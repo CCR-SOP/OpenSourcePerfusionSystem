@@ -3,3 +3,5 @@ Release/*
 .xdchelp
 config/*
 .launches/*
+
+RemoteSystemsTempFiles/
