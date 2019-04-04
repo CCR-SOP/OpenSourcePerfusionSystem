@@ -7,10 +7,12 @@
 	<deviceEndianness value="little"/>
 	<codegenToolVersion value="18.12.0.LTS"/>
 	<isElfFormat value="true"/>
+	<connection value="common/targetdb/connections/TIMSP430-USB.xml"/>
 	<linkerCommandFile value="lnk_msp430f67791a.cmd"/>
 	<rts value="libc.a"/>
 	<createSlaveProjects value=""/>
 	<templateProperties value="id=eusci_b_i2c_ex1_masterRxMultiple.projectspec.eusci_b_i2c_ex1_masterRxMultiple"/>
 	<origin value="C:\ti\msp430ware_3_80_07_00\driverlib\examples\MSP430F5xx_6xx\eusci_b_i2c\CCS\eusci_b_i2c_ex1_masterRxMultiple.projectspec"/>
 	<filesToOpen value=""/>
+	<isTargetManual value="false"/>
 </projectOptions>

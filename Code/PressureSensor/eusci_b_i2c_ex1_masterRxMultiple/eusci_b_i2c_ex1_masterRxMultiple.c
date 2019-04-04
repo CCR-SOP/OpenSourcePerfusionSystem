@@ -30,6 +30,7 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * --/COPYRIGHT--*/
 #include "driverlib.h"
+#include "stdio.h"
 
 //*****************************************************************************
 //
@@ -42,14 +43,16 @@
 //means that the master receives data from the slave.
 //
 //*****************************************************************************
-#define SLAVE_ADDRESS 0x48
+//JWK, BSP120 pressure sensor address is hardcoded at 0x28
+#define SLAVE_ADDRESS 0x28
 
 //*****************************************************************************
 //
 //Specify Expected Receive data count.
 //
 //*****************************************************************************
-#define RXCOUNT 0x05
+//JWK, BSP120 sensor sends 2 bytes
+#define RXCOUNT 0x02
 
 //******************************************************************************
 //  MSP430F5xx_6xx Demo - USCI_B0 I2C Master RX multiple bytes from MSP430 Slave
@@ -72,6 +75,12 @@
 //
 //******************************************************************************
 uint8_t RXData;
+uint16_t g_pressure;
+bool g_goodvalue;
+
+const double g_maxpsi = 1.0;
+const double g_minpsi = 0.15;
+const uint16_t g_maxcount = 0x3FFF;
 void main (void)
 {
     WDT_A_hold(WDT_A_BASE);
@@ -138,6 +147,19 @@ void main (void)
 
         // Enter LPM0 w/ interrupt
         __bis_SR_register(CPUOFF+GIE);
+
+        if (g_goodvalue) {
+            if (g_pressure & 0x40) {
+                // device in command mode
+            } else if (g_pressure & 0x80) {
+                // stale data
+            } else if (g_pressure & 0xC0) {
+                // Diagnostic condition exists
+            } else {
+                double psi = (g_maxpsi - g_minpsi)*( (g_pressure - 0.1 * g_maxcount) / (0.8 * g_maxcount)) + g_minpsi;
+                printf("PSI is %lf\tcounts are %d\n", psi, g_pressure);
+            }
+        }
     }
 }
 
@@ -180,8 +202,13 @@ void USCIB0_ISR(void)
             RXData = EUSCI_B_I2C_masterReceiveSingle(
                     EUSCI_B0_BASE
                     );
-            if (++count >= RXCOUNT) {
+            if (++count == 0) {
+                g_goodvalue = false;
+                g_pressure = (count & 0x3F) << 8;
+            } else {
                 count = 0;
+                g_pressure |= count;
+                g_goodvalue = true;
                 __bic_SR_register_on_exit(CPUOFF); // Exit LPM0
             }
             break; // Vector 24: RXIFG0 break;
