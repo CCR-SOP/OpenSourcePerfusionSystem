@@ -1,0 +1,5 @@
+# Code Composer Studio
+Release/*
+.xdchelp
+config/*
+.launches/*
