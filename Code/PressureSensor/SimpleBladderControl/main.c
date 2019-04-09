@@ -52,6 +52,17 @@ void clockInit(void);
 void timerInit(void);
 void draw_main_page(void);
 void init_buttons(void);
+void set_inflate(bool on);
+void set_deflate(bool on);
+void configure_GPIO_pins(void);
+
+const uint8_t PORT_INFLATE = GPIO_PORT_P4;
+const uint16_t PIN_INFLATE = GPIO_PIN1;
+const uint8_t PORT_DEFLATE = GPIO_PORT_P3;
+const uint16_t PIN_DEFLATE = GPIO_PIN5;
+
+#define DEBOUNCE_TIME 50000
+bool g_debouncing = false;
 
 #if defined(__IAR_SYSTEMS_ICC__)
 int16_t __low_level_init(void) {
@@ -70,7 +81,6 @@ void main(void)
     // Initialization routines
     boardInit();
     clockInit();
-    timerInit();
     init_buttons();
 
     // LCD setup using Graphics Library API calls
@@ -83,6 +93,8 @@ void main(void)
     //
     touch_initInterface();
 
+    configure_GPIO_pins();
+
     draw_main_page();
 
     // Loop to detect touch
@@ -92,6 +104,7 @@ void main(void)
 
         if(g_sTouchContext.touch)
         {
+
             if(Graphics_isButtonSelected(&btn_inflate,
                                               g_sTouchContext.x,
                                               g_sTouchContext.y))
@@ -100,9 +113,10 @@ void main(void)
                     Graphics_drawButton(&g_sContext, &btn_inflate);
                     inflating = false;
                 } else {
-                    Graphics_drawSelectedButton(&g_sContext,&btn_inflate);
+                    Graphics_drawSelectedButton(&g_sContext, &btn_inflate);
                     inflating = true;
                 }
+                set_inflate(inflating);
 
             }
             else if(Graphics_isButtonSelected(&btn_deflate,
@@ -112,11 +126,11 @@ void main(void)
                 if (deflating) {
                     Graphics_drawButton(&g_sContext, &btn_deflate);
                     deflating = false;
-
                 } else {
-                    Graphics_drawSelectedButton(&g_sContext,&btn_deflate);
+                    Graphics_drawSelectedButton(&g_sContext, &btn_deflate);
                     deflating = true;
                 }
+                set_deflate(deflating);
             }
 
         }
@@ -156,6 +170,7 @@ void init_buttons(void)
     btn_deflate.textYPos = 90;
     btn_deflate.text = "deflate";
     btn_deflate.font = &g_sFontCm18;
+
 }
 
 void draw_main_page(void)
@@ -212,22 +227,31 @@ void clockInit(void)
         );
 }
 
-void timerInit()
-{
-    Timer_A_initUpModeParam timerAUpModeParams =
-    {
-        TIMER_A_CLOCKSOURCE_SMCLK,
-        TIMER_A_CLOCKSOURCE_DIVIDER_64,
-        UINT16_MAX,
-        TIMER_A_TAIE_INTERRUPT_DISABLE,
-        TIMER_A_CCIE_CCR0_INTERRUPT_DISABLE,
-        TIMER_A_SKIP_CLEAR
-    };
-    //Configure timer A to count cycles/64
-    Timer_A_initUpMode(
-        TIMER_A1_BASE,&timerAUpModeParams);
-}
-
 void Delay(){
     __delay_cycles(SYSTEM_CLOCK_SPEED * 3);
 }
+
+void configure_GPIO_pins(void)
+{
+    GPIO_setAsOutputPin(PORT_INFLATE, PIN_INFLATE);
+    GPIO_setAsOutputPin(PORT_DEFLATE, PIN_DEFLATE);
+}
+
+void set_inflate(bool on)
+{
+    if (on) {
+        GPIO_setOutputHighOnPin(PORT_INFLATE, PIN_INFLATE);
+    } else {
+        GPIO_setOutputLowOnPin(PORT_INFLATE, PIN_INFLATE);
+    }
+}
+
+void set_deflate(bool on)
+{
+    if (on) {
+        GPIO_setOutputHighOnPin(PORT_DEFLATE, PIN_DEFLATE);
+    } else {
+        GPIO_setOutputLowOnPin(PORT_DEFLATE, PIN_DEFLATE);
+    }
+}
+
