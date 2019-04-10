@@ -2,6 +2,6 @@
 Release/*
 .xdchelp
 config/*
-.launches/*
+.launches/
 
 RemoteSystemsTempFiles/
