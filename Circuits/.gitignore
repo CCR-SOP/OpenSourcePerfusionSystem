@@ -1,0 +1,15 @@
+# Eagle autosave files
+*.s#*
+*.b#*
+
+# Eagle GERBER files&
+*.boa
+*.bot
+*.top
+*.drd
+*.dri
+*.gpi
+*.top
+
+# Keep GERBER files if in a folder called GERBER
+!**/GERBER/*
