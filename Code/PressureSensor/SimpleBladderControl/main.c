@@ -61,8 +61,7 @@ const uint16_t PIN_INFLATE = GPIO_PIN4;
 const uint8_t PORT_DEFLATE = GPIO_PORT_P1;
 const uint16_t PIN_DEFLATE = GPIO_PIN5;
 
-#define DEBOUNCE_TIME 50000
-bool g_debouncing = false;
+#define DEBOUNCE_TOUCHES 100
 
 #if defined(__IAR_SYSTEMS_ICC__)
 int16_t __low_level_init(void) {
@@ -98,11 +97,18 @@ void main(void)
     draw_main_page();
 
     // Loop to detect touch
+    int consecutive_touches = 0;
     while(1)
     {
         touch_updateCurrentTouch(&g_sTouchContext);
 
-        if(g_sTouchContext.touch)
+        if(g_sTouchContext.touch) {
+            consecutive_touches++;
+        } else {
+            consecutive_touches = 0;
+        }
+
+        if (consecutive_touches == DEBOUNCE_TOUCHES)
         {
 
             if(Graphics_isButtonSelected(&btn_inflate,
@@ -139,9 +145,9 @@ void main(void)
 
 void init_buttons(void)
 {
-    btn_inflate.xMin = 80;
+    btn_inflate.xMin = 40;
     btn_inflate.xMax = 150;
-    btn_inflate.yMin = 80;
+    btn_inflate.yMin = 60;
     btn_inflate.yMax = 120;
     btn_inflate.borderWidth = 1;
     btn_inflate.selected = false;
@@ -150,15 +156,15 @@ void init_buttons(void)
     btn_inflate.selectedColor = GRAPHICS_COLOR_BLACK;
     btn_inflate.textColor = GRAPHICS_COLOR_BLACK;
     btn_inflate.selectedTextColor = GRAPHICS_COLOR_RED;
-    btn_inflate.textXPos = 100;
-    btn_inflate.textYPos = 90;
+    btn_inflate.textXPos = btn_inflate.xMin + 20;
+    btn_inflate.textYPos = btn_inflate.yMin + 15;
     btn_inflate.text = "inflate";
     btn_inflate.font = &g_sFontCm18;
 
-    btn_deflate.xMin = 180;
-    btn_deflate.xMax = 250;
-    btn_deflate.yMin = 80;
-    btn_deflate.yMax = 120;
+    btn_deflate.xMin = btn_inflate.xMax + 10;
+    btn_deflate.xMax = btn_deflate.xMin + (btn_inflate.xMax - btn_inflate.xMin);
+    btn_deflate.yMin = btn_inflate.yMin;
+    btn_deflate.yMax = btn_inflate.yMax;
     btn_deflate.borderWidth = 1;
     btn_deflate.selected = false;
     btn_deflate.fillColor = GRAPHICS_COLOR_RED;
@@ -166,8 +172,8 @@ void init_buttons(void)
     btn_deflate.selectedColor = GRAPHICS_COLOR_BLACK;
     btn_deflate.textColor = GRAPHICS_COLOR_BLACK;
     btn_deflate.selectedTextColor = GRAPHICS_COLOR_RED;
-    btn_deflate.textXPos = 200;
-    btn_deflate.textYPos = 90;
+    btn_deflate.textXPos = btn_deflate.xMin + 20;
+    btn_deflate.textYPos = btn_deflate.yMin + 15;
     btn_deflate.text = "deflate";
     btn_deflate.font = &g_sFontCm18;
 
@@ -181,7 +187,7 @@ void draw_main_page(void)
     Graphics_drawStringCentered(&g_sContext, "Bladder Control",
                                 AUTO_STRING_LENGTH,
                                 159,
-                                45,
+                                20,
                                 TRANSPARENT_TEXT);
 
     Graphics_drawButton(&g_sContext, &btn_inflate);
