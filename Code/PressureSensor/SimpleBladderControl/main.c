@@ -72,6 +72,10 @@ int16_t __low_level_init(void) {
 
 #endif
 
+int8_t lbl_inflate[] = "Inflate";
+int8_t lbl_deflate[] = "Deflate";
+int8_t lbl_cycle[] = "Cycle";
+
 void main(void)
 {
 
@@ -143,40 +147,32 @@ void main(void)
     }
 }
 
+void create_button(Graphics_Button* btn, int x, int y, int w, int h, int8_t* lbl)
+{
+    btn->xMin = x;
+    btn->xMax = x + w;
+    btn->yMin = y;
+    btn->yMax = y + h;
+
+    btn->borderWidth = 1;
+    btn->selected = false;
+    btn->fillColor = GRAPHICS_COLOR_RED;
+    btn->borderColor = GRAPHICS_COLOR_RED;
+    btn->selectedColor = GRAPHICS_COLOR_BLACK;
+    btn->textColor = GRAPHICS_COLOR_BLACK;
+    btn->selectedTextColor = GRAPHICS_COLOR_RED;
+
+    btn->textXPos = btn->xMin + 20;
+    btn->textYPos = btn->yMin + 15;
+    btn->text = lbl;
+    btn->font = &g_sFontCm18;
+}
+
 void init_buttons(void)
 {
-    btn_inflate.xMin = 40;
-    btn_inflate.xMax = 150;
-    btn_inflate.yMin = 60;
-    btn_inflate.yMax = 120;
-    btn_inflate.borderWidth = 1;
-    btn_inflate.selected = false;
-    btn_inflate.fillColor = GRAPHICS_COLOR_RED;
-    btn_inflate.borderColor = GRAPHICS_COLOR_RED;
-    btn_inflate.selectedColor = GRAPHICS_COLOR_BLACK;
-    btn_inflate.textColor = GRAPHICS_COLOR_BLACK;
-    btn_inflate.selectedTextColor = GRAPHICS_COLOR_RED;
-    btn_inflate.textXPos = btn_inflate.xMin + 20;
-    btn_inflate.textYPos = btn_inflate.yMin + 15;
-    btn_inflate.text = "inflate";
-    btn_inflate.font = &g_sFontCm18;
-
-    btn_deflate.xMin = btn_inflate.xMax + 10;
-    btn_deflate.xMax = btn_deflate.xMin + (btn_inflate.xMax - btn_inflate.xMin);
-    btn_deflate.yMin = btn_inflate.yMin;
-    btn_deflate.yMax = btn_inflate.yMax;
-    btn_deflate.borderWidth = 1;
-    btn_deflate.selected = false;
-    btn_deflate.fillColor = GRAPHICS_COLOR_RED;
-    btn_deflate.borderColor = GRAPHICS_COLOR_RED;
-    btn_deflate.selectedColor = GRAPHICS_COLOR_BLACK;
-    btn_deflate.textColor = GRAPHICS_COLOR_BLACK;
-    btn_deflate.selectedTextColor = GRAPHICS_COLOR_RED;
-    btn_deflate.textXPos = btn_deflate.xMin + 20;
-    btn_deflate.textYPos = btn_deflate.yMin + 15;
-    btn_deflate.text = "deflate";
-    btn_deflate.font = &g_sFontCm18;
-
+    int x = 40, width = 100, y = 60, height = 60;
+    create_button(&btn_inflate, x, y, width, height, lbl_inflate);
+    create_button(&btn_deflate, x + width + 10, y, width, height, lbl_deflate);
 }
 
 void draw_main_page(void)
