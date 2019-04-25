@@ -56,9 +56,9 @@ void set_inflate(bool on);
 void set_deflate(bool on);
 void configure_GPIO_pins(void);
 
-const uint8_t PORT_INFLATE = GPIO_PORT_P4;
-const uint16_t PIN_INFLATE = GPIO_PIN1;
-const uint8_t PORT_DEFLATE = GPIO_PORT_P3;
+const uint8_t PORT_INFLATE = GPIO_PORT_P1;
+const uint16_t PIN_INFLATE = GPIO_PIN4;
+const uint8_t PORT_DEFLATE = GPIO_PORT_P1;
 const uint16_t PIN_DEFLATE = GPIO_PIN5;
 
 #define DEBOUNCE_TIME 50000
