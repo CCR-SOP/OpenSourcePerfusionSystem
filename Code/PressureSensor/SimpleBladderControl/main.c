@@ -39,8 +39,26 @@
 
 //Touch screen context
 touch_context g_sTouchContext;
+
+#define DEBOUNCE_TOUCHES 100
 Graphics_Button btn_inflate;
 Graphics_Button btn_deflate;
+Graphics_Button btn_cycle;
+
+int8_t lbl_inflate[] = "Inflate";
+int8_t lbl_deflate[] = "Deflate";
+int8_t lbl_cycle[] = "Cycle";
+
+bool g_cycling = false;
+bool g_inflating = false;
+bool g_deflating = false;
+bool g_change_detected = false;
+
+// Cycling
+#define COMPARE_VALUE 3000
+void timerInit(void);
+void timerStart(void);
+void timerStop(void);
 
 // Graphic library context
 Graphics_Context g_sContext;
@@ -49,7 +67,6 @@ Graphics_Context g_sContext;
 void Delay();
 void boardInit(void);
 void clockInit(void);
-void timerInit(void);
 void draw_main_page(void);
 void init_buttons(void);
 void set_inflate(bool on);
@@ -61,7 +78,6 @@ const uint16_t PIN_INFLATE = GPIO_PIN4;
 const uint8_t PORT_DEFLATE = GPIO_PORT_P1;
 const uint16_t PIN_DEFLATE = GPIO_PIN5;
 
-#define DEBOUNCE_TOUCHES 100
 
 #if defined(__IAR_SYSTEMS_ICC__)
 int16_t __low_level_init(void) {
@@ -72,18 +88,15 @@ int16_t __low_level_init(void) {
 
 #endif
 
-int8_t lbl_inflate[] = "Inflate";
-int8_t lbl_deflate[] = "Deflate";
-int8_t lbl_cycle[] = "Cycle";
+
 
 void main(void)
 {
 
-    bool inflating = false;
-    bool deflating = false;
     // Initialization routines
     boardInit();
     clockInit();
+    timerInit();
     init_buttons();
 
     // LCD setup using Graphics Library API calls
@@ -100,6 +113,9 @@ void main(void)
 
     draw_main_page();
 
+    //Enter LPM0, enable interrupts
+    __bis_SR_register(GIE);
+
     // Loop to detect touch
     int consecutive_touches = 0;
     while(1)
@@ -115,35 +131,52 @@ void main(void)
         if (consecutive_touches == DEBOUNCE_TOUCHES)
         {
 
+            g_change_detected = true;
             if(Graphics_isButtonSelected(&btn_inflate,
                                               g_sTouchContext.x,
                                               g_sTouchContext.y))
             {
-                if (inflating) {
-                    Graphics_drawButton(&g_sContext, &btn_inflate);
-                    inflating = false;
-                } else {
-                    Graphics_drawSelectedButton(&g_sContext, &btn_inflate);
-                    inflating = true;
-                }
-                set_inflate(inflating);
-
+                set_inflate(!g_inflating);
             }
             else if(Graphics_isButtonSelected(&btn_deflate,
                                                    g_sTouchContext.x,
                                                    g_sTouchContext.y))
             {
-                if (deflating) {
-                    Graphics_drawButton(&g_sContext, &btn_deflate);
-                    deflating = false;
+                set_deflate(!g_deflating);
+            }
+            else if(Graphics_isButtonSelected(&btn_cycle,
+                                                   g_sTouchContext.x,
+                                                   g_sTouchContext.y))
+            {
+                if (g_cycling) {
+                    timerStop();
+                    set_inflate(false);
+                    set_deflate(false);
                 } else {
-                    Graphics_drawSelectedButton(&g_sContext, &btn_deflate);
-                    deflating = true;
+                    timerStart();
                 }
-                set_deflate(deflating);
+                g_cycling = !g_cycling;
             }
 
         }
+        if (g_change_detected) {
+            if (g_inflating) {
+                Graphics_drawButton(&g_sContext, &btn_inflate);
+            } else {
+                Graphics_drawSelectedButton(&g_sContext, &btn_inflate);
+            }
+            if (g_deflating) {
+                Graphics_drawButton(&g_sContext, &btn_deflate);
+            } else {
+                Graphics_drawSelectedButton(&g_sContext, &btn_deflate);
+            }
+            if (g_cycling) {
+                Graphics_drawButton(&g_sContext, &btn_cycle);
+            } else {
+                Graphics_drawSelectedButton(&g_sContext, &btn_cycle);
+            }
+        }
+        g_change_detected = false;
     }
 }
 
@@ -173,6 +206,7 @@ void init_buttons(void)
     int x = 40, width = 100, y = 60, height = 60;
     create_button(&btn_inflate, x, y, width, height, lbl_inflate);
     create_button(&btn_deflate, x + width + 10, y, width, height, lbl_deflate);
+    create_button(&btn_cycle, x, y + height + 10, width, height, lbl_cycle);
 }
 
 void draw_main_page(void)
@@ -188,6 +222,7 @@ void draw_main_page(void)
 
     Graphics_drawButton(&g_sContext, &btn_inflate);
     Graphics_drawButton(&g_sContext, &btn_deflate);
+    Graphics_drawButton(&g_sContext, &btn_cycle);
 
 }
 
@@ -239,6 +274,45 @@ void configure_GPIO_pins(void)
     GPIO_setAsOutputPin(PORT_DEFLATE, PIN_DEFLATE);
 }
 
+void timerInit(void)
+{
+    //Start timer in continuous mode sourced by SMCLK
+    Timer_A_initContinuousModeParam initContParam = {0};
+    initContParam.clockSource = TIMER_A_CLOCKSOURCE_ACLK;
+    initContParam.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_32;
+    initContParam.timerInterruptEnable_TAIE = TIMER_A_TAIE_INTERRUPT_DISABLE;
+    initContParam.timerClear = TIMER_A_DO_CLEAR;
+    initContParam.startTimer = false;
+    Timer_A_initContinuousMode(TIMER_A1_BASE, &initContParam);
+
+    //Initialize compare mode
+    Timer_A_clearCaptureCompareInterrupt(TIMER_A1_BASE,
+        TIMER_A_CAPTURECOMPARE_REGISTER_0
+        );
+
+    Timer_A_initCompareModeParam initCompParam = {0};
+    initCompParam.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_0;
+    initCompParam.compareInterruptEnable = TIMER_A_CAPTURECOMPARE_INTERRUPT_ENABLE;
+    initCompParam.compareOutputMode = TIMER_A_OUTPUTMODE_OUTBITVALUE;
+    initCompParam.compareValue = COMPARE_VALUE;
+    Timer_A_initCompareMode(TIMER_A1_BASE, &initCompParam);
+
+
+}
+
+void timerStart(void)
+{
+    Timer_A_startCounter(TIMER_A1_BASE, TIMER_A_CONTINUOUS_MODE);
+    Timer_A_enableInterrupt(TIMER_A1_BASE);
+}
+
+void timerStop(void)
+{
+    Timer_A_disableInterrupt(TIMER_A1_BASE);
+    Timer_A_stop(TIMER_A1_BASE);
+}
+
+
 void set_inflate(bool on)
 {
     if (on) {
@@ -246,6 +320,7 @@ void set_inflate(bool on)
     } else {
         GPIO_setOutputLowOnPin(PORT_INFLATE, PIN_INFLATE);
     }
+    g_inflating = on;
 }
 
 void set_deflate(bool on)
@@ -255,5 +330,37 @@ void set_deflate(bool on)
     } else {
         GPIO_setOutputLowOnPin(PORT_DEFLATE, PIN_DEFLATE);
     }
+    g_deflating = on;
 }
 
+//******************************************************************************
+//
+//This is the TIMER1_A3 interrupt vector service routine.
+//
+//******************************************************************************
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=TIMER1_A0_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(TIMER1_A0_VECTOR)))
+#endif
+void TIMER1_A0_ISR (void)
+{
+    uint16_t compVal = Timer_A_getCaptureCompareCount(TIMER_A1_BASE,
+            TIMER_A_CAPTURECOMPARE_REGISTER_0)
+            + COMPARE_VALUE;
+
+    g_change_detected = true;
+    if (g_inflating) {
+        set_inflate(false);
+        set_deflate(true);
+    } else {
+        set_inflate(true);
+        set_deflate(false);
+    }
+    //Add Offset to CCR0
+    Timer_A_setCompareValue(TIMER_A1_BASE,
+        TIMER_A_CAPTURECOMPARE_REGISTER_0,
+        compVal
+        );
+}
