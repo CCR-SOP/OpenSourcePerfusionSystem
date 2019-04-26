@@ -113,9 +113,7 @@ void main(void)
 
     draw_main_page();
 
-    //Enter LPM0, enable interrupts
     __bis_SR_register(GIE);
-
     // Loop to detect touch
     int consecutive_touches = 0;
     while(1)
@@ -220,9 +218,11 @@ void draw_main_page(void)
                                 20,
                                 TRANSPARENT_TEXT);
 
-    Graphics_drawButton(&g_sContext, &btn_inflate);
-    Graphics_drawButton(&g_sContext, &btn_deflate);
-    Graphics_drawButton(&g_sContext, &btn_cycle);
+
+
+    Graphics_drawSelectedButton(&g_sContext, &btn_inflate);
+    Graphics_drawSelectedButton(&g_sContext, &btn_deflate);
+    Graphics_drawSelectedButton(&g_sContext, &btn_cycle);
 
 }
 
@@ -276,7 +276,6 @@ void configure_GPIO_pins(void)
 
 void timerInit(void)
 {
-    //Start timer in continuous mode sourced by SMCLK
     Timer_A_initContinuousModeParam initContParam = {0};
     initContParam.clockSource = TIMER_A_CLOCKSOURCE_ACLK;
     initContParam.clockSourceDivider = TIMER_A_CLOCKSOURCE_DIVIDER_32;
@@ -303,12 +302,10 @@ void timerInit(void)
 void timerStart(void)
 {
     Timer_A_startCounter(TIMER_A1_BASE, TIMER_A_CONTINUOUS_MODE);
-    Timer_A_enableInterrupt(TIMER_A1_BASE);
 }
 
 void timerStop(void)
 {
-    Timer_A_disableInterrupt(TIMER_A1_BASE);
     Timer_A_stop(TIMER_A1_BASE);
 }
 
@@ -346,9 +343,10 @@ __attribute__((interrupt(TIMER1_A0_VECTOR)))
 #endif
 void TIMER1_A0_ISR (void)
 {
-    uint16_t compVal = Timer_A_getCaptureCompareCount(TIMER_A1_BASE,
-            TIMER_A_CAPTURECOMPARE_REGISTER_0)
-            + COMPARE_VALUE;
+    uint16_t compVal =
+            Timer_A_getCaptureCompareCount(TIMER_A1_BASE,
+                                           TIMER_A_CAPTURECOMPARE_REGISTER_0)
+                                           + COMPARE_VALUE;
 
     g_change_detected = true;
     if (g_inflating) {
@@ -360,7 +358,9 @@ void TIMER1_A0_ISR (void)
     }
     //Add Offset to CCR0
     Timer_A_setCompareValue(TIMER_A1_BASE,
-        TIMER_A_CAPTURECOMPARE_REGISTER_0,
-        compVal
+                            TIMER_A_CAPTURECOMPARE_REGISTER_0,
+                            compVal
         );
+
+    Timer_A_clearTimerInterrupt(TIMER_A1_BASE);
 }
