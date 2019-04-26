@@ -13,4 +13,6 @@
 	<templateProperties value="id=MSP-EXP430F5529LP_Grlib_Example.projectspec.MSP-EXP430F5529LP_GrLibExample"/>
 	<origin value="C:\ti\msp430ware_3_80_07_00\grlib\examples\MSP-EXP430F5529LP_GrLibExample\CCS\MSP-EXP430F5529LP_Grlib_Example.projectspec"/>
 	<filesToOpen value=""/>
+	<connection value="common/targetdb/connections/TIMSP430-USB.xml"/>
+	<isTargetManual value="false"/>
 </projectOptions>
