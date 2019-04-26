@@ -26,6 +26,11 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>SSC_I2C_Pressure.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PARENT_LOC/lib/SSC_I2C_Pressure.c</locationURI>
+		</link>
+		<link>
 			<name>gpio.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/gpio.c</locationURI>
