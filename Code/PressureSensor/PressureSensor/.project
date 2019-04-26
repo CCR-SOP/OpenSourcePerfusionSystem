@@ -24,4 +24,36 @@
 		<nature>org.eclipse.cdt.core.ccnature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>gpio.c</name>
+			<type>1</type>
+			<locationURI>DRIVERLIB_LOC/gpio.c</locationURI>
+		</link>
+		<link>
+			<name>ucs.c</name>
+			<type>1</type>
+			<locationURI>DRIVERLIB_LOC/ucs.c</locationURI>
+		</link>
+		<link>
+			<name>usci_b_i2c.c</name>
+			<type>1</type>
+			<locationURI>DRIVERLIB_LOC/usci_b_i2c.c</locationURI>
+		</link>
+		<link>
+			<name>wdt_a.c</name>
+			<type>1</type>
+			<locationURI>DRIVERLIB_LOC/wdt_a.c</locationURI>
+		</link>
+	</linkedResources>
+	<variableList>
+		<variable>
+			<name>DRIVERLIB_LOC</name>
+			<value>file:/C:/Users/kakareka/Documents/GitHub/LiverCompression/Code/PressureSensor/driverlib/MSP430F5xx_6xx</value>
+		</variable>
+		<variable>
+			<name>GRLIB_LOC</name>
+			<value>file:/C:/Users/kakareka/Documents/GitHub/LiverCompression/Code/PressureSensor/GrLib</value>
+		</variable>
+	</variableList>
 </projectDescription>
