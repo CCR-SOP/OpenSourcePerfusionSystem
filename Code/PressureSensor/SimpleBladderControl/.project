@@ -26,6 +26,11 @@
 	</natures>
 	<linkedResources>
 		<link>
+			<name>SSC_I2C_Pressure.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PARENT_LOC/lib/SSC_I2C_Pressure.c</locationURI>
+		</link>
+		<link>
 			<name>driverlib/adc12_a.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/adc12_a.c</locationURI>
@@ -59,6 +64,11 @@
 			<name>driverlib/ucs.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/ucs.c</locationURI>
+		</link>
+		<link>
+			<name>driverlib/usci_b_i2c.c</name>
+			<type>1</type>
+			<locationURI>DRIVERLIB_LOC1/usci_b_i2c.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/usci_b_spi.c</name>
@@ -120,6 +130,10 @@
 		<variable>
 			<name>DRIVERLIB_LOC</name>
 			<value>file:/C:/Users/kakareka/Documents/GitHub/LiverCompression/Code/PressureSensor/driverlib</value>
+		</variable>
+		<variable>
+			<name>DRIVERLIB_LOC1</name>
+			<value>$%7BDRIVERLIB_LOC%7D/MSP430F5xx_6xx</value>
 		</variable>
 		<variable>
 			<name>GRLIB_LOC</name>
