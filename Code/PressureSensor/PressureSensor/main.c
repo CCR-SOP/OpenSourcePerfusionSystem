@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include "SSC_I2C_Pressure.h"
 
+bool g_newread = true;
+uint8_t msb, lsb;
 
 int main(void)
 {
@@ -11,9 +13,11 @@ int main(void)
     ssc_init();
 
     while (1) {
+        g_newread = true;
         ssc_start_read();
         __bis_SR_register(LPM0_bits + GIE);
-        psi = ssc_get_last_psi();
+
+        psi = convert_to_psi(msb, lsb);
         printf("psi - %d\n", psi);
     }
 
@@ -32,8 +36,14 @@ void USCI_B1_ISR (void)
     switch (__even_in_range(UCB1IV,12)){
         case USCI_I2C_UCRXIFG:
         {
-            if (ssc_process_byte()) {
+            if (g_newread) {
+                msb = UCB1RXBUF;
+                g_newread = false;
+                UCB1CTL1 |= UCTXSTP;  //issue stop
+            } else {
+                lsb = UCB1RXBUF;
                 __bic_SR_register_on_exit(LPM0_bits);
+
             }
             break;
         }
