@@ -36,6 +36,16 @@
 			<locationURI>DRIVERLIB_LOC/gpio.c</locationURI>
 		</link>
 		<link>
+			<name>pmm.c</name>
+			<type>1</type>
+			<locationURI>DRIVERLIB_LOC/pmm.c</locationURI>
+		</link>
+		<link>
+			<name>sfr.c</name>
+			<type>1</type>
+			<locationURI>DRIVERLIB_LOC/sfr.c</locationURI>
+		</link>
+		<link>
 			<name>ucs.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/ucs.c</locationURI>
