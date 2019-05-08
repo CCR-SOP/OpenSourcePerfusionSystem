@@ -7,31 +7,32 @@
 #include "Images/images.h"
 #include "SSC_I2C_Pressure.h"
 
+// Graphics
 touch_context g_sTouchContext;
+Graphics_Context g_sContext;
+int8_t lbl_inflate[] = "Inflate";
+int8_t lbl_deflate[] = "Deflate";
+int8_t lbl_cycle[] = "Cycle";
 
 #define DEBOUNCE_TOUCHES 1
 Graphics_Button btn_inflate;
 Graphics_Button btn_deflate;
 Graphics_Button btn_cycle;
 
-int8_t lbl_inflate[] = "Inflate";
-int8_t lbl_deflate[] = "Deflate";
-int8_t lbl_cycle[] = "Cycle";
 
+// Pressure control
 bool g_cycling = false;
 bool g_inflating = false;
 bool g_deflating = false;
 bool g_change_detected = false;
 
-// Cycling
-#define COMPARE_VALUE 3000
 void timerInit(void);
 void timerStart(void);
 void timerStop(void);
 
-// Graphic library context
-Graphics_Context g_sContext;
-
+#define PRESSURE_CHECK_MS 250
+uint16_t g_high_mpsi = 40;
+uint16_t g_low_mpsi = 8;
 
 void Delay();
 void init_clocks(void);
@@ -70,15 +71,30 @@ void main(void)
     draw_main_page();
 
     __bis_SR_register(GIE);
-    // Loop to detect touch
+     // Loop to detect touch
     int consecutive_touches = 0;
+    uint16_t last_mpsi = 0, mpsi = 0;
 
+    timerStart();
     while(1)
     {
-        ssc_start_read();
         __bis_SR_register(LPM0_bits + GIE);
-        draw_psi(ssc_get_last_psi());
-
+        mpsi = ssc_get_last_psi();
+        if (mpsi != last_mpsi) {
+            draw_psi(mpsi);
+            last_mpsi = mpsi;
+        }
+        if (g_cycling) {
+            if (mpsi <= g_low_mpsi) {
+                set_inflate(true);
+                set_deflate(false);
+                g_change_detected = true;
+            } else if (mpsi >= g_high_mpsi) {
+                set_deflate(true);
+                set_inflate(false);
+                g_change_detected = true;
+            }
+        }
         touch_updateCurrentTouch(&g_sTouchContext);
 
         if(g_sTouchContext.touch) {
@@ -258,7 +274,7 @@ void timerInit(void)
     initCompParam.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_0;
     initCompParam.compareInterruptEnable = TIMER_A_CAPTURECOMPARE_INTERRUPT_ENABLE;
     initCompParam.compareOutputMode = TIMER_A_OUTPUTMODE_OUTBITVALUE;
-    initCompParam.compareValue = COMPARE_VALUE;
+    initCompParam.compareValue = PRESSURE_CHECK_MS;
     Timer_A_initCompareMode(TIMER_A1_BASE, &initCompParam);
 
 
@@ -311,21 +327,13 @@ void TIMER1_A0_ISR (void)
     uint16_t compVal =
             Timer_A_getCaptureCompareCount(TIMER_A1_BASE,
                                            TIMER_A_CAPTURECOMPARE_REGISTER_0)
-                                           + COMPARE_VALUE;
-
-    g_change_detected = true;
-    if (g_inflating) {
-        set_inflate(false);
-        set_deflate(true);
-    } else {
-        set_inflate(true);
-        set_deflate(false);
-    }
+                                           + PRESSURE_CHECK_MS;
     //Add Offset to CCR0
     Timer_A_setCompareValue(TIMER_A1_BASE,
                             TIMER_A_CAPTURECOMPARE_REGISTER_0,
                             compVal
         );
 
+    ssc_start_read();
     Timer_A_clearTimerInterrupt(TIMER_A1_BASE);
 }
