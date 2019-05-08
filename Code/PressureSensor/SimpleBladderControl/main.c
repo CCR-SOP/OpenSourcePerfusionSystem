@@ -182,7 +182,7 @@ void draw_psi(uint16_t psi)
                                 2,
                                 btn_cycle.xMax + 20,
                                 btn_cycle.yMin + 20,
-                                TRANSPARENT_TEXT);
+                                OPAQUE_TEXT);
 }
 
 void draw_main_page(void)
