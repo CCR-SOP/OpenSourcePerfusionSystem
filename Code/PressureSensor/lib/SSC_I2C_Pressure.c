@@ -16,7 +16,7 @@ const float SENSOR_RATIO = 0.0022888532845044634;
 
 bool g_newread = true;
 uint8_t msb, lsb;
-uint16_t last_psi;
+uint16_t last_psi = 0;
 uint16_t convert_to_psi(uint8_t msb, uint8_t lsb);
 
 void ssc_init(void)
@@ -46,7 +46,10 @@ void ssc_init(void)
 
 void ssc_start_read(void)
 {
-    last_psi = convert_to_psi(msb, lsb);
+    uint16_t tmp = convert_to_psi(msb, lsb);
+    if (tmp != 0xC0) {
+        last_psi = tmp;
+    }
     g_newread = true;
 
     USCI_B_I2C_masterReceiveMultiByteStart(I2C_BASE);
@@ -54,12 +57,13 @@ void ssc_start_read(void)
 
 uint16_t convert_to_psi(uint8_t msb, uint8_t lsb)
 {
-    uint16_t psi = 0;
-    uint8_t status = (msb & 0xC0) >> 6;
+    uint16_t psi = 0xC0;
+    uint8_t status = (msb & 0xC0);
 
     if (!status) {
-        uint16_t counts = (msb << 8) | lsb;
-        psi = (counts - SENSOR_MIN_COUNTS) * SENSOR_RATIO + SENSOR_MIN_PSI;
+        uint16_t counts = ((msb & 0x3F) << 8) | lsb;
+        float milli_psi = ((float)(counts - SENSOR_MIN_COUNTS) * 100.0 * SENSOR_RATIO + (float)SENSOR_MIN_PSI);
+        psi = (uint16_t)milli_psi;
     }
     return psi;
 }

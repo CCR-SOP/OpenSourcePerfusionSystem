@@ -78,8 +78,6 @@ void main(void)
         ssc_start_read();
         __bis_SR_register(LPM0_bits + GIE);
         draw_psi(ssc_get_last_psi());
-        //printf("%d\n", ssc_get_last_psi());
-
 
         touch_updateCurrentTouch(&g_sTouchContext);
 
@@ -174,15 +172,14 @@ void init_buttons(void)
 
 void draw_psi(uint16_t psi)
 {
-    char psi_str[3];
-    snprintf(psi_str, 2, "%d", psi);
+    char psi_str[7];
+    snprintf(psi_str, 7, "%6d", psi);
     Graphics_setForegroundColor(&g_sContext, GRAPHICS_COLOR_RED);
     Graphics_setBackgroundColor(&g_sContext, GRAPHICS_COLOR_BLACK);
-    Graphics_drawStringCentered(&g_sContext, (int8_t*)psi_str,
-                                2,
-                                btn_cycle.xMax + 20,
-                                btn_cycle.yMin + 20,
-                                OPAQUE_TEXT);
+    Graphics_drawString(&g_sContext, (int8_t*)psi_str, -1,
+                        btn_cycle.xMax + 50,
+                        btn_cycle.yMin + 20,
+                        OPAQUE_TEXT);
 }
 
 void draw_main_page(void)
