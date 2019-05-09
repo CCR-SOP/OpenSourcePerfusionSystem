@@ -407,8 +407,10 @@ void ADC12_A_ISR (void)
             //determine touch location can be done
             //IRQ will be re-enabled with looking for a touch
             ADC12_A_disableInterrupt(ADC12_A_BASE, TOUCH_X_PLUS_IFG);
-            //Exit active CPU
-            __bic_SR_register_on_exit(LPM0_bits);
+            // only exit the low power state if a touch detected
+            if (g_touched) {
+                __bic_SR_register_on_exit(LPM0_bits);
+            }
             break;
         case 10: break;   //Vector 10:  ADC12IFG2
         case 12: break;   //Vector 12:  ADC12IFG3
