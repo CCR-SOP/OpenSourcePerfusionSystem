@@ -7,8 +7,12 @@
 #include "Images/images.h"
 #include "SSC_I2C_Pressure.h"
 
-// Graphics
+// Touchscreen
 touch_context g_sTouchContext;
+#define TOUCHSCREEN_CHECK_MS 100
+extern bool g_touched;
+
+// Graphics
 Graphics_Context g_sContext;
 int8_t lbl_inflate[] = "Inflate";
 int8_t lbl_deflate[] = "Deflate";
@@ -26,9 +30,9 @@ bool g_inflating = false;
 bool g_deflating = false;
 bool g_change_detected = false;
 
-void timerInit(void);
-void timerStart(void);
-void timerStop(void);
+void timer_init(void);
+void timer_start(void);
+void timer_stop(void);
 
 #define PRESSURE_CHECK_MS 250
 uint16_t g_high_mpsi = 40;
@@ -52,7 +56,7 @@ void main(void)
 {
 
     init_clocks();
-    timerInit();
+    timer_init();
     ssc_init();
     init_buttons();
 
@@ -71,11 +75,11 @@ void main(void)
     draw_main_page();
 
     __bis_SR_register(GIE);
-     // Loop to detect touch
+
     int consecutive_touches = 0;
     uint16_t last_mpsi = 0, mpsi = 0;
 
-    timerStart();
+    timer_start();
     while(1)
     {
         __bis_SR_register(LPM0_bits + GIE);
@@ -85,27 +89,19 @@ void main(void)
             last_mpsi = mpsi;
         }
         if (g_cycling) {
-            if (mpsi <= g_low_mpsi) {
+            if (!g_inflating && mpsi <= g_low_mpsi) {
                 set_inflate(true);
                 set_deflate(false);
                 g_change_detected = true;
-            } else if (mpsi >= g_high_mpsi) {
+            } else if (!g_deflating && mpsi >= g_high_mpsi) {
                 set_deflate(true);
                 set_inflate(false);
                 g_change_detected = true;
             }
         }
-        touch_updateCurrentTouch(&g_sTouchContext);
-
-        if(g_sTouchContext.touch) {
-            consecutive_touches++;
-        } else {
-            consecutive_touches = 0;
-        }
-
-        if (consecutive_touches == DEBOUNCE_TOUCHES)
-        {
-
+        if (g_touched) {
+            touch_updateCurrentTouch(&g_sTouchContext);
+            g_touched = false;
             g_change_detected = true;
             if(Graphics_isButtonSelected(&btn_inflate,
                                               g_sTouchContext.x,
@@ -124,11 +120,8 @@ void main(void)
                                                    g_sTouchContext.y))
             {
                 if (g_cycling) {
-                    timerStop();
                     set_inflate(false);
                     set_deflate(false);
-                } else {
-                    timerStart();
                 }
                 g_cycling = !g_cycling;
             }
@@ -150,8 +143,9 @@ void main(void)
             } else {
                 Graphics_drawSelectedButton(&g_sContext, &btn_cycle);
             }
+            g_change_detected = false;
         }
-        g_change_detected = false;
+
 
     }
 
@@ -255,7 +249,7 @@ void configure_GPIO_pins(void)
     GPIO_setAsOutputPin(PORT_DEFLATE, PIN_DEFLATE);
 }
 
-void timerInit(void)
+void timer_init(void)
 {
     Timer_A_initContinuousModeParam initContParam = {0};
     initContParam.clockSource = TIMER_A_CLOCKSOURCE_ACLK;
@@ -265,7 +259,7 @@ void timerInit(void)
     initContParam.startTimer = false;
     Timer_A_initContinuousMode(TIMER_A1_BASE, &initContParam);
 
-    //Initialize compare mode
+    // CCR0 will be used for checking current pressure
     Timer_A_clearCaptureCompareInterrupt(TIMER_A1_BASE,
         TIMER_A_CAPTURECOMPARE_REGISTER_0
         );
@@ -277,15 +271,26 @@ void timerInit(void)
     initCompParam.compareValue = PRESSURE_CHECK_MS;
     Timer_A_initCompareMode(TIMER_A1_BASE, &initCompParam);
 
+    // CCR1 will be used for checking touchscreen
+    Timer_A_clearCaptureCompareInterrupt(TIMER_A1_BASE,
+        TIMER_A_CAPTURECOMPARE_REGISTER_1
+        );
+
+    initCompParam.compareRegister = TIMER_A_CAPTURECOMPARE_REGISTER_1;
+    initCompParam.compareInterruptEnable = TIMER_A_CAPTURECOMPARE_INTERRUPT_ENABLE;
+    initCompParam.compareOutputMode = TIMER_A_OUTPUTMODE_OUTBITVALUE;
+    initCompParam.compareValue = TOUCHSCREEN_CHECK_MS;
+    Timer_A_initCompareMode(TIMER_A1_BASE, &initCompParam);
+
 
 }
 
-void timerStart(void)
+void timer_start(void)
 {
     Timer_A_startCounter(TIMER_A1_BASE, TIMER_A_CONTINUOUS_MODE);
 }
 
-void timerStop(void)
+void timer_stop(void)
 {
     Timer_A_stop(TIMER_A1_BASE);
 }
@@ -311,11 +316,8 @@ void set_deflate(bool on)
     g_deflating = on;
 }
 
-//******************************************************************************
-//
-//This is the TIMER1_A3 interrupt vector service routine.
-//
-//******************************************************************************
+
+// Timer1_A0_VECTOR used for CCR0 only on TIMER_A1_BASE)
 #if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
 #pragma vector=TIMER1_A0_VECTOR
 __interrupt
@@ -324,16 +326,39 @@ __attribute__((interrupt(TIMER1_A0_VECTOR)))
 #endif
 void TIMER1_A0_ISR (void)
 {
-    uint16_t compVal =
-            Timer_A_getCaptureCompareCount(TIMER_A1_BASE,
-                                           TIMER_A_CAPTURECOMPARE_REGISTER_0)
-                                           + PRESSURE_CHECK_MS;
-    //Add Offset to CCR0
+    uint16_t next_compare_val;
+    next_compare_val = Timer_A_getCaptureCompareCount(
+                        TIMER_A1_BASE,
+                        TIMER_A_CAPTURECOMPARE_REGISTER_0)
+                        + PRESSURE_CHECK_MS;
     Timer_A_setCompareValue(TIMER_A1_BASE,
                             TIMER_A_CAPTURECOMPARE_REGISTER_0,
-                            compVal
-        );
+                            next_compare_val);
 
     ssc_start_read();
+    Timer_A_clearTimerInterrupt(TIMER_A1_BASE);
+}
+
+// TIMER1_A1 used for other CCR1+ interrupts on TIMER_A1_BASE
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=TIMER1_A1_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(TIMER1_A1_VECTOR)))
+#endif
+void TIMER1_A1_ISR (void)
+{
+    uint16_t next_compare_val;
+    switch (__even_in_range(TA1IV,12)) {
+    case TA1IV_TACCR1:
+        next_compare_val = Timer_A_getCaptureCompareCount(TIMER_A1_BASE,
+            TIMER_A_CAPTURECOMPARE_REGISTER_1)
+            + TOUCHSCREEN_CHECK_MS;
+        Timer_A_setCompareValue(TIMER_A1_BASE,
+                                TIMER_A_CAPTURECOMPARE_REGISTER_1,
+                                next_compare_val);
+        touch_start_adc();
+        break;
+    };
     Timer_A_clearTimerInterrupt(TIMER_A1_BASE);
 }
