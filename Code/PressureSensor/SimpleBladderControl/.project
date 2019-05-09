@@ -36,109 +36,104 @@
 			<locationURI>PARENT-1-PARENT_LOC/lib/SSC_I2C_Pressure.h</locationURI>
 		</link>
 		<link>
-			<name>adc12_a.c</name>
+			<name>driverlib/adc12_a.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/adc12_a.c</locationURI>
 		</link>
 		<link>
-			<name>button.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/grlib/button.c</locationURI>
-		</link>
-		<link>
-			<name>circle.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/grlib/circle.c</locationURI>
-		</link>
-		<link>
-			<name>context.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/grlib/context.c</locationURI>
-		</link>
-		<link>
-			<name>display.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/grlib/display.c</locationURI>
-		</link>
-		<link>
-			<name>flashctl.c</name>
+			<name>driverlib/flashctl.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/flashctl.c</locationURI>
 		</link>
 		<link>
-			<name>fontcm18.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/fonts/fontcm18.c</locationURI>
-		</link>
-		<link>
-			<name>fontcmss18.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/fonts/fontcmss18.c</locationURI>
-		</link>
-		<link>
-			<name>fontcmss20b.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/fonts/fontcmss20b.c</locationURI>
-		</link>
-		<link>
-			<name>gpio.c</name>
+			<name>driverlib/gpio.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/gpio.c</locationURI>
 		</link>
 		<link>
-			<name>line.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/grlib/line.c</locationURI>
-		</link>
-		<link>
-			<name>pmm.c</name>
+			<name>driverlib/pmm.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/pmm.c</locationURI>
 		</link>
 		<link>
-			<name>rectangle.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/grlib/rectangle.c</locationURI>
-		</link>
-		<link>
-			<name>rtc_a.c</name>
+			<name>driverlib/rtc_a.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/rtc_a.c</locationURI>
 		</link>
 		<link>
-			<name>sfr.c</name>
+			<name>driverlib/sfr.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/sfr.c</locationURI>
 		</link>
 		<link>
-			<name>string.c</name>
-			<type>1</type>
-			<locationURI>GRLIB_LOC/grlib/string.c</locationURI>
-		</link>
-		<link>
-			<name>timer_a.c</name>
+			<name>driverlib/timer_a.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/timer_a.c</locationURI>
 		</link>
 		<link>
-			<name>ucs.c</name>
+			<name>driverlib/ucs.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/ucs.c</locationURI>
 		</link>
 		<link>
-			<name>usci_b_i2c.c</name>
+			<name>driverlib/usci_b_i2c.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/usci_b_i2c.c</locationURI>
 		</link>
 		<link>
-			<name>usci_b_spi.c</name>
+			<name>driverlib/usci_b_spi.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/usci_b_spi.c</locationURI>
 		</link>
 		<link>
-			<name>wdt_a.c</name>
+			<name>driverlib/wdt_a.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/wdt_a.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/button.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/grlib/button.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/circle.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/grlib/circle.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/context.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/grlib/context.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/display.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/grlib/display.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/fontcm18.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/fonts/fontcm18.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/fontcmss20b.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/fonts/fontcmss20b.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/line.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/grlib/line.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/rectangle.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/grlib/rectangle.c</locationURI>
+		</link>
+		<link>
+			<name>grlib/string.c</name>
+			<type>1</type>
+			<locationURI>GRLIB_LOC/grlib/string.c</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>
