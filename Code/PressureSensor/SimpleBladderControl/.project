@@ -38,57 +38,57 @@
 		<link>
 			<name>driverlib/adc12_a.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/adc12_a.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/adc12_a.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/flashctl.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/flashctl.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/flashctl.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/gpio.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/gpio.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/gpio.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/pmm.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/pmm.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/pmm.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/rtc_a.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/rtc_a.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/rtc_a.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/sfr.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/sfr.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/sfr.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/timer_a.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/timer_a.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/timer_a.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/ucs.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/ucs.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/ucs.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/usci_b_i2c.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/usci_b_i2c.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/usci_b_i2c.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/usci_b_spi.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/usci_b_spi.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/usci_b_spi.c</locationURI>
 		</link>
 		<link>
 			<name>driverlib/wdt_a.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/driverlib/MSP430F5xx_6xx/wdt_a.c</locationURI>
+			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/wdt_a.c</locationURI>
 		</link>
 		<link>
 			<name>grlib/button.c</name>
