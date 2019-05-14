@@ -42,6 +42,8 @@
  */
 extern Graphics_Context g_sContext;
 
+bool g_touched = false;
+inline bool touch_is_touch(void);
 static bool touch_detectedTouch(void);
 static uint16_t touch_sampleX(void);
 static uint16_t touch_sampleY(void);
@@ -127,65 +129,51 @@ void touch_updateCurrentTouch(touch_context *data)
     float q12Ratio;
 
     /* Sample new X and Y coordinates if touch was detected. */
-    if(touch_detectedTouch())
+    data->touch = true;
+
+    /* Sample the X analog axis. */
+    adcResult = touch_sampleX();
+
+    /* Map the analog reading to the display coordinates. */
+    /* Map the ADC reading to the display coordinates. */
+    q12Ratio =
+        (float)(((float)(adcResult -
+                         touch_calibrationData.xMin)) /
+                (float)(touch_calibrationData.xMax -
+                        touch_calibrationData.xMin));
+    if(q12Ratio >= 1)
     {
-        data->touch = true;
-
-        /* Sample the X analog axis. */
-        adcResult = touch_sampleX();
-
-        /* Map the analog reading to the display coordinates. */
-        /* Map the ADC reading to the display coordinates. */
-        q12Ratio =
-            (float)(((float)(adcResult -
-                             touch_calibrationData.xMin)) /
-                    (float)(touch_calibrationData.xMax -
-                            touch_calibrationData.xMin));
-        if(q12Ratio >= 1)
-        {
-            q12Ratio = 1;
-        }
-        if(q12Ratio < 0)
-        {
-            q12Ratio = 0;
-        }
-        data->x = (uint16_t)(q12Ratio * LCD_HORIZONTAL_MAX);
-
-        /* Sample the Y analog axis. */
-        adcResult = touch_sampleY();
-
-        /* Map the ADC reading to the display coordinates. */
-        q12Ratio =
-            (float)(((float)(adcResult -
-                             touch_calibrationData.yMin)) /
-                    ((float)(touch_calibrationData.yMax -
-                             touch_calibrationData.yMin)));
-        if(q12Ratio >= 1)
-        {
-            q12Ratio = 1;
-        }
-        if(q12Ratio < 0)
-        {
-            q12Ratio = 0;
-        }
-
-        data->y = (uint16_t)(q12Ratio * LCD_VERTICAL_MAX);
+        q12Ratio = 1;
     }
-    else
+    if(q12Ratio < 0)
     {
-        data->touch = false;
-        data->x = 0xffff;
-        data->y = 0xffff;
+        q12Ratio = 0;
     }
+    data->x = (uint16_t)(q12Ratio * LCD_HORIZONTAL_MAX);
+
+    /* Sample the Y analog axis. */
+    adcResult = touch_sampleY();
+
+    /* Map the ADC reading to the display coordinates. */
+    q12Ratio =
+        (float)(((float)(adcResult -
+                         touch_calibrationData.yMin)) /
+                ((float)(touch_calibrationData.yMax -
+                         touch_calibrationData.yMin)));
+    if(q12Ratio >= 1)
+    {
+        q12Ratio = 1;
+    }
+    if(q12Ratio < 0)
+    {
+        q12Ratio = 0;
+    }
+
+    data->y = (uint16_t)(q12Ratio * LCD_VERTICAL_MAX);
 }
 
-/*
- * Returns true when a touch is detected.
- */
-static bool touch_detectedTouch(void)
+void touch_start_adc(void)
 {
-    uint16_t ui16ADCtemp;
-
     /* Set X- and Y- as output and Y+ as input (floating). */
     GPIO_setAsOutputPin(TOUCH_X_MINUS_PORT, TOUCH_X_MINUS_PIN);
     GPIO_setAsOutputPin(TOUCH_Y_MINUS_PORT, TOUCH_Y_MINUS_PIN);
@@ -199,24 +187,34 @@ static bool touch_detectedTouch(void)
     GPIO_setAsPeripheralModuleFunctionOutputPin(TOUCH_X_PLUS_PORT,
                                                 TOUCH_X_PLUS_PIN);
     ADC12_A_clearInterrupt(ADC12_A_BASE, TOUCH_X_PLUS_IFG);
+    ADC12_A_enableInterrupt(ADC12_A_BASE, TOUCH_X_PLUS_IFG);
     ADC12_A_startConversion(ADC12_A_BASE, TOUCH_X_PLUS_MEMORY,
                             ADC12_A_SINGLECHANNEL);
-    while(!ADC12_A_getInterruptStatus(ADC12_A_BASE, TOUCH_X_PLUS_IFG))
-    {
-        ;
-    }
-    ui16ADCtemp = ADC12_A_getResults(ADC12_A_BASE, TOUCH_X_PLUS_MEMORY);
 
-    /* Check if the detected touch is below the threshold. */
-    if(ui16ADCtemp < TOUCH_THRESHOLD)
-    {
-        return(true);
-    }
-    else
-    {
-        return(false);
-    }
 }
+
+inline bool touch_is_touch(void)
+{
+    uint16_t adc_counts;
+    adc_counts = ADC12_A_getResults(ADC12_A_BASE, TOUCH_X_PLUS_MEMORY);
+    return (adc_counts < TOUCH_THRESHOLD);
+}
+
+inline void touch_wait_for_adc(void)
+{
+    while(!ADC12_A_getInterruptStatus(ADC12_A_BASE, TOUCH_X_PLUS_IFG)) {};
+}
+
+/*
+ * Returns true when a touch is detected.
+ */
+inline bool touch_detectedTouch(void)
+{
+    touch_start_adc();
+    touch_wait_for_adc();
+    bool touch_detected = touch_is_touch();
+    return touch_detected;
+ }
 
 static uint16_t touch_sampleX(void)
 {
@@ -388,4 +386,45 @@ void touch_calibrate(void)
     FlashCtl_lockInfoA();
 
     Graphics_clearDisplay(&g_sContext);
+}
+
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=ADC12_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(ADC12_VECTOR)))
+#endif
+void ADC12_A_ISR (void)
+{
+    switch (__even_in_range(ADC12IV,34)){
+        case  0: break;   //Vector  0:  No interrupt
+        case  2: break;   //Vector  2:  ADC overflow
+        case  4: break;   //Vector  4:  ADC timing overflow
+        case  6: break;   //Vector  6:  ADC12IFG0
+        case  8:          //Vector  8:  ADC12IFG1
+            g_touched = touch_is_touch();
+            //disable the interrupt so further readings used to
+            //determine touch location can be done
+            //IRQ will be re-enabled with looking for a touch
+            ADC12_A_disableInterrupt(ADC12_A_BASE, TOUCH_X_PLUS_IFG);
+            // only exit the low power state if a touch detected
+            if (g_touched) {
+                __bic_SR_register_on_exit(LPM0_bits);
+            }
+            break;
+        case 10: break;   //Vector 10:  ADC12IFG2
+        case 12: break;   //Vector 12:  ADC12IFG3
+        case 14: break;   //Vector 14:  ADC12IFG4
+        case 16: break;   //Vector 16:  ADC12IFG5
+        case 18: break;   //Vector 18:  ADC12IFG6
+        case 20: break;   //Vector 20:  ADC12IFG7
+        case 22: break;   //Vector 22:  ADC12IFG8
+        case 24: break;   //Vector 24:  ADC12IFG9
+        case 26: break;   //Vector 26:  ADC12IFG10
+        case 28: break;   //Vector 28:  ADC12IFG11
+        case 30: break;   //Vector 30:  ADC12IFG12
+        case 32: break;   //Vector 32:  ADC12IFG13
+        case 34: break;   //Vector 34:  ADC12IFG14
+        default: break;
+    }
 }

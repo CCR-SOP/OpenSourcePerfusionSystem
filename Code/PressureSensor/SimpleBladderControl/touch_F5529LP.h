@@ -117,6 +117,7 @@ extern touch_context touch_currentTouch;
 /*
  * Function prototypes.
  */
+extern void touch_start_adc(void);
 extern void touch_initInterface(void);
 extern void touch_updateCurrentTouch(touch_context *data);
 extern void touch_calibrate(void);

@@ -1,10 +1,23 @@
 #include "SSC_I2C_Pressure.h"
+#include "driverlib.h"
 
-unsigned char receiveBuffer[BYTES_PER_READING] = { 0x01, 0x01, 0x01, 0x01};
-unsigned char *receiveBufferPointer;
-unsigned char receiveCount = 0;
+#define SENSOR_ADDRESS 0x28
+#define I2C_BASE USCI_B1_BASE
 
-uint16_t last_psi;
+// JWK, min/max from datasheet and Honeywell I2C (10% calibration)
+// JWK assume part SSCDANT030PG2A3
+const uint16_t SENSOR_MAX_COUNTS = 0x3999;
+const uint16_t SENSOR_MIN_COUNTS = 0x0666;
+const uint16_t SENSOR_MAX_PSI  = 30;
+const uint16_t SENSOR_MIN_PSI = 0;
+// psi/counts = (SENSOR_MAX_PSI - SENSOR_MIN_PSI) / (float)(SENSOR_MAX_COUNTS - SENSOR_MIN_COUNTS);
+// 0-30PSI, 10% - 90% 14 bit sensor (30 - 0) / (0x3999 - 0x0666)
+const float SENSOR_RATIO = 0.0022888532845044634;
+
+bool g_newread = true;
+uint8_t msb, lsb;
+uint16_t last_psi = 0;
+uint16_t convert_to_psi(uint8_t msb, uint8_t lsb);
 
 void ssc_init(void)
 {
@@ -19,7 +32,7 @@ void ssc_init(void)
     USCI_B_I2C_initMasterParam param = {0};
     param.selectClockSource = USCI_B_I2C_CLOCKSOURCE_SMCLK;
     param.i2cClk = UCS_getSMCLK();
-    param.dataRate = USCI_B_I2C_SET_DATA_RATE_400KBPS;
+    param.dataRate = USCI_B_I2C_SET_DATA_RATE_100KBPS;
     USCI_B_I2C_initMaster(I2C_BASE, &param);
 
     USCI_B_I2C_setSlaveAddress(I2C_BASE, SENSOR_ADDRESS);
@@ -33,52 +46,53 @@ void ssc_init(void)
 
 void ssc_start_read(void)
 {
-    receiveBufferPointer = (unsigned char *)receiveBuffer;
-    receiveCount = BYTES_PER_READING;
+    uint16_t tmp = convert_to_psi(msb, lsb);
+    if (tmp != 0xC0) {
+        last_psi = tmp;
+    }
+    g_newread = true;
 
     USCI_B_I2C_masterReceiveMultiByteStart(I2C_BASE);
 }
 
-bool ssc_process_byte(void)
+uint16_t convert_to_psi(uint8_t msb, uint8_t lsb)
 {
-    bool reading_complete = false;
-    receiveCount--;
+    uint16_t psi = 0xC0;
+    uint8_t status = (msb & 0xC0);
 
-    if (receiveCount){
-        if (receiveCount == 1) {
-            //Initiate end of reception -> Receive byte with NAK
-            *receiveBufferPointer++ =
-                    USCI_B_I2C_masterReceiveMultiByteFinish(I2C_BASE);
-        }
-        else {
-            //Keep receiving one byte at a time
-            *receiveBufferPointer++ = USCI_B_I2C_masterReceiveMultiByteNext(I2C_BASE);
-        }
+    if (!status) {
+        uint16_t counts = ((msb & 0x3F) << 8) | lsb;
+        float milli_psi = ((float)(counts - SENSOR_MIN_COUNTS) * 100.0 * SENSOR_RATIO + (float)SENSOR_MIN_PSI);
+        psi = (uint16_t)milli_psi;
     }
-    else {
-        //Receive last byte
-        *receiveBufferPointer = USCI_B_I2C_masterReceiveMultiByteNext(I2C_BASE);
-        last_psi = convert_to_psi();
-        reading_complete = true;
-
-    }
-
-    return reading_complete;
-
-}
-
-int convert_to_psi(void)
-{
-    uint16_t compensated = (receiveBuffer[2] << 8 ) | receiveBuffer[3];
-    compensated = compensated >> 5;
-
-    int psi = ( (compensated - SENSOR_MIN_COUNTS) * (SENSOR_MAX_PSI - SENSOR_MIN_PSI)
-               / (SENSOR_MAX_COUNTS - SENSOR_MIN_COUNTS) ) + SENSOR_MIN_PSI;
-
     return psi;
 }
 
 int ssc_get_last_psi(void)
 {
     return last_psi;
+}
+
+#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
+#pragma vector=USCI_B1_VECTOR
+__interrupt
+#elif defined(__GNUC__)
+__attribute__((interrupt(USCI_B1_VECTOR)))
+#endif
+void USCI_B1_ISR (void)
+{
+    switch (__even_in_range(UCB1IV,12)){
+        case USCI_I2C_UCRXIFG:
+        {
+            if (g_newread) {
+                msb = USCI_B_I2C_masterReceiveMultiByteFinish(I2C_BASE);
+                g_newread = false;
+            } else {
+                lsb = USCI_B_I2C_masterReceiveMultiByteNext(I2C_BASE);
+                __bic_SR_register_on_exit(LPM0_bits);
+
+            }
+            break;
+        }
+    }
 }
