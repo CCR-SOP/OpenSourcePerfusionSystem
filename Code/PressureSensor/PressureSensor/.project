@@ -36,17 +36,17 @@
 			<locationURI>DRIVERLIB_LOC/gpio.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/ucs.c</name>
+			<name>ucs.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/ucs.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/usci_b_i2c.c</name>
+			<name>usci_b_i2c.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/usci_b_i2c.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/wdt_a.c</name>
+			<name>wdt_a.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/wdt_a.c</locationURI>
 		</link>
