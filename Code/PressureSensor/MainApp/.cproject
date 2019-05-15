@@ -71,6 +71,8 @@
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.MSP430_18.12.linkerID.SEARCH_PATH.1118844740" name="Add &lt;dir&gt; to library search path (--search_path, -i)" superClass="com.ti.ccstudio.buildDefinitions.MSP430_18.12.linkerID.SEARCH_PATH" valueType="libPaths">
 									<listOptionValue builtIn="false" value="${CCS_BASE_ROOT}/msp430/include"/>
+									<listOptionValue builtIn="false" value="${GRLIB_LOC}/grlib"/>
+									<listOptionValue builtIn="false" value="${GRLIB_LOC}/fonts"/>
 									<listOptionValue builtIn="false" value="${CCS_BASE_ROOT}/msp430/lib/5xx_6xx_FRxx"/>
 									<listOptionValue builtIn="false" value="${CG_TOOL_ROOT}/lib"/>
 									<listOptionValue builtIn="false" value="${CG_TOOL_ROOT}/include"/>
@@ -94,6 +96,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="com.ti.ccstudio.buildDefinitions.MSP430.Debug.14730113.632337559" name="SSC_I2C_Pressure.c" rcbsApplicability="disable" resourcePath="SSC_I2C_Pressure.c" toolsToInvoke="com.ti.ccstudio.buildDefinitions.MSP430_18.12.exe.compilerDebug.2133543678.400552512">
+						<tool id="com.ti.ccstudio.buildDefinitions.MSP430_18.12.exe.compilerDebug.2133543678.400552512" name="MSP430 Compiler" superClass="com.ti.ccstudio.buildDefinitions.MSP430_18.12.exe.compilerDebug.2133543678"/>
+					</fileInfo>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>

@@ -28,110 +28,110 @@
 		<link>
 			<name>SSC_I2C_Pressure.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/lib/SSC_I2C_Pressure.c</locationURI>
+			<locationURI>WORKSPACE_LOC/lib/SSC_I2C_Pressure.c</locationURI>
 		</link>
 		<link>
 			<name>SSC_I2C_Pressure.h</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PARENT_LOC/lib/SSC_I2C_Pressure.h</locationURI>
+			<locationURI>WORKSPACE_LOC/lib/SSC_I2C_Pressure.h</locationURI>
 		</link>
 		<link>
-			<name>driverlib/adc12_a.c</name>
+			<name>driverlib_loc/adc12_a.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/adc12_a.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/flashctl.c</name>
+			<name>driverlib_loc/flashctl.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/flashctl.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/gpio.c</name>
+			<name>driverlib_loc/gpio.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/gpio.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/pmm.c</name>
+			<name>driverlib_loc/pmm.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/pmm.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/rtc_a.c</name>
+			<name>driverlib_loc/rtc_a.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/rtc_a.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/sfr.c</name>
+			<name>driverlib_loc/sfr.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/sfr.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/timer_a.c</name>
+			<name>driverlib_loc/timer_a.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/timer_a.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/ucs.c</name>
+			<name>driverlib_loc/ucs.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/ucs.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/usci_b_i2c.c</name>
+			<name>driverlib_loc/usci_b_i2c.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/usci_b_i2c.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/usci_b_spi.c</name>
+			<name>driverlib_loc/usci_b_spi.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/usci_b_spi.c</locationURI>
 		</link>
 		<link>
-			<name>driverlib/wdt_a.c</name>
+			<name>driverlib_loc/wdt_a.c</name>
 			<type>1</type>
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/wdt_a.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/button.c</name>
+			<name>grlib_local/button.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/button.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/circle.c</name>
+			<name>grlib_local/circle.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/circle.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/context.c</name>
+			<name>grlib_local/context.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/context.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/display.c</name>
+			<name>grlib_local/display.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/display.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/fontcm18.c</name>
+			<name>grlib_local/fontcm18.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/fonts/fontcm18.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/fontcmss20b.c</name>
+			<name>grlib_local/fontcmss20b.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/fonts/fontcmss20b.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/line.c</name>
+			<name>grlib_local/line.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/line.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/rectangle.c</name>
+			<name>grlib_local/rectangle.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/rectangle.c</locationURI>
 		</link>
 		<link>
-			<name>grlib/string.c</name>
+			<name>grlib_local/string.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/string.c</locationURI>
 		</link>
