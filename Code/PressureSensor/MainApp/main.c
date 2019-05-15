@@ -4,8 +4,8 @@
 #include "driverlib.h"
 #include "touch_F5529LP.h"
 #include "LcdDriver/kitronix320x240x16_ssd2119_spi.h"
-#include "Images/images.h"
 #include "SSC_I2C_Pressure.h"
+#include "gui/gui.h"
 
 // Touchscreen
 touch_context g_sTouchContext;
@@ -14,15 +14,6 @@ extern bool g_touched;
 
 // Graphics
 Graphics_Context g_sContext;
-int8_t lbl_inflate[] = "Inflate";
-int8_t lbl_deflate[] = "Deflate";
-int8_t lbl_cycle[] = "Cycle";
-
-#define DEBOUNCE_TOUCHES 1
-Graphics_Button btn_inflate;
-Graphics_Button btn_deflate;
-Graphics_Button btn_cycle;
-
 
 // Pressure control
 bool g_cycling = false;
@@ -38,11 +29,7 @@ void timer_stop(void);
 uint16_t g_high_mpsi = 40;
 uint16_t g_low_mpsi = 8;
 
-void Delay();
 void init_clocks(void);
-void draw_main_page(void);
-void draw_psi(uint16_t psi);
-void init_buttons(void);
 void set_inflate(bool on);
 void set_deflate(bool on);
 void configure_GPIO_pins(void);
@@ -58,7 +45,7 @@ void main(void)
     init_clocks();
     timer_init();
     ssc_init();
-    init_buttons();
+    gui_init();
 
     // LCD setup using Graphics Library API calls
     Kitronix320x240x16_SSD2119Init();
@@ -67,16 +54,12 @@ void main(void)
     Graphics_setFont(&g_sContext, &g_sFontCmss20b);
     Graphics_clearDisplay(&g_sContext);
 
-    //
     touch_initInterface();
 
     configure_GPIO_pins();
 
-    draw_main_page();
-
     __bis_SR_register(GIE);
 
-    int consecutive_touches = 0;
     uint16_t last_mpsi = 0, mpsi = 0;
 
     timer_start();
@@ -85,7 +68,7 @@ void main(void)
         __bis_SR_register(LPM0_bits + GIE);
         mpsi = ssc_get_last_psi();
         if (mpsi != last_mpsi) {
-            draw_psi(mpsi);
+            gui_update_mpsi(mpsi);
             last_mpsi = mpsi;
         }
         if (g_cycling) {
@@ -103,111 +86,27 @@ void main(void)
             touch_updateCurrentTouch(&g_sTouchContext);
             g_touched = false;
             g_change_detected = true;
-            if(Graphics_isButtonSelected(&btn_inflate,
-                                              g_sTouchContext.x,
-                                              g_sTouchContext.y))
+            if(gui_is_inflate(g_sTouchContext.x, g_sTouchContext.y))
             {
                 set_inflate(!g_inflating);
+                gui_toggle_inflate();
             }
-            else if(Graphics_isButtonSelected(&btn_deflate,
-                                                   g_sTouchContext.x,
-                                                   g_sTouchContext.y))
+            else if(gui_is_deflate(g_sTouchContext.x, g_sTouchContext.y))
             {
                 set_deflate(!g_deflating);
+                gui_toggle_deflate();
             }
-            else if(Graphics_isButtonSelected(&btn_cycle,
-                                                   g_sTouchContext.x,
-                                                   g_sTouchContext.y))
+            else if(gui_is_cycle(g_sTouchContext.x, g_sTouchContext.y))
             {
                 if (g_cycling) {
                     set_inflate(false);
                     set_deflate(false);
                 }
                 g_cycling = !g_cycling;
+                gui_toggle_cycle();
             }
-
         }
-        if (g_change_detected) {
-            if (g_inflating) {
-                Graphics_drawButton(&g_sContext, &btn_inflate);
-            } else {
-                Graphics_drawSelectedButton(&g_sContext, &btn_inflate);
-            }
-            if (g_deflating) {
-                Graphics_drawButton(&g_sContext, &btn_deflate);
-            } else {
-                Graphics_drawSelectedButton(&g_sContext, &btn_deflate);
-            }
-            if (g_cycling) {
-                Graphics_drawButton(&g_sContext, &btn_cycle);
-            } else {
-                Graphics_drawSelectedButton(&g_sContext, &btn_cycle);
-            }
-            g_change_detected = false;
-        }
-
-
     }
-
-}
-
-void create_button(Graphics_Button* btn, int x, int y, int w, int h, int8_t* lbl)
-{
-    btn->xMin = x;
-    btn->xMax = x + w;
-    btn->yMin = y;
-    btn->yMax = y + h;
-
-    btn->borderWidth = 1;
-    btn->selected = false;
-    btn->fillColor = GRAPHICS_COLOR_RED;
-    btn->borderColor = GRAPHICS_COLOR_RED;
-    btn->selectedColor = GRAPHICS_COLOR_BLACK;
-    btn->textColor = GRAPHICS_COLOR_BLACK;
-    btn->selectedTextColor = GRAPHICS_COLOR_RED;
-
-    btn->textXPos = btn->xMin + 20;
-    btn->textYPos = btn->yMin + 15;
-    btn->text = lbl;
-    btn->font = &g_sFontCm18;
-}
-
-void init_buttons(void)
-{
-    int x = 40, width = 100, y = 60, height = 60;
-    create_button(&btn_inflate, x, y, width, height, lbl_inflate);
-    create_button(&btn_deflate, x + width + 10, y, width, height, lbl_deflate);
-    create_button(&btn_cycle, x, y + height + 10, width, height, lbl_cycle);
-}
-
-void draw_psi(uint16_t psi)
-{
-    char psi_str[7];
-    snprintf(psi_str, 7, "%6d", psi);
-    Graphics_setForegroundColor(&g_sContext, GRAPHICS_COLOR_RED);
-    Graphics_setBackgroundColor(&g_sContext, GRAPHICS_COLOR_BLACK);
-    Graphics_drawString(&g_sContext, (int8_t*)psi_str, -1,
-                        btn_cycle.xMax + 50,
-                        btn_cycle.yMin + 20,
-                        OPAQUE_TEXT);
-}
-
-void draw_main_page(void)
-{
-    Graphics_setForegroundColor(&g_sContext, GRAPHICS_COLOR_RED);
-    Graphics_setBackgroundColor(&g_sContext, GRAPHICS_COLOR_BLACK);
-    Graphics_clearDisplay(&g_sContext);
-    Graphics_drawStringCentered(&g_sContext, "Bladder Control",
-                                AUTO_STRING_LENGTH,
-                                159,
-                                20,
-                                TRANSPARENT_TEXT);
-
-
-
-    Graphics_drawSelectedButton(&g_sContext, &btn_inflate);
-    Graphics_drawSelectedButton(&g_sContext, &btn_deflate);
-    Graphics_drawSelectedButton(&g_sContext, &btn_cycle);
 
 }
 
