@@ -25,8 +25,8 @@ static const uint32_t g_color_btntext_selected = GRAPHICS_COLOR_RED;
 #define BTN_FONT g_sFontCm18
 static const uint32_t g_color_btnborder = GRAPHICS_COLOR_WHITE;
 static const uint8_t g_border_width = 1;
-static const uint8_t g_btn_height = 10;
-static const uint8_t g_btn_width = 40;
+static const uint8_t g_btn_height = 60;
+static const uint8_t g_btn_width = 100;
 
 static const int g_display_border = 5;
 
@@ -99,8 +99,8 @@ static void create_button(Graphics_Button* btn, int x, int y,
     // text_len will not be accurate for fonts with different
     // width characters
     int text_width = Graphics_getStringWidth(&g_sContext, lbl, strlen((const char*)lbl));
-    btn->textXPos = (w - text_width) / 2;
-    btn->textYPos = (h - BTN_FONT.height) / 2;
+    btn->textXPos = (w - text_width) / 2 + btn->xMin;
+    btn->textYPos = (h - BTN_FONT.height) / 2 + btn->yMin;
 }
 
 static void init_buttons(void)
@@ -168,6 +168,7 @@ void gui_switch_to_main(void)
     g_panel.btn_ur = &btn_config;
     g_panel.btn_ll = &btn_inflate;
 
+    gui_display();
 }
 
 void gui_switch_to_config(void)
@@ -179,7 +180,9 @@ void gui_switch_to_config(void)
     g_panel.btn_ll = &btn_minus;
 
     g_panel.btn_ur = &btn_main;
-    g_panel.btn_ll = &btn_highlow;
+    g_panel.btn_lr = &btn_highlow;
+
+    gui_display();
 
 }
 
@@ -235,6 +238,7 @@ void gui_toggle_button(BUTTON_LOC_T loc)
     default:
         assert("ILLEGAL BUTTON TOGGLE");
     }
+    btn->selected = !(btn->selected);
     Graphics_drawButton(&g_sContext, btn);
 }
 
@@ -281,6 +285,6 @@ bool gui_is_highlow(int x, int y) {
 }
 
 bool gui_is_main(int x, int y) {
-    return (g_panel.mode == MAIN && is_button(&btn_main, x, y));
+    return (g_panel.mode == CONFIG && is_button(&btn_main, x, y));
 }
 

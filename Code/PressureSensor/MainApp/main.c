@@ -41,11 +41,12 @@ const uint16_t PIN_DEFLATE = GPIO_PIN5;
 
 void main(void)
 {
+    uint16_t last_mpsi = 0, mpsi = 0;
 
     init_clocks();
     timer_init();
     ssc_init();
-    gui_init();
+    configure_GPIO_pins();
 
     // LCD setup using Graphics Library API calls
     Kitronix320x240x16_SSD2119Init();
@@ -53,15 +54,12 @@ void main(void)
     Graphics_setBackgroundColor(&g_sContext, GRAPHICS_COLOR_BLACK);
     Graphics_setFont(&g_sContext, &g_sFontCmss20b);
     Graphics_clearDisplay(&g_sContext);
-
     touch_initInterface();
-
-    configure_GPIO_pins();
 
     __bis_SR_register(GIE);
 
-    uint16_t last_mpsi = 0, mpsi = 0;
-
+    gui_init();
+    gui_display();
     timer_start();
     while(1)
     {
@@ -104,6 +102,14 @@ void main(void)
                 }
                 g_cycling = !g_cycling;
                 gui_toggle_cycle();
+            }
+            else if(gui_is_config(g_sTouchContext.x, g_sTouchContext.y))
+            {
+                gui_switch_to_config();
+            }
+            else if(gui_is_main(g_sTouchContext.x, g_sTouchContext.y))
+            {
+                gui_switch_to_main();
             }
         }
     }
