@@ -76,7 +76,6 @@ void main(void)
 
     __bis_SR_register(GIE);
 
-    int consecutive_touches = 0;
     uint16_t last_mpsi = 0, mpsi = 0;
 
     timer_start();
