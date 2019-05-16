@@ -427,34 +427,37 @@ Source: &lt;a href="http://www.panasonic-electric-works.com/catalogues/downloads
 <description>&lt;b&gt;https://componentsearchengine.com&lt;/b&gt;&lt;p&gt;
 &lt;author&gt;Created by SamacSys&lt;/author&gt;</description>
 <packages>
-<package name="DIP1330W46P254L1000H1375Q8N">
-<description>&lt;b&gt;DIP AN&lt;/b&gt;&lt;br&gt;
+<package name="SOP254P1330X598-8N">
+<description>&lt;b&gt;RN&lt;/b&gt;&lt;br&gt;
 </description>
-<pad name="1" x="-6.65" y="3.81" drill="0.66" diameter="1.06" shape="square"/>
-<pad name="2" x="-6.65" y="1.27" drill="0.66" diameter="1.06"/>
-<pad name="3" x="-6.65" y="-1.27" drill="0.66" diameter="1.06"/>
-<pad name="4" x="-6.65" y="-3.81" drill="0.66" diameter="1.06"/>
-<pad name="5" x="6.65" y="-3.81" drill="0.66" diameter="1.06"/>
-<pad name="6" x="6.65" y="-1.27" drill="0.66" diameter="1.06"/>
-<pad name="7" x="6.65" y="1.27" drill="0.66" diameter="1.06"/>
-<pad name="8" x="6.65" y="3.81" drill="0.66" diameter="1.06"/>
+<smd name="1" x="-5.625" y="3.81" dx="2.95" dy="1.4" layer="1"/>
+<smd name="2" x="-5.625" y="1.27" dx="2.95" dy="1.4" layer="1"/>
+<smd name="3" x="-5.625" y="-1.27" dx="2.95" dy="1.4" layer="1"/>
+<smd name="4" x="-5.625" y="-3.81" dx="2.95" dy="1.4" layer="1"/>
+<smd name="5" x="5.625" y="-3.81" dx="2.95" dy="1.4" layer="1"/>
+<smd name="6" x="5.625" y="-1.27" dx="2.95" dy="1.4" layer="1"/>
+<smd name="7" x="5.625" y="1.27" dx="2.95" dy="1.4" layer="1"/>
+<smd name="8" x="5.625" y="3.81" dx="2.95" dy="1.4" layer="1"/>
 <text x="0" y="0" size="1.27" layer="25" align="center">&gt;NAME</text>
 <text x="0" y="0" size="1.27" layer="27" align="center">&gt;VALUE</text>
-<wire x1="-7.43" y1="5.25" x2="7.43" y2="5.25" width="0.05" layer="51"/>
-<wire x1="7.43" y1="5.25" x2="7.43" y2="-5.25" width="0.05" layer="51"/>
-<wire x1="7.43" y1="-5.25" x2="-7.43" y2="-5.25" width="0.05" layer="51"/>
-<wire x1="-7.43" y1="-5.25" x2="-7.43" y2="5.25" width="0.05" layer="51"/>
-<wire x1="-3.495" y1="5" x2="3.495" y2="5" width="0.1" layer="51"/>
-<wire x1="3.495" y1="5" x2="3.495" y2="-5" width="0.1" layer="51"/>
-<wire x1="3.495" y1="-5" x2="-3.495" y2="-5" width="0.1" layer="51"/>
-<wire x1="-3.495" y1="-5" x2="-3.495" y2="5" width="0.1" layer="51"/>
-<wire x1="-3.495" y1="3.73" x2="-2.225" y2="5" width="0.1" layer="51"/>
-<wire x1="-7.18" y1="5" x2="3.495" y2="5" width="0.2" layer="21"/>
-<wire x1="-3.495" y1="-5" x2="3.495" y2="-5" width="0.2" layer="21"/>
+<wire x1="-7.35" y1="5.3" x2="7.35" y2="5.3" width="0.05" layer="51"/>
+<wire x1="7.35" y1="5.3" x2="7.35" y2="-5.3" width="0.05" layer="51"/>
+<wire x1="7.35" y1="-5.3" x2="-7.35" y2="-5.3" width="0.05" layer="51"/>
+<wire x1="-7.35" y1="-5.3" x2="-7.35" y2="5.3" width="0.05" layer="51"/>
+<wire x1="-3.5" y1="5.05" x2="3.5" y2="5.05" width="0.1" layer="51"/>
+<wire x1="3.5" y1="5.05" x2="3.5" y2="-5.05" width="0.1" layer="51"/>
+<wire x1="3.5" y1="-5.05" x2="-3.5" y2="-5.05" width="0.1" layer="51"/>
+<wire x1="-3.5" y1="-5.05" x2="-3.5" y2="5.05" width="0.1" layer="51"/>
+<wire x1="-3.5" y1="2.51" x2="-0.96" y2="5.05" width="0.1" layer="51"/>
+<wire x1="-3.8" y1="5.05" x2="3.8" y2="5.05" width="0.2" layer="21"/>
+<wire x1="3.8" y1="5.05" x2="3.8" y2="-5.05" width="0.2" layer="21"/>
+<wire x1="3.8" y1="-5.05" x2="-3.8" y2="-5.05" width="0.2" layer="21"/>
+<wire x1="-3.8" y1="-5.05" x2="-3.8" y2="5.05" width="0.2" layer="21"/>
+<wire x1="-7.1" y1="4.86" x2="-4.15" y2="4.86" width="0.2" layer="21"/>
 </package>
 </packages>
 <symbols>
-<symbol name="SSCDANT030PG2A3">
+<symbol name="SSCMRNN015PA3A3">
 <wire x1="5.08" y1="2.54" x2="27.94" y2="2.54" width="0.254" layer="94"/>
 <wire x1="27.94" y1="-10.16" x2="27.94" y2="2.54" width="0.254" layer="94"/>
 <wire x1="27.94" y1="-10.16" x2="5.08" y2="-10.16" width="0.254" layer="94"/>
@@ -472,14 +475,14 @@ Source: &lt;a href="http://www.panasonic-electric-works.com/catalogues/downloads
 </symbol>
 </symbols>
 <devicesets>
-<deviceset name="SSCDANT030PG2A3" prefix="U">
-<description>&lt;b&gt;Board Mount Pressure Sensors DIP,Single Ax Barbed Gage, 3.3V&lt;/b&gt;&lt;p&gt;
-Source: &lt;a href="https://componentsearchengine.com/Datasheets/1/SSCDANT030PG2A3.pdf"&gt; Datasheet &lt;/a&gt;</description>
+<deviceset name="SSCMRNN015PA3A3" prefix="U">
+<description>&lt;b&gt;Board Mount Pressure Sensors SMT, Sing Rad Barbed Absolute, 3.3V&lt;/b&gt;&lt;p&gt;
+Source: &lt;a href="https://componentsearchengine.com/Datasheets/1/SSCMRNN015PA3A3.pdf"&gt; Datasheet &lt;/a&gt;</description>
 <gates>
-<gate name="G$1" symbol="SSCDANT030PG2A3" x="0" y="0"/>
+<gate name="G$1" symbol="SSCMRNN015PA3A3" x="0" y="0"/>
 </gates>
 <devices>
-<device name="" package="DIP1330W46P254L1000H1375Q8N">
+<device name="" package="SOP254P1330X598-8N">
 <connects>
 <connect gate="G$1" pin="GND" pad="1"/>
 <connect gate="G$1" pin="NC_1" pad="5"/>
@@ -492,10 +495,10 @@ Source: &lt;a href="https://componentsearchengine.com/Datasheets/1/SSCDANT030PG2
 </connects>
 <technologies>
 <technology name="">
-<attribute name="DESCRIPTION" value="Board Mount Pressure Sensors DIP,Single Ax Barbed Gage, 3.3V" constant="no"/>
-<attribute name="HEIGHT" value="13.75mm" constant="no"/>
+<attribute name="DESCRIPTION" value="Board Mount Pressure Sensors SMT, Sing Rad Barbed Absolute, 3.3V" constant="no"/>
+<attribute name="HEIGHT" value="5.98mm" constant="no"/>
 <attribute name="MANUFACTURER_NAME" value="Honeywell" constant="no"/>
-<attribute name="MANUFACTURER_PART_NUMBER" value="SSCDANT030PG2A3" constant="no"/>
+<attribute name="MANUFACTURER_PART_NUMBER" value="SSCMRNN015PA3A3" constant="no"/>
 <attribute name="MOUSER_PART_NUMBER" value="" constant="no"/>
 <attribute name="MOUSER_PRICE-STOCK" value="" constant="no"/>
 <attribute name="RS_PART_NUMBER" value="" constant="no"/>
@@ -5214,7 +5217,6 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <parts>
 <part name="K1" library="relay" library_urn="urn:adsk.eagle:library:339" deviceset="AQV*" device="SMD" package3d_urn="urn:adsk.eagle:package:24363/1" technology="21"/>
 <part name="K2" library="relay" library_urn="urn:adsk.eagle:library:339" deviceset="AQV*" device="SMD" package3d_urn="urn:adsk.eagle:package:24363/1" technology="21"/>
-<part name="U1" library="SamacSys_Parts" deviceset="SSCDANT030PG2A3" device=""/>
 <part name="J1" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-2X10" device="" package3d_urn="urn:adsk.eagle:package:22405/2"/>
 <part name="J5" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-2X10" device="" package3d_urn="urn:adsk.eagle:package:22405/2"/>
 <part name="JP1" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-1X2" device="/90" package3d_urn="urn:adsk.eagle:package:22437/2" value="RelayPower"/>
@@ -5222,6 +5224,7 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <part name="JP3" library="pinhead" library_urn="urn:adsk.eagle:library:325" deviceset="PINHD-1X2" device="/90" package3d_urn="urn:adsk.eagle:package:22437/2" value="DeflateRelay"/>
 <part name="R1" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="M1206" package3d_urn="urn:adsk.eagle:package:26088/1" value="1k"/>
 <part name="R2" library="resistor" library_urn="urn:adsk.eagle:library:348" deviceset="R-US_" device="M1206" package3d_urn="urn:adsk.eagle:package:26088/1" value="1k"/>
+<part name="U2" library="SamacSys_Parts" deviceset="SSCMRNN015PA3A3" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -5244,10 +5247,6 @@ P2.7 - (LCD_SDC)</text>
 <instance part="K2" gate="G$1" x="114.3" y="53.34" smashed="yes">
 <attribute name="NAME" x="106.68" y="62.23" size="1.778" layer="95" font="vector"/>
 <attribute name="VALUE" x="106.68" y="42.672" size="1.778" layer="96" font="vector"/>
-</instance>
-<instance part="U1" gate="G$1" x="66.04" y="86.36" smashed="yes">
-<attribute name="NAME" x="74.93" y="93.98" size="1.778" layer="95" align="center-left"/>
-<attribute name="VALUE" x="74.93" y="91.44" size="1.778" layer="96" align="center-left"/>
 </instance>
 <instance part="J1" gate="A" x="35.56" y="15.24" smashed="yes">
 <attribute name="NAME" x="29.21" y="28.575" size="1.778" layer="95"/>
@@ -5277,6 +5276,10 @@ P2.7 - (LCD_SDC)</text>
 <attribute name="NAME" x="31.5214" y="80.01" size="1.778" layer="95" rot="R90"/>
 <attribute name="VALUE" x="36.322" y="80.01" size="1.778" layer="96" rot="R90"/>
 </instance>
+<instance part="U2" gate="G$1" x="66.04" y="86.36" smashed="yes">
+<attribute name="NAME" x="95.25" y="93.98" size="1.778" layer="95" align="center-left"/>
+<attribute name="VALUE" x="95.25" y="91.44" size="1.778" layer="96" align="center-left"/>
+</instance>
 </instances>
 <busses>
 </busses>
@@ -5289,9 +5292,8 @@ P2.7 - (LCD_SDC)</text>
 <junction x="33.02" y="25.4"/>
 </segment>
 <segment>
-<pinref part="U1" gate="G$1" pin="VSUPPLY"/>
-<wire x1="66.04" y1="83.82" x2="45.72" y2="83.82" width="0.1524" layer="91"/>
 <label x="53.34" y="83.82" size="1.778" layer="95"/>
+<wire x1="66.04" y1="83.82" x2="45.72" y2="83.82" width="0.1524" layer="91"/>
 <wire x1="45.72" y1="83.82" x2="45.72" y2="91.44" width="0.1524" layer="91"/>
 <pinref part="R2" gate="G$1" pin="2"/>
 <wire x1="33.02" y1="88.9" x2="33.02" y2="91.44" width="0.1524" layer="91"/>
@@ -5300,6 +5302,7 @@ P2.7 - (LCD_SDC)</text>
 <wire x1="45.72" y1="91.44" x2="40.64" y2="91.44" width="0.1524" layer="91"/>
 <junction x="40.64" y="91.44"/>
 <junction x="33.02" y="88.9"/>
+<pinref part="U2" gate="G$1" pin="VSUPPLY"/>
 <junction x="66.04" y="83.82"/>
 </segment>
 </net>
@@ -5325,9 +5328,9 @@ P2.7 - (LCD_SDC)</text>
 <junction x="93.98" y="25.4"/>
 </segment>
 <segment>
-<pinref part="U1" gate="G$1" pin="GND"/>
 <wire x1="66.04" y1="86.36" x2="50.8" y2="86.36" width="0.1524" layer="91"/>
 <label x="53.34" y="86.36" size="1.778" layer="95"/>
+<pinref part="U2" gate="G$1" pin="GND"/>
 <junction x="66.04" y="86.36"/>
 </segment>
 <segment>
@@ -5369,11 +5372,11 @@ P2.7 - (LCD_SDC)</text>
 <junction x="33.02" y="2.54"/>
 </segment>
 <segment>
-<pinref part="U1" gate="G$1" pin="SDA"/>
 <wire x1="66.04" y1="81.28" x2="40.64" y2="81.28" width="0.1524" layer="91"/>
 <label x="53.34" y="81.28" size="1.778" layer="95"/>
 <pinref part="R1" gate="G$1" pin="1"/>
 <junction x="40.64" y="81.28"/>
+<pinref part="U2" gate="G$1" pin="SDA"/>
 <junction x="66.04" y="81.28"/>
 </segment>
 </net>
@@ -5413,11 +5416,11 @@ P2.7 - (LCD_SDC)</text>
 <junction x="33.02" y="5.08"/>
 </segment>
 <segment>
-<pinref part="U1" gate="G$1" pin="SCL"/>
 <label x="53.34" y="78.74" size="1.778" layer="95"/>
 <pinref part="R2" gate="G$1" pin="1"/>
 <wire x1="33.02" y1="78.74" x2="66.04" y2="78.74" width="0.1524" layer="91"/>
 <junction x="33.02" y="78.74"/>
+<pinref part="U2" gate="G$1" pin="SCL"/>
 <junction x="66.04" y="78.74"/>
 </segment>
 </net>
