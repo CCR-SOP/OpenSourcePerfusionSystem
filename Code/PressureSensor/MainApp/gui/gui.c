@@ -61,12 +61,10 @@ static Button btn_highlow;
 Text_t lbl_high[] = "High";
 Text_t lbl_low[] = "Low";
 static Button btn_main;
-Text_t lbl_main[] = "Main";
+Text_t lbl_main[] = "Control";
 static Text_t panel_title_config[] = "Configuration";
 
 typedef struct {
-    Button *btn_title;
-    Button *btn_subtitle;
     Button *btn_ur;
     Button *btn_lr;
     Button *btn_ul;
@@ -114,10 +112,16 @@ static void init_buttons(void)
 
 
     // title button is not really a button, but convenient to use
-    create_button(&btn_title, 0, 0,
-                  display_w, TITLE_FONT.height, lbl_title);
-    create_button(&btn_subtitle, 0, btn_title.yMax + 1,
-                  display_w, SUBTITLE_FONT.height, "Control");
+    create_button(&btn_title, g_display_border, g_display_border,
+                  display_w - 2 * g_display_border, TITLE_FONT.height, lbl_title);
+    btn_title.fillColor = GRAPHICS_COLOR_BLACK;
+    btn_title.textColor = GRAPHICS_COLOR_WHITE;
+    btn_title.borderWidth = 0;
+    create_button(&btn_subtitle, btn_title.xMin, btn_title.yMax + 1,
+                  btn_title.xMax - btn_title.xMin, SUBTITLE_FONT.height, "Control");
+    btn_subtitle.fillColor = GRAPHICS_COLOR_BLACK;
+    btn_subtitle.textColor = GRAPHICS_COLOR_WHITE;
+    btn_subtitle.borderWidth = 0;
 
     // control buttons
     int col1_x = g_display_border;
@@ -214,8 +218,8 @@ void gui_display(void)
 {
 
     gui_update_mpsi();
-    Graphics_drawButton(&g_sContext, g_panel.btn_title);
-    Graphics_drawButton(&g_sContext, g_panel.btn_subtitle);
+    Graphics_drawButton(&g_sContext, &btn_title);
+    Graphics_drawButton(&g_sContext, &btn_subtitle);
 
     Graphics_drawButton(&g_sContext, g_panel.btn_ul);
     Graphics_drawButton(&g_sContext, g_panel.btn_ml);
