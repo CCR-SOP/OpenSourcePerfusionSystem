@@ -117,11 +117,14 @@ static void init_buttons(void)
     btn_title.fillColor = GRAPHICS_COLOR_BLACK;
     btn_title.textColor = GRAPHICS_COLOR_WHITE;
     btn_title.borderWidth = 0;
+    btn_title.borderColor = btn_title.fillColor;
+
     create_button(&btn_subtitle, btn_title.xMin, btn_title.yMax + 1,
                   btn_title.xMax - btn_title.xMin, SUBTITLE_FONT.height, "Control");
     btn_subtitle.fillColor = GRAPHICS_COLOR_BLACK;
     btn_subtitle.textColor = GRAPHICS_COLOR_WHITE;
     btn_subtitle.borderWidth = 0;
+    btn_subtitle.borderColor = btn_subtitle.fillColor;
 
     // control buttons
     int col1_x = g_display_border;
@@ -136,6 +139,11 @@ static void init_buttons(void)
                   g_btn_width, g_btn_height, lbl_cyclectrl);
     create_button(&btn_mpsi, col1_x, row_mid_y,
                   g_btn_width, g_btn_height, lbl_mpsi);
+    btn_mpsi.fillColor = GRAPHICS_COLOR_BLACK;
+    btn_mpsi.textColor = GRAPHICS_COLOR_WHITE;
+    btn_mpsi.borderWidth = 0;
+    btn_mpsi.borderColor = btn_mpsi.fillColor;
+
     create_button(&btn_inflate, col1_x, row_bot_y,
                   g_btn_width, g_btn_height, lbl_inflate);
 
@@ -147,8 +155,7 @@ static void init_buttons(void)
     // Config panel
     create_button(&btn_plus, col1_x, row_top_y,
                   g_btn_width, g_btn_height, lbl_plus);
-    create_button(&btn_mpsi, col1_x, row_mid_y,
-                  g_btn_width, g_btn_height, lbl_mpsi);
+    // btn_mpsi will be reused for the config panel
     create_button(&btn_minus, col1_x, row_bot_y,
                   g_btn_width, g_btn_height, lbl_minus);
 

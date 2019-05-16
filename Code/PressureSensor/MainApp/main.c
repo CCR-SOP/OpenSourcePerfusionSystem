@@ -70,7 +70,10 @@ void main(void)
         __bis_SR_register(LPM0_bits + GIE);
         g_mpsi = ssc_get_last_psi();
         if (g_mpsi != last_mpsi) {
-            gui_update_mpsi();
+            if (gui_is_mode_main()) {
+                // only update mpsi if on main panel
+                gui_update_mpsi();
+            }
             last_mpsi = g_mpsi;
         }
         if (g_cycling) {
