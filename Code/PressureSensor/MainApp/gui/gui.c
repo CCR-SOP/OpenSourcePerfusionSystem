@@ -5,18 +5,20 @@
 #include "grlib.h"
 #include "button.h"
 
+extern Graphics_Context g_sContext;
+extern uint16_t g_high_mpsi;
+extern uint16_t g_low_mpsi;
+extern uint16_t g_mpsi;
 
 typedef enum {
     MAIN,
     CONFIG
 } PANEL_MODE_T;
 
-typedef int8_t Text_t;
 typedef Graphics_Button Button;
+typedef int8_t Text_t;
 
 bool is_button(Button* btn, int x, int y);
-
-extern Graphics_Context g_sContext;
 
 static const uint32_t g_color_btnfill_normal = GRAPHICS_COLOR_RED;
 static const uint32_t g_color_btnfill_selected = GRAPHICS_COLOR_GREEN;
@@ -75,8 +77,9 @@ typedef struct {
 
 static PANEL_T g_panel;
 
+static void toggle_button(Button* btn);
 
-static void create_button(Graphics_Button* btn, int x, int y,
+static void create_button(Button* btn, int x, int y,
                           int w, int h,
                           int8_t* lbl)
 {
@@ -85,7 +88,6 @@ static void create_button(Graphics_Button* btn, int x, int y,
     btn->yMin = y;
     btn->yMax = y + h;
 
-    btn->selected = false;
     btn->borderWidth = g_border_width;
     btn->borderColor = g_color_btnborder;
     btn->fillColor = g_color_btnfill_normal;
@@ -93,7 +95,9 @@ static void create_button(Graphics_Button* btn, int x, int y,
     btn->textColor = g_color_btntext_normal;
     btn->selectedTextColor = g_color_btntext_selected;
 
+    btn->selected = false;
     btn->text = lbl;
+
     btn->font = &BTN_FONT;
 
     // text_len will not be accurate for fonts with different
@@ -113,7 +117,7 @@ static void init_buttons(void)
     create_button(&btn_title, 0, 0,
                   display_w, TITLE_FONT.height, lbl_title);
     create_button(&btn_subtitle, 0, btn_title.yMax + 1,
-                  display_w, SUBTITLE_FONT.height, "");
+                  display_w, SUBTITLE_FONT.height, "Control");
 
     // control buttons
     int col1_x = g_display_border;
@@ -157,6 +161,26 @@ void gui_init(void)
     gui_switch_to_main();
 }
 
+inline bool gui_is_mode_config(void)
+{
+    return (g_panel.mode == CONFIG);
+}
+
+inline bool gui_is_mode_main(void)
+{
+    return (g_panel.mode == MAIN);
+}
+
+inline bool gui_is_highmode(void)
+{
+    return (!btn_highlow.selected);
+}
+
+inline bool gui_is_lowmode(void)
+{
+    return (btn_highlow.selected);
+}
+
 void gui_switch_to_main(void)
 {
     g_panel.mode = MAIN;
@@ -188,6 +212,8 @@ void gui_switch_to_config(void)
 
 void gui_display(void)
 {
+
+    gui_update_mpsi();
     Graphics_drawButton(&g_sContext, g_panel.btn_title);
     Graphics_drawButton(&g_sContext, g_panel.btn_subtitle);
 
@@ -199,55 +225,58 @@ void gui_display(void)
     Graphics_drawButton(&g_sContext, g_panel.btn_lr);
 
 
+
 }
 
 void gui_toggle_inflate(void)
 {
-    gui_toggle_button(LL);
+    toggle_button(&btn_inflate);
 }
 
 void gui_toggle_deflate(void)
 {
-    gui_toggle_button(LR);
+    toggle_button(&btn_deflate);
 }
 
 void gui_toggle_cycle(void)
 {
-    gui_toggle_button(UL);
+    toggle_button(&btn_cyclectrl);
 }
 
-void gui_toggle_button(BUTTON_LOC_T loc)
+void gui_toggle_highlow(void)
 {
-    Button* btn;
-    switch(loc) {
-    case UR:
-        btn = g_panel.btn_ur;
-        break;
-    case UL:
-        btn= g_panel.btn_ul;
-        break;
-    case LR:
-        btn = g_panel.btn_lr;
-        break;
-    case LL:
-        btn= g_panel.btn_ll;
-        break;
-    case ML:
-        btn= g_panel.btn_ml;
-        break;
-    default:
-        assert("ILLEGAL BUTTON TOGGLE");
+    // Swap text
+    // remember: selected var has not been toggled yet
+    if (btn_highlow.selected) {
+        btn_highlow.text = lbl_high;
+    } else {
+        btn_highlow.text = lbl_low;
     }
+    toggle_button(&btn_highlow);
+    gui_update_mpsi();
+}
+
+void toggle_button(Button* btn)
+{
     btn->selected = !(btn->selected);
     Graphics_drawButton(&g_sContext, btn);
 }
 
-void gui_update_mpsi(int mpsi)
+void gui_update_mpsi(void)
 {
+    int16_t mpsi = 0;
     if (g_panel.mode == MAIN) {
-        sprintf((char*)lbl_mpsi, "%04d", mpsi);
-        Graphics_drawButton(&g_sContext, &btn_mpsi);
+        mpsi = g_mpsi;
+    } else {
+        if (btn_highlow.selected) {
+            mpsi = g_low_mpsi;
+        } else {
+            mpsi = g_high_mpsi;
+        }
     }
+    sprintf((char*)lbl_mpsi, "%04d", mpsi);
+    Graphics_drawButton(&g_sContext, &btn_mpsi);
+
 }
 
 bool is_button(Button* btn, int x, int y)

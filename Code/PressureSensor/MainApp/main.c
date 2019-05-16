@@ -16,6 +16,10 @@ extern bool g_touched;
 Graphics_Context g_sContext;
 
 // Pressure control
+uint16_t g_high_mpsi = 40;
+uint16_t g_low_mpsi = 8;
+uint16_t g_mpsi = 0;
+
 bool g_cycling = false;
 bool g_inflating = false;
 bool g_deflating = false;
@@ -26,8 +30,8 @@ void timer_start(void);
 void timer_stop(void);
 
 #define PRESSURE_CHECK_MS 250
-uint16_t g_high_mpsi = 40;
-uint16_t g_low_mpsi = 8;
+
+
 
 void init_clocks(void);
 void set_inflate(bool on);
@@ -41,7 +45,7 @@ const uint16_t PIN_DEFLATE = GPIO_PIN5;
 
 void main(void)
 {
-    uint16_t last_mpsi = 0, mpsi = 0;
+    uint16_t last_mpsi = 0;
 
     init_clocks();
     timer_init();
@@ -64,17 +68,17 @@ void main(void)
     while(1)
     {
         __bis_SR_register(LPM0_bits + GIE);
-        mpsi = ssc_get_last_psi();
-        if (mpsi != last_mpsi) {
-            gui_update_mpsi(mpsi);
-            last_mpsi = mpsi;
+        g_mpsi = ssc_get_last_psi();
+        if (g_mpsi != last_mpsi) {
+            gui_update_mpsi();
+            last_mpsi = g_mpsi;
         }
         if (g_cycling) {
-            if (!g_inflating && mpsi <= g_low_mpsi) {
+            if (!g_inflating && g_mpsi <= g_low_mpsi) {
                 set_inflate(true);
                 set_deflate(false);
                 g_change_detected = true;
-            } else if (!g_deflating && mpsi >= g_high_mpsi) {
+            } else if (!g_deflating && g_mpsi >= g_high_mpsi) {
                 set_deflate(true);
                 set_inflate(false);
                 g_change_detected = true;
@@ -110,6 +114,32 @@ void main(void)
             else if(gui_is_main(g_sTouchContext.x, g_sTouchContext.y))
             {
                 gui_switch_to_main();
+            }
+            else if(gui_is_highlow(g_sTouchContext.x, g_sTouchContext.y))
+            {
+                gui_toggle_highlow();
+            }
+            else if(gui_is_plus(g_sTouchContext.x, g_sTouchContext.y))
+            {
+                if (gui_is_highmode()) {
+                    g_high_mpsi++;
+                } else if (g_low_mpsi < g_high_mpsi) {
+                    g_low_mpsi++;
+                }
+                gui_update_mpsi();
+            }
+            else if(gui_is_minus(g_sTouchContext.x, g_sTouchContext.y))
+            {
+                if (gui_is_highmode()) {
+                    if (g_high_mpsi > 0 && g_high_mpsi > g_low_mpsi) {
+                        g_high_mpsi--;
+                    }
+                } else {
+                    if (g_low_mpsi > 0) {
+                        g_low_mpsi--;
+                    }
+                }
+                gui_update_mpsi();
             }
         }
     }
