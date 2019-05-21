@@ -1843,8 +1843,8 @@ design rules under a new name.</description>
 <attribute name="VALUE" x="-7.62" y="67.31" size="1.27" layer="28" rot="MR180" align="center"/>
 </element>
 <element name="PS1" library="MasterSPIS" package="YW15" value="YW1515ATHP" x="59.69" y="-25.4" smashed="yes" rot="MR90">
-<attribute name="NAME" x="85.09" y="-20.32" size="1.27" layer="26" font="vector" rot="MR90"/>
-<attribute name="VALUE" x="82.55" y="-20.32" size="1.27" layer="28" font="vector" rot="MR90"/>
+<attribute name="NAME" x="36.83" y="-27.94" size="1.27" layer="26" font="vector" rot="MR0"/>
+<attribute name="VALUE" x="36.83" y="-25.4" size="1.27" layer="28" font="vector" rot="MR0"/>
 </element>
 <element name="J2" library="MasterSPIS" package="TERM_4PIN_5.08MM_NO_THP" value="OSTTG0451XBNO_THP" x="20.32" y="-50.8" smashed="yes" rot="MR0">
 <attribute name="NAME" x="20.32" y="-60.96" size="1.27" layer="26" rot="MR0"/>
