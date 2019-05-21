@@ -37,7 +37,7 @@ static Button btn_subtitle;
 #define TITLE_FONT g_sFontCm18
 #define SUBTITLE_FONT g_sFontCm18
 
-static Text_t lbl_title[] = "NIH Bladder Control v1.0";
+static Text_t lbl_title[] = "NIH Bladder Control v1.1";
 // Main Panel
 static Button btn_cyclectrl;
 Text_t lbl_cyclectrl[] = "Cycle";

@@ -6,9 +6,9 @@
 #define SW_TRANSITION GPIO_HIGH_TO_LOW_TRANSITION
 
 // IRQ handlers need to be updated manually if Port changes
-const uint8_t sw_ports[6] = {GPIO_PORT_P1, GPIO_PORT_P1, GPIO_PORT_P7,
+const uint8_t sw_ports[6] = {GPIO_PORT_P1, GPIO_PORT_P1, GPIO_PORT_P2,
                              GPIO_PORT_P2, GPIO_PORT_P2, GPIO_PORT_P2};
-const uint16_t sw_pins[6] = {GPIO_PIN3, GPIO_PIN2, GPIO_PIN4,
+const uint16_t sw_pins[6] = {GPIO_PIN3, GPIO_PIN2, GPIO_PIN3,
                             GPIO_PIN4, GPIO_PIN0, GPIO_PIN2};
 
 bool sw_status[6];
@@ -64,15 +64,5 @@ void Port_2 (void)
     _check_and_ack_sw(SW_UR);
     _check_and_ack_sw(SW_MR);
     _check_and_ack_sw(SW_LR);
-}
-
-#if defined(__TI_COMPILER_VERSION__) || defined(__IAR_SYSTEMS_ICC__)
-#pragma vector=PORT7_VECTOR
-__interrupt
-#elif defined(__GNUC__)
-__attribute__((interrupt(PORT7_VECTOR)))
-#endif
-void Port_7 (void)
-{
     _check_and_ack_sw(SW_LL);
 }

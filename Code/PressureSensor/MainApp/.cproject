@@ -48,7 +48,6 @@
 									<listOptionValue builtIn="false" value="${PARENT_LOC}/GrLib/grlib"/>
 									<listOptionValue builtIn="false" value="${PARENT_LOC}/GrLib/fonts"/>
 									<listOptionValue builtIn="false" value="${PARENT_LOC}/lib"/>
-									<listOptionValue builtIn="false" value="${PARENT_LOC}/../lib"/>
 									<listOptionValue builtIn="false" value="${CG_TOOL_ROOT}/include"/>
 								</option>
 								<option id="com.ti.ccstudio.buildDefinitions.MSP430_18.12.compilerID.ADVICE__POWER.193661082" name="Enable checking of ULP power rules (--advice:power)" superClass="com.ti.ccstudio.buildDefinitions.MSP430_18.12.compilerID.ADVICE__POWER" value="&quot;none&quot;" valueType="string"/>
