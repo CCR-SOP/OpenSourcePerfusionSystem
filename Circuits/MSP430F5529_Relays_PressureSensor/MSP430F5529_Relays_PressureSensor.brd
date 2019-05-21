@@ -52,7 +52,7 @@
 <layer number="42" name="bRestrict" color="1" fill="10" visible="yes" active="yes"/>
 <layer number="43" name="vRestrict" color="2" fill="10" visible="yes" active="yes"/>
 <layer number="44" name="Drills" color="7" fill="1" visible="no" active="yes"/>
-<layer number="45" name="Holes" color="7" fill="1" visible="no" active="yes"/>
+<layer number="45" name="Holes" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="46" name="Milling" color="3" fill="1" visible="no" active="yes"/>
 <layer number="47" name="Measures" color="7" fill="1" visible="no" active="yes"/>
 <layer number="48" name="Document" color="7" fill="1" visible="yes" active="yes"/>
@@ -80,10 +80,14 @@
 </layers>
 <board>
 <plain>
-<wire x1="-25.4" y1="-71.12" x2="82.55" y2="-71.12" width="0" layer="20"/>
-<wire x1="82.55" y1="-71.12" x2="82.55" y2="69.85" width="0" layer="20"/>
+<wire x1="-25.4" y1="-64.77" x2="82.55" y2="-64.77" width="0" layer="20"/>
+<wire x1="82.55" y1="-64.77" x2="82.55" y2="69.85" width="0" layer="20"/>
 <wire x1="82.55" y1="69.85" x2="-25.4" y2="69.85" width="0" layer="20"/>
-<wire x1="-25.4" y1="69.85" x2="-25.4" y2="-71.12" width="0" layer="20"/>
+<wire x1="-25.4" y1="69.85" x2="-25.4" y2="-64.77" width="0" layer="20"/>
+<hole x="-19.05" y="63.5" drill="3.302"/>
+<hole x="76.2" y="63.5" drill="3.302"/>
+<hole x="76.2" y="-60.325" drill="3.302"/>
+<hole x="-19.05" y="-60.325" drill="3.302"/>
 </plain>
 <libraries>
 <library name="pinhead" urn="urn:adsk.eagle:library:325">
