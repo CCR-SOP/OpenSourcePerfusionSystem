@@ -6,6 +6,7 @@
 #include "LcdDriver/kitronix320x240x16_ssd2119_spi.h"
 #include "SSC_I2C_Pressure.h"
 #include "gui/gui.h"
+#include "Switches.h"
 
 // Touchscreen
 touch_context g_sTouchContext;
@@ -42,6 +43,15 @@ const uint8_t PORT_INFLATE = GPIO_PORT_P1;
 const uint16_t PIN_INFLATE = GPIO_PIN4;
 const uint8_t PORT_DEFLATE = GPIO_PORT_P1;
 const uint16_t PIN_DEFLATE = GPIO_PIN5;
+
+#define SW_CYCLE SW_UL
+#define SW_INFLATE SW_LL
+#define SW_CONFIG SW_UR
+#define SW_DEFLATE SW_LR
+#define SW_PLUS SW_UL
+#define SW_MINUS SW_LL
+#define SW_CONTROL SW_UR
+#define SW_HIGHLOW SW_LR
 
 void main(void)
 {
@@ -91,59 +101,68 @@ void main(void)
             touch_updateCurrentTouch(&g_sTouchContext);
             g_touched = false;
             g_change_detected = true;
-            if(gui_is_inflate(g_sTouchContext.x, g_sTouchContext.y))
-            {
-                set_inflate(!g_inflating);
-                gui_toggle_inflate();
+            sw_status[SW_INFLATE] |= gui_is_inflate(g_sTouchContext.x, g_sTouchContext.y);
+            sw_status[SW_DEFLATE] |= gui_is_deflate(g_sTouchContext.x, g_sTouchContext.y);
+            sw_status[SW_CYCLE] |= gui_is_cycle(g_sTouchContext.x, g_sTouchContext.y);
+            sw_status[SW_CONFIG] |= gui_is_config(g_sTouchContext.x, g_sTouchContext.y);
+            sw_status[SW_PLUS] |= gui_is_plus(g_sTouchContext.x, g_sTouchContext.y);
+            sw_status[SW_MINUS] |= gui_is_minus(g_sTouchContext.x, g_sTouchContext.y);
+            sw_status[SW_CONTROL] |= gui_is_main(g_sTouchContext.x, g_sTouchContext.y);
+            sw_status[SW_HIGHLOW] |= gui_is_highlow(g_sTouchContext.x, g_sTouchContext.y);
+        }
+        if(sw_status[SW_INFLATE])
+        {
+            set_inflate(!g_inflating);
+            gui_toggle_inflate();
+            sw_status[SW_INFLATE] = false;
+        }
+        if (sw_status[SW_DEFLATE]) {
+            set_deflate(!g_deflating);
+            gui_toggle_deflate();
+            sw_status[SW_DEFLATE] = false;
+        }
+        if (sw_status[SW_CYCLE]) {
+            if (g_cycling) {
+                set_inflate(false);
+                set_deflate(false);
             }
-            else if(gui_is_deflate(g_sTouchContext.x, g_sTouchContext.y))
-            {
-                set_deflate(!g_deflating);
-                gui_toggle_deflate();
+            g_cycling = !g_cycling;
+            gui_toggle_cycle();
+            sw_status[SW_CYCLE] = false;
+        }
+        if (sw_status[SW_CONFIG]) {
+            gui_switch_to_config();
+            sw_status[SW_CONFIG] = false;
+        }
+        if (sw_status[SW_CONTROL]) {
+            gui_switch_to_main();
+            sw_status[SW_CONTROL] = false;
+        }
+        if (sw_status[SW_HIGHLOW]) {
+            gui_toggle_highlow();
+            sw_status[SW_HIGHLOW] = false;
+        }
+        if (sw_status[SW_PLUS]) {
+            if (gui_is_highmode()) {
+                g_high_mpsi++;
+            } else if (g_low_mpsi < g_high_mpsi) {
+                g_low_mpsi++;
             }
-            else if(gui_is_cycle(g_sTouchContext.x, g_sTouchContext.y))
-            {
-                if (g_cycling) {
-                    set_inflate(false);
-                    set_deflate(false);
+            gui_update_mpsi();
+            sw_status[SW_PLUS] = false;
+        }
+        if (sw_status[SW_MINUS]) {
+            if (gui_is_highmode()) {
+                if (g_high_mpsi > 0 && g_high_mpsi > g_low_mpsi) {
+                    g_high_mpsi--;
                 }
-                g_cycling = !g_cycling;
-                gui_toggle_cycle();
-            }
-            else if(gui_is_config(g_sTouchContext.x, g_sTouchContext.y))
-            {
-                gui_switch_to_config();
-            }
-            else if(gui_is_main(g_sTouchContext.x, g_sTouchContext.y))
-            {
-                gui_switch_to_main();
-            }
-            else if(gui_is_highlow(g_sTouchContext.x, g_sTouchContext.y))
-            {
-                gui_toggle_highlow();
-            }
-            else if(gui_is_plus(g_sTouchContext.x, g_sTouchContext.y))
-            {
-                if (gui_is_highmode()) {
-                    g_high_mpsi++;
-                } else if (g_low_mpsi < g_high_mpsi) {
-                    g_low_mpsi++;
+            } else {
+                if (g_low_mpsi > 0) {
+                    g_low_mpsi--;
                 }
-                gui_update_mpsi();
             }
-            else if(gui_is_minus(g_sTouchContext.x, g_sTouchContext.y))
-            {
-                if (gui_is_highmode()) {
-                    if (g_high_mpsi > 0 && g_high_mpsi > g_low_mpsi) {
-                        g_high_mpsi--;
-                    }
-                } else {
-                    if (g_low_mpsi > 0) {
-                        g_low_mpsi--;
-                    }
-                }
-                gui_update_mpsi();
-            }
+            gui_update_mpsi();
+            sw_status[SW_MINUS] = false;
         }
     }
 
