@@ -101,47 +101,47 @@
 			<locationURI>DRIVERLIB_LOC/MSP430F5xx_6xx/wdt_a.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/button.c</name>
+			<name>grlib_loc/button.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/button.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/circle.c</name>
+			<name>grlib_loc/circle.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/circle.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/context.c</name>
+			<name>grlib_loc/context.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/context.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/display.c</name>
+			<name>grlib_loc/display.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/display.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/fontcm18.c</name>
+			<name>grlib_loc/fontcm18.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/fonts/fontcm18.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/fontcmss20b.c</name>
+			<name>grlib_loc/fontcmss20b.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/fonts/fontcmss20b.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/line.c</name>
+			<name>grlib_loc/line.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/line.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/rectangle.c</name>
+			<name>grlib_loc/rectangle.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/rectangle.c</locationURI>
 		</link>
 		<link>
-			<name>grlib_local/string.c</name>
+			<name>grlib_loc/string.c</name>
 			<type>1</type>
 			<locationURI>GRLIB_LOC/grlib/string.c</locationURI>
 		</link>
