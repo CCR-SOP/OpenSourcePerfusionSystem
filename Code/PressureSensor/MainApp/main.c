@@ -61,6 +61,7 @@ void main(void)
     timer_init();
     ssc_init();
     configure_GPIO_pins();
+    sw_init();
 
     // LCD setup using Graphics Library API calls
     Kitronix320x240x16_SSD2119Init();
@@ -101,16 +102,16 @@ void main(void)
             touch_updateCurrentTouch(&g_sTouchContext);
             g_touched = false;
             if (gui_is_mode_config()) {
-                sw_status[SW_PLUS] |= gui_is_plus(g_sTouchContext.x, g_sTouchContext.y);
-                sw_status[SW_MINUS] |= gui_is_minus(g_sTouchContext.x, g_sTouchContext.y);
-                sw_status[SW_CONTROL] |= gui_is_main(g_sTouchContext.x, g_sTouchContext.y);
-                sw_status[SW_HIGHLOW] |= gui_is_highlow(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_PLUS] = gui_is_plus(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_MINUS] = gui_is_minus(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_CONTROL] = gui_is_main(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_HIGHLOW] = gui_is_highlow(g_sTouchContext.x, g_sTouchContext.y);
             }
             if (gui_is_mode_main()) {
-                sw_status[SW_INFLATE] |= gui_is_inflate(g_sTouchContext.x, g_sTouchContext.y);
-                sw_status[SW_DEFLATE] |= gui_is_deflate(g_sTouchContext.x, g_sTouchContext.y);
-                sw_status[SW_CYCLE] |= gui_is_cycle(g_sTouchContext.x, g_sTouchContext.y);
-                sw_status[SW_CONFIG] |= gui_is_config(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_INFLATE] = gui_is_inflate(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_DEFLATE] = gui_is_deflate(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_CYCLE] = gui_is_cycle(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_CONFIG] = gui_is_config(g_sTouchContext.x, g_sTouchContext.y);
             }
 
         }
