@@ -1,18 +1,31 @@
 #include "SSC_I2C_Pressure.h"
 #include "driverlib.h"
 
-#define SENSOR_ADDRESS 0x28
 #define I2C_BASE USCI_B1_BASE
+//#define SSCDANT030PG2A3
+#define SSCMRNN015PA3A3
 
-// JWK, min/max from datasheet and Honeywell I2C (10% calibration)
-// JWK assume part SSCDANT030PG2A3
-const uint16_t SENSOR_MAX_COUNTS = 0x3999;
-const uint16_t SENSOR_MIN_COUNTS = 0x0666;
-const uint16_t SENSOR_MAX_PSI  = 30;
-const uint16_t SENSOR_MIN_PSI = 0;
+// JWK, min/max counts from datasheet and Honeywell I2C (10% calibration)
 // psi/counts = (SENSOR_MAX_PSI - SENSOR_MIN_PSI) / (float)(SENSOR_MAX_COUNTS - SENSOR_MIN_COUNTS);
-// 0-30PSI, 10% - 90% 14 bit sensor (30 - 0) / (0x3999 - 0x0666)
-const float SENSOR_RATIO = 0.0022888532845044634;
+
+#ifdef SSCDANT030PG2A3
+const uint8_t SENSOR_ADDRESS = 0x28;
+#define SENSOR_MAX_COUNTS  0x3999
+#define SENSOR_MIN_COUNTS  0x0666
+#define SENSOR_MAX_PSI 30
+#define SENSOR_MIN_PSI 0
+#endif
+
+#ifdef SSCMRNN015PA3A3
+const uint8_t SENSOR_ADDRESS = 0x38;
+#define SENSOR_MAX_COUNTS 0x3999
+#define SENSOR_MIN_COUNTS 0x0666
+#define SENSOR_MAX_PSI 15
+#define SENSOR_MIN_PSI 0
+#endif
+
+const float SENSOR_RATIO = (float)(SENSOR_MAX_PSI - SENSOR_MIN_PSI) / (float)(SENSOR_MAX_COUNTS - SENSOR_MIN_COUNTS);
+
 
 bool g_newread = true;
 uint8_t msb, lsb;
@@ -62,7 +75,7 @@ uint16_t convert_to_psi(uint8_t msb, uint8_t lsb)
 
     if (!status) {
         uint16_t counts = ((msb & 0x3F) << 8) | lsb;
-        float milli_psi = ((float)(counts - SENSOR_MIN_COUNTS) * 100.0 * SENSOR_RATIO + (float)SENSOR_MIN_PSI);
+        float milli_psi = ((float)(counts - SENSOR_MIN_COUNTS) * SENSOR_RATIO + SENSOR_MIN_PSI) * 100.0;
         psi = (uint16_t)milli_psi;
     }
     return psi;
