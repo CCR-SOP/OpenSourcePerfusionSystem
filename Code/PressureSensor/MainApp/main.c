@@ -4,8 +4,9 @@
 #include "driverlib.h"
 #include "touch_F5529LP.h"
 #include "LcdDriver/kitronix320x240x16_ssd2119_spi.h"
-#include "Images/images.h"
 #include "SSC_I2C_Pressure.h"
+#include "gui/gui.h"
+#include "Switches.h"
 
 // Touchscreen
 touch_context g_sTouchContext;
@@ -14,17 +15,12 @@ extern bool g_touched;
 
 // Graphics
 Graphics_Context g_sContext;
-int8_t lbl_inflate[] = "Inflate";
-int8_t lbl_deflate[] = "Deflate";
-int8_t lbl_cycle[] = "Cycle";
-
-#define DEBOUNCE_TOUCHES 1
-Graphics_Button btn_inflate;
-Graphics_Button btn_deflate;
-Graphics_Button btn_cycle;
-
 
 // Pressure control
+uint16_t g_high_mpsi = 400;
+uint16_t g_low_mpsi = 100;
+uint16_t g_mpsi = 0;
+
 bool g_cycling = false;
 bool g_inflating = false;
 bool g_deflating = false;
@@ -35,14 +31,10 @@ void timer_start(void);
 void timer_stop(void);
 
 #define PRESSURE_CHECK_MS 250
-uint16_t g_high_mpsi = 40;
-uint16_t g_low_mpsi = 8;
 
-void Delay();
+
+
 void init_clocks(void);
-void draw_main_page(void);
-void draw_psi(uint16_t psi);
-void init_buttons(void);
 void set_inflate(bool on);
 void set_deflate(bool on);
 void configure_GPIO_pins(void);
@@ -52,13 +44,24 @@ const uint16_t PIN_INFLATE = GPIO_PIN4;
 const uint8_t PORT_DEFLATE = GPIO_PORT_P1;
 const uint16_t PIN_DEFLATE = GPIO_PIN5;
 
+#define SW_CYCLE SW_UL
+#define SW_INFLATE SW_LL
+#define SW_CONFIG SW_UR
+#define SW_DEFLATE SW_LR
+#define SW_PLUS SW_UL
+#define SW_MINUS SW_LL
+#define SW_CONTROL SW_UR
+#define SW_HIGHLOW SW_LR
+
 void main(void)
 {
+    uint16_t last_mpsi = 0;
 
     init_clocks();
     timer_init();
     ssc_init();
-    init_buttons();
+    configure_GPIO_pins();
+    sw_init();
 
     // LCD setup using Graphics Library API calls
     Kitronix320x240x16_SSD2119Init();
@@ -66,147 +69,113 @@ void main(void)
     Graphics_setBackgroundColor(&g_sContext, GRAPHICS_COLOR_BLACK);
     Graphics_setFont(&g_sContext, &g_sFontCmss20b);
     Graphics_clearDisplay(&g_sContext);
-
-    //
-    touch_initInterface();
-
-    configure_GPIO_pins();
-
-    draw_main_page();
+    //touch_initInterface();
 
     __bis_SR_register(GIE);
 
-    uint16_t last_mpsi = 0, mpsi = 0;
-
+    gui_init();
+    gui_display();
     timer_start();
     while(1)
     {
         __bis_SR_register(LPM0_bits + GIE);
-        mpsi = ssc_get_last_psi();
-        if (mpsi != last_mpsi) {
-            draw_psi(mpsi);
-            last_mpsi = mpsi;
+        g_mpsi = ssc_get_last_psi();
+        if (g_mpsi != last_mpsi) {
+            if (gui_is_mode_main()) {
+                // only update mpsi if on main panel
+                gui_update_mpsi();
+            }
+            last_mpsi = g_mpsi;
         }
         if (g_cycling) {
-            if (!g_inflating && mpsi <= g_low_mpsi) {
+            if (!g_inflating && g_mpsi <= g_low_mpsi) {
                 set_inflate(true);
                 set_deflate(false);
                 g_change_detected = true;
-            } else if (!g_deflating && mpsi >= g_high_mpsi) {
+            } else if (!g_deflating && g_mpsi >= g_high_mpsi) {
                 set_deflate(true);
                 set_inflate(false);
                 g_change_detected = true;
             }
         }
+        /*
         if (g_touched) {
             touch_updateCurrentTouch(&g_sTouchContext);
             g_touched = false;
-            g_change_detected = true;
-            if(Graphics_isButtonSelected(&btn_inflate,
-                                              g_sTouchContext.x,
-                                              g_sTouchContext.y))
+            if (gui_is_mode_config()) {
+                sw_status[SW_PLUS] = gui_is_plus(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_MINUS] = gui_is_minus(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_CONTROL] = gui_is_main(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_HIGHLOW] = gui_is_highlow(g_sTouchContext.x, g_sTouchContext.y);
+            }
+            if (gui_is_mode_main()) {
+                sw_status[SW_INFLATE] = gui_is_inflate(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_DEFLATE] = gui_is_deflate(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_CYCLE] = gui_is_cycle(g_sTouchContext.x, g_sTouchContext.y);
+                sw_status[SW_CONFIG] = gui_is_config(g_sTouchContext.x, g_sTouchContext.y);
+            }
+
+        }
+        */
+        if (gui_is_mode_main()) {
+            if(sw_status[SW_INFLATE])
             {
                 set_inflate(!g_inflating);
+                gui_toggle_inflate();
+                sw_status[SW_INFLATE] = false;
             }
-            else if(Graphics_isButtonSelected(&btn_deflate,
-                                                   g_sTouchContext.x,
-                                                   g_sTouchContext.y))
-            {
+            if (sw_status[SW_DEFLATE]) {
                 set_deflate(!g_deflating);
+                gui_toggle_deflate();
+                sw_status[SW_DEFLATE] = false;
             }
-            else if(Graphics_isButtonSelected(&btn_cycle,
-                                                   g_sTouchContext.x,
-                                                   g_sTouchContext.y))
-            {
+            if (sw_status[SW_CYCLE]) {
                 if (g_cycling) {
                     set_inflate(false);
                     set_deflate(false);
                 }
                 g_cycling = !g_cycling;
+                gui_toggle_cycle();
+                sw_status[SW_CYCLE] = false;
             }
-
+            if (sw_status[SW_CONFIG]) {
+                gui_switch_to_config();
+                sw_status[SW_CONFIG] = false;
+            }
         }
-        if (g_change_detected) {
-            if (g_inflating) {
-                Graphics_drawButton(&g_sContext, &btn_inflate);
-            } else {
-                Graphics_drawSelectedButton(&g_sContext, &btn_inflate);
+        else {
+            if (sw_status[SW_CONTROL]) {
+                gui_switch_to_main();
+                sw_status[SW_CONTROL] = false;
             }
-            if (g_deflating) {
-                Graphics_drawButton(&g_sContext, &btn_deflate);
-            } else {
-                Graphics_drawSelectedButton(&g_sContext, &btn_deflate);
+            if (sw_status[SW_HIGHLOW]) {
+                gui_toggle_highlow();
+                sw_status[SW_HIGHLOW] = false;
             }
-            if (g_cycling) {
-                Graphics_drawButton(&g_sContext, &btn_cycle);
-            } else {
-                Graphics_drawSelectedButton(&g_sContext, &btn_cycle);
+            if (sw_status[SW_PLUS]) {
+                if (gui_is_highmode()) {
+                    g_high_mpsi++;
+                } else if (g_low_mpsi < g_high_mpsi) {
+                    g_low_mpsi++;
+                }
+                gui_update_mpsi();
+                sw_status[SW_PLUS] = false;
             }
-            g_change_detected = false;
+            if (sw_status[SW_MINUS]) {
+                if (gui_is_highmode()) {
+                    if (g_high_mpsi > 0 && g_high_mpsi > g_low_mpsi) {
+                        g_high_mpsi--;
+                    }
+                } else {
+                    if (g_low_mpsi > 0) {
+                        g_low_mpsi--;
+                    }
+                }
+                gui_update_mpsi();
+                sw_status[SW_MINUS] = false;
+            }
         }
-
-
     }
-
-}
-
-void create_button(Graphics_Button* btn, int x, int y, int w, int h, int8_t* lbl)
-{
-    btn->xMin = x;
-    btn->xMax = x + w;
-    btn->yMin = y;
-    btn->yMax = y + h;
-
-    btn->borderWidth = 1;
-    btn->selected = false;
-    btn->fillColor = GRAPHICS_COLOR_RED;
-    btn->borderColor = GRAPHICS_COLOR_RED;
-    btn->selectedColor = GRAPHICS_COLOR_BLACK;
-    btn->textColor = GRAPHICS_COLOR_BLACK;
-    btn->selectedTextColor = GRAPHICS_COLOR_RED;
-
-    btn->textXPos = btn->xMin + 20;
-    btn->textYPos = btn->yMin + 15;
-    btn->text = lbl;
-    btn->font = &g_sFontCm18;
-}
-
-void init_buttons(void)
-{
-    int x = 40, width = 100, y = 60, height = 60;
-    create_button(&btn_inflate, x, y, width, height, lbl_inflate);
-    create_button(&btn_deflate, x + width + 10, y, width, height, lbl_deflate);
-    create_button(&btn_cycle, x, y + height + 10, width, height, lbl_cycle);
-}
-
-void draw_psi(uint16_t psi)
-{
-    char psi_str[7];
-    snprintf(psi_str, 7, "%6d", psi);
-    Graphics_setForegroundColor(&g_sContext, GRAPHICS_COLOR_RED);
-    Graphics_setBackgroundColor(&g_sContext, GRAPHICS_COLOR_BLACK);
-    Graphics_drawString(&g_sContext, (int8_t*)psi_str, -1,
-                        btn_cycle.xMax + 50,
-                        btn_cycle.yMin + 20,
-                        OPAQUE_TEXT);
-}
-
-void draw_main_page(void)
-{
-    Graphics_setForegroundColor(&g_sContext, GRAPHICS_COLOR_RED);
-    Graphics_setBackgroundColor(&g_sContext, GRAPHICS_COLOR_BLACK);
-    Graphics_clearDisplay(&g_sContext);
-    Graphics_drawStringCentered(&g_sContext, "Bladder Control",
-                                AUTO_STRING_LENGTH,
-                                159,
-                                20,
-                                TRANSPARENT_TEXT);
-
-
-
-    Graphics_drawSelectedButton(&g_sContext, &btn_inflate);
-    Graphics_drawSelectedButton(&g_sContext, &btn_deflate);
-    Graphics_drawSelectedButton(&g_sContext, &btn_cycle);
 
 }
 
