@@ -3,7 +3,7 @@
 
 #define I2C_BASE USCI_B1_BASE
 //#define SSCDANT030PG2A3
-#define SSCMRNN015PA3A3
+#define SSCMRND030PG2A3
 
 // JWK, min/max counts from datasheet and Honeywell I2C (10% calibration)
 // psi/counts = (SENSOR_MAX_PSI - SENSOR_MIN_PSI) / (float)(SENSOR_MAX_COUNTS - SENSOR_MIN_COUNTS);
@@ -21,6 +21,14 @@ const uint8_t SENSOR_ADDRESS = 0x38;
 #define SENSOR_MAX_COUNTS 0x3999
 #define SENSOR_MIN_COUNTS 0x0666
 #define SENSOR_MAX_PSI 15
+#define SENSOR_MIN_PSI 0
+#endif
+
+#ifdef SSCMRND030PG2A3
+const uint8_t SENSOR_ADDRESS = 0x28;
+#define SENSOR_MAX_COUNTS 0x3999
+#define SENSOR_MIN_COUNTS 0x0666
+#define SENSOR_MAX_PSI 30
 #define SENSOR_MIN_PSI 0
 #endif
 
@@ -75,7 +83,7 @@ uint16_t convert_to_psi(uint8_t msb, uint8_t lsb)
 
     if (!status) {
         uint16_t counts = ((msb & 0x3F) << 8) | lsb;
-        float milli_psi = ((float)(counts - SENSOR_MIN_COUNTS) * SENSOR_RATIO + SENSOR_MIN_PSI) * 100.0;
+        float milli_psi = ((float)(counts - SENSOR_MIN_COUNTS) * SENSOR_RATIO + SENSOR_MIN_PSI) * 1000.0;
         psi = (uint16_t)milli_psi;
     }
     return psi;

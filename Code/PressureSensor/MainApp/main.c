@@ -17,8 +17,8 @@ extern bool g_touched;
 Graphics_Context g_sContext;
 
 // Pressure control
-uint16_t g_high_mpsi = 40;
-uint16_t g_low_mpsi = 8;
+uint16_t g_high_mpsi = 400;
+uint16_t g_low_mpsi = 100;
 uint16_t g_mpsi = 0;
 
 bool g_cycling = false;
@@ -69,7 +69,7 @@ void main(void)
     Graphics_setBackgroundColor(&g_sContext, GRAPHICS_COLOR_BLACK);
     Graphics_setFont(&g_sContext, &g_sFontCmss20b);
     Graphics_clearDisplay(&g_sContext);
-    touch_initInterface();
+    //touch_initInterface();
 
     __bis_SR_register(GIE);
 
@@ -98,6 +98,7 @@ void main(void)
                 g_change_detected = true;
             }
         }
+        /*
         if (g_touched) {
             touch_updateCurrentTouch(&g_sTouchContext);
             g_touched = false;
@@ -115,6 +116,7 @@ void main(void)
             }
 
         }
+        */
         if (gui_is_mode_main()) {
             if(sw_status[SW_INFLATE])
             {
