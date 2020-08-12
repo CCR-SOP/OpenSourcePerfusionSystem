@@ -5,3 +5,6 @@ config/*
 .launches/
 
 RemoteSystemsTempFiles/
+
+__pycache__/
+.idea/
