@@ -8,6 +8,7 @@ verify_ssl = true
 [packages]
 wxpython = "*"
 matplotlib = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.8"
