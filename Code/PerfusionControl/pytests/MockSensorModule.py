@@ -1,10 +1,6 @@
 from threading import Thread, Lock, Timer, Event
 import time
-import requests
-from datetime import datetime
-
-from SensorPktQueue import SensorPktQueue, TempSensor, CO2Sensor
-from SplunkHEC import SplunkHEC, SplunkInstance
+from queue import Queue
 
 
 class MockAcqModule(Thread):
@@ -42,7 +38,7 @@ class MockAcqModule(Thread):
             self._time = time.perf_counter() - self.__epoch
             with self.__sensor_lock:
                 for sensor in self.__sensors:
-                    self.__queue.add_pkt(sensor.sample)
+                    self.__queue.put(sensor.get_sample())
 
     def halt(self):
         self._event_halt.set()
@@ -53,6 +49,11 @@ class MockAcqModule(Thread):
     def add_sensor(self, sensor):
         with self.__sensor_lock:
             self.__sensors.append(sensor)
+
+    def get_sensor_names(self):
+        with self.__sensor_lock:
+            names = [sensor.sensor_name for sensor in self.__sensors]
+        return names
 
 
 class CommModule(Thread):
@@ -82,14 +83,14 @@ class CommModule(Thread):
         self.__epoch = time.perf_counter()
         self._time = 0
         self.__queue = pkt_queue
-        self.__server = SplunkHEC(module_id, splunk_instance)
+        # self.__server = SplunkHEC(module_id, splunk_instance)
 
     def run(self):
         while not self._event_halt.wait(self.comm_transfer_ms/1000.0):
             self._time = time.perf_counter() - self.__epoch
             while not self.__queue.empty():
-                pkt = self.__queue.get_pkt()
-                self.__server.post_json(pkt)
+                pkt = self.__queue.get()
+                # self.__server.post_json(pkt)
 
     def halt(self):
         self._event_halt.set()
@@ -108,11 +109,11 @@ class MockSensorModule():
     -------
     """
 
-    def __init__(self, id, splunk_instance):
+    def __init__(self, id):
         self.__id = id
-        self.__queue = SensorPktQueue()
+        self.__queue = Queue(maxsize=100)
         self.__acq = MockAcqModule(self.__queue)
-        self.__comm = CommModule(self.__queue, self.__id, splunk_instance)
+        self.__comm = CommModule(self.__queue, self.__id, None)
         self.__acq.start()
         self.__comm.start()
 
@@ -123,3 +124,7 @@ class MockSensorModule():
     def add_sensor(self, sensor):
         self.__acq.add_sensor(sensor)
         sensor.start()
+
+    def get_sensor_names(self):
+        return self.__acq.get_sensor_names()
+
