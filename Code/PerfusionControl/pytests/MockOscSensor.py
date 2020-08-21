@@ -8,7 +8,7 @@ class MockOscSensor(MockSensor.MockSensor):
     Mock sensor which generates an sinusoidal waveform. Derived from MockSensor
 
     """
-    def __init__(self, min_val, max_val, osc_period_ms):
+    def __init__(self, sensor_name, min_val, max_val, osc_period_ms):
         """ Constructor for MockOscSensor
 
             ...
@@ -22,7 +22,7 @@ class MockOscSensor(MockSensor.MockSensor):
             osc_period_ms: int
                 oscillation period in milliseconds
         """
-        super().__init__(min_val, max_val)
+        super().__init__(sensor_name, min_val, max_val)
         self.__osc_period_ms = osc_period_ms
 
     def _update_sample(self):
