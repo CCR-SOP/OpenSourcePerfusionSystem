@@ -29,8 +29,9 @@ class MockSensor(Thread):
 
     """
 
-    def __init__(self, min_valid, max_valid):
+    def __init__(self, sensor_name, min_valid, max_valid):
         Thread.__init__(self)
+        self.sensor_name = sensor_name
         self._event_halt = Event()
         self.period_update_ms = 1000
         self.alarm_low = min_valid
