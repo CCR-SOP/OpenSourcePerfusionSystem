@@ -3,7 +3,7 @@
 
 @author: John Kakareka
 
-Panel class for general settings
+Panel class for general settings for Hepatic Artery branch
 """
 import wx
 
@@ -20,12 +20,12 @@ class PanelHAParameters(wx.Panel):
         self.perfusion = perfusion
         wx.Panel.__init__(self, parent, -1)
 
-        self.sizer_ha = wx.FlexGridSizer(cols=2, hgap=20, vgap=10)
-        self.label_ha_flow = wx.StaticText(self, label='Desired HA Flow\nliters/min')
-        self.slider_ha_flow = wx.Slider(self, wx.ID_ANY, value=5, minValue=0, maxValue=10, style=wx.SL_LABELS)
+        self.sizer = wx.FlexGridSizer(cols=2, hgap=20, vgap=10)
+        self.label_flow = wx.StaticText(self, label='Desired HA Flow\nliters/min')
+        self.slider_flow = wx.Slider(self, wx.ID_ANY, value=5, minValue=0, maxValue=10, style=wx.SL_LABELS)
 
-        self.label_ha_rate = wx.StaticText(self, label='Desired HA Rate\nbeats per min')
-        self.slider_ha_rate = wx.Slider(self, wx.ID_ANY, value=80, minValue=0, maxValue=200, style=wx.SL_LABELS)
+        self.label_rate = wx.StaticText(self, label='Desired HA Rate\nbeats per min')
+        self.slider_rate = wx.Slider(self, wx.ID_ANY, value=80, minValue=0, maxValue=200, style=wx.SL_LABELS)
 
         self.__do_layout()
         # self.__set_bindings()
@@ -34,27 +34,27 @@ class PanelHAParameters(wx.Panel):
         flags_slider = wx.SizerFlags(1).CenterVertical().Expand()
         flags_label = wx.SizerFlags(0).CenterVertical().Left()
 
-        self.sizer_ha.AddGrowableCol(1, 1)
-        self.sizer_ha.Add(self.label_ha_flow, flags_label)
-        self.sizer_ha.Add(self.slider_ha_flow, flags_slider)
+        self.sizer.AddGrowableCol(1, 1)
+        self.sizer.Add(self.label_flow, flags_label)
+        self.sizer.Add(self.slider_flow, flags_slider)
 
-        self.sizer_ha.Add(self.label_ha_rate, flags_label)
-        self.sizer_ha.Add(self.slider_ha_rate, flags_slider)
+        self.sizer.Add(self.label_rate, flags_label)
+        self.sizer.Add(self.slider_rate, flags_slider)
 
-        self.SetSizer(self.sizer_ha)
+        self.SetSizer(self.sizer)
         self.Fit()
 
     # def __set_bindings(self):
         # add bindings, if needed
 
     def update_gui(self):
-        self.slider_ha_flow.SetMin(self.perfusion.ha_min_flow)
-        self.slider_ha_flow.SetMax(self.perfusion.ha_max_flow)
-        self.slider_ha_rate.SetValue(self.perfusion.ha_rate)
+        self.slider_flow.SetMin(self.perfusion.ha_min_flow)
+        self.slider_flow.SetMax(self.perfusion.ha_max_flow)
+        self.slider_rate.SetValue(self.perfusion.ha_rate)
 
     def update_acq(self):
-        self.perfusion.ha_rate = self.slider_ha_rate.GetValue()
-        self.perfusion.ha_flow = self.slider_ha_flow.GetValue()
+        self.perfusion.ha_rate = self.slider_rate.GetValue()
+        self.perfusion.ha_flow = self.slider_flow.GetValue()
 
 
 class TestFrame(wx.Frame):
