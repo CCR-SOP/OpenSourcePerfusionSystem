@@ -35,8 +35,8 @@ class DIO:
         self._active_high = active_high
         self._read_only = read_only
 
-        self.__active_state = DIOActiveHighState if self._active_high else DIOActiveLowState
-        self.__value = self.__active_state.INACTIVE
+        self._active_state = DIOActiveHighState if self._active_high else DIOActiveLowState
+        self.__value = self._active_state.INACTIVE
 
         # create a dummy timer so is_alive function is always valid
         self.__timer = threading.Timer(0, self.activate)
@@ -47,26 +47,26 @@ class DIO:
             self._activate()
 
     def _activate(self):
-        self.__value = self.__active_state.ACTIVE
+        self.__value = self._active_state.ACTIVE
         print(f"{self.__value}")
 
     def deactivate(self):
         if not self.__timer.is_alive() and not self._read_only:
-            self.__deactivate()
+            self._deactivate()
 
     def _deactivate(self):
-        self.__value = self.__active_state.INACTIVE
+        self.__value = self._active_state.INACTIVE
         print(f"{self.__value}")
 
     def toggle(self):
         if not self.__timer.is_alive() and not self._read_only:
-            self.__toggle()
+            self._toggle()
 
     def _toggle(self):
-        if self.__value == self.__active_state.INACTIVE:
-            self.__activate()
+        if self.__value == self._active_state.INACTIVE:
+            self._activate()
         else:
-            self.__deactivate()
+            self._deactivate()
 
     def pulse(self, milliseconds):
         if not self._read_only:
