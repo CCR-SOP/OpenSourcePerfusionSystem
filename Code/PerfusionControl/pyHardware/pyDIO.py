@@ -44,9 +44,9 @@ class DIO:
 
     def activate(self):
         if not self.__timer.is_alive() and not self._read_only:
-            self.__activate()
+            self._activate()
 
-    def __activate(self):
+    def _activate(self):
         self.__value = self.__active_state.ACTIVE
         print(f"{self.__value}")
 
@@ -54,7 +54,7 @@ class DIO:
         if not self.__timer.is_alive() and not self._read_only:
             self.__deactivate()
 
-    def __deactivate(self):
+    def _deactivate(self):
         self.__value = self.__active_state.INACTIVE
         print(f"{self.__value}")
 
@@ -62,7 +62,7 @@ class DIO:
         if not self.__timer.is_alive() and not self._read_only:
             self.__toggle()
 
-    def __toggle(self):
+    def _toggle(self):
         if self.__value == self.__active_state.INACTIVE:
             self.__activate()
         else:
@@ -71,8 +71,8 @@ class DIO:
     def pulse(self, milliseconds):
         if not self._read_only:
             # pulse starts immediately
-            self.__toggle()
-            self.__timer = threading.Timer(milliseconds/1000.0, self.__toggle)
+            self._toggle()
+            self.__timer = threading.Timer(milliseconds/1000.0, self._toggle)
             self.__timer.start()
 
     @property
