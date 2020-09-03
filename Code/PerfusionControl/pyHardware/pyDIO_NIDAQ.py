@@ -9,6 +9,8 @@ Author: John Kakareka
 
 import time
 import threading
+
+import numpy as np
 import PyDAQmx
 from PyDAQmx import Task
 from PyDAQmx.DAQmxConstants import *
@@ -29,6 +31,9 @@ class NIDAQ_DIO(pyDIO.DIO):
 
     def open(self):
         try:
+            if self.__task:
+                self.close()
+
             self.__task = Task()
             if self._read_only:
                 self.__task.CreateDIChan(self._devname, '', DAQmx_Val_ChanPerLine)
@@ -44,3 +49,13 @@ class NIDAQ_DIO(pyDIO.DIO):
         if self.__task:
             self.__task.StopTask()
             self.__task = None
+
+    def _activate(self):
+        data = np.array([1], dtype=np.uint8)
+        self.__task.WriteDigitalLines(1, True, self.__timeout, DAQmx_Val_GroupByChannel, data, None, None)
+        print("activated channel")
+
+    def _deactivate(self):
+        data = np.array([0], dtype=np.uint8)
+        self.__task.WriteDigitalLines(1, True, self.__timeout, DAQmx_Val_GroupByChannel, data, None, None)
+        print("activated channel")
