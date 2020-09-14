@@ -49,6 +49,27 @@
 - VIH >= 2V, IIH <=20uA
 - VIL <= 0.4V, IIL <=0.5mA
 
+# Peristaltic Pump
+- Ismatec Ecoline VC-280
+- 3.5-350 RPM
+- 8-pin socket DIN 45326
+- Pin 1, GND
+- Pin 2, shield (GND)
+	- used to couple cable shielding to ground
+- Pin 3, stop-run
+	- Pump startes when connected to GND
+- Pin 4, direction
+	- If open, pumps run CW
+	- if grounded, pump runs CCW
+- Pin 5, speed In
+	- 0-5V, 0-10V, 0-20mA, 4-20mA, set by DIP S1
+- Pin 6, speed intern
+	- if connected to ground, speed controlled by front panel
+- Pin 7, +5V
+	- Output, Ri = 330ohm
+- Pin 8, unused
+
+
 # Pressure Transducer
 - APT300, 733862
 	- Hepatic Artery
