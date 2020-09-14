@@ -1,0 +1,32 @@
+function pumpTest()
+%Function that shows a proof of concept of how to interface with
+%Syringe pump, from this it should be clear how to send all commands through
+%the RS232 port. 
+
+
+%Initialize pump on COM port 6
+s = serial('COM6');
+%Set all values in order to read values correctly
+set(s, 'Timeout', 60);
+set(s,'BaudRate', 9600);
+set(s, 'Parity', 'none');
+set(s, 'DataBits', 8);
+set(s, 'StopBits', 1);
+set(s, 'RequestToSend', 'off');
+%Open pump data stream
+fopen(s);
+
+%Write the ASCII value of 'run<CR><LF>' to the pump
+%This starts the pump at the predetermined rate
+fwrite(s, char([114 117 110 13 10]));
+pause(1);
+%Write the ASCII value of 'stop<CR><LF>' to the pump
+%Stops the pump
+fwrite(s, char([115 116 111 112 13 10]));
+%Close pump I/O stream
+fclose(s);
+
+%In order to send other commands simply convert the desired command to
+%ASCII and use the same syntax as above. N.B. Include ASCII values for
+%control characters such as <CR>, <LF>, and <SP>.
+end
