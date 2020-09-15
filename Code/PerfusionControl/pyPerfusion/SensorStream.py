@@ -81,20 +81,26 @@ class SensorStream(Thread):
         self.__fid_read.seek(self.__end_of_header)
 
     def get_data(self, last_ms, samples_needed):
-        total_samples = int(last_ms / self.__hw.period_sampling_ms)
-        step = int(total_samples/samples_needed)
-        if step < 1:
-            step = 1
-        bytes_to_read = total_samples * np.dtype(self.__hw.datatype).itemsize
-        try:
-            if self.__fid_read.tell() <= bytes_to_read:
-                self.__fid_read.seek(self.__end_of_header)
-            else:
-                self.__fid_read.seek(-bytes_to_read, 2)
-        except OSError:
-            # probably occurred by reading past beginning of file
-            print("Error seeking file")
-            self.__fid_read.seek(self.__end_of_header)
-        data = np.fromfile(self.__fid_read, dtype=self.__hw.datatype, count=total_samples)
 
+        if last_ms == 0:
+            self.__fid_read.seek(self.__end_of_header)
+            total_samples = -1
+        else:
+            total_samples = int(last_ms / self.__hw.period_sampling_ms)
+            bytes_to_read = total_samples * np.dtype(self.__hw.datatype).itemsize
+            try:
+                if self.__fid_read.tell() <= bytes_to_read:
+                    self.__fid_read.seek(self.__end_of_header)
+                else:
+                    self.__fid_read.seek(-bytes_to_read, 2)
+            except OSError:
+                # probably occurred by reading past beginning of file
+                print("Error seeking file")
+                self.__fid_read.seek(self.__end_of_header)
+        data = np.fromfile(self.__fid_read, dtype=self.__hw.datatype, count=total_samples)
+        idx = np.linspace(0, len(data) - 1, samples_needed, dtype='int')
+        try:
+            data = data[idx]
+        except IndexError:
+            data = None
         return data
