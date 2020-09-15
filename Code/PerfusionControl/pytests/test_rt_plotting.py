@@ -6,16 +6,26 @@
 test real-time plotting
 """
 import wx
+import time
+from pathlib import Path
 
 from pyPerfusion.panel_plotting import PanelPlotting
-from pytests.MockSensorModule import MockSensorModule
+from pyPerfusion.HWAcq import HWAcq
+from pyPerfusion.SensorStream import SensorStream
+
+
+acq = HWAcq(10)
+sensor = SensorStream('test', 'ml/min', acq)
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelPlotting(self, MockSensorModule("mod1"))
+        self.panel = PanelPlotting(self)
+        self.panel.add_sensor(sensor)
+        sensor.start()
+        sensor.open(Path('./'), Path('2020-09-14'))
 
 
 class MyTestApp(wx.App):
@@ -28,4 +38,6 @@ class MyTestApp(wx.App):
 
 app = MyTestApp(0)
 app.MainLoop()
+time.sleep(10)
+sensor.stop()
 
