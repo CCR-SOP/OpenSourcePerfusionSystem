@@ -55,7 +55,6 @@ class HWAcq(Thread):
         sleep_time = 100 * self._period_sampling_ms / 1000.0
         time.sleep(sleep_time)
         val = np.random.randint(70, 80, size=1, dtype=self.datatype)
-        print(f'value is {val}')
         self.__buffer = np.ones(100, dtype=self.datatype) * val
 
     def get_data(self):
