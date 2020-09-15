@@ -5,8 +5,8 @@
 
 Panel class for plotting data
 """
+from enum import Enum
 import wx
-
 import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
@@ -15,11 +15,20 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 from pyPerfusion.SensorStream import SensorStream
 
 
+class PlotFrame(Enum):
+    FROM_START = 0
+    LAST_SECOND = 1_000
+    LAST_5_SECONDS = 5_000
+    LAST_MINUTE = 60_000
+
+
 class PanelPlotting(wx.Panel):
     def __init__(self, parent):
         self.__parent = parent
         self.__sensors = []
         wx.Panel.__init__(self, parent, -1)
+        self.__plot_frame = PlotFrame.LAST_5_SECONDS
+        self.__plot_len = 200
 
         self.fig = mpl.figure.Figure()
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
@@ -31,10 +40,9 @@ class PanelPlotting(wx.Panel):
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        parameters = ['last hour', 'last day', 'study start']
+        parameters = [item.name for item in PlotFrame]
         self.choice_plot_parameter = wx.Choice(self, choices=parameters)
-        self.choice_plot_parameter.SetSelection(1)
-        self.sensor_name = parameters[1]
+        self.choice_plot_parameter.SetStringSelection(self.__plot_frame.name)
         font = self.choice_plot_parameter.GetFont()
         font.SetPointSize(20)
         self.choice_plot_parameter.SetFont(font)
@@ -46,7 +54,7 @@ class PanelPlotting(wx.Panel):
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
-        self.timer_plot.Start(1000, wx.TIMER_CONTINUOUS)
+        self.timer_plot.Start(200, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
 
@@ -62,23 +70,22 @@ class PanelPlotting(wx.Panel):
         self.choice_plot_parameter.Bind(wx.EVT_CHOICE, self.OnPlotChoiceChange)
 
     def OnPlotChoiceChange(self, event):
-        new_name = self.choice_plot_parameter.GetStringSelection()
-        print(f'{new_name}')
-        if not new_name == self.sensor_name:
-            self.sensor_name = new_name
-            self.axes.clear()
+        self.__plot_frame = PlotFrame[self.choice_plot_parameter.GetStringSelection()]
+        # self.axes.clear()
 
     def plot(self):
         for sensor in self.__sensors:
-            data = sensor.get_data(1000, 100)
+            data = sensor.get_data(self.__plot_frame.value, self.__plot_len)
             if data is not None:
                 data_time = np.linspace(0, len(data), num=len(data))
                 if self.__line is None:
                     self.__line, = self.axes.plot(data_time, data)
                 else:
+                    # print(f'data len is {len(data)}')
                     self.__line.set_data(data_time, data)
                     self.axes.set_ylim(50, 100)
                     self.axes.set_xlim(data_time[0], data_time[-1])
+                    # self.axes.plot(data_time, data)
                 self.canvas.draw()
 
     def OnTimer(self, event):
