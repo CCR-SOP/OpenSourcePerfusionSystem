@@ -34,6 +34,7 @@ class HWAcq(Thread):
         self.__epoch = time.perf_counter()
         self._time = 0
         self._period_sampling_ms = period_sample_ms
+        self._read_period_ms = 500
         self.datatype = np.uint32
 
     @property
@@ -41,7 +42,7 @@ class HWAcq(Thread):
         return self._period_sampling_ms
 
     def run(self):
-        while not self._event_halt.wait(self._period_sampling_ms / 1000.0):
+        while not self._event_halt.wait(self._read_period_ms / 1000.0):
             with self.__lock_buf:
                 self._time = time.perf_counter() - self.__epoch
                 self._acq_samples()
@@ -52,10 +53,11 @@ class HWAcq(Thread):
         self._event_halt.set()
 
     def _acq_samples(self):
-        sleep_time = 100 * self._period_sampling_ms / 1000.0
+        samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
+        sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         time.sleep(sleep_time)
         val = np.random.randint(70, 80, size=1, dtype=self.datatype)
-        self.__buffer = np.ones(100, dtype=self.datatype) * val
+        self.__buffer = np.ones(samples_per_read, dtype=self.datatype) * val
 
     def get_data(self):
         buf = None
