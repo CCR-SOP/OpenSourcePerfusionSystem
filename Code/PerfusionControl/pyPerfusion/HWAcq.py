@@ -34,6 +34,7 @@ class HWAcq(Thread):
         self.__epoch = time.perf_counter()
         self._time = 0
         self._period_sampling_ms = period_sample_ms
+        self.datatype = np.uint32
 
     @property
     def period_sampling_ms(self):
@@ -44,8 +45,7 @@ class HWAcq(Thread):
             with self.__lock_buf:
                 self._time = time.perf_counter() - self.__epoch
                 self._acq_samples()
-                data = np.array(len(self.__buffer), dtype=np.float64)
-                data = self.__buffer * 1.0 + 0.0
+                data = self.__buffer  #   * 1.0 + 0.0
                 self.__queue_buffer.put(data)
 
     def halt(self):
@@ -54,7 +54,9 @@ class HWAcq(Thread):
     def _acq_samples(self):
         sleep_time = 100 * self._period_sampling_ms / 1000.0
         time.sleep(sleep_time)
-        self.__buffer = np.ones(100) * 50
+        val = np.random.randint(70, 80, size=1, dtype=self.datatype)
+        print(f'value is {val}')
+        self.__buffer = np.ones(100, dtype=self.datatype) * val
 
     def get_data(self):
         buf = None
