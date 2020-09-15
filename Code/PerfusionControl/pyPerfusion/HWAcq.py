@@ -46,7 +46,7 @@ class HWAcq(Thread):
             with self.__lock_buf:
                 self._time = time.perf_counter() - self.__epoch
                 self._acq_samples()
-                data = self.__buffer  #   * 1.0 + 0.0
+                data = self.convert_to_units()
                 self.__queue_buffer.put(data)
 
     def halt(self):
@@ -67,4 +67,4 @@ class HWAcq(Thread):
         return buf
 
     def convert_to_units(self):
-        return self.__buffer * 1.0 + 0.0
+        return self.__buffer * 0.5 + 0.0

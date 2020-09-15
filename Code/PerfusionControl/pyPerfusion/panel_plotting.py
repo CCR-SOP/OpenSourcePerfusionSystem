@@ -83,7 +83,7 @@ class PanelPlotting(wx.Panel):
                 else:
                     # print(f'data len is {len(data)}')
                     self.__line.set_data(data_time, data)
-                    self.axes.set_ylim(50, 100)
+                    self.axes.set_ylim(np.min(data) * 0.9, np.max(data) * 1.1)
                     self.axes.set_xlim(data_time[0], data_time[-1])
                     # self.axes.plot(data_time, data)
                 self.canvas.draw()
