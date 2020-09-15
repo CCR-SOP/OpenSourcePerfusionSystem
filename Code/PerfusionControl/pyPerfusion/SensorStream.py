@@ -1,11 +1,9 @@
-import mmap
 import pathlib
 import datetime
 from threading import Thread, Event
-import numpy as np
+from os import SEEK_END
 
-from pyPerfusion.SensorAcq import SensorAcq
-from pyPerfusion.HWAcq import HWAcq
+import numpy as np
 
 DATA_VERSION = 1
 
@@ -17,6 +15,7 @@ class SensorStream(Thread):
         self.__hw = hw
         self.__evt_halt = Event()
         self.__fid = None
+        self.__fid_read = None
         self.data = None
         self.__name = name
         self._project_path = pathlib.Path.cwd()
@@ -26,15 +25,17 @@ class SensorStream(Thread):
         self.__end_of_header = 0
         self.__last_idx = 0
         self.__mmap_len = 100
+        self.data = np.array(100, dtype=self.__hw.datatype)
 
-        self.data = np.array(100, dtype=np.float32)
     def run(self):
         while not self.__evt_halt.wait(self.__hw.period_sampling_ms / 1000.0):
             data_buf = self.__hw.get_data()
-            if data_buf is not None:
+            if data_buf is not None and self.__fid is not None:
                 buf_len = len(data_buf)
-                self.__fid.write(data_buf.tobytes())
+                # self.__fid.write(data_buf.tobytes())
+                data_buf.tofile(self.__fid)
                 self.__last_idx += buf_len
+                self.__fid.flush()
 
     def start(self):
         super().start()
@@ -52,6 +53,7 @@ class SensorStream(Thread):
         self.__timestamp = datetime.datetime.now()
         self.print_header()
 
+
     def stop(self):
         self.__hw.halt()
         self.__evt_halt.set()
@@ -65,24 +67,39 @@ class SensorStream(Thread):
             self.__fid.close()
             self.__fid = None
         full_path = self._project_path / self._study_path / self._filename
-        self.__fid = open(full_path, 'wt')
-        stamp_str = self.__timestamp.strftime('%Y-%m-%d_%H:%M')
-
-        print(f'Data Format: {DATA_VERSION}', file=self.__fid)
-        print(f'Sensor: {self.__name}', file=self.__fid)
-        print(f'Unit: {self.__unit_str}', file=self.__fid)
-        print(f'Data Format: float32', file=self.__fid)
-        print(f'Start of Acquisition: {stamp_str}', file=self.__fid)
-        self.__end_of_header = self.__fid.tell()
-        self.__fid.close()
-        self.__fid = open(full_path, 'rb+')
-        self.__fid.seek(0, 2)  # seek to end of file
+        # self.__fid = open(full_path, 'wt')
+        # stamp_str = self.__timestamp.strftime('%Y-%m-%d_%H:%M')
+        #
+        # print(f'Data Format: {DATA_VERSION}', file=self.__fid)
+        # print(f'Sensor: {self.__name}', file=self.__fid)
+        # print(f'Unit: {self.__unit_str}', file=self.__fid)
+        # print(f'Data Format: float32', file=self.__fid)
+        # print(f'Start of Acquisition: {stamp_str}', file=self.__fid)
+        # self.__end_of_header = self.__fid.tell()
+        # print(f'end of header is {self.__end_of_header}')
+        # self.__fid.close()
+        self.__fid = open(full_path, 'wb+')
+        # self.__fid.seek(0, 2)  # seek to end of file
+        self.__fid_read = open(full_path, 'rb')
+        # self.__fid_read.seek(self.__end_of_header)
 
     def get_data(self, last_ms, samples_needed):
-        from_start = datetime.datetime.now() - self.__timestamp
-        delta = from_start.total_seconds()
-        total_samples = delta / self._sample_period
+        total_samples = int(last_ms / self.__hw.period_sampling_ms)
+        step = int(total_samples/samples_needed)
+        if step < 1:
+            step = 1
+        # print(f'start time is {self.__timestamp}')
+        # print(f'seconds from start is {delta}')
+        # print(f'total samples is {total_samples}')
+        # print(f'step is {int(total_samples/samples_needed)}')
+        bytes_to_read = total_samples * np.dtype(self.__hw.datatype).itemsize
 
-        return self.data[-total_samples::total_samples/samples_needed]
+        try:
+            self.__fid_read.seek(-bytes_to_read, 2)
+        except OSError:
+            # probably occurred by reading past beginning of file
+            print("Error seeking file")
+            self.__fid_read.seek(0)
+        data = np.fromfile(self.__fid_read, dtype=self.__hw.datatype, count=total_samples)
 
-
+        return data
