@@ -35,7 +35,7 @@ class HWAcq(Thread):
         self._time = 0
         self._period_sampling_ms = period_sample_ms
         self._read_period_ms = 500
-        self.datatype = np.uint32
+        self.datatype = np.float32
 
     @property
     def period_sampling_ms(self):
@@ -56,7 +56,7 @@ class HWAcq(Thread):
         samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         time.sleep(sleep_time)
-        val = np.random.randint(70, 80, size=1, dtype=self.datatype)
+        val = self.datatype(np.random.random_sample() * 10 + 70)
         self.__buffer = np.ones(samples_per_read, dtype=self.datatype) * val
 
     def get_data(self):
@@ -66,5 +66,5 @@ class HWAcq(Thread):
                 buf = self.__queue_buffer.get(timeout=1.0)
         return buf
 
-    def adc_to_units(self, sample):
-        return sample * 1.0 + 0.0
+    def convert_to_units(self):
+        return self.__buffer * 1.0 + 0.0
