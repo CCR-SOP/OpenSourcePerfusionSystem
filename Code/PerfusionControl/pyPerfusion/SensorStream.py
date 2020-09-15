@@ -99,8 +99,10 @@ class SensorStream(Thread):
                 self.__fid_read.seek(self.__end_of_header)
         data = np.fromfile(self.__fid_read, dtype=self.__hw.datatype, count=total_samples)
         idx = np.linspace(0, len(data) - 1, samples_needed, dtype='int')
+        time_start = (self.__last_idx - len(data)) * self.__hw.period_sampling_ms/1000.0 + self.__hw.start_time
+        data_time = (idx * self.__hw.period_sampling_ms/1000.0) + time_start
         try:
             data = data[idx]
         except IndexError:
             data = None
-        return data
+        return data_time, data

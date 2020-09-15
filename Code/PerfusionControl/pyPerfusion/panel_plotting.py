@@ -75,9 +75,8 @@ class PanelPlotting(wx.Panel):
 
     def plot(self):
         for sensor in self.__sensors:
-            data = sensor.get_data(self.__plot_frame.value, self.__plot_len)
+            data_time, data = sensor.get_data(self.__plot_frame.value, self.__plot_len)
             if data is not None and len(data) > 0:
-                data_time = np.linspace(0, len(data), num=len(data))
                 if self.__line is None:
                     self.__line, = self.axes.plot(data_time, data)
                 else:
