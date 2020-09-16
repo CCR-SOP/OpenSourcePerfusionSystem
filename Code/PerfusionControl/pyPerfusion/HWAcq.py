@@ -46,6 +46,10 @@ class HWAcq(Thread):
     def start_time(self):
         return self.__epoch
 
+    @property
+    def buf_len(self):
+        return len(self.__buffer)
+
     def start(self):
         self.__epoch = perf_counter()
         Thread.start(self)

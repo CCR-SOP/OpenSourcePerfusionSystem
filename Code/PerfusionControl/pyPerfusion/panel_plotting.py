@@ -50,14 +50,13 @@ class PanelPlotting(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
         self.axes = self.fig.add_subplot(111)
-        self.__line = None
+        self.__line = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
         self.timer_plot.Start(200, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
-
         self.sizer.Add(self.choice_plot_parameter, wx.SizerFlags().CenterHorizontal())
         # self.sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
         self.sizer.Add(self.canvas, 1, wx.ALL | wx.EXPAND, border=1)
@@ -77,15 +76,15 @@ class PanelPlotting(wx.Panel):
         for sensor in self.__sensors:
             data_time, data = sensor.get_data(self.__plot_frame.value, self.__plot_len)
             if data is not None and len(data) > 0:
-                if self.__line is None:
-                    self.__line, = self.axes.plot(data_time, data)
-                else:
-                    # print(f'data len is {len(data)}')
-                    self.__line.set_data(data_time, data)
-                    self.axes.set_ylim(np.min(data) * 0.9, np.max(data) * 1.1)
-                    self.axes.set_xlim(data_time[0], data_time[-1])
-                    # self.axes.plot(data_time, data)
+                if isinstance(sensor, SensorStream):
+                    self.plot_stream(self.__line[sensor.name], data_time, data)
                 self.canvas.draw()
+
+    def plot_stream(self, line, data_time, data):
+        if self.__line is not None:
+            line.set_data(data_time, data)
+            self.axes.set_ylim(np.min(data) * 0.9, np.max(data) * 1.1)
+            self.axes.set_xlim(data_time[0], data_time[-1])
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
@@ -94,6 +93,7 @@ class PanelPlotting(wx.Panel):
     def add_sensor(self, sensor):
         assert isinstance(sensor, SensorStream)
         self.__sensors.append(sensor)
+        self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len)
 
 
 class TestFrame(wx.Frame):

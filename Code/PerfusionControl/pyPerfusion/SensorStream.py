@@ -25,8 +25,11 @@ class SensorStream(Thread):
         self.__timestamp = None
         self.__end_of_header = 0
         self.__last_idx = 0
-        self.__mmap_len = 100
-        self.data = np.array(100, dtype=self.__hw.data_type)
+        self.data = np.array(self.__hw.buf_len, dtype=self.__hw.data_type)
+
+    @property
+    def buf_len(self):
+        return self.__hw.buf_len
 
     def run(self):
         while not self.__evt_halt.wait(self.__hw.period_sampling_ms / 1000.0):
