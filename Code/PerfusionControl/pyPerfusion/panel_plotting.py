@@ -13,6 +13,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 # from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 
 from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.SensorPoint import SensorPoint
 
 
 class PlotFrame(Enum):
@@ -73,18 +74,33 @@ class PanelPlotting(wx.Panel):
         # self.axes.clear()
 
     def plot(self):
+        min_x = []
+        max_x = []
+        min_y = []
+        max_y = []
         for sensor in self.__sensors:
             data_time, data = sensor.get_data(self.__plot_frame.value, self.__plot_len)
             if data is not None and len(data) > 0:
-                if isinstance(sensor, SensorStream):
+                if type(sensor) is SensorStream:
                     self.plot_stream(self.__line[sensor.name], data_time, data)
-                self.canvas.draw()
+                    min_y.append(np.min(data))
+                    max_y.append(np.max(data))
+                    min_x.append(data_time[0])
+                    max_x.append(data_time[-1])
+                elif type(sensor) is SensorPoint:
+                    self.plot_event(self.__line[sensor.name], data_time, data)
+        if len(min_y) > 0:
+            self.axes.set_ylim(min(min_y) * 0.9, max(max_y) * 1.1)
+            self.axes.set_xlim(min(min_x), max(max_x))
+            self.canvas.draw()
 
     def plot_stream(self, line, data_time, data):
-        if self.__line is not None:
+        if line is not None:
             line.set_data(data_time, data)
-            self.axes.set_ylim(np.min(data) * 0.9, np.max(data) * 1.1)
-            self.axes.set_xlim(data_time[0], data_time[-1])
+
+    def plot_event(self, line, data_time, data):
+        if line is not None:
+            line.set_data(data_time, data)
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
@@ -93,7 +109,10 @@ class PanelPlotting(wx.Panel):
     def add_sensor(self, sensor):
         assert isinstance(sensor, SensorStream)
         self.__sensors.append(sensor)
-        self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len)
+        if type(sensor) is SensorStream:
+            self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len)
+        elif type(sensor) is SensorPoint:
+            self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len, marker='o', color='red', linestyle=None)
 
 
 class TestFrame(wx.Frame):
