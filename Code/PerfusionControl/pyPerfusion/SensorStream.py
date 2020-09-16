@@ -74,7 +74,7 @@ class SensorStream(Thread):
         self.__fid = None
 
     def print_header(self):
-        print(f'Data Format: {DATA_VERSION}', file=self.__fid)
+        print(f'File Format: {DATA_VERSION}', file=self.__fid)
         print(f'Sensor: {self.__name}', file=self.__fid)
         print(f'Unit: {self.__unit_str}', file=self.__fid)
         print(f'Data Format: {str(np.dtype(self.__hw.data_type))}', file=self.__fid)
