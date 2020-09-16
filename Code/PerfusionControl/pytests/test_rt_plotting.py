@@ -25,7 +25,7 @@ class TestFrame(wx.Frame):
         self.panel = PanelPlotting(self)
         self.panel.add_sensor(sensor)
         sensor.start()
-        sensor.open(Path('./'), Path('2020-09-14'))
+        sensor.open(Path('./__data__'), Path('2020-09-14'))
 
 
 class MyTestApp(wx.App):

@@ -8,7 +8,7 @@ from pyPerfusion.SensorStream import SensorStream
 acq = HWAcq(10)
 sensor = SensorStream('test', 'ml/min', acq)
 
-sensor.open(Path('./'), Path('2020-09-14'))
+sensor.open(Path('./__data__'), Path('2020-09-14'))
 sensor.start()
 sleep(10)
 sensor.stop()

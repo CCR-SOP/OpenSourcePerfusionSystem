@@ -28,7 +28,7 @@ class TestFrame(wx.Frame):
             panel = PanelPlotting(self)
             panel.add_sensor(sensor)
             sensor.start()
-            sensor.open(Path('./'), Path('2020-09-14'))
+            sensor.open(Path('./__data__'), Path('2020-09-14'))
             sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
         self.SetSizer(sizer_plots)
         self.Fit()
