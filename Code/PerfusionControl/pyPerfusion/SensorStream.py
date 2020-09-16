@@ -15,7 +15,7 @@ class SensorStream(Thread):
         self.__unit_str = unit_str
         self.__hw = hw
         self.__evt_halt = Event()
-        self.__fid = None
+        self._fid = None
         self.__fid_read = None
         self.data = None
         self.__name = name
@@ -31,11 +31,14 @@ class SensorStream(Thread):
     def run(self):
         while not self.__evt_halt.wait(self.__hw.period_sampling_ms / 1000.0):
             data_buf, t = self.__hw.get_data()
-            if data_buf is not None and self.__fid is not None:
+            if data_buf is not None and self._fid is not None:
                 buf_len = len(data_buf)
-                data_buf.tofile(self.__fid)
+                self._write_to_file(data_buf, t)
                 self.__last_idx += buf_len
-                self.__fid.flush()
+                self._fid.flush()
+
+    def _write_to_file(self, data_buf, t):
+        data_buf.tofile(self._fid)
 
     def start(self):
         super().start()
@@ -52,16 +55,16 @@ class SensorStream(Thread):
         tmp_path = self._project_path / self._study_path
         tmp_path.mkdir(parents=True, exist_ok=True)
         self.__timestamp = datetime.datetime.now()
-        if self.__fid:
-            self.__fid.close()
-            self.__fid = None
+        if self._fid:
+            self._fid.close()
+            self._fid = None
         full_path = self._project_path / self._study_path / self._filename
-        self.__fid = open(full_path, 'wt')
+        self._fid = open(full_path, 'wt')
 
         self.print_header()
 
-        self.__end_of_header = self.__fid.tell()
-        self.__fid.flush()
+        self.__end_of_header = self._fid.tell()
+        self._fid.flush()
         self.__fid_read = open(full_path, 'rb')
         self.__fid_read.seek(self.__end_of_header)
 
@@ -71,15 +74,16 @@ class SensorStream(Thread):
         # JWK, probably need a join here to ensure data collection stops before file closed
         # self.data.close()
         # self.__fid.close()
-        self.__fid = None
+        self._fid = None
 
     def print_header(self):
-        print(f'File Format: {DATA_VERSION}', file=self.__fid)
-        print(f'Sensor: {self.__name}', file=self.__fid)
-        print(f'Unit: {self.__unit_str}', file=self.__fid)
-        print(f'Data Format: {str(np.dtype(self.__hw.data_type))}', file=self.__fid)
+        self._fid.print(f'File Format: {DATA_VERSION}')
+        self._fid.print(f'Sensor: {self.__name}')
+        self._fid.print(f'Unit: {self.__unit_str}')
+        self._fid.print(f'Data Format: {str(np.dtype(self.__hw.data_type))}')
+        self._fid.print(f'Sampling Period (ms): {self.__hw.period_sampling_ms}')
         stamp_str = self.__timestamp.strftime('%Y-%m-%d_%H:%M')
-        print(f'Start of Acquisition: {stamp_str}', file=self.__fid)
+        self._fid.print(f'Start of Acquisition: {stamp_str}')
 
     def get_data(self, last_ms, samples_needed):
 
