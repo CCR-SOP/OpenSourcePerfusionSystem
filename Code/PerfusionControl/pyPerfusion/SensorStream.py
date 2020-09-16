@@ -77,13 +77,16 @@ class SensorStream(Thread):
         self._fid = None
 
     def print_header(self):
-        self._fid.print(f'File Format: {DATA_VERSION}')
-        self._fid.print(f'Sensor: {self.__name}')
-        self._fid.print(f'Unit: {self.__unit_str}')
-        self._fid.print(f'Data Format: {str(np.dtype(self.__hw.data_type))}')
-        self._fid.print(f'Sampling Period (ms): {self.__hw.period_sampling_ms}')
         stamp_str = self.__timestamp.strftime('%Y-%m-%d_%H:%M')
-        self._fid.print(f'Start of Acquisition: {stamp_str}')
+        header = [f'File Format: {DATA_VERSION}',
+                  f'Sensor: {self.__name}',
+                  f'Unit: {self.__unit_str}',
+                  f'Data Format: {str(np.dtype(self.__hw.data_type))}',
+                  f'Sampling Period (ms): {self.__hw.period_sampling_ms}',
+                  f'Start of Acquisition: {stamp_str}'
+                  ]
+        end_of_line = '\n'
+        self._fid.writelines(f'{end_of_line.join(header)}{end_of_line}')
 
     def get_data(self, last_ms, samples_needed):
 
