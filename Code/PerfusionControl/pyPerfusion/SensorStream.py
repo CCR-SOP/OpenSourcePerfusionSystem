@@ -26,11 +26,11 @@ class SensorStream(Thread):
         self.__end_of_header = 0
         self.__last_idx = 0
         self.__mmap_len = 100
-        self.data = np.array(100, dtype=self.__hw.datatype)
+        self.data = np.array(100, dtype=self.__hw.data_type)
 
     def run(self):
         while not self.__evt_halt.wait(self.__hw.period_sampling_ms / 1000.0):
-            data_buf = self.__hw.get_data()
+            data_buf, t = self.__hw.get_data()
             if data_buf is not None and self.__fid is not None:
                 buf_len = len(data_buf)
                 data_buf.tofile(self.__fid)
@@ -49,9 +49,21 @@ class SensorStream(Thread):
         self._project_path = project_path
         self._study_path = study_path
         self._project_path.mkdir(parents=True, exist_ok=True)
-        self._study_path.mkdir(parents=True, exist_ok=True)
+        tmp_path = self._project_path / self._study_path
+        tmp_path.mkdir(parents=True, exist_ok=True)
         self.__timestamp = datetime.datetime.now()
+        if self.__fid:
+            self.__fid.close()
+            self.__fid = None
+        full_path = self._project_path / self._study_path / self._filename
+        self.__fid = open(full_path, 'wt')
+
         self.print_header()
+
+        self.__end_of_header = self.__fid.tell()
+        self.__fid.flush()
+        self.__fid_read = open(full_path, 'rb')
+        self.__fid_read.seek(self.__end_of_header)
 
     def stop(self):
         self.__hw.halt()
@@ -62,23 +74,12 @@ class SensorStream(Thread):
         self.__fid = None
 
     def print_header(self):
-        if self.__fid:
-            self.__fid.close()
-            self.__fid = None
-        full_path = self._project_path / self._study_path / self._filename
-        self.__fid = open(full_path, 'wt')
-        stamp_str = self.__timestamp.strftime('%Y-%m-%d_%H:%M')
-
         print(f'Data Format: {DATA_VERSION}', file=self.__fid)
         print(f'Sensor: {self.__name}', file=self.__fid)
         print(f'Unit: {self.__unit_str}', file=self.__fid)
-        print(f'Data Format: {str(np.dtype(self.__hw.datatype))}', file=self.__fid)
+        print(f'Data Format: {str(np.dtype(self.__hw.data_type))}', file=self.__fid)
+        stamp_str = self.__timestamp.strftime('%Y-%m-%d_%H:%M')
         print(f'Start of Acquisition: {stamp_str}', file=self.__fid)
-        self.__end_of_header = self.__fid.tell()
-
-        self.__fid.flush()
-        self.__fid_read = open(full_path, 'rb')
-        self.__fid_read.seek(self.__end_of_header)
 
     def get_data(self, last_ms, samples_needed):
 
@@ -87,7 +88,7 @@ class SensorStream(Thread):
             total_samples = -1
         else:
             total_samples = int(last_ms / self.__hw.period_sampling_ms)
-            bytes_to_read = total_samples * np.dtype(self.__hw.datatype).itemsize
+            bytes_to_read = total_samples * np.dtype(self.__hw.data_type).itemsize
             try:
                 if self.__fid_read.tell() <= bytes_to_read:
                     self.__fid_read.seek(self.__end_of_header)
@@ -97,7 +98,7 @@ class SensorStream(Thread):
                 # probably occurred by reading past beginning of file
                 print("Error seeking file")
                 self.__fid_read.seek(self.__end_of_header)
-        data = np.fromfile(self.__fid_read, dtype=self.__hw.datatype, count=total_samples)
+        data = np.fromfile(self.__fid_read, dtype=self.__hw.data_type, count=total_samples)
         idx = np.linspace(0, len(data) - 1, samples_needed, dtype='int')
         time_start = (self.__last_idx - len(data)) * self.__hw.period_sampling_ms/1000.0 + self.__hw.start_time
         data_time = (idx * self.__hw.period_sampling_ms/1000.0) + time_start
