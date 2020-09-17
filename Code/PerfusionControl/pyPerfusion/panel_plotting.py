@@ -112,7 +112,7 @@ class PanelPlotting(wx.Panel):
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len)
         elif type(sensor) is SensorPoint:
-            self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len, marker='o', color='red', linestyle=None)
+            self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len, 's')
 
 
 class TestFrame(wx.Frame):
