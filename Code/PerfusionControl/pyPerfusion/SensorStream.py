@@ -32,7 +32,8 @@ class SensorStream(Thread):
         return self._hw.buf_len
 
     def run(self):
-        while not self.__evt_halt.wait(self._hw.period_sampling_ms / 1000.0):
+        # JWK, need better wait timeout
+        while not self.__evt_halt.wait(self._hw.period_sampling_ms / 1000.0 / 10.0):
             data_buf, t = self._hw.get_data()
             if data_buf is not None and self._fid is not None:
                 buf_len = len(data_buf)
