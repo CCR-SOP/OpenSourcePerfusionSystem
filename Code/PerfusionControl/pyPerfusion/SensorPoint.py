@@ -34,7 +34,7 @@ class SensorPoint(SensorStream):
         data_buf.tofile(self._fid)
 
     def __read_chunk(self):
-        ts = []
+        ts = 0
         data_buf = []
         ts_bytes = self._fid_read.read(self._bytes_per_ts)
         if len(ts_bytes) == 4:
