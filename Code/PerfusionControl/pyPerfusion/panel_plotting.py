@@ -88,7 +88,7 @@ class PanelPlotting(wx.Panel):
                     min_x.append(data_time[0])
                     max_x.append(data_time[-1])
                 elif type(sensor) is SensorPoint:
-                    self.plot_event(self.__line[sensor.name], data_time, data)
+                    self.plot_event(sensor, data_time, data)
         if len(min_y) > 0:
             self.axes.set_ylim(min(min_y) * 0.9, max(max_y) * 1.1)
             self.axes.set_xlim(min(min_x), max(max_x))
@@ -98,9 +98,11 @@ class PanelPlotting(wx.Panel):
         if line is not None:
             line.set_data(data_time, data)
 
-    def plot_event(self, line, data_time, data):
-        if line is not None:
-            line.set_data(data_time, data)
+    def plot_event(self, sensor, data_time, data):
+        # del self.__line[sensor.name]
+        self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color='red')
+
+
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
@@ -112,7 +114,8 @@ class PanelPlotting(wx.Panel):
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len)
         elif type(sensor) is SensorPoint:
-            self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len, 's')
+            # self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len, 's')
+            self.__line[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color='red')
 
 
 class TestFrame(wx.Frame):
