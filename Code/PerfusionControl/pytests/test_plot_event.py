@@ -18,7 +18,7 @@ from pyPerfusion.SensorPoint import SensorPoint
 acq = HWAcq(100)
 sensor = SensorStream('test', 'ml/min', acq)
 
-evt_acq = HWAcq(500)
+evt_acq = HWAcq(1000)
 evt = SensorPoint('Insulin Injection', 'ml', evt_acq)
 
 
@@ -29,10 +29,10 @@ class TestFrame(wx.Frame):
         self.panel = PanelPlotting(self)
         self.panel.add_sensor(sensor)
         self.panel.add_sensor(evt)
-        sensor.start()
         sensor.open(Path('./__data__'), Path('2020-09-14'))
-        evt.start()
         evt.open(Path('./__data__'), Path('2020-09-14'))
+        sensor.start()
+        evt.start()
 
 
 class MyTestApp(wx.App):
@@ -45,6 +45,6 @@ class MyTestApp(wx.App):
 
 app = MyTestApp(0)
 app.MainLoop()
-time.sleep(10)
+time.sleep(100)
 sensor.stop()
 
