@@ -23,7 +23,7 @@ class SensorStream(Thread):
         self._filename = pathlib.Path(f'{self._name}.dat')
         self._study_path = None
         self._timestamp = None
-        self.__end_of_header = 0
+        self._end_of_header = 0
         self._last_idx = 0
         self.data = np.array(self._hw.buf_len, dtype=self._hw.data_type)
 
@@ -70,10 +70,10 @@ class SensorStream(Thread):
         # reopen as binary for data
         # self._fid.open(full_path, 'wb')
         # self._fid.seek(0, SEEK_END)
-        self.__end_of_header = self._fid.tell()
+        self._end_of_header = self._fid.tell()
         self._fid.flush()
         self._fid_read = open(full_path, 'rb')
-        self._fid_read.seek(self.__end_of_header)
+        self._fid_read.seek(self._end_of_header)
 
     def stop(self):
         self._hw.halt()
@@ -98,20 +98,20 @@ class SensorStream(Thread):
 
     def get_data(self, last_ms, samples_needed):
         if last_ms == 0:
-            self._fid_read.seek(self.__end_of_header)
+            self._fid_read.seek(self._end_of_header)
             total_samples = -1
         else:
             total_samples = int(last_ms / self._hw.period_sampling_ms)
             bytes_to_read = total_samples * np.dtype(self._hw.data_type).itemsize
             try:
                 if self._fid_read.tell() <= bytes_to_read:
-                    self._fid_read.seek(self.__end_of_header)
+                    self._fid_read.seek(self._end_of_header)
                 else:
                     self._fid_read.seek(-bytes_to_read, 2)
             except OSError:
                 # probably occurred by reading past beginning of file
                 print("Error seeking file")
-                self._fid_read.seek(self.__end_of_header)
+                self._fid_read.seek(self._end_of_header)
             except AttributeError:
                 # read fid not valid
                 print("ERROR: Read FID is not valid")
