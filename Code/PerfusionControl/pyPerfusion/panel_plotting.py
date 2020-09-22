@@ -50,8 +50,10 @@ class PanelPlotting(wx.Panel):
 
         self.__do_layout()
         self.__set_bindings()
-        self.axes = self.fig.add_subplot(111)
+        self.axes = self.fig.add_subplot(6, 1, (1, 4))
+        self.axes_lt = self.fig.add_subplot(6, 1, 6)
         self.__line = {}
+        self.__line_lt = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -89,6 +91,13 @@ class PanelPlotting(wx.Panel):
                     max_x.append(data_time[-1])
                 elif type(sensor) is SensorPoint:
                     self.plot_event(sensor, data_time, data)
+            lt_t, lt = sensor.get_data(PlotFrame.FROM_START.value, self.__plot_len)
+            if lt is not None and len(lt) > 0:
+                if type(sensor) is SensorStream:
+                    self.plot_stream(self.__line_lt[sensor.name], lt_t, lt)
+                    self.axes_lt.set_ylim(min(lt) * 0.9, max(lt) * 1.1)
+                    self.axes_lt.set_xlim(lt_t[0], lt_t[-1])
+                    # self.canvas.draw()
         if len(min_y) > 0:
             self.axes.set_ylim(min(min_y) * 0.9, max(max_y) * 1.1)
             self.axes.set_xlim(min(min_x), max(max_x))
@@ -102,8 +111,6 @@ class PanelPlotting(wx.Panel):
         # del self.__line[sensor.name]
         self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color='red')
 
-
-
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             self.plot()
@@ -112,7 +119,10 @@ class PanelPlotting(wx.Panel):
         assert isinstance(sensor, SensorStream)
         self.__sensors.append(sensor)
         if type(sensor) is SensorStream:
-            self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len)
+            self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
+            self.__line_lt[sensor.name], = self.axes_lt.plot([0] * self.__plot_len)
+            self.axes_lt.set_yticklabels([])
+            self.axes_lt.set_xticklabels([])
         elif type(sensor) is SensorPoint:
             # self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len, 's')
             self.__line[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color='red')
