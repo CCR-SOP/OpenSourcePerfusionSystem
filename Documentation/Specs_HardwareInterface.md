@@ -85,6 +85,18 @@
 	- +/-10V fixed
 	- Will need to know gain settings for conversion to mmHg
 	- Jumper J4 controls pulsatile output to BNC
+	
+# BGA circuit
+- Reglo 78018
+	- For BGA circuit
+	- Front Panel Controls
+	- DB-25 connector (see page 3-40 in manual for full pin out)
+		- Pin 1 - Speed Control Voltage (0-10V)
+		- Pin 3 - Speed Control Input Reference (GND)
+		- Pin 15 - Remote Start/Stop input
+		- Pin 16 - Remote CW/CCW Input
+		- Pin 17 - Remote Reference (GND)
+		- Remote pins are contact closure to GND
 
 
 
