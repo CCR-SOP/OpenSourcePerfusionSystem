@@ -56,6 +56,7 @@ class PanelPlotting(wx.Panel):
         self.__line = {}
         self.__line_lt = {}
         self.__line_range = {}
+        self.__line_range_lt = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -78,34 +79,24 @@ class PanelPlotting(wx.Panel):
         # self.axes.clear()
 
     def plot(self):
-        min_x = []
-        max_x = []
-        min_y = []
-        max_y = []
         for sensor in self.__sensors:
-            data_time, data = sensor.get_data(self.__plot_frame.value, self.__plot_len)
-            if data is not None and len(data) > 0:
-                if type(sensor) is SensorStream:
-                    self.plot_stream(self.__line[sensor.name], data_time, data)
-                    min_y.append(np.min(data))
-                    max_y.append(np.max(data))
-                    min_x.append(data_time[0])
-                    max_x.append(data_time[-1])
-                    self.plot_valid_range(sensor)
+            self._plot(self.__line[sensor.name], sensor, self.__plot_frame)
+            self._plot(self.__line_lt[sensor.name], sensor, PlotFrame.FROM_START)
 
-                elif type(sensor) is SensorPoint:
-                    self.plot_event(sensor, data_time, data)
-            lt_t, lt = sensor.get_data(PlotFrame.FROM_START.value, self.__plot_len)
-            if lt is not None and len(lt) > 0:
-                if type(sensor) is SensorStream:
-                    self.plot_stream(self.__line_lt[sensor.name], lt_t, lt)
-                    self.axes_lt.set_ylim(min(lt) * 0.9, max(lt) * 1.1)
-                    self.axes_lt.set_xlim(lt_t[0], lt_t[-1])
-                    # self.canvas.draw()
-        if len(min_y) > 0:
-            self.axes.set_ylim(min(min_y) * 0.9, max(max_y) * 1.1)
-            self.axes.set_xlim(min(min_x), max(max_x))
-            self.canvas.draw()
+        self.axes.relim()
+        self.axes.autoscale_view()
+        self.axes_lt.relim()
+        self.axes_lt.autoscale_view()
+        self.canvas.draw()
+
+    def _plot(self, line, sensor, frame):
+        data_time, data = sensor.get_data(frame.value, self.__plot_len)
+        if data is not None and len(data) > 0:
+            if type(sensor) is SensorStream:
+                self.plot_stream(line, data_time, data)
+                self.plot_valid_range(sensor)
+            elif type(sensor) is SensorPoint:
+                self.plot_event(sensor, data_time, data)
 
     def plot_stream(self, line, data_time, data):
         if line is not None:
@@ -118,8 +109,10 @@ class PanelPlotting(wx.Panel):
     def plot_valid_range(self, sensor):
         if sensor.valid_range is not None and self._valid_range != sensor.valid_range:
             self.__line_range.remove()
+            self.__line_range_lt.remove()
             print('printing new valid range')
             self.__line_range = self.axes.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
+            self.__line_range_lt = self.axes_lt.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
@@ -133,8 +126,11 @@ class PanelPlotting(wx.Panel):
             self.__line_lt[sensor.name], = self.axes_lt.plot([0] * self.__plot_len)
             if sensor.valid_range is not None:
                 self.__line_range = self.axes.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
+                self.__line_range_lt = self.axes_lt.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g',
+                                                      alpha=0.2)
             else:
                 self.__line_range = None
+                self.__line_range_lt = None
             self._valid_range = sensor.valid_range
             self.axes_lt.set_yticklabels([])
             self.axes_lt.set_xticklabels([])
