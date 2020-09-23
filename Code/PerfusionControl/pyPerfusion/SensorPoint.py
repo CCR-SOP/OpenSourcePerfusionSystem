@@ -26,12 +26,12 @@ class SensorPoint(SensorStream):
                   ]
         end_of_line = '\n'
         hdr_str = f'{end_of_line.join(header)}{end_of_line}'
-        self._fid.write(hdr_str.encode())
+        self._fid_write.write(hdr_str.encode())
 
     def _write_to_file(self, data_buf, t):
         ts_bytes = struct.pack('i', int(t * 1000.0))
-        self._fid.write(ts_bytes)
-        data_buf.tofile(self._fid)
+        self._fid_write.write(ts_bytes)
+        data_buf.tofile(self._fid_write)
 
     def __read_chunk(self):
         ts = 0
@@ -43,8 +43,9 @@ class SensorPoint(SensorStream):
         return data_buf, ts
 
     def get_data(self, last_ms, samples_needed):
+        self._open_read()
         cur_time = int(perf_counter() * 1000)
-        self._fid_read.seek(self._end_of_header, SEEK_SET)
+        self._fid_read.seek(0)
         chunk = [1]
         data_time = []
         data = []
@@ -53,5 +54,5 @@ class SensorPoint(SensorStream):
             if chunk and (cur_time - ts < last_ms or last_ms == 0):
                 data.append(chunk)
                 data_time.append(ts / 1000.0)
-
+        self._fid_read.close()
         return data_time, data
