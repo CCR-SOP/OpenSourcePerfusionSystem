@@ -101,7 +101,7 @@ class SensorStream(Thread):
         self._fid_read.close()
         self._fid_read = None
 
-    def print_stream_info(self):
+    def _get_stream_info(self):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
                   f'Sensor: {self._name}',
@@ -112,6 +112,10 @@ class SensorStream(Thread):
                   ]
         end_of_line = '\n'
         hdr_str = f'{end_of_line.join(header)}{end_of_line}'
+        return hdr_str
+
+    def print_stream_info(self):
+        hdr_str = self._get_stream_info()
         filename = self.full_path.with_suffix('.txt')
         print(f"printing stream info to {filename}")
         fid = open(filename, 'wt')

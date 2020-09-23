@@ -13,7 +13,7 @@ class SensorPoint(SensorStream):
         self._samples_per_ts = 1
         self._bytes_per_ts = 4
 
-    def print_header(self):
+    def _get_stream_info(self):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
                   f'Sensor: {self._name}',
@@ -26,7 +26,7 @@ class SensorPoint(SensorStream):
                   ]
         end_of_line = '\n'
         hdr_str = f'{end_of_line.join(header)}{end_of_line}'
-        self._fid_write.write(hdr_str.encode())
+        return hdr_str
 
     def _write_to_file(self, data_buf, t):
         ts_bytes = struct.pack('i', int(t * 1000.0))
