@@ -30,6 +30,7 @@ class PanelPlotting(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
         self.__plot_frame = PlotFrame.LAST_5_SECONDS
         self.__plot_len = 200
+        self._valid_range = None
 
         self.fig = mpl.figure.Figure()
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
@@ -54,6 +55,7 @@ class PanelPlotting(wx.Panel):
         self.axes_lt = self.fig.add_subplot(6, 1, 6)
         self.__line = {}
         self.__line_lt = {}
+        self.__line_range = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -89,6 +91,8 @@ class PanelPlotting(wx.Panel):
                     max_y.append(np.max(data))
                     min_x.append(data_time[0])
                     max_x.append(data_time[-1])
+                    self.plot_valid_range(sensor)
+
                 elif type(sensor) is SensorPoint:
                     self.plot_event(sensor, data_time, data)
             lt_t, lt = sensor.get_data(PlotFrame.FROM_START.value, self.__plot_len)
@@ -111,6 +115,12 @@ class PanelPlotting(wx.Panel):
         # del self.__line[sensor.name]
         self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color='red')
 
+    def plot_valid_range(self, sensor):
+        if sensor.valid_range is not None and self._valid_range != sensor.valid_range:
+            self.__line_range.remove()
+            print('printing new valid range')
+            self.__line_range = self.axes.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
+
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             self.plot()
@@ -121,6 +131,8 @@ class PanelPlotting(wx.Panel):
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_lt[sensor.name], = self.axes_lt.plot([0] * self.__plot_len)
+            self.__line_range = self.axes.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
+            self._valid_range = sensor.valid_range
             self.axes_lt.set_yticklabels([])
             self.axes_lt.set_xticklabels([])
             self.axes.set_title(sensor.name)

@@ -10,9 +10,10 @@ DATA_VERSION = 1
 
 
 class SensorStream(Thread):
-    def __init__(self, name, unit_str, hw):
+    def __init__(self, name, unit_str, hw, valid_range=None):
         Thread.__init__(self)
         self._unit_str = unit_str
+        self._valid_range = valid_range
         self._hw = hw
         self.__evt_halt = Event()
         self._fid_write = None
@@ -39,6 +40,10 @@ class SensorStream(Thread):
     @property
     def unit_str(self):
         return self._unit_str
+
+    @property
+    def valid_range(self):
+        return self._valid_range
 
     def run(self):
         # JWK, need better wait timeout

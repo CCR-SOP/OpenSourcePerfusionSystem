@@ -14,8 +14,8 @@ from pyPerfusion.HWAcq import HWAcq
 from pyPerfusion.SensorStream import SensorStream
 
 
-acq = HWAcq(10)
-sensor = SensorStream('test', 'ml/min', acq)
+acq = HWAcq(10, demo_amp = 20, demo_offset=60)
+sensor = SensorStream('test', 'ml/min', acq, valid_range=[65, 75])
 
 
 class TestFrame(wx.Frame):
