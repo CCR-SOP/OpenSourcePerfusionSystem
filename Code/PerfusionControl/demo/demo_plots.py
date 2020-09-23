@@ -14,10 +14,10 @@ from pyPerfusion.HWAcq import HWAcq
 from pyPerfusion.SensorStream import SensorStream
 
 sensors = [
-          SensorStream('HA Flow', 'ml/min', HWAcq(10)),
-          SensorStream('PV Flow', 'ml/min', HWAcq(10)),
-          SensorStream('HA Pressure', 'mmHg', HWAcq(10)),
-          SensorStream('PV Pressure', 'mmHg', HWAcq(10))
+          SensorStream('HA Flow', 'ml/min', HWAcq(10, demo_amp=80, demo_offset=0)),
+          SensorStream('PV Flow', 'ml/min', HWAcq(10, demo_amp=40, demo_offset=20)),
+          SensorStream('HA Pressure', 'mmHg', HWAcq(10, demo_amp=100, demo_offset=0)),
+          SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0))
          ]
 
 
