@@ -36,6 +36,10 @@ class SensorStream(Thread):
     def full_path(self):
         return self._project_path / self._study_path / self._filename.with_suffix(self._ext)
 
+    @property
+    def unit_str(self):
+        return self._unit_str
+
     def run(self):
         # JWK, need better wait timeout
         while not self.__evt_halt.wait(self._hw.period_sampling_ms / 1000.0 / 10.0):

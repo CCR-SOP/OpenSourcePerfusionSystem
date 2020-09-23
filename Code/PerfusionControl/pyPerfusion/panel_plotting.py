@@ -124,6 +124,7 @@ class PanelPlotting(wx.Panel):
             self.axes_lt.set_yticklabels([])
             self.axes_lt.set_xticklabels([])
             self.axes.set_title(sensor.name)
+            self.axes.set_ylabel(sensor.unit_str)
 
         elif type(sensor) is SensorPoint:
             # self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len, 's')
