@@ -105,6 +105,7 @@ class PanelPlotting(wx.Panel):
     def plot_event(self, sensor, data_time, data):
         # del self.__line[sensor.name]
         self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color='red')
+        self.__line_lt[sensor.name] = self.axes_lt.vlines(data_time, ymin=0, ymax=100, color='red', alpha=0.2)
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
@@ -125,10 +126,9 @@ class PanelPlotting(wx.Panel):
             self.axes_lt.set_xticklabels([])
             self.axes.set_title(sensor.name)
             self.axes.set_ylabel(sensor.unit_str)
-
         elif type(sensor) is SensorPoint:
-            # self.__line[sensor.name], = self.axes.plot([0] * sensor.buf_len, 's')
             self.__line[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color='red')
+            self.__line_lt[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color='red', alpha=0.2)
 
 
 class TestFrame(wx.Frame):
