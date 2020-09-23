@@ -24,9 +24,12 @@ class HWAcq(Thread):
 
     """
 
-    def __init__(self, period_sample_ms):
+    def __init__(self, period_sample_ms, demo_amp=70, demo_offset=10):
 
         Thread.__init__(self)
+        self._period_sampling_ms = period_sample_ms
+        self._demo_amp = demo_amp
+        self._demo_offset = demo_offset
         self.__queue_buffer = Queue(maxsize=100)
         self.__buffer = np.zeros(100, dtype=np.uint16)
         self.__buffer_t = 0
@@ -34,7 +37,7 @@ class HWAcq(Thread):
         self.__lock_buf = Lock()
         self.__epoch = 0
         self._time = 0
-        self._period_sampling_ms = period_sample_ms
+
         self._read_period_ms = 500
         self.data_type = np.float32
 
@@ -73,12 +76,12 @@ class HWAcq(Thread):
         return buf, t
 
     def _convert_to_units(self):
-        return self.__buffer * 0.5 + 0.0
+        return self.__buffer * 1.0 + 0.0
 
     def _acq_samples(self):
         samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         sleep(sleep_time)
         self.__buffer_t = perf_counter()
-        val = self.data_type(np.random.random_sample() * 10 + 70)
+        val = self.data_type(np.random.random_sample() * self._demo_amp + self._demo_offset)
         self.__buffer = np.ones(samples_per_read, dtype=self.data_type) * val
