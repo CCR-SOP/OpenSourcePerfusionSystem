@@ -50,11 +50,11 @@ class SensorStream(Thread):
         data_buf.tofile(self._fid_write)
 
     def _open_read(self):
-        self._fid_read = open(self.full_path, 'r')
+        self._fid_read = open(self.full_path, 'rb')
         self.data = np.memmap(self._fid_read, dtype=self._hw.data_type, mode='r')
 
     def _open_write(self):
-        self._fid_write = open(self.full_path, 'w+')
+        self._fid_write = open(self.full_path, 'w+b')
 
     def _get_file_size(self):
         self._fid_read.seek(0, SEEK_END)
