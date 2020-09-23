@@ -66,8 +66,7 @@ class SensorStream(Thread):
         self._fid_write = open(self.full_path, 'w+b')
 
     def _get_file_size(self):
-        self._fid_read.seek(0, SEEK_END)
-        return int(self._fid_read.tell() / np.dtype(self._hw.data_type).itemsize)
+        return len(self.data)
 
     def start(self):
         super().start()
@@ -145,6 +144,7 @@ class SensorStream(Thread):
             start_idx = 0
         idx = np.linspace(start_idx, file_size-1, samples_needed, dtype=np.int)
         data = self.data[idx]
+
         start_t = start_idx * self._hw.period_sampling_ms / 1000.0
         stop_t = file_size * self._hw.period_sampling_ms / 1000.0
         data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.float32)
