@@ -32,6 +32,7 @@ class PanelPlotting(wx.Panel):
         self.__plot_len = 200
         self._valid_range = None
 
+
         self.fig = mpl.figure.Figure()
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
         self.canvas.SetMinSize(wx.Size(1, 1))
@@ -57,6 +58,7 @@ class PanelPlotting(wx.Panel):
         self.__line_lt = {}
         self.__line_range = {}
         self.__line_range_lt = {}
+        self._shaded = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -76,7 +78,6 @@ class PanelPlotting(wx.Panel):
 
     def OnPlotChoiceChange(self, event):
         self.__plot_frame = PlotFrame[self.choice_plot_parameter.GetStringSelection()]
-        # self.axes.clear()
 
     def plot(self):
         for sensor in self.__sensors:
@@ -94,7 +95,6 @@ class PanelPlotting(wx.Panel):
         if data is not None and len(data) > 0:
             if type(sensor) is SensorStream:
                 self.plot_stream(line, data_time, data)
-                self.plot_valid_range(sensor)
             elif type(sensor) is SensorPoint:
                 self.plot_event(sensor, data_time, data)
 
@@ -105,14 +105,6 @@ class PanelPlotting(wx.Panel):
     def plot_event(self, sensor, data_time, data):
         # del self.__line[sensor.name]
         self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color='red')
-
-    def plot_valid_range(self, sensor):
-        if sensor.valid_range is not None and self._valid_range != sensor.valid_range:
-            self.__line_range.remove()
-            self.__line_range_lt.remove()
-            print('printing new valid range')
-            self.__line_range = self.axes.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
-            self.__line_range_lt = self.axes_lt.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
@@ -125,13 +117,10 @@ class PanelPlotting(wx.Panel):
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_lt[sensor.name], = self.axes_lt.plot([0] * self.__plot_len)
             if sensor.valid_range is not None:
-                self.__line_range = self.axes.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
-                self.__line_range_lt = self.axes_lt.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g',
-                                                      alpha=0.2)
-            else:
-                self.__line_range = None
-                self.__line_range_lt = None
-            self._valid_range = sensor.valid_range
+                rng = sensor.valid_range
+                self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+                self._shaded['lt'] = self.axes_lt.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+                self._valid_range = rng
             self.axes_lt.set_yticklabels([])
             self.axes_lt.set_xticklabels([])
             self.axes.set_title(sensor.name)
