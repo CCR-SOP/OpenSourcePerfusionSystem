@@ -131,7 +131,10 @@ class PanelPlotting(wx.Panel):
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_lt[sensor.name], = self.axes_lt.plot([0] * self.__plot_len)
-            self.__line_range = self.axes.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
+            if sensor.valid_range is not None:
+                self.__line_range = self.axes.axhspan(sensor.valid_range[0], sensor.valid_range[1], color='g', alpha=0.2)
+            else:
+                self.__line_range = None
             self._valid_range = sensor.valid_range
             self.axes_lt.set_yticklabels([])
             self.axes_lt.set_xticklabels([])
