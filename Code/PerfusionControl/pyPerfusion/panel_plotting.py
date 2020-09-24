@@ -47,7 +47,7 @@ class PanelPlotting(wx.Panel):
         self.choice_plot_parameter = wx.Choice(self, choices=parameters)
         self.choice_plot_parameter.SetStringSelection(self.__plot_frame.name)
         font = self.choice_plot_parameter.GetFont()
-        font.SetPointSize(20)
+        font.SetPointSize(12)
         self.choice_plot_parameter.SetFont(font)
 
         self.__do_layout()
