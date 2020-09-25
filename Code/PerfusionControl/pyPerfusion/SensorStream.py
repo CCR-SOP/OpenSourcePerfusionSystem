@@ -59,8 +59,9 @@ class SensorStream(Thread):
         data_buf.tofile(self._fid_write)
 
     def _open_read(self):
-        self._fid_read = open(self.full_path, 'rb')
-        self.data = np.memmap(self._fid_read, dtype=self._hw.data_type, mode='r')
+        _fid = open(self.full_path, 'rb')
+        data = np.memmap(_fid, dtype=self._hw.data_type, mode='r')
+        return _fid, data
 
     def _open_write(self):
         self._fid_write = open(self.full_path, 'w+b')
@@ -131,7 +132,7 @@ class SensorStream(Thread):
         fid.close()
 
     def get_data(self, last_ms, samples_needed):
-        self._open_read()
+        _fid, data = self._open_read()
         file_size = self._get_file_size()
         if last_ms > 0:
             data_size = int(last_ms / self._hw.period_sampling_ms)
@@ -143,11 +144,18 @@ class SensorStream(Thread):
         else:
             start_idx = 0
         idx = np.linspace(start_idx, file_size-1, samples_needed, dtype=np.int)
-        data = self.data[idx]
+        data = data[idx]
 
         start_t = start_idx * self._hw.period_sampling_ms / 1000.0
         stop_t = file_size * self._hw.period_sampling_ms / 1000.0
         data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.float32)
-        self._fid_read.close()
+        _fid.close()
 
         return data_time, data
+
+    def get_current(self):
+        _fid, data = self._open_read()
+        val = data[-1]
+        _fid.close()
+
+        return val
