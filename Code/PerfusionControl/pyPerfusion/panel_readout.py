@@ -5,19 +5,24 @@
 
 Panel class for showing single number readout
 """
+from pathlib import Path
+
 import wx
+
+from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.HWAcq import HWAcq
 
 
 class PanelReadout(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, sensor:SensorStream):
         wx.Panel.__init__(self, parent, -1)
-        self._sensors = []
+        self._sensor = sensor
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer_value = wx.BoxSizer(wx.HORIZONTAL)
-        self.label_name = wx.StaticText(self, label='HA Flow')
-        self.label_value = wx.StaticText(self, label='65')
-        self.label_units = wx.StaticText(self, label='bpm')
+        self.label_name = wx.StaticText(self, label=sensor.name)
+        self.label_value = wx.StaticText(self, label='000')
+        self.label_units = wx.StaticText(self, label=sensor.unit_str)
 
         self.__do_layout()
         # self.__set_bindings()
@@ -41,6 +46,17 @@ class PanelReadout(wx.Panel):
         self.Layout()
         self.Fit()
 
+        self.timer_update = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimer)
+        self.timer_update.Start(1000, wx.TIMER_CONTINUOUS)
+
+    def OnTimer(self, event):
+        if event.GetId() == self.timer_update.GetId():
+            self.update_value()
+
+    def update_value(self):
+        val = int(self._sensor.get_current())
+        self.label_value.SetLabel(f'{val:3}')
 
     # def __set_bindings(self):
         # add bindings, if needed
@@ -50,7 +66,11 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelReadout(self)
+
+        self.sensor = SensorStream('HA Flow', 'bpm', HWAcq(100))
+        self.panel = PanelReadout(self, self.sensor)
+        self.sensor.start()
+        self.sensor.open(Path('./__data__'), Path('2020-09-14'))
 
 
 class MyTestApp(wx.App):
