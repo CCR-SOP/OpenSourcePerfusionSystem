@@ -47,6 +47,14 @@ class PanelPlotting(wx.Panel):
         self.Bind(wx.EVT_TIMER, self.OnTimer)
         self.timer_plot.Start(200, wx.TIMER_CONTINUOUS)
 
+    @property
+    def plot_frame_ms(self):
+        return self._plot_frame_ms
+
+    @plot_frame_ms.setter
+    def plot_frame_ms(self, ms):
+        self._plot_frame_ms = ms
+
     def __do_layout(self):
         self.sizer.Add(self.canvas, 1, wx.ALL | wx.EXPAND, border=1)
 
@@ -75,7 +83,13 @@ class PanelPlotting(wx.Panel):
                 except ValueError:
                     pass
                 if sensor.valid_range is not None:
-                    self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[0], where=data < sensor.valid_range[0], color='r')
+                    self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[0],
+                                                                              where=data < sensor.valid_range[0],
+                                                                              color='r')
+                    self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[1],
+                                                                              where=data > sensor.valid_range[1],
+                                                                              color='r')
+
             elif type(sensor) is SensorPoint:
                 self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color='red')
 
@@ -100,6 +114,15 @@ class PanelPlotting(wx.Panel):
     def _configure_plot(self, sensor):
         self.axes.set_title(sensor.name)
         self.axes.set_ylabel(sensor.unit_str)
+
+
+class PanelPlotLT(PanelPlotting):
+    def __init__(self, parent):
+        PanelPlotting.__init__(self, parent)
+
+    def _configure_plot(self, sensor):
+        self.axes.set_yticklabels([])
+        self.axes.set_xticklabels([])
 
 
 class TestFrame(wx.Frame):
