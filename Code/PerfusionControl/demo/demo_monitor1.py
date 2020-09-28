@@ -40,16 +40,15 @@ class TestFrame(wx.Frame):
             panel = PanelReadout(self, sensor)
             sizer_readout.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
-        for sensor in sensors:
-            sensor.open(Path('./__data__'), Path('yyyy-mm-dd'))
-            sensor.start()
-
         sizer_main.Add(sizer_plots, 1, wx.ALL | wx.EXPAND)
         sizer_main.Add(sizer_readout)
         self.SetSizer(sizer_main)
         self.Fit()
         self.Layout()
         self.Maximize(True)
+
+        [sensor.open(Path('./__data__'), Path('yyyy-mm-dd')) for sensor in sensors]
+        [sensor.start() for sensor in sensors]
 
 
 class MyTestApp(wx.App):
@@ -63,5 +62,6 @@ class MyTestApp(wx.App):
 app = MyTestApp(0)
 app.MainLoop()
 time.sleep(10)
-sensor.stop()
+[sensor.stop() for sensor in sensors]
+
 
