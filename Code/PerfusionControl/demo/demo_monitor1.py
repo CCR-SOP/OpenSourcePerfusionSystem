@@ -9,17 +9,16 @@ import wx
 import time
 from pathlib import Path
 
-from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.panel_readout import PanelReadout
 from pyPerfusion.HWAcq import HWAcq
 from pyPerfusion.SensorStream import SensorStream
 
-sensors = [
-          SensorStream('HA Flow', 'ml/min', HWAcq(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
-          SensorStream('PV Flow', 'ml/min', HWAcq(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
-          SensorStream('HA Pressure', 'mmHg', HWAcq(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
-          SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0), valid_range=[3, 7])
-         ]
+sensors = {'HA Flow': SensorStream('HA Flow', 'ml/min', HWAcq(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
+           'PV Flow': SensorStream('PV Flow', 'ml/min', HWAcq(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
+           'HA Pressure': SensorStream('HA Pressure', 'mmHg', HWAcq(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
+           'PV Pressure': SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0), valid_range=[3, 7])
+           }
 
 
 class TestFrame(wx.Frame):
@@ -28,15 +27,14 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer_main = wx.BoxSizer(wx.HORIZONTAL)
 
-        sizer_plots = wx.GridSizer(cols=2)
-        for sensor in sensors:
-            panel = PanelPlotting(self)
-            panel.add_sensor(sensor)
-
-            sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer_plots = wx.GridSizer(cols=2, hgap=5, vgap=5)
+        sizer_plots.Add(self._add_lt(sensors['HA Flow']), 1, wx.ALL | wx.EXPAND)
+        sizer_plots.Add(self._add_lt(sensors['PV Flow']), 1, wx.ALL | wx.EXPAND)
+        sizer_plots.Add(self._add_plot(sensors['HA Pressure']), 1, wx.ALL | wx.EXPAND)
+        sizer_plots.Add(self._add_plot(sensors['PV Pressure']), 1, wx.ALL | wx.EXPAND)
 
         sizer_readout = wx.GridSizer(cols=1)
-        for sensor in sensors:
+        for sensor in sensors.values():
             panel = PanelReadout(self, sensor)
             sizer_readout.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
@@ -47,9 +45,24 @@ class TestFrame(wx.Frame):
         self.Layout()
         self.Maximize(True)
 
-        [sensor.open(Path('./__data__'), Path('yyyy-mm-dd')) for sensor in sensors]
-        [sensor.start() for sensor in sensors]
+        [sensor.open(Path('./__data__'), Path('yyyy-mm-dd')) for sensor in sensors.values()]
+        [sensor.start() for sensor in sensors.values()]
 
+    def _add_lt(self, sensor):
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        panel = PanelPlotting(self)
+        panel.add_sensor(sensor)
+        sizer.Add(panel, 6, wx.ALL | wx.EXPAND, border=0)
+        panel = PanelPlotLT(self)
+        panel.plot_frame_ms = 0
+        panel.add_sensor(sensor)
+        sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=0)
+        return sizer
+
+    def _add_plot(self, sensor):
+        panel = PanelPlotting(self)
+        panel.add_sensor(sensor)
+        return panel
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -62,6 +75,6 @@ class MyTestApp(wx.App):
 app = MyTestApp(0)
 app.MainLoop()
 time.sleep(10)
-[sensor.stop() for sensor in sensors]
+[sensor.stop() for sensor in sensors.values()]
 
 
