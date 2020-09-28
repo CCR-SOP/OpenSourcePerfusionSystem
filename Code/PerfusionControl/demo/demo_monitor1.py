@@ -49,6 +49,7 @@ class TestFrame(wx.Frame):
         self.SetSizer(sizer_main)
         self.Fit()
         self.Layout()
+        self.Maximize(True)
 
 
 class MyTestApp(wx.App):
