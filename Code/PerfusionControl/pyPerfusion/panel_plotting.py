@@ -26,7 +26,7 @@ class PanelPlotting(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
         self.__plot_len = 200
         self._valid_range = None
-        self.__plot_frame_ms = 5_000
+        self._plot_frame_ms = 5_000
 
         self.fig = mpl.figure.Figure()
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
@@ -66,7 +66,7 @@ class PanelPlotting(wx.Panel):
         self.canvas.draw()
 
     def _plot(self, line, sensor):
-        data_time, data = sensor.get_data(self.__plot_frame_ms, self.__plot_len)
+        data_time, data = sensor.get_data(self._plot_frame_ms, self.__plot_len)
         if data is not None and len(data) > 0:
             if type(sensor) is SensorStream:
                 line.set_data(data_time, data)
