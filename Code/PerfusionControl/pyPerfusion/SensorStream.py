@@ -66,9 +66,6 @@ class SensorStream(Thread):
     def _open_write(self):
         self._fid_write = open(self.full_path, 'w+b')
 
-    def _get_file_size(self):
-        return len(self.data)
-
     def start(self):
         super().start()
         self._hw.start()
@@ -133,7 +130,7 @@ class SensorStream(Thread):
 
     def get_data(self, last_ms, samples_needed):
         _fid, data = self._open_read()
-        file_size = self._get_file_size()
+        file_size = len(data)
         if last_ms > 0:
             data_size = int(last_ms / self._hw.period_sampling_ms)
             if samples_needed > data_size:
