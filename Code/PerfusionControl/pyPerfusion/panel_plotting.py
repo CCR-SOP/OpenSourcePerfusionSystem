@@ -6,10 +6,13 @@
 Panel class for plotting data
 """
 from enum import Enum
+import numpy as np
+
 import wx
 import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
+import matplotlib.transforms as mtransforms
 # from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 
 from pyPerfusion.SensorStream import SensorStream
@@ -59,6 +62,8 @@ class PanelPlotting(wx.Panel):
         self.__line_range = {}
         self.__line_range_lt = {}
         self._shaded = {}
+        self.__line_invalid = {}
+        self.__line_invalid_lt = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -95,6 +100,20 @@ class PanelPlotting(wx.Panel):
         if data is not None and len(data) > 0:
             if type(sensor) is SensorStream:
                 self.plot_stream(line, data_time, data)
+                if frame == PlotFrame.FROM_START:
+                    try:
+                        self.axes.collections.remove(self.__line_invalid_lt[sensor.name])
+                    except ValueError:
+                        pass
+                    self.__line_invalid_lt[sensor.name] = self.axes_lt.fill_between(data_time, data, sensor.valid_range[0],
+                                                                              where=data < sensor.valid_range[0],
+                                                                              color='r')
+                else:
+                    try:
+                        self.axes_lt.collections.remove(self.__line_invalid[sensor.name])
+                    except ValueError:
+                        pass
+                    self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[0], where=data < sensor.valid_range[0], color='r')
             elif type(sensor) is SensorPoint:
                 self.plot_event(sensor, data_time, data)
 
@@ -117,6 +136,8 @@ class PanelPlotting(wx.Panel):
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_lt[sensor.name], = self.axes_lt.plot([0] * self.__plot_len)
+            self.__line_invalid[sensor.name] = self.axes.fill_between([0], [0], [0])
+            self.__line_invalid_lt[sensor.name] = self.axes.fill_between([0], [0], [0])
             if sensor.valid_range is not None:
                 rng = sensor.valid_range
                 self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
