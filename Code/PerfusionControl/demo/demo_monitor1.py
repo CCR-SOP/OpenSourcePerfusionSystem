@@ -15,10 +15,10 @@ from pyPerfusion.HWAcq import HWAcq
 from pyPerfusion.SensorStream import SensorStream
 
 sensors = [
-          SensorStream('HA Flow', 'ml/min', HWAcq(10, demo_amp=80, demo_offset=0)),
-          SensorStream('PV Flow', 'ml/min', HWAcq(10, demo_amp=40, demo_offset=20)),
-          SensorStream('HA Pressure', 'mmHg', HWAcq(10, demo_amp=100, demo_offset=0)),
-          SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0))
+          SensorStream('HA Flow', 'ml/min', HWAcq(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
+          SensorStream('PV Flow', 'ml/min', HWAcq(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
+          SensorStream('HA Pressure', 'mmHg', HWAcq(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
+          SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0), valid_range=[3, 7])
          ]
 
 
@@ -35,7 +35,7 @@ class TestFrame(wx.Frame):
 
             sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
-        sizer_readout = wx.GridSizer(cols=2)
+        sizer_readout = wx.GridSizer(cols=1)
         for sensor in sensors:
             panel = PanelReadout(self, sensor)
             sizer_readout.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
@@ -44,8 +44,7 @@ class TestFrame(wx.Frame):
             sensor.open(Path('./__data__'), Path('yyyy-mm-dd'))
             sensor.start()
 
-
-        sizer_main.Add(sizer_plots)
+        sizer_main.Add(sizer_plots, 1, wx.ALL | wx.EXPAND)
         sizer_main.Add(sizer_readout)
         self.SetSizer(sizer_main)
         self.Fit()
