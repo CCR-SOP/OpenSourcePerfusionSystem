@@ -74,7 +74,8 @@ class PanelPlotting(wx.Panel):
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
                 except ValueError:
                     pass
-                self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[0], where=data < sensor.valid_range[0], color='r')
+                if sensor.valid_range is not None:
+                    self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[0], where=data < sensor.valid_range[0], color='r')
             elif type(sensor) is SensorPoint:
                 self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color='red')
 
@@ -87,7 +88,7 @@ class PanelPlotting(wx.Panel):
         self.__sensors.append(sensor)
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
-            self.__line_invalid[sensor.name] = self.axes.fill_between([0], [0], [0])
+            self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
             if sensor.valid_range is not None:
                 rng = sensor.valid_range
                 self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
