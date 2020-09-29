@@ -24,7 +24,7 @@ class HWAcq(Thread):
 
     """
 
-    def __init__(self, period_sample_ms, demo_amp=70, demo_offset=10):
+    def __init__(self, period_sample_ms, demo_amp=70, demo_offset=10, read_period_ms=500):
 
         Thread.__init__(self)
         self._period_sampling_ms = period_sample_ms
@@ -38,7 +38,7 @@ class HWAcq(Thread):
         self.__epoch = 0
         self._time = 0
 
-        self._read_period_ms = 500
+        self._read_period_ms = read_period_ms
         self.data_type = np.float32
 
     @property
