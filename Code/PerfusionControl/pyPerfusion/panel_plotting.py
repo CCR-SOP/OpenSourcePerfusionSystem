@@ -42,6 +42,7 @@ class PanelPlotting(wx.Panel):
         self.__line_range = {}
         self._shaded = {}
         self.__line_invalid = {}
+        self.__colors = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -91,13 +92,15 @@ class PanelPlotting(wx.Panel):
                                                                               color='r')
 
             elif type(sensor) is SensorPoint:
-                self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color='red')
+                color = self.__colors[sensor.name]
+                del self.__line[sensor.name]
+                self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             self.plot()
 
-    def add_sensor(self, sensor):
+    def add_sensor(self, sensor, color='r'):
         assert isinstance(sensor, SensorStream)
         self.__sensors.append(sensor)
         if type(sensor) is SensorStream:
@@ -109,11 +112,17 @@ class PanelPlotting(wx.Panel):
                 self._valid_range = rng
             self._configure_plot(sensor)
         elif type(sensor) is SensorPoint:
-            self.__line[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color='red')
+            self.__line[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color=color, label=sensor.name)
+            self.__colors[sensor.name] = color
 
     def _configure_plot(self, sensor):
         self.axes.set_title(sensor.name)
         self.axes.set_ylabel(sensor.unit_str)
+        self.show_legend()
+
+    def show_legend(self):
+        self.axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=2, mode="expand",
+                         borderaxespad=0, framealpha=0.0, fontsize='x-small')
 
 
 class PanelPlotLT(PanelPlotting):
