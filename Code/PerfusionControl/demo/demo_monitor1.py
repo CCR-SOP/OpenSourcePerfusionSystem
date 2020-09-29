@@ -17,7 +17,8 @@ from pyPerfusion.SensorStream import SensorStream
 sensors = {'HA Flow': SensorStream('HA Flow', 'ml/min', HWAcq(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
            'PV Flow': SensorStream('PV Flow', 'ml/min', HWAcq(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
            'HA Pressure': SensorStream('HA Pressure', 'mmHg', HWAcq(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
-           'PV Pressure': SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0), valid_range=[3, 7])
+           'PV Pressure': SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0), valid_range=[3, 7]),
+           'IVC Pressure': SensorStream('IVC Pressure', 'mmHg', HWAcq(10, demo_amp=3, demo_offset=0), valid_range=[0, 2])
            }
 
 
