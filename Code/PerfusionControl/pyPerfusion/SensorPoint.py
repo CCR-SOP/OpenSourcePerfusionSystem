@@ -33,26 +33,26 @@ class SensorPoint(SensorStream):
         self._fid_write.write(ts_bytes)
         data_buf.tofile(self._fid_write)
 
-    def __read_chunk(self):
+    def __read_chunk(self, _fid):
         ts = 0
         data_buf = []
-        ts_bytes = self._fid_read.read(self._bytes_per_ts)
+        ts_bytes = _fid.read(self._bytes_per_ts)
         if len(ts_bytes) == 4:
             ts, = struct.unpack('i', ts_bytes)
-            data_buf = np.fromfile(self._fid_read, dtype=self._hw.data_type, count=self._samples_per_ts)
+            data_buf = np.fromfile(_fid, dtype=self._hw.data_type, count=self._samples_per_ts)
         return data_buf, ts
 
     def get_data(self, last_ms, samples_needed):
-        self._open_read()
+        _fid, tmp = self._open_read()
         cur_time = int(perf_counter() * 1000)
-        self._fid_read.seek(0)
+        _fid.seek(0)
         chunk = [1]
         data_time = []
         data = []
         while chunk:
-            chunk, ts = self.__read_chunk()
+            chunk, ts = self.__read_chunk(_fid)
             if chunk and (cur_time - ts < last_ms or last_ms == 0):
                 data.append(chunk)
                 data_time.append(ts / 1000.0)
-        self._fid_read.close()
+        _fid.close()
         return data_time, data
