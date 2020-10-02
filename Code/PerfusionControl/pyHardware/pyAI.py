@@ -4,7 +4,7 @@ from queue import Queue
 import numpy as np
 
 
-class HWAcq(Thread):
+class AI(Thread):
     """
     Base class for streaming data from sensors and saving to file
 

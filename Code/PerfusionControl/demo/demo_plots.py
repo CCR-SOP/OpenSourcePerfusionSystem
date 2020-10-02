@@ -10,14 +10,14 @@ import time
 from pathlib import Path
 
 from pyPerfusion.panel_plotting import PanelPlotting
-from pyPerfusion.HWAcq import HWAcq
+from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 
 sensors = [
-          SensorStream('HA Flow', 'ml/min', HWAcq(10, demo_amp=80, demo_offset=0)),
-          SensorStream('PV Flow', 'ml/min', HWAcq(10, demo_amp=40, demo_offset=20)),
-          SensorStream('HA Pressure', 'mmHg', HWAcq(10, demo_amp=100, demo_offset=0)),
-          SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0))
+          SensorStream('HA Flow', 'ml/min', AI(10, demo_amp=80, demo_offset=0)),
+          SensorStream('PV Flow', 'ml/min', AI(10, demo_amp=40, demo_offset=20)),
+          SensorStream('HA Pressure', 'mmHg', AI(10, demo_amp=100, demo_offset=0)),
+          SensorStream('PV Pressure', 'mmHg', AI(10, demo_amp=10, demo_offset=0))
          ]
 
 

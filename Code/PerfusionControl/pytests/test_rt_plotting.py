@@ -10,11 +10,11 @@ import time
 from pathlib import Path
 
 from pyPerfusion.panel_plotting import PanelPlotting
-from pyPerfusion.HWAcq import HWAcq
+from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 
 
-acq = HWAcq(10, demo_amp = 20, demo_offset=60)
+acq = AI(10, demo_amp = 20, demo_offset=60)
 sensor = SensorStream('test', 'ml/min', acq, valid_range=[65, 75])
 
 

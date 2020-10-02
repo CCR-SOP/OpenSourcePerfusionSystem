@@ -10,13 +10,13 @@ import time
 from pathlib import Path
 
 from pyPerfusion.panel_plotting import PanelPlotting
-from pyPerfusion.HWAcq import HWAcq
+from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 
 
 sensors = []
-sensors.append(SensorStream('HA Flow', 'ml/min', HWAcq(10)))
-sensors.append(SensorStream('PV Flow', 'ml/min', HWAcq(20)))
+sensors.append(SensorStream('HA Flow', 'ml/min', AI(10)))
+sensors.append(SensorStream('PV Flow', 'ml/min', AI(20)))
 
 
 class TestFrame(wx.Frame):

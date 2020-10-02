@@ -13,20 +13,20 @@ import wx
 
 from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.panel_readout import PanelReadout
-from pyPerfusion.HWAcq import HWAcq
+from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
 
-sensors = {'PV Oxygen': SensorStream('PV Oxygen', '%', HWAcq(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
-           'HA Oxygen': SensorStream('HA Oxygen', '%', HWAcq(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
-           'Temperature': SensorStream('Temperature', 'F', HWAcq(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
-           'pH': SensorStream('pH', '', HWAcq(10, demo_amp=10, demo_offset=0), valid_range=[3, 7]),
-           'CO2': SensorStream('CO2', '%', HWAcq(10, demo_amp=3, demo_offset=0), valid_range=[0, 2]),
-           'Glucose': SensorStream('Glucose', 'ml', HWAcq(10, demo_amp=100, demo_offset=0), valid_range=[10, 90]),
+sensors = {'PV Oxygen': SensorStream('PV Oxygen', '%', AI(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
+           'HA Oxygen': SensorStream('HA Oxygen', '%', AI(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
+           'Temperature': SensorStream('Temperature', 'F', AI(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
+           'pH': SensorStream('pH', '', AI(10, demo_amp=10, demo_offset=0), valid_range=[3, 7]),
+           'CO2': SensorStream('CO2', '%', AI(10, demo_amp=3, demo_offset=0), valid_range=[0, 2]),
+           'Glucose': SensorStream('Glucose', 'ml', AI(10, demo_amp=100, demo_offset=0), valid_range=[10, 90]),
            }
 
-events = {'Insulin': SensorPoint('Insulin', '2 ml', HWAcq(1000, read_period_ms=2250)),
-          'Glucagen': SensorPoint('Glucagen', '2 ml', HWAcq(1000, read_period_ms=3725))
+events = {'Insulin': SensorPoint('Insulin', '2 ml', AI(1000, read_period_ms=2250)),
+          'Glucagen': SensorPoint('Glucagen', '2 ml', AI(1000, read_period_ms=3725))
           }
 
 
