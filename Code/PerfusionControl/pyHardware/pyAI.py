@@ -56,6 +56,9 @@ class AI(Thread):
     def buf_len(self):
         return len(self._buffer)
 
+    def open(self):
+        pass
+
     def start(self):
         self.__epoch = perf_counter()
         Thread.start(self)
