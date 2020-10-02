@@ -32,7 +32,7 @@ class NIDAQ_AI(pyAI.AI):
         return f"/{self.__dev}/ai{self._line}"
 
     def _convert_to_units(self):
-        self.data = self._buffer
+        return self.data_type(self._buffer)
 
     def _acq_samples(self):
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
