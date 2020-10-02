@@ -31,7 +31,7 @@ class AI(Thread):
         self._demo_amp = demo_amp
         self._demo_offset = demo_offset
         self.__queue_buffer = Queue(maxsize=100)
-        self.__buffer = np.zeros(100, dtype=np.uint16)
+
         self.__buffer_t = 0
         self._event_halt = Event()
         self.__lock_buf = Lock()
@@ -39,7 +39,9 @@ class AI(Thread):
         self._time = 0
 
         self._read_period_ms = read_period_ms
-        self.data_type = np.float32
+        self.data_type = np.float64
+        self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
+        self._buffer = np.zeros(self.samples_per_read, dtype=self.data_type)
 
     @property
     def period_sampling_ms(self):
@@ -51,7 +53,7 @@ class AI(Thread):
 
     @property
     def buf_len(self):
-        return len(self.__buffer)
+        return len(self._buffer)
 
     def start(self):
         self.__epoch = perf_counter()
@@ -61,7 +63,9 @@ class AI(Thread):
         while not self._event_halt.wait(self._read_period_ms / 1000.0):
             with self.__lock_buf:
                 self._acq_samples()
+                print(f'min/max is {min(self._buffer)}/{max(self._buffer)}')
                 data = self._convert_to_units()
+
                 self.__queue_buffer.put((data, self.__buffer_t))
 
     def halt(self):
@@ -76,12 +80,12 @@ class AI(Thread):
         return buf, t
 
     def _convert_to_units(self):
-        return self.__buffer * 1.0 + 0.0
+        return self._buffer * 1.0 + 0.0
 
     def _acq_samples(self):
-        samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
+
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         sleep(sleep_time)
         self.__buffer_t = perf_counter()
         val = self.data_type(np.random.random_sample() * self._demo_amp + self._demo_offset)
-        self.__buffer = np.ones(samples_per_read, dtype=self.data_type) * val
+        self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
