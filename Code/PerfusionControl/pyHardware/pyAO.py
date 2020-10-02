@@ -29,15 +29,9 @@ class AO:
     def _volts_to_adc(self, volts):
         return int((volts - self._volt_range[0]) / self._volts_per_bit)
 
-    def _set_ao_counts(self, adc):
-        print(f'Setting analog output to {adc} counts, {self._adc_to_volts(adc)} Volts')
-
     def config(self, volt_range):
         self._volt_range = volt_range
 
     def set_voltage(self, volts):
         adc = self._volts_to_adc(volts)
-        self._set_ao_counts(adc)
-
-    def set_adc_counts(self, adc):
-        self._set_ao_counts(adc)
+        print(f'Setting analog output to {adc} counts, {self._adc_to_volts(adc)} Volts')
