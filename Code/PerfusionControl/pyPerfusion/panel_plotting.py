@@ -20,9 +20,10 @@ from pyPerfusion.SensorPoint import SensorPoint
 
 
 class PanelPlotting(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, with_readout=True):
         self.__parent = parent
         self.__sensors = []
+        self._with_readout = with_readout
         wx.Panel.__init__(self, parent, -1)
         self.__plot_len = 200
         self._valid_range = None
@@ -43,6 +44,7 @@ class PanelPlotting(wx.Panel):
         self._shaded = {}
         self.__line_invalid = {}
         self.__colors = {}
+        self.__val_display = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -75,14 +77,11 @@ class PanelPlotting(wx.Panel):
         self.canvas.draw()
 
     def _plot(self, line, sensor):
+        color = 'black'
         data_time, data = sensor.get_data(self._plot_frame_ms, self.__plot_len)
         if data is not None and len(data) > 0:
+            readout = data[-1]
             if type(sensor) is SensorStream:
-                line.set_data(data_time, data)
-                try:
-                    self.axes.collections.remove(self.__line_invalid[sensor.name])
-                except ValueError:
-                    pass
                 if sensor.valid_range is not None:
                     self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[0],
                                                                               where=data < sensor.valid_range[0],
@@ -90,11 +89,27 @@ class PanelPlotting(wx.Panel):
                     self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[1],
                                                                               where=data > sensor.valid_range[1],
                                                                               color='r')
+                    if self._with_readout:
+                        if readout < sensor.valid_range[0]:
+                            color = 'orange'
+                        elif readout > sensor.valid_range[1]:
+                            color = 'red'
+                        else:
+                            color = 'black'
 
+                line.set_data(data_time, data)
+                if self._with_readout:
+                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    self.__val_display[sensor.name].set_color(color)
+                try:
+                    self.axes.collections.remove(self.__line_invalid[sensor.name])
+                except ValueError:
+                    pass
             elif type(sensor) is SensorPoint:
                 color = self.__colors[sensor.name]
                 del self.__line[sensor.name]
                 self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
+
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
@@ -106,6 +121,11 @@ class PanelPlotting(wx.Panel):
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
+            if self._with_readout:
+                self.__val_display[sensor.name] = self.axes.text(1.06, 0.5, '0',
+                                                                 transform=self.axes.transAxes,
+                                                                 fontsize=18, ha='center')
+                self.axes.text(1.06, 0.4, sensor.unit_str, transform=self.axes.transAxes, fontsize=8, ha='center')
             if sensor.valid_range is not None:
                 rng = sensor.valid_range
                 self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
@@ -127,7 +147,7 @@ class PanelPlotting(wx.Panel):
 
 class PanelPlotLT(PanelPlotting):
     def __init__(self, parent):
-        PanelPlotting.__init__(self, parent)
+        PanelPlotting.__init__(self, parent, with_readout=False)
 
     def _configure_plot(self, sensor):
         self.axes.set_yticklabels([])
