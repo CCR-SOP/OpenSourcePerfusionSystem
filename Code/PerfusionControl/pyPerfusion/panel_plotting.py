@@ -112,9 +112,10 @@ class PanelPlotting(wx.Panel):
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
             if self._with_readout:
-                self.__val_display[sensor.name] = self.axes.text(1.01, 0.5, '0',
+                self.__val_display[sensor.name] = self.axes.text(1.06, 0.5, '0',
                                                                  transform=self.axes.transAxes,
-                                                                 fontsize=16)
+                                                                 fontsize=18, ha='center')
+                self.axes.text(1.06, 0.4, sensor.unit_str, transform=self.axes.transAxes, fontsize=8, ha='center')
             if sensor.valid_range is not None:
                 rng = sensor.valid_range
                 self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
