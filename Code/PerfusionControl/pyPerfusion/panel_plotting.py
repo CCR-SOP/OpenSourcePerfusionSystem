@@ -77,16 +77,11 @@ class PanelPlotting(wx.Panel):
         self.canvas.draw()
 
     def _plot(self, line, sensor):
+        color = 'black'
         data_time, data = sensor.get_data(self._plot_frame_ms, self.__plot_len)
         if data is not None and len(data) > 0:
+            readout = data[-1]
             if type(sensor) is SensorStream:
-                line.set_data(data_time, data)
-                if self._with_readout:
-                    self.__val_display[sensor.name].set_text(f'{data[-1]:.0f}')
-                try:
-                    self.axes.collections.remove(self.__line_invalid[sensor.name])
-                except ValueError:
-                    pass
                 if sensor.valid_range is not None:
                     self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[0],
                                                                               where=data < sensor.valid_range[0],
@@ -94,7 +89,22 @@ class PanelPlotting(wx.Panel):
                     self.__line_invalid[sensor.name] = self.axes.fill_between(data_time, data, sensor.valid_range[1],
                                                                               where=data > sensor.valid_range[1],
                                                                               color='r')
+                    if self._with_readout:
+                        if readout < sensor.valid_range[0]:
+                            color = 'orange'
+                        elif readout > sensor.valid_range[1]:
+                            color = 'red'
+                        else:
+                            color = 'black'
 
+                line.set_data(data_time, data)
+                if self._with_readout:
+                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    self.__val_display[sensor.name].set_color(color)
+                try:
+                    self.axes.collections.remove(self.__line_invalid[sensor.name])
+                except ValueError:
+                    pass
             elif type(sensor) is SensorPoint:
                 color = self.__colors[sensor.name]
                 del self.__line[sensor.name]
