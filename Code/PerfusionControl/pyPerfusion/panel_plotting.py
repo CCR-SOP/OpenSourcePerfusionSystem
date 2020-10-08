@@ -43,6 +43,7 @@ class PanelPlotting(wx.Panel):
         self._shaded = {}
         self.__line_invalid = {}
         self.__colors = {}
+        self.__val_display = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -79,6 +80,7 @@ class PanelPlotting(wx.Panel):
         if data is not None and len(data) > 0:
             if type(sensor) is SensorStream:
                 line.set_data(data_time, data)
+                self.__val_display[sensor.name].set_text(f'{data[-1]:.0f}')
                 try:
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
                 except ValueError:
@@ -96,6 +98,7 @@ class PanelPlotting(wx.Panel):
                 del self.__line[sensor.name]
                 self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
 
+
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             self.plot()
@@ -106,6 +109,9 @@ class PanelPlotting(wx.Panel):
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
+            self.__val_display[sensor.name] = self.axes.text(1.01, 0.5, '0',
+                                                             transform=self.axes.transAxes,
+                                                             fontsize=16)
             if sensor.valid_range is not None:
                 rng = sensor.valid_range
                 self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
