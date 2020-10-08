@@ -20,9 +20,10 @@ from pyPerfusion.SensorPoint import SensorPoint
 
 
 class PanelPlotting(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, with_readout=True):
         self.__parent = parent
         self.__sensors = []
+        self._with_readout = with_readout
         wx.Panel.__init__(self, parent, -1)
         self.__plot_len = 200
         self._valid_range = None
@@ -80,7 +81,8 @@ class PanelPlotting(wx.Panel):
         if data is not None and len(data) > 0:
             if type(sensor) is SensorStream:
                 line.set_data(data_time, data)
-                self.__val_display[sensor.name].set_text(f'{data[-1]:.0f}')
+                if self._with_readout:
+                    self.__val_display[sensor.name].set_text(f'{data[-1]:.0f}')
                 try:
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
                 except ValueError:
@@ -109,9 +111,10 @@ class PanelPlotting(wx.Panel):
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
-            self.__val_display[sensor.name] = self.axes.text(1.01, 0.5, '0',
-                                                             transform=self.axes.transAxes,
-                                                             fontsize=16)
+            if self._with_readout:
+                self.__val_display[sensor.name] = self.axes.text(1.01, 0.5, '0',
+                                                                 transform=self.axes.transAxes,
+                                                                 fontsize=16)
             if sensor.valid_range is not None:
                 rng = sensor.valid_range
                 self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
@@ -133,7 +136,7 @@ class PanelPlotting(wx.Panel):
 
 class PanelPlotLT(PanelPlotting):
     def __init__(self, parent):
-        PanelPlotting.__init__(self, parent)
+        PanelPlotting.__init__(self, parent, with_readout=False)
 
     def _configure_plot(self, sensor):
         self.axes.set_yticklabels([])
