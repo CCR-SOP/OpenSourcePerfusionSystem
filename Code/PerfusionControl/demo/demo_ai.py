@@ -3,21 +3,18 @@
 
 @author: John Kakareka
 
-Demonstration of plots screen with full array of different sensors
+Demonstration of plots created with real data
 """
 import wx
 import time
 from pathlib import Path
 
 from pyPerfusion.panel_plotting import PanelPlotting
-from pyHardware.pyAI import AI
+from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 
 sensors = [
-          SensorStream('HA Flow', 'ml/min', AI(10, demo_amp=80, demo_offset=0)),
-          SensorStream('PV Flow', 'ml/min', AI(10, demo_amp=40, demo_offset=20)),
-          SensorStream('HA Pressure', 'mmHg', AI(10, demo_amp=100, demo_offset=0)),
-          SensorStream('PV Pressure', 'mmHg', AI(10, demo_amp=10, demo_offset=0))
+          SensorStream('Analog Input 1', 'Volts', NIDAQ_AI(0, 10, volts_p2p=5, volts_offset=2.5, dev='Dev1'))
          ]
 
 
@@ -30,7 +27,7 @@ class TestFrame(wx.Frame):
         for sensor in sensors:
             panel = PanelPlotting(self)
             panel.add_sensor(sensor)
-            sensor.open(Path('./__data__'), Path('2020-09-14'))
+            sensor.open(Path('./__data__'), Path('yyyy-mm-dd'))
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
         for sensor in sensors:
             sensor.start()

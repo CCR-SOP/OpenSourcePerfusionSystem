@@ -13,19 +13,19 @@ import wx
 
 from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.panel_readout import PanelReadout
-from pyPerfusion.HWAcq import HWAcq
+from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
 
-sensors = {'HA Flow': SensorStream('HA Flow', 'ml/min', HWAcq(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
-           'PV Flow': SensorStream('PV Flow', 'ml/min', HWAcq(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
-           'HA Pressure': SensorStream('HA Pressure', 'mmHg', HWAcq(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
-           'PV Pressure': SensorStream('PV Pressure', 'mmHg', HWAcq(10, demo_amp=10, demo_offset=0), valid_range=[3, 7]),
-           'IVC Pressure': SensorStream('IVC Pressure', 'mmHg', HWAcq(10, demo_amp=3, demo_offset=0), valid_range=[0, 2])
+sensors = {'HA Flow': SensorStream('HA Flow', 'ml/min', AI(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
+           'PV Flow': SensorStream('PV Flow', 'ml/min', AI(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
+           'HA Pressure': SensorStream('HA Pressure', 'mmHg', AI(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
+           'PV Pressure': SensorStream('PV Pressure', 'mmHg', AI(10, demo_amp=10, demo_offset=0), valid_range=[3, 7]),
+           'IVC Pressure': SensorStream('IVC Pressure', 'mmHg', AI(10, demo_amp=3, demo_offset=0), valid_range=[0, 2])
            }
 
-events = {'Vasodilator': SensorPoint('Vasodilator', '2 ml', HWAcq(1000, read_period_ms=2250)),
-          'Vasoconstrictor': SensorPoint('Vasoconstrictor', '2 ml', HWAcq(1000, read_period_ms=3725))
+events = {'Vasodilator': SensorPoint('Vasodilator', '2 ml', AI(1000, read_period_ms=2250)),
+          'Vasoconstrictor': SensorPoint('Vasoconstrictor', '2 ml', AI(1000, read_period_ms=3725))
           }
 
 

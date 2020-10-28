@@ -10,7 +10,7 @@ from pathlib import Path
 import wx
 
 from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.HWAcq import HWAcq
+from pyHardware.pyAI import AI
 
 
 class PanelReadout(wx.Panel):
@@ -67,7 +67,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.sensor = SensorStream('HA Flow', 'bpm', HWAcq(100))
+        self.sensor = SensorStream('HA Flow', 'bpm', AI(100))
         self.panel = PanelReadout(self, self.sensor)
         self.sensor.start()
         self.sensor.open(Path('./__data__'), Path('2020-09-14'))

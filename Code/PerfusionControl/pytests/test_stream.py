@@ -1,11 +1,11 @@
 from time import sleep
 from pathlib import Path
 
-from pyPerfusion.HWAcq import HWAcq
+from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 
 
-acq = HWAcq(10)
+acq = AI(10)
 sensor = SensorStream('test', 'ml/min', acq)
 
 sensor.open(Path('./__data__'), Path('2020-09-14'))

@@ -98,6 +98,8 @@ class SensorStream(Thread):
 
         self.print_stream_info()
 
+        self._hw.open()
+
     def stop(self):
         self._hw.halt()
         self.__evt_halt.set()

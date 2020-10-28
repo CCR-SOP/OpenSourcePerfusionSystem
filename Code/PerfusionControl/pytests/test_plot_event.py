@@ -10,15 +10,15 @@ import time
 from pathlib import Path
 
 from pyPerfusion.panel_plotting import PanelPlotting
-from pyPerfusion.HWAcq import HWAcq
+from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
 
 
-acq = HWAcq(100)
+acq = AI(100)
 sensor = SensorStream('test', 'ml/min', acq)
 
-evt_acq = HWAcq(1000)
+evt_acq = AI(1000)
 evt = SensorPoint('Insulin Injection', 'ml', evt_acq)
 
 
