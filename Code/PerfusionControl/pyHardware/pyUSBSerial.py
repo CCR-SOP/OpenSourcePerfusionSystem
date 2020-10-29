@@ -55,6 +55,14 @@ class USBSerial:
             self.__port.write(str2send.encode('UTF-8'))
             self.__port.flush()
 
+    def get_response(self, max_bytes=1, eol='\r', timeout=1.0):
+        response = ''
+        if self.__port.is_open:
+            self.__port.timeout = timeout
+            response = self.__port.read_until(expected=eol, size=max_bytes).decode('UTF-8')
+            #
+        return response
+
     def recv(self, expected_bytes, timeout=0):
         if self.__port.is_open:
             bytes = self.__port.read(expected_bytes, timeout)
