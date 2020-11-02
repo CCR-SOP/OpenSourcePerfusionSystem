@@ -20,7 +20,7 @@ class PanelDIO(wx.Panel):
         self._avail_ports = PORT_LIST
         self._avail_lines = LINE_LIST
 
-        self.sizer = wx.FlexGridSizer(cols=2, hgap=20, vgap=10)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_dev = wx.StaticText(self, label='NI Device Name')
         self.choice_dev = wx.Choice(self, wx.ID_ANY, choices=self._avail_dev)
 
@@ -35,8 +35,12 @@ class PanelDIO(wx.Panel):
 
         self.check_read_only = wx.CheckBox(self, label='Read Only')
 
-        self.btn_activate = wx.Button(self, label="Activate")
-        self.btn_deactivate = wx.Button(self, label="Deactivate")
+        self.btn_open = wx.ToggleButton(self, label='Open')
+        self.btn_activate = wx.Button(self, label='Activate')
+        self.btn_deactivate = wx.Button(self, label='Deactivate')
+        self.btn_pulse = wx.Button(self, label='Pulse')
+        self.spin_pulse = wx.SpinCtrl(self, min=1, max=20000, initial=10)
+        self.lbl_pulse = wx.StaticText(self, label='ms')
 
         self.__do_layout()
         # self.__set_bindings()
@@ -62,12 +66,27 @@ class PanelDIO(wx.Panel):
         self.sizer_test.Add(self.btn_activate)
         self.sizer_test.Add(self.btn_deactivate)
 
-        self.sizer.Add(self.sizer_dev)
-        self.sizer.Add(self.sizer_port)
-        self.sizer.Add(self.sizer_line)
-        self.sizer.Add(self.sizer_active)
-        self.sizer.Add(self.check_read_only)
+        self.sizer_pulse = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_pulse.Add(self.spin_pulse)
+        self.sizer_pulse.Add(self.lbl_pulse)
+        self.sizer_pulse.Add(self.btn_pulse)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.sizer_dev)
+        sizer.Add(self.sizer_port)
+        sizer.Add(self.sizer_line)
+        self.sizer.Add(sizer)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.sizer_active)
+        sizer.Add(self.check_read_only)
+        self.sizer.Add(sizer)
+
+        self.sizer.AddSpacer(10)
+
+        self.sizer.Add(self.btn_open)
         self.sizer.Add(self.sizer_test)
+        self.sizer.Add(self.sizer_pulse)
 
         self.SetSizer(self.sizer)
         self.Layout()
