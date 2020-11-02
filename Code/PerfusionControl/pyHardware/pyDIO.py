@@ -29,11 +29,11 @@ class DIOActiveLowState(DIOState):
 
 
 class DIO:
-    def __init__(self, port, line, active_high=True, read_only=True):
-        self._port = port
-        self._line = line
-        self._active_high = active_high
-        self._read_only = read_only
+    def __init__(self):
+        self._port = None
+        self._line = None
+        self._active_high = True
+        self._read_only = False
 
         self._active_state = DIOActiveHighState if self._active_high else DIOActiveLowState
         self.__value = self._active_state.INACTIVE
@@ -41,6 +41,15 @@ class DIO:
         # create a dummy timer so is_alive function is always valid
         self.__timer = threading.Timer(0, self.activate)
         # timer is still considered alive when the callback is called
+
+    def open(self, port, line, active_high=True, read_only=True):
+        self._port = port
+        self._line = line
+        self._active_high = active_high
+        self._read_only = read_only
+
+        self._active_state = DIOActiveHighState if self._active_high else DIOActiveLowState
+        self.__value = self._active_state.INACTIVE
 
     def activate(self):
         if not self.__timer.is_alive() and not self._read_only:
