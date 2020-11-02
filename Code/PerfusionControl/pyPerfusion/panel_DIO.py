@@ -36,14 +36,13 @@ class PanelDIO(wx.Panel):
         self.check_read_only = wx.CheckBox(self, label='Read Only')
 
         self.btn_open = wx.ToggleButton(self, label='Open')
-        self.btn_activate = wx.Button(self, label='Activate')
-        self.btn_deactivate = wx.Button(self, label='Deactivate')
+        self.btn_activate = wx.ToggleButton(self, label='Activate')
         self.btn_pulse = wx.Button(self, label='Pulse')
         self.spin_pulse = wx.SpinCtrl(self, min=1, max=20000, initial=10)
         self.lbl_pulse = wx.StaticText(self, label='ms')
 
         self.__do_layout()
-        # self.__set_bindings()
+        self.__set_bindings()
 
     def __do_layout(self):
         self.sizer_dev = wx.BoxSizer(wx.HORIZONTAL)
@@ -61,10 +60,6 @@ class PanelDIO(wx.Panel):
         self.sizer_active = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_active.Add(self.radio_active_high)
         self.sizer_active.Add(self.radio_active_low)
-
-        self.sizer_test = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_test.Add(self.btn_activate)
-        self.sizer_test.Add(self.btn_deactivate)
 
         self.sizer_pulse = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_pulse.Add(self.spin_pulse)
@@ -85,15 +80,35 @@ class PanelDIO(wx.Panel):
         self.sizer.AddSpacer(10)
 
         self.sizer.Add(self.btn_open)
-        self.sizer.Add(self.sizer_test)
+        self.sizer.Add(self.btn_activate)
         self.sizer.Add(self.sizer_pulse)
 
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
-    # def __set_bindings(self):
-        # add bindings, if needed
+    def __set_bindings(self):
+        self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
+        self.btn_activate.Bind(wx.EVT_TOGGLEBUTTON, self.OnActivate)
+        self.btn_pulse.Bind(wx.EVT_BUTTON, self.OnPulse)
+
+    def OnOpen(self, evt):
+        state = self.btn_open.GetValue()
+        if state:
+            self.btn_open.SetLabel('Close')
+        else:
+            self.btn_open.SetLabel('Open')
+
+    def OnActivate(self, evt):
+        state = self.btn_activate.GetValue()
+        if state:
+            self.btn_activate.SetLabel('Deactivate')
+        else:
+            self.btn_activate.SetLabel('Activate')
+
+    def OnPulse(self, evt):
+        ms = self.spin_pulse.GetValue()
+        print(f'Pulsing for {ms} ms')
 
 
 class TestFrame(wx.Frame):
