@@ -19,9 +19,9 @@ import pyHardware.pyAO as pyAO
 
 
 class NIDAQ_AO(pyAO.AO):
-    def __init__(self, line, period_ms, volt_range=[-10, 10], bits=12, dev=None):
-        super().__init__(line, period_ms, volt_range, bits)
-        self.__dev = dev
+    def __init__(self):
+        super().__init__()
+        self.__dev = None
         self.__timeout = 1.0
         self.__task = None
 
@@ -29,7 +29,9 @@ class NIDAQ_AO(pyAO.AO):
     def _devname(self):
         return f"/{self.__dev}/ao{self._line}"
 
-    def open(self):
+    def open(self, line, period_ms, volt_range=[-10, 10], bits=12, dev=None):
+        super().open(line, period_ms, volt_range, bits)
+        self.__dev = dev
         try:
             if self.__task:
                 self.close()
