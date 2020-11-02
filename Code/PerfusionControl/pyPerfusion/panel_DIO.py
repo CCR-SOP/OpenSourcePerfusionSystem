@@ -6,14 +6,17 @@
 Panel class for testing and configuring DIO
 """
 import wx
+from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
-PORT_LIST = ['0', '1', '2', '3', '4']
-LINE_LIST = ['0', '1', '2', '3', '4', '5', '6', '7', '8']
+PORT_LIST = [f'port{p}' for p in range(0, 5)]
+LINE_LIST = [f'line{line}' for line in range(0, 9)]
+
 
 class PanelDIO(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, dio):
         self.parent = parent
+        self._dio = dio
         wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
@@ -30,8 +33,8 @@ class PanelDIO(wx.Panel):
         self.label_line = wx.StaticText(self, label='Line Number')
         self.choice_line = wx.Choice(self, wx.ID_ANY, choices=self._avail_lines)
 
-        self.radio_active_high = wx.RadioButton(self, label='Active High', style=wx.RB_GROUP)
-        self.radio_active_low = wx.RadioButton(self, label='Active Low')
+        self.radio_active_sel = wx.RadioBox(self, label='Active State Selection',
+                                            choices=['Active High', 'Active Low'])
 
         self.check_read_only = wx.CheckBox(self, label='Read Only')
 
@@ -57,10 +60,6 @@ class PanelDIO(wx.Panel):
         self.sizer_line.Add(self.label_line)
         self.sizer_line.Add(self.choice_line)
 
-        self.sizer_active = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_active.Add(self.radio_active_high)
-        self.sizer_active.Add(self.radio_active_low)
-
         self.sizer_pulse = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_pulse.Add(self.spin_pulse)
         self.sizer_pulse.Add(self.lbl_pulse)
@@ -73,7 +72,7 @@ class PanelDIO(wx.Panel):
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.sizer_active)
+        sizer.Add(self.radio_active_sel)
         sizer.Add(self.check_read_only)
         self.sizer.Add(sizer)
 
@@ -95,27 +94,39 @@ class PanelDIO(wx.Panel):
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
         if state:
+            dev = self.choice_dev.GetStringSelection()
+            port = self.choice_port.GetStringSelection()
+            line = self.choice_line.GetStringSelection()
+            active_high = self.radio_active_sel.GetSelection() == 0
+            read_only = self.check_read_only.GetValue()
+            self._dio.open(port, line, active_high, read_only, dev)
             self.btn_open.SetLabel('Close')
+
         else:
+            self._dio.close()
             self.btn_open.SetLabel('Open')
 
     def OnActivate(self, evt):
         state = self.btn_activate.GetValue()
         if state:
+            self._dio.activate()
             self.btn_activate.SetLabel('Deactivate')
         else:
+            self._dio.deactivate()
             self.btn_activate.SetLabel('Activate')
 
     def OnPulse(self, evt):
         ms = self.spin_pulse.GetValue()
         print(f'Pulsing for {ms} ms')
+        self._dio.pulse(ms)
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelDIO(self)
+        self.dio = NIDAQ_DIO()
+        self.panel = PanelDIO(self, self.dio)
 
 
 class MyTestApp(wx.App):
