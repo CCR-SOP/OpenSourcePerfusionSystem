@@ -10,12 +10,18 @@ import threading
 
 
 class AO:
-    def __init__(self, line, period_ms, volt_range=[-10, 10], bits=12):
+    def __init__(self):
+        self._line = None
+        self._period_ms = None
+        self._volt_range = None
+        self._bits = None
+        self._volts_per_bit = None
+
+    def open(self, line, period_ms, volt_range=[-10, 10], bits=12):
         self._line = line
         self._period_ms = period_ms
         self._volt_range = volt_range
         self._bits = bits
-
         self._volts_per_bit = self._calc_volts_per_bit()
 
     def _calc_volts_per_bit(self):
