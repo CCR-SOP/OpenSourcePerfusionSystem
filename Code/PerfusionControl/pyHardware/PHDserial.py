@@ -31,7 +31,7 @@ class PHDserial(USBSerial):
     def open(self, port_name, baud, addr):
         super().open(port_name, baud)
         self.__addr = addr
-        self.__port.xonxoff = True
+        self.__serial.xonxoff = True
         self.send('poll REMOTE')
         self.send(f'address {self.__addr}')
         self.send('ascale 100')
