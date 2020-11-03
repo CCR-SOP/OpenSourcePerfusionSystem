@@ -29,9 +29,7 @@ class PanelAO(wx.Panel):
         self.choice_line = wx.Choice(self, wx.ID_ANY, choices=self._avail_lines)
 
         self.btn_open = wx.ToggleButton(self, label='Open')
-        self.btn_volts = wx.Button(self, label='Update')
-        self.spin_volts = wx.SpinCtrlDouble(self, min=0, max=5, initial=2.5)
-        self.lbl_volts = wx.StaticText(self, label='Volts')
+        self.btn_update = wx.Button(self, label='Update')
 
         self.check_sine = wx.CheckBox(self, label='Sine output')
         self.spin_pk2pk = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
@@ -43,6 +41,8 @@ class PanelAO(wx.Panel):
         self.spin_hz.Digits = 3
         self.spin_offset.Digits = 3
         self.spin_pk2pk.Digits = 3
+
+        self.OnSine(wx.EVT_CHECKBOX)
 
         self.__do_layout()
         self.__set_bindings()
@@ -57,9 +57,7 @@ class PanelAO(wx.Panel):
         self.sizer_line.Add(self.choice_line)
 
         self.sizer_volts = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_volts.Add(self.spin_volts)
-        self.sizer_volts.Add(self.lbl_volts)
-        self.sizer_volts.Add(self.btn_volts)
+        self.sizer_volts.Add(self.btn_update)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.sizer_dev)
@@ -92,7 +90,8 @@ class PanelAO(wx.Panel):
 
     def __set_bindings(self):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
-        self.btn_volts.Bind(wx.EVT_BUTTON, self.OnVolts)
+        self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
+        self.check_sine.Bind(wx.EVT_CHECKBOX, self.OnSine)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -106,11 +105,18 @@ class PanelAO(wx.Panel):
             self._ao.close()
             self.btn_open.SetLabel('Open')
 
-    def OnVolts(self, evt):
-        volts = self.spin_volts.GetValue()
-        print(f'Updating for {volts} volts')
+    def OnUpdate(self, evt):
+        volts = self.spin_pk2pk.GetValue()
+        hz = self.spin_hz.GetValue()
+        offset = self.spin_hz.GetValue
+        want_sine = self.check_sine.IsChecked()
+
         self._ao.set_voltage(volts)
 
+    def OnSine(self, evt):
+        want_sine = self.check_sine.IsChecked()
+        self.spin_hz.Enable(want_sine)
+        self.spin_pk2pk.Enable(want_sine)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
