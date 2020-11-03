@@ -11,7 +11,6 @@ import time
 import threading
 import ctypes
 
-import numpy as np
 import PyDAQmx
 from PyDAQmx import Task
 from PyDAQmx.DAQmxConstants import *
@@ -20,9 +19,9 @@ import pyHardware.pyAOSine as pyAOSine
 
 
 class NIDAQ_AOSine(pyAOSine.AOSine):
-    def __init__(self, line, period_ms, volts_p2p, volts_offset, Hz, bits=12, dev=None):
-        super().__init__(line, period_ms, volts_p2p, volts_offset, Hz, bits)
-        self.__dev = dev
+    def __init__(self):
+        super().__init__()
+        self.__dev = None
         self.__timeout = 1.0
         self.__task = None
 
@@ -35,8 +34,9 @@ class NIDAQ_AOSine(pyAOSine.AOSine):
         written = ctypes.c_int32()
         self.__task.WriteAnalogF64(len(self._buffer), True, 1.0 / self._Hz, DAQmx_Val_GroupByChannel, self._buffer, PyDAQmx.byref(written), None)
 
-    def open(self):
-        # super().open()
+    def open(self, line, period_ms, volts_p2p, volts_offset, Hz, bits=12, dev=None):
+        self.__dev = dev
+        super().open(line, period_ms, volts_p2p, volts_offset, Hz, bits)
         try:
             if self.__task:
                 self.close()
@@ -54,6 +54,7 @@ class NIDAQ_AOSine(pyAOSine.AOSine):
             self.__task = None
 
     def close(self):
+        self.halt()
         if self.__task:
             self.__task.StopTask()
             self.__task = None
