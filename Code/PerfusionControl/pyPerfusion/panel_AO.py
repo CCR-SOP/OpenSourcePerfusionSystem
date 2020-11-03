@@ -12,10 +12,10 @@ DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
-class PanelAIO(wx.Panel):
+class PanelAO(wx.Panel):
     def __init__(self, parent, aio):
         self.parent = parent
-        self._aio = aio
+        self._ao = aio
         wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
@@ -74,24 +74,24 @@ class PanelAIO(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
-            self._aio.open(line, period_ms=10, volt_range=[0, 5], dev=dev)
+            self._ao.open(line, period_ms=10, volt_range=[0, 5], dev=dev)
             self.btn_open.SetLabel('Close',)
         else:
-            self._aio.close()
+            self._ao.close()
             self.btn_open.SetLabel('Open')
 
     def OnVolts(self, evt):
         volts = self.spin_volts.GetValue()
         print(f'Updating for {volts} volts')
-        self._aio.set_voltage(volts)
+        self._ao.set_voltage(volts)
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.aio = NIDAQ_AO()
-        self.panel = PanelAIO(self, self.aio)
+        self.ao = NIDAQ_AO()
+        self.panel = PanelAO(self, self.ao)
 
 
 class MyTestApp(wx.App):
