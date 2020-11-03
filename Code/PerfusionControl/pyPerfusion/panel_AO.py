@@ -33,6 +33,17 @@ class PanelAO(wx.Panel):
         self.spin_volts = wx.SpinCtrlDouble(self, min=0, max=5, initial=2.5)
         self.lbl_volts = wx.StaticText(self, label='Volts')
 
+        self.check_sine = wx.CheckBox(self, label='Sine output')
+        self.spin_pk2pk = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
+        self.lbl_pk2pk = wx.StaticText(self, label='Pk-Pk Voltage', style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self.spin_offset = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
+        self.lbl_offset = wx.StaticText(self, label='Offset Voltage', style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self.spin_hz = wx.SpinCtrlDouble(self, min=0.0, max=1000.0, initial=1.0)
+        self.lbl_hz = wx.StaticText(self, label='Hz', style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self.spin_hz.Digits = 3
+        self.spin_offset.Digits = 3
+        self.spin_pk2pk.Digits = 3
+
         self.__do_layout()
         self.__set_bindings()
 
@@ -59,6 +70,21 @@ class PanelAO(wx.Panel):
 
         self.sizer.Add(self.btn_open)
         self.sizer.Add(self.sizer_volts)
+
+        self.sizer.AddSpacer(20)
+
+        self.sizer.Add(self.check_sine)
+        self.sizer.AddSpacer(10)
+        self.sizer_sine = wx.GridSizer(cols=3, hgap=5, vgap=2)
+        self.sizer_sine.Add(self.lbl_pk2pk, 2, wx.EXPAND)
+        self.sizer_sine.Add(self.lbl_offset, 1, wx.EXPAND)
+        self.sizer_sine.Add(self.lbl_hz, 1, wx.EXPAND)
+
+        self.sizer_sine.Add(self.spin_pk2pk, 2, wx.EXPAND)
+        self.sizer_sine.Add(self.spin_offset, 1, wx.EXPAND)
+        self.sizer_sine.Add(self.spin_hz, 1, wx.EXPAND)
+
+        self.sizer.Add(self.sizer_sine)
 
         self.SetSizer(self.sizer)
         self.Layout()
