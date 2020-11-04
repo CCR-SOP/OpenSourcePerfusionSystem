@@ -24,6 +24,7 @@ class NIDAQ_AOSine(pyAOSine.AOSine):
         self.__dev = None
         self.__timeout = 1.0
         self.__task = None
+        self.__last_dc_val = None
 
     @property
     def _devname(self):
@@ -31,8 +32,13 @@ class NIDAQ_AOSine(pyAOSine.AOSine):
 
     def _output_samples(self):
         # super()._output_samples()
-        written = ctypes.c_int32()
-        self.__task.WriteAnalogF64(len(self._buffer), True, 1.0 / self._Hz, DAQmx_Val_GroupByChannel, self._buffer, PyDAQmx.byref(written), None)
+        if self._Hz > 0:
+            written = ctypes.c_int32()
+            self.__task.WriteAnalogF64(len(self._buffer), True, 1.0 / self._Hz, DAQmx_Val_GroupByChannel, self._buffer, PyDAQmx.byref(written), None)
+        else:
+            if self._volts_offset != self.__last_dc_val:
+                self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)
+                self.__last_dc_val = self._volts_offset
 
     def open(self, line, period_ms, volts_p2p, volts_offset, Hz, bits=12, dev=None):
         self.__dev = dev
@@ -62,5 +68,6 @@ class NIDAQ_AOSine(pyAOSine.AOSine):
     def set_sine(self, volts_p2p, volts_offset, Hz):
         super().set_sine(volts_p2p, volts_offset, Hz)
 
-    def set_dc(self):
-        self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)
+    def set_dc(self, volts):
+        self.__last_dc_val = None
+        super().set_dc(volts)
