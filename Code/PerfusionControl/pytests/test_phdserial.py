@@ -1,7 +1,7 @@
 from pyHardware.PHDserial import PHDserial
 
-port_name = 'COM4'
-baud = 115200
+port_name = 'COM6'
+baud = 9600
 
 syringe = PHDserial()
 syringe.open(port_name=port_name, baud=baud, addr=0)

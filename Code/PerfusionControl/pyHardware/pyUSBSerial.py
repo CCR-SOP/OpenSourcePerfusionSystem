@@ -5,7 +5,6 @@ class USBSerial:
     """
     Base class for serial communication over USB
 
-    ...
 
     Attributes
     ----------
@@ -62,11 +61,12 @@ class USBSerial:
         response = ''
         if self.__serial.is_open:
             self.__serial.timeout = timeout
-            response = self.__serial.read_until(expected=eol, size=max_bytes).decode('UTF-8')
+            response = self.__serial.read_until(eol, size=max_bytes).decode('UTF-8')
             #
         return response
 
     def recv(self, expected_bytes, timeout=0):
         if self.__serial.is_open:
-            bytes = self.__serial.read(expected_bytes, timeout)
+            self.__serial.timeout = timeout
+            bytes = self.__serial.read(expected_bytes)
             return bytes

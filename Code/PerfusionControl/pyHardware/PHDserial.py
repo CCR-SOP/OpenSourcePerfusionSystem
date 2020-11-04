@@ -31,10 +31,11 @@ class PHDserial(USBSerial):
     def open(self, port_name, baud, addr):
         super().open(port_name, baud)
         self.__addr = addr
-        self.__serial.xonxoff = True
-        self.send('poll REMOTE')
+        self._USBSerial__serial.xonxoff = True
+        self.send('')
+        self.send('poll REMOTE\r')
         self.send(f'address {self.__addr}')
-        self.send('ascale 100')
+        # self.send('ascale 100\r')
 
     def set_param(self, param, value):
         self.send(f'{param} {value}')
@@ -59,23 +60,31 @@ class PHDserial(USBSerial):
 
     def get_syringe_manufacturers(self):
         # turn polling off to get a response
-        self.send('poll off')
-        self.send('syrmanu ?')
+        self.send('poll OFF\r')
+        self.send('poll REMOTE\r')
+        self.send('poll OFF\r')
+        self.send('syrmanu ?\r')
         valid_manu = True
         while valid_manu:
-            response = self.get_response(max_bytes=100)
+            response = self.get_response(max_bytes=1000)
             if response == '':
                 valid_manu = False
             else:
-                # expected response is ":{code} {name}"
-                code, name = response[1:].split()
-                self._manufacturers[code] = name
+                ends = []
+                for i in range(len(response)):
+                    if response[i] == ':':
+                        ends.append(i)
+                response = response[(ends[-2]+2):(ends[-1]-2)].split('\r\n')
+                for i in range(len(response)):
+                    syringe_info = response[i]
+                    syringe_info_separation = syringe_info.split('  ')
+                    self._manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
         # restore polling
-        self.send('poll REMOTE')
+        self.send('poll REMOTE\r')
 
     def get_syringe_types(self):
         # turn polling off to get a response
-        self.send('poll off')
+        self.send('poll OFF\r')
         for code in self._manufacturers.keys():
             self.send(f'syrmanu {code} ?')
             valid_type = True
@@ -90,7 +99,7 @@ class PHDserial(USBSerial):
             self._syringes[code] = syringes
 
         # restore polling
-        self.send('poll REMOTE')
+        self.send('poll REMOTE\r')
 
     def print_available_syringes(self):
         for code, name in self._manufacturers.items():
