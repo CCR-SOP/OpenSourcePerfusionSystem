@@ -18,7 +18,7 @@ class AO(threading.Thread):
         self._period_ms = None
         self._volts_p2p = None
         self._volts_offset = None
-        self._Hz = None
+        self._Hz = 0
         self._bits = None
         self._fid = None
 
@@ -28,12 +28,9 @@ class AO(threading.Thread):
         self._event_halt = threading.Event()
         self._lock_buf = threading.Lock()
 
-    def open(self, line, period_ms, volts_p2p, volts_offset, Hz, bits=12):
+    def open(self, line, period_ms, bits=12):
         self._line = line
         self._period_ms = period_ms
-        self._volts_p2p = volts_p2p
-        self._volts_offset = volts_offset
-        self._Hz = Hz
         self._bits = bits
         self._gen_cycle()
 

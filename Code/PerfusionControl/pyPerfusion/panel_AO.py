@@ -99,8 +99,9 @@ class PanelAO(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
-            self._ao.open(line, period_ms=10, volt_range=[0, 5], dev=dev)
+            self._ao.open(line, period_ms=10, dev=dev)
             self.btn_open.SetLabel('Close',)
+            self._ao.start()
         else:
             self._ao.close()
             self.btn_open.SetLabel('Open')
@@ -108,10 +109,13 @@ class PanelAO(wx.Panel):
     def OnUpdate(self, evt):
         volts = self.spin_pk2pk.GetValue()
         hz = self.spin_hz.GetValue()
-        offset = self.spin_hz.GetValue
+        offset = self.spin_offset.GetValue()
         want_sine = self.check_sine.IsChecked()
 
-        self._ao.set_voltage(volts)
+        if want_sine:
+            self._ao.set_sine(volts_p2p=volts, volts_offset=offset, Hz=hz)
+        else:
+            self._ao.set_dc(offset)
 
     def OnSine(self, evt):
         want_sine = self.check_sine.IsChecked()

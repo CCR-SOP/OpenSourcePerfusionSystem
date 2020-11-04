@@ -3,7 +3,7 @@ from time import sleep
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 
 ao = NIDAQ_AO()
-ao.open(0, 0.1, 2, 1, 0, dev='Dev1')
+ao.open(line=0, period_ms=0.1, dev='Dev1')
 ao.set_sine(2, 2, 1)
 
 ao.start()
