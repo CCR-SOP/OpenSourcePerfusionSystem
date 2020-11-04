@@ -33,11 +33,11 @@ class PanelAO(wx.Panel):
 
         self.check_sine = wx.CheckBox(self, label='Sine output')
         self.spin_pk2pk = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
-        self.lbl_pk2pk = wx.StaticText(self, label='Pk-Pk Voltage', style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self.lbl_pk2pk = wx.StaticText(self, label='Pk-Pk Voltage')
         self.spin_offset = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
-        self.lbl_offset = wx.StaticText(self, label='Offset Voltage', style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self.lbl_offset = wx.StaticText(self, label='Offset Voltage')
         self.spin_hz = wx.SpinCtrlDouble(self, min=0.0, max=1000.0, initial=1.0)
-        self.lbl_hz = wx.StaticText(self, label='Hz', style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self.lbl_hz = wx.StaticText(self, label='Hz')
         self.spin_hz.Digits = 3
         self.spin_offset.Digits = 3
         self.spin_pk2pk.Digits = 3
@@ -48,41 +48,41 @@ class PanelAO(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
+        flags = wx.SizerFlags().Border(wx.ALL, 5).Center().Proportion(0)
         self.sizer_dev = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_dev.Add(self.label_dev)
-        self.sizer_dev.Add(self.choice_dev)
+        self.sizer_dev.Add(self.label_dev, flags)
+        self.sizer_dev.Add(self.choice_dev, flags)
 
         self.sizer_line = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_line.Add(self.label_line)
-        self.sizer_line.Add(self.choice_line)
-
-        self.sizer_volts = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_volts.Add(self.btn_update)
+        self.sizer_line.Add(self.label_line, flags)
+        self.sizer_line.Add(self.choice_line, flags)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.sizer_dev)
+        sizer.AddSpacer(10)
         sizer.Add(self.sizer_line)
+        sizer.AddSpacer(20)
+        sizer.Add(self.btn_open, flags)
         self.sizer.Add(sizer)
-
         self.sizer.AddSpacer(10)
-
-        self.sizer.Add(self.btn_open)
-        self.sizer.Add(self.sizer_volts)
 
         self.sizer.AddSpacer(20)
 
         self.sizer.Add(self.check_sine)
         self.sizer.AddSpacer(10)
         self.sizer_sine = wx.GridSizer(cols=3, hgap=5, vgap=2)
-        self.sizer_sine.Add(self.lbl_pk2pk, 2, wx.EXPAND)
-        self.sizer_sine.Add(self.lbl_offset, 1, wx.EXPAND)
-        self.sizer_sine.Add(self.lbl_hz, 1, wx.EXPAND)
+        flags = wx.SizerFlags(0).Expand()
+        self.sizer_sine.Add(self.lbl_pk2pk, flags)
+        self.sizer_sine.Add(self.lbl_offset, flags)
+        self.sizer_sine.Add(self.lbl_hz, flags)
+        self.sizer_sine.Add(self.spin_pk2pk, flags)
+        self.sizer_sine.Add(self.spin_offset, flags)
+        self.sizer_sine.Add(self.spin_hz, flags)
 
-        self.sizer_sine.Add(self.spin_pk2pk, 2, wx.EXPAND)
-        self.sizer_sine.Add(self.spin_offset, 1, wx.EXPAND)
-        self.sizer_sine.Add(self.spin_hz, 1, wx.EXPAND)
-
-        self.sizer.Add(self.sizer_sine)
+        self.sizer.Add(self.sizer_sine, flags)
+        flags = wx.SizerFlags(0)
+        self.sizer.AddSpacer(10)
+        self.sizer.Add(self.btn_update, flags)
 
         self.SetSizer(self.sizer)
         self.Layout()
