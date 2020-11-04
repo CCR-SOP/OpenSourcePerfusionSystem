@@ -61,5 +61,6 @@ class NIDAQ_AOSine(pyAOSine.AOSine):
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         super().set_sine(volts_p2p, volts_offset, Hz)
-        self.close()
-        self.open()
+
+    def set_dc(self):
+        self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)

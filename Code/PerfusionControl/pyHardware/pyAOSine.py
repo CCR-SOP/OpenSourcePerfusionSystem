@@ -39,14 +39,18 @@ class AOSine(threading.Thread):
 
         self._fid = open(Path('__data__') / 'sine.dat', 'w+')
 
-
     def _output_samples(self):
         self._buffer.tofile(self._fid)
 
     def run(self):
-        while not self._event_halt.wait(1.0 / self._Hz):
-            with self._lock_buf:
-                self._output_samples()
+        if self._Hz > 0:
+            while not self._event_halt.wait(1.0 / self._Hz):
+                with self._lock_buf:
+                    self._output_samples()
+        else:
+            self.set_dc()
+            while not self._event_halt.wait(0.1):
+                pass
 
     def halt(self):
         self._event_halt.set()
@@ -64,6 +68,16 @@ class AOSine(threading.Thread):
         self._gen_cycle()
 
     def _gen_cycle(self):
-        t = np.arange(0, 1 / self._Hz, step=self._period_ms / 1000.0)
-        with self._lock_buf:
-            self._buffer = self._volts_p2p / 2.0 * np.sin(2 * np.pi * self._Hz * t, dtype=self._data_type) + self._volts_offset
+        if self._Hz > 0:
+            t = np.arange(0, 1 / self._Hz, step=self._period_ms / 1000.0)
+            with self._lock_buf:
+                self._buffer = self._volts_p2p / 2.0 * \
+                               np.sin(2 * np.pi * self._Hz * t, dtype=self._data_type) \
+                               + self._volts_offset
+        else:
+            self._buffer = self._volts_offset
+            print(f"creating dc of {self._volts_offset}")
+
+    def set_dc(self):
+        print(f"setting dc voltage to {self._volts_offset}")
+        pass
