@@ -37,9 +37,9 @@ class NIDAQ_AO(pyAO.AO):
                 self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)
                 self.__last_dc_val = self._volts_offset
 
-    def open(self, line, period_ms, volts_p2p, volts_offset, Hz, bits=12, dev=None):
+    def open(self, line, period_ms, bits=12, dev=None):
         self.__dev = dev
-        super().open(line, period_ms, volts_p2p, volts_offset, Hz, bits)
+        super().open(line, period_ms, bits)
         try:
             if self.__task:
                 self.close()
@@ -47,8 +47,6 @@ class NIDAQ_AO(pyAO.AO):
             self.__task = Task()
             # NI USB-6009 does not support FuncGen Channels
             # self.__task.CreateAOFuncGenChan(self._devname, None, DAQmx_Val_Sine, self._Hz, self._volts_p2p, self._volts_offset)
-            volt_min = self._volts_offset - 0.5 * self._volts_p2p
-            volt_max = self._volts_offset + 0.5 * self._volts_p2p
             self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, DAQmx_Val_Volts, None)
             self.__task.StartTask()
         except PyDAQmx.DAQError as e:
