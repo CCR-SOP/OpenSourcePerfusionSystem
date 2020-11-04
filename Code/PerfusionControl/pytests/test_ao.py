@@ -1,8 +1,8 @@
 from time import sleep
 
-from pyHardware.pyAOSine_NIDAQ import NIDAQ_AOSine
+from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 
-ao = NIDAQ_AOSine()
+ao = NIDAQ_AO()
 ao.open(0, 0.1, 2, 1, 0, dev='Dev1')
 ao.set_sine(2, 2, 1)
 
