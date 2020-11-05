@@ -17,7 +17,6 @@ class SensorStream(Thread):
         self._hw = hw
         self.__evt_halt = Event()
         self._fid_write = None
-        self._fid_read = None
         self.data = None
         self._name = name
         self._project_path = pathlib.Path.cwd()
@@ -84,9 +83,6 @@ class SensorStream(Thread):
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
-        if self._fid_read:
-            self._fid_read.close()
-            self._fid_read = None
 
         # write file handle should be opened first as the memory mapped read handle needs
         # a file with data in it
@@ -106,8 +102,6 @@ class SensorStream(Thread):
         # JWK, probably need a join here to ensure data collection stops before file closed
         self._fid_write.close()
         self._fid_write = None
-        self._fid_read.close()
-        self._fid_read = None
 
     def _get_stream_info(self):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
