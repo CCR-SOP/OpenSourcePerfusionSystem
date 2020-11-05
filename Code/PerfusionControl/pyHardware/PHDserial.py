@@ -86,7 +86,7 @@ class PHDserial(USBSerial):
         # turn polling off to get a response
         self.send('poll OFF\r')
         for code in self._manufacturers.keys():
-            self.send(f'syrmanu {code} ?')
+            self.send(f'syrmanu {code} ?\r')
             valid_type = True
             syringes = []
             while valid_type:
@@ -94,8 +94,10 @@ class PHDserial(USBSerial):
                 if response == '':
                     valid_type = False
                 else:
+                    response = response.replace(':', '')
+                    response = response.replace('\n\n\n', '\n')
                     # expected response is ":{volume} {unit}"
-                    syringes.append(response[1:])
+                    syringes.append(response)
             self._syringes[code] = syringes
 
         # restore polling
@@ -105,5 +107,4 @@ class PHDserial(USBSerial):
         for code, name in self._manufacturers.items():
             print(f'{name} ({code})')
             syringes = self._syringes[code]
-            for syringe in syringes:
-                print(f'\t {syringe}')
+            print(f'{syringes[0]}')
