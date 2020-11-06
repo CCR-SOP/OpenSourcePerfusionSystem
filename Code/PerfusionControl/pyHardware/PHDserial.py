@@ -32,8 +32,8 @@ class PHDserial(USBSerial):
         self.__addr = addr
         self._USBSerial__serial.xonxoff = True
         self.send('')
-        self.send('poll REMOTE\r')
         self.send(f'address {self.__addr}')
+        self.send('poll REMOTE\r')
         # self.send('ascale 100\r')
 
     def infuse(self):
@@ -44,35 +44,99 @@ class PHDserial(USBSerial):
         self.send('poll REMOTE\r')
         self.send('stop\r')
 
-        # civolume = clear infused volume; ctvolume = clear target volume; cvolume = clear both; ivolume = display infused volume; tvolume [{target volume} {volume units}] = set target volume
-        # citime: Clears the infused time; ctime: Clears both the infused and withdrawn times.; cttime: Clears the target time; cwtime: Clears the withdrawn time. Quick Start mode only.
-        # itime: Displays the infused time
-        # ttime: Sets or displays the target time. Quick Start mode only; ttime [{target time}]
-
     def set_param(self, param, value):
         self.send('poll OFF\r')
         self.send(f'{param} {value}')
         self.send('poll REMOTE\r')
 
-    def set_syringe_manufacturer_and_volume(self, manu_code, volume):
+    def set_syringe_manufacturer_size_rate(self, manu_code, syringe_size, ml_min):
+        # rate can be changed mid run
+        # BD_plastic_dictionary = {1: 4.699, 3: 8.585, 5: 11.989, 10: 14.427, 20: 19.05, 30: 21.59, 50: 26.594, 60: 26.594}
         self.send('poll OFF\r')
-        self.set_param(f'syrm', f'{manu_code} {volume} ml\r')
+        self.set_param(f'syrm', '%s %d ml' % (manu_code, syringe_size))
+        print('New Syringe Information:')
+        self.get_syringe_info()
         self.send('poll REMOTE\r')
-
-    def set_syringe_diameter(self, diameter):
-        self.send('poll OFF\r')
-        BD_plastic_dictionary = {1: 4.699, 3: 8.585, 5: 11.989, 10: 14.427, 20: 19.05, 30: 21.59, 50: 26.594, 60: 26.594}
-        syringe_size = BD_plastic_dictionary[diameter]
-        self.set_param('diameter', f'{syringe_size}\r')
-        self.send('poll REMOTE\r')
-
-    def set_infusion_rate(self, ml_min):
         self.send('poll OFF\r')
         self.set_param('irate', f'{ml_min} ml/min\r')
+        print('Infusion rate set to :')
+        self.get_infusion_rate()
+        self.send('poll REMOTE\r')
+
+    def set_infusion_rate(self, ml_min):  # can be changed mid-run
+        self.send('poll OFF\r')
+        self.set_param('irate', f'{ml_min} ml/min\r')
+        print('Infusion rate set to :')
+        self.get_infusion_rate()
+        self.send('poll REMOTE\r')
+
+    def reset_infusion_volume(self):
+        self.send('poll OFF\r')
+        self.send('civolume\r')
+        print('Infusion volume reset to :')
+        self.get_infused_volume()
+        self.send('poll REMOTE\r')
+
+    def get_syringe_info(self):
+        self.send('poll OFF\r')
+        self.send('syrm\r')
+        valid_manu = True
+        while valid_manu:
+            response = self.get_response(max_bytes=1000)
+            if response == '':
+                valid_manu = False
+            else:
+                ends = []
+                for i in range(len(response)):
+                    if response[i] == ':' or response[i] == '>':
+                        ends.append(i)
+                response = response[ends[-2]+1:ends[-1]-1]
+                print(response)
+
+        # restore polling
+        self.send('poll REMOTE\r')
+
+    def get_infusion_rate(self):
+        self.send('poll OFF\r')
+        self.send('irate\r')
+        valid_manu = True
+        while valid_manu:
+            response = self.get_response(max_bytes=1000)
+            if response == '':
+                valid_manu = False
+            else:
+                ends = []
+                for i in range(len(response)):
+                    if response[i] == ':' or response[i] == '>':
+                        ends.append(i)
+                response = response[ends[-2]+1:ends[-1]-1]
+                print(response)
+
+        # restore polling
+        self.send('poll REMOTE\r')
+
+    def get_infused_volume(self):
+        self.send('poll OFF\r')
+        self.send('ivolume\r')
+        valid_manu = True
+        while valid_manu:
+            response = self.get_response(max_bytes=1000)
+            if response == '':
+                valid_manu = False
+            else:
+                ends = []
+                for i in range(len(response)):
+                    if response[i] == ':' or response[i] == '>':
+                        ends.append(i)
+                response = response[ends[-2] + 1:ends[-1] - 1]
+                print(response)
+
+        # restore polling
         self.send('poll REMOTE\r')
 
     def get_syringe_manufacturers(self):
         # make sure polling is off to get a response
+        # make sure polling is remote before turning polling off so that semicolons will flank response string
         self.send('poll REMOTE\r')
         self.send('poll OFF\r')
         self.send('syrmanu ?\r')
@@ -115,7 +179,6 @@ class PHDserial(USBSerial):
 
         # restore polling
         self.send('poll REMOTE\r')
-
 
     def print_available_syringes(self):
         for code, name in self._manufacturers.items():
