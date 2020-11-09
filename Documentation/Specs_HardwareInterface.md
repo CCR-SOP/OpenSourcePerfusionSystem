@@ -19,7 +19,7 @@
 	- Pin 13 
 		- If connected to Pin1, speed can be set on front-panel instead of Pin 5
 
--Connected pins 2 and 3 to pin 1(GND), and connected pin 5 to AO to successfully vary pump speed
+-Connected pins 2 and 3 to pin 1(GND), and connected pin 5 to AO to successfully vary pump speed/gain remote control
 
 
 # VCS Control
@@ -50,7 +50,7 @@
 - Ground: Pins 9-13
 - VIH >= 2V, IIH <=20uA
 - VIL <= 0.4V, IIL <=0.5mA
-- Gained control through USB
+- Gained remote control through USB
 
 # Peristaltic Pump
 - Ismatec Ecoline VC-280
@@ -71,7 +71,7 @@
 - Pin 7, +5V
 	- Output, Ri = 330ohm
 - Pin 8, unused
-- Connected Pin 3 to Pin 1, and connected Pin 5 to AO to vary speed of pump successfully
+- Connected Pin 3 to Pin 1, and connected Pin 5 to AO to vary speed of pump successfully/gain remote control
 
 
 # Pressure Transducer
@@ -95,12 +95,14 @@
 	- For BGA circuit
 	- Front Panel Controls
 	- DB-25 connector (see page 3-40 in manual for full pin out)
-		- Pin 1 - Speed Control Voltage (0-10V)
+		- Pin 1 - Speed Control Voltage (0-10V; can be changed to 0-5V using touchscreen)
 		- Pin 3 - Speed Control Input Reference (GND)
 		- Pin 15 - Remote Start/Stop input
 		- Pin 16 - Remote CW/CCW Input
 		- Pin 17 - Remote Reference (GND)
 		- Remote pins are contact closure to GND
+
+- Connected pins 3, 15, and 17 to GND, and pin 1 to AO to successfully gain remote control/vary speed 
 
 
 
