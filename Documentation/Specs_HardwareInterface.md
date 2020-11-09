@@ -18,7 +18,8 @@
 		- Open collector, active low
 	- Pin 13 
 		- If connected to Pin1, speed can be set on front-panel instead of Pin 5
-	-Connected pins 2 and 3 to pin 1(GND), and connected pin 5 to AO to successfully vary pump speed
+
+-Connected pins 2 and 3 to pin 1(GND), and connected pin 5 to AO to successfully vary pump speed
 
 
 # VCS Control
@@ -49,6 +50,7 @@
 - Ground: Pins 9-13
 - VIH >= 2V, IIH <=20uA
 - VIL <= 0.4V, IIL <=0.5mA
+- Gained control through USB
 
 # Peristaltic Pump
 - Ismatec Ecoline VC-280
