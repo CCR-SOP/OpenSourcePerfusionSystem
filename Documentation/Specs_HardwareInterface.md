@@ -18,6 +18,7 @@
 		- Open collector, active low
 	- Pin 13 
 		- If connected to Pin1, speed can be set on front-panel instead of Pin 5
+	-Connected pins 2 and 3 to pin 1(GND), and connected pin 5 to AO to successfully vary pump speed
 
 
 # VCS Control
@@ -68,6 +69,7 @@
 - Pin 7, +5V
 	- Output, Ri = 330ohm
 - Pin 8, unused
+- Connected Pin 3 to Pin 1, and connected Pin 5 to AO to vary speed of pump successfully
 
 
 # Pressure Transducer
