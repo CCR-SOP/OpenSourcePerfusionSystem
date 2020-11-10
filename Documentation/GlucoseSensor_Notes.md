@@ -43,7 +43,8 @@ Open-source Android application to directly get data from glucose sensors. Data 
 Unclear if xDrip is capable of directly getting data from Dexcom G6 sensors. Most likely gets data from Dexcom Share service.
 Android complement to Spike
 ## Loop 
-Open-source iOS application for use in DIY open pancreas systems. Uses internal iOS Bluetooth services to spy on incoming Dexcom Bluetooth data. Standard Dexcom smartphone app must be running and is used to configure and initiate data collection from sensor.
+Open-source iOS application for use in DIY open pancreas systems (i.e. CGM + insulin delivery). Uses internal iOS Bluetooth services to spy on incoming Dexcom Bluetooth data (see CGMBLEKit on GitHub). Standard Dexcom smartphone app must be running and is used to configure and initiate data collection from sensor.
 Chris Hanneman (2020-10-07 phone call) suggested we could develop an iOS app which accepted data from Loop and then forwarded to another location
+
 ## Direct Bluetooth communication
 Dexcom does not provide documentation on directly communicating with the sensors. The bluetooth protocol used to interact with third-party infusion pumps is tightly held by Dexcom and unlikely to be shared (Chris Hanneman, 2020-10-13 phone call).
