@@ -22,6 +22,7 @@ Open-source cloud-based system for remote monitoring of glucose monitors (includ
 * Uses Dexcom Share service for access to data (termed the "Dexcom Bridge")
 * Using Share service, access is real-time with normal network latencies
 * Can also access data using the Spike app for iOS
+* Chirs Hannemann (2020-10-07 phone call) stated that Nightscout pulls data from the Dexcom Servers
 ## Dexcom Smartphone App 
 Standard smartphone app for use with Dexcom glucose sensors. Available on iOS and Android. Capable of forwarding data to cloud-based services and well as providing a local visualization of data. 
 ## Dexcom Receiver
