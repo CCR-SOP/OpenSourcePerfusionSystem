@@ -165,17 +165,17 @@ class PHDserial(USBSerial):
         for code in self._manufacturers.keys():
             self.send(f'syrmanu {code} ?\r')
             valid_type = True
-            syringes = []
             while valid_type:
-                response = self.get_response(max_bytes=100)
+                response = self.get_response(max_bytes=110)
                 if response == '':
                     valid_type = False
                 else:
+                    # expected response is ":{volume} {unit}"
                     response = response.replace(':', '')
                     response = response.replace('\n\n\n', '\n')
-                    # expected response is ":{volume} {unit}"
-                    syringes.append(response)
-            self._syringes[code] = syringes
+                    response = response[1:].split('\r\n')
+                    response = response[:-1]
+                    self._syringes[code] = response
 
         # restore polling
         self.send('poll REMOTE\r')
@@ -184,4 +184,5 @@ class PHDserial(USBSerial):
         for code, name in self._manufacturers.items():
             print(f'{name} ({code})')
             syringes = self._syringes[code]
-            print(f'{syringes[0]}')
+            for syringe in syringes:
+                print(f'\t {syringe}')
