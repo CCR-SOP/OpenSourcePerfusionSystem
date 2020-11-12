@@ -26,159 +26,71 @@ class PHDserial(USBSerial):
         self.__addr = 0
         self._manufacturers = {}
         self._syringes = {}
+        self._response = ''
 
     def open(self, port_name, baud, addr):
         super().open(port_name, baud)
         self.__addr = addr
         self._USBSerial__serial.xonxoff = True
         self.send('')
-        self.send(f'address {self.__addr}')
+        self.send(f'address {self.__addr}\r')
         self.send('poll REMOTE\r')
-        # self.send('ascale 100\r')
+
+    def send(self, str2send):
+        super().send(str2send)
+        self._response = self.get_response(max_bytes=1000)
 
     def infuse(self):
-        self.send('poll REMOTE\r')
         self.send('irun\r')
 
     def stop(self):
-        self.send('poll REMOTE\r')
         self.send('stop\r')
 
     def set_param(self, param, value):
-        self.send('poll OFF\r')
         self.send(f'{param} {value}')
-        self.send('poll REMOTE\r')
 
     def set_syringe_manufacturer_size_rate(self, manu_code, syringe_size, ml_min):
-        # rate can be changed mid run
-        # BD_plastic_dictionary = {1: 4.699, 3: 8.585, 5: 11.989, 10: 14.427, 20: 19.05, 30: 21.59, 50: 26.594, 60: 26.594}
-        self.send('poll OFF\r')
-        self.set_param(f'syrm', '%s %d ml' % (manu_code, syringe_size))
+        self.set_param('syrm', '%s %d ml\r' % (manu_code, syringe_size))
         print('New Syringe Information:')
         self.get_syringe_info()
-        self.send('poll REMOTE\r')
-        self.send('poll OFF\r')
         self.set_param('irate', f'{ml_min} ml/min\r')
         print('Infusion rate set to :')
         self.get_infusion_rate()
-        self.send('poll REMOTE\r')
 
     def set_infusion_rate(self, ml_min):  # can be changed mid-run
-        self.send('poll OFF\r')
         self.set_param('irate', f'{ml_min} ml/min\r')
         print('Infusion rate set to :')
         self.get_infusion_rate()
-        self.send('poll REMOTE\r')
 
     def reset_infusion_volume(self):
-        self.send('poll OFF\r')
         self.send('civolume\r')
         print('Infusion volume reset to :')
         self.get_infused_volume()
-        self.send('poll REMOTE\r')
 
     def get_syringe_info(self):
-        self.send('poll OFF\r')
         self.send('syrm\r')
-        valid_manu = True
-        while valid_manu:
-            response = self.get_response(max_bytes=1000)
-            if response == '':
-                valid_manu = False
-            else:
-                ends = []
-                for i in range(len(response)):
-                    if response[i] == ':' or response[i] == '>':
-                        ends.append(i)
-                response = response[ends[-2]+1:ends[-1]-1]
-                print(response)
-
-        # restore polling
-        self.send('poll REMOTE\r')
+        print(self._response)
 
     def get_infusion_rate(self):
-        self.send('poll OFF\r')
         self.send('irate\r')
-        valid_manu = True
-        while valid_manu:
-            response = self.get_response(max_bytes=1000)
-            if response == '':
-                valid_manu = False
-            else:
-                ends = []
-                for i in range(len(response)):
-                    if response[i] == ':' or response[i] == '>':
-                        ends.append(i)
-                response = response[ends[-2]+1:ends[-1]-1]
-                print(response)
-
-        # restore polling
-        self.send('poll REMOTE\r')
+        print(self._response)
 
     def get_infused_volume(self):
-        self.send('poll OFF\r')
         self.send('ivolume\r')
-        valid_manu = True
-        while valid_manu:
-            response = self.get_response(max_bytes=1000)
-            if response == '':
-                valid_manu = False
-            else:
-                ends = []
-                for i in range(len(response)):
-                    if response[i] == ':' or response[i] == '>':
-                        ends.append(i)
-                response = response[ends[-2] + 1:ends[-1] - 1]
-                print(response)
-
-        # restore polling
-        self.send('poll REMOTE\r')
+        print(self._response)
 
     def get_syringe_manufacturers(self):
-        # make sure polling is off to get a response
-        # make sure polling is remote before turning polling off so that semicolons will flank response string
-        self.send('poll REMOTE\r')
-        self.send('poll OFF\r')
         self.send('syrmanu ?\r')
-        valid_manu = True
-        while valid_manu:
-            response = self.get_response(max_bytes=1000)
-            if response == '':
-                valid_manu = False
-            else:
-                ends = []
-                for i in range(len(response)):
-                    if response[i] == ':':
-                        ends.append(i)
-                response = response[(ends[-2]+2):(ends[-1]-2)].split('\r\n')
-                for i in range(len(response)):
-                    syringe_info = response[i]
-                    syringe_info_separation = syringe_info.split('  ')
-                    self._manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
-
-        # restore polling
-        self.send('poll REMOTE\r')
+        response = self._response[1:-1].split('\n')  # First and last values of the string are '\n'; remove these, then separate by '\n'
+        for i in range(len(response)):
+            syringe_info = response[i]
+            syringe_info_separation = syringe_info.split('  ')  # Double spaces separate manufacturing code from manufacturing information
+            self._manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
 
     def get_syringe_types(self):
-        # make sure polling is off to get a response
-        self.send('poll OFF\r')
         for code in self._manufacturers.keys():
             self.send(f'syrmanu {code} ?\r')
-            valid_type = True
-            while valid_type:
-                response = self.get_response(max_bytes=110)
-                if response == '':
-                    valid_type = False
-                else:
-                    # expected response is ":{volume} {unit}"
-                    response = response.replace(':', '')
-                    response = response.replace('\n\n\n', '\n')
-                    response = response[1:].split('\r\n')
-                    response = response[:-1]
-                    self._syringes[code] = response
-
-        # restore polling
-        self.send('poll REMOTE\r')
+            self._syringes[code] = self._response[1:-1].split('\n')  # First and last values of each syringe's volume string are '\n', remove these, then separate by '\n'
 
     def print_available_syringes(self):
         for code, name in self._manufacturers.items():
