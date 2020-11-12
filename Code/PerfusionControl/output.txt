@@ -1,0 +1,182 @@
+Air-Tite, HSW Norm-Ject (air)
+
+1 ml
+2.5 ml
+5 ml
+10 ml
+20 ml
+30 ml
+50 ml
+
+Becton Dickinson, Glass (all types) (bdg)
+
+500 ul
+1 ml
+2.5 ml
+5 ml
+10 ml
+20 ml
+30 ml
+50 ml
+100 ml
+
+Becton Dickinson, Plasti-pak (bdp)
+
+1 ml
+3 ml
+5 ml
+10 ml
+20 ml
+30 ml
+50 ml
+60 ml
+
+Cadence Science, Micro-Mate Glass (cad)
+
+250 ul
+500 ul
+1 ml
+2 ml
+3 ml
+5 ml
+10 ml
+20 ml
+30 ml
+50 ml
+100 ml
+
+CMA Microdialysis, CMA (cma)
+
+1 ml
+2.5 ml
+5 ml
+10 ml
+
+Hamilton 700, Glass (hm1)
+
+5 ul
+10 ul
+25 ul
+50 ul
+100 ul
+250 ul
+500 ul
+
+Hamilton 1000, Glass (hm2)
+
+1 ml
+1.25 ml
+2.5 ml
+5 ml
+10 ml
+25 ml
+50 ml
+100 ml
+
+Hamilton 1700, Glass (hm3)
+
+10 ul
+25 ul
+50 ul
+100 ul
+250 ul
+500 ul
+
+Hamilton 7000, Glass (hm4)
+
+0.5 ul
+1 ul
+2 ul
+5 ul
+
+Harvard Apparatus, Stainless Steel (has)
+
+2.5 ml
+8 ml
+20 ml
+50 ml
+100 ml
+
+Hoshi (hos)
+
+1 ml
+2 ml
+3 ml
+5 ml
+10 ml
+20 ml
+30 ml
+50 ml
+100 ml
+
+ILS, Glass (ils)
+
+250 ul
+500 ul
+1 ml
+2.5 ml
+5 ml
+10 ml
+25 ml
+50 ml
+100 ml
+
+Nipro (nip)
+
+1 ml
+1 ml
+2.5 ml
+5 ml
+10 ml
+20 ml
+30 ml
+50 ml
+
+Scientific Glass Engineering (sge)
+
+5 ul
+10 ul
+25 ul
+50 ul
+100 ul
+250 ul
+500 ul
+1 ml
+2.5 ml
+5 ml
+10 ml
+25 ml
+50 ml
+100 ml
+Sherwood-Monoject, Plastic (smp)
+
+1 ml
+3 ml
+6 ml
+12 ml
+20 ml
+35 ml
+60 ml
+140 ml
+
+Terumo Japan, Plastic (tej)
+
+1 ml
+1 ml
+2.5 ml
+5 ml
+10 ml
+20 ml
+30 ml
+50 ml
+
+Top (top)
+
+1 ml
+2.5 ml
+5 ml
+10 ml
+20 ml
+30 ml
+50 ml
+

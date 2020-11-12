@@ -10,6 +10,7 @@ pydaqmx = "*"
 wxpython = "*"
 matplotlib = "*"
 numpy = "*"
+pyserial = "*"
 
 [requires]
 python_version = "3.8"
