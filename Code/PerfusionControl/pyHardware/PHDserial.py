@@ -89,9 +89,8 @@ class PHDserial(USBSerial):
 
     def update_syringe_manufacturers(self):
         self.send('syrmanu ?\r')
-        response = self._response[1:-1].split('\n')  # First and last values of the string are '\n'; remove these, then separate by '\n'
-        print(f' response is {response}')
-        if response[0] != '':
+        if self._response:
+            response = self._response[1:-1].split('\n')  # First and last values of the string are '\n'; remove these, then separate by '\n'
             for i in range(len(response)):
                 syringe_info = response[i]
                 syringe_info_separation = syringe_info.split('  ')  # Double spaces separate manufacturing code from manufacturing information
