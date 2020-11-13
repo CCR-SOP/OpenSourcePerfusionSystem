@@ -28,6 +28,14 @@ class PHDserial(USBSerial):
         self._syringes = {}
         self._response = ''
 
+    @property
+    def manufacturers(self):
+        return self._manufacturers
+
+    @property
+    def syringes(self):
+        return self._syringes
+
     def open(self, port_name, baud, addr=0):
         super().open(port_name, baud)
         self.__addr = addr
@@ -79,15 +87,17 @@ class PHDserial(USBSerial):
         self.send('ivolume\r')
         print(self._response)
 
-    def get_syringe_manufacturers(self):
+    def update_syringe_manufacturers(self):
         self.send('syrmanu ?\r')
         response = self._response[1:-1].split('\n')  # First and last values of the string are '\n'; remove these, then separate by '\n'
-        for i in range(len(response)):
-            syringe_info = response[i]
-            syringe_info_separation = syringe_info.split('  ')  # Double spaces separate manufacturing code from manufacturing information
-            self._manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
+        print(f' response is {response}')
+        if response[0] != '':
+            for i in range(len(response)):
+                syringe_info = response[i]
+                syringe_info_separation = syringe_info.split('  ')  # Double spaces separate manufacturing code from manufacturing information
+                self._manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
 
-    def get_syringe_types(self):
+    def update_syringe_types(self):
         for code in self._manufacturers.keys():
             self.send(f'syrmanu {code} ?\r')
             self._syringes[code] = self._response[1:-1].split('\n')  # First and last values of each syringe's volume string are '\n', remove these, then separate by '\n'
