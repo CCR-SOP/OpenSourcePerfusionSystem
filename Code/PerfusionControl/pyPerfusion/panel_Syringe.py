@@ -25,15 +25,19 @@ class PanelSyringe(wx.Panel):
 
         self.label_comm = wx.StaticText(self, label='USB COMM')
         self.choice_comm = wx.Choice(self, wx.ID_ANY, choices=self._avail_comm)
+        self.choice_comm.SetSelection(0)
 
         self.label_baud = wx.StaticText(self, label='Baud Rate')
         self.choice_baud = wx.Choice(self, wx.ID_ANY, choices=self._avail_baud)
-        self.choice_baud.SetSelection(2)
+        self.choice_baud.SetSelection(0)
 
         self.btn_open = wx.ToggleButton(self, label='Open')
 
         self.label_manu = wx.StaticText(self, label='Manufacturer')
-        self.choice_manu = wx.Choice(self, choices=self._manufacturers)
+        self.choice_manu = wx.Choice(self, choices=[])
+
+        self.label_types = wx.StaticText(self, label='Syringe Type')
+        self.choice_types = wx.Choice(self, choices=[])
 
         self.__do_layout()
         self.__set_bindings()
@@ -49,16 +53,28 @@ class PanelSyringe(wx.Panel):
         self.sizer_baud.Add(self.label_baud, flags)
         self.sizer_baud.Add(self.choice_baud, flags)
 
+        self.sizer_manu = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_manu.Add(self.label_manu, flags)
+        self.sizer_manu.Add(self.choice_manu, flags)
+
+        self.sizer_types = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_types.Add(self.label_types, flags)
+        self.sizer_types.Add(self.choice_types, flags)
+
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.sizer_comm)
         sizer.AddSpacer(10)
         sizer.Add(self.sizer_baud)
         sizer.AddSpacer(20)
         sizer.Add(self.btn_open, flags)
-
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(10)
 
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.sizer_manu)
+        sizer.AddSpacer(10)
+        sizer.Add(self.sizer_types)
+        self.sizer.Add(sizer)
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -66,6 +82,7 @@ class PanelSyringe(wx.Panel):
 
     def __set_bindings(self):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
+        self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -74,10 +91,38 @@ class PanelSyringe(wx.Panel):
             baud = self.choice_baud.GetStringSelection()
             self._syringe.open(comm, int(baud))
             self.btn_open.SetLabel('Close',)
+
+            self._syringe.update_syringe_manufacturers()
+            self._syringe.update_syringe_types()
+            self.update_syringe_choices()
         else:
             self._syringe.close()
             self.btn_open.SetLabel('Open')
 
+    def update_syringe_choices(self):
+        self.choice_manu.Clear()
+        manu = self._syringe.manufacturers
+        if not manu:
+            # create dummy map for testing
+            manu = {'ABC': 'Test 1', 'DEF': 'Test 2'}
+
+        manu_str = [f'({code}) {desc}' for code, desc in manu.items()]
+        self.choice_manu.Append(manu_str)
+
+    def update_syringe_types(self, code):
+        self.choice_types.Clear()
+        syringes = self._syringe.syringes
+        if not syringes:
+            # create dummy map for testing
+            syringes = {'ABC': ['1 ml', '2 ml', '3 ml'], 'DEF': ['4 ul', '5 ul', '6 ul']}
+
+        types = syringes[code]
+        self.choice_types.Append(types)
+
+    def OnManu(self, evt):
+        sel = self.choice_manu.GetString(self.choice_manu.GetSelection())
+        code = sel[1:4]
+        self.update_syringe_types(code)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
