@@ -83,6 +83,7 @@ class PanelSyringe(wx.Panel):
     def __set_bindings(self):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
         self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
+        self.choice_types.Bind(wx.EVT_CHOICE, self.OnTypes)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -119,10 +120,20 @@ class PanelSyringe(wx.Panel):
         types = syringes[code]
         self.choice_types.Append(types)
 
-    def OnManu(self, evt):
+    def get_selected_code(self):
         sel = self.choice_manu.GetString(self.choice_manu.GetSelection())
         code = sel[1:4]
+        return code
+
+    def OnManu(self, evt):
+        code = self.get_selected_code()
         self.update_syringe_types(code)
+
+    def OnTypes(self, evt):
+        code = self.get_selected_code()
+        syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
+        self._syringe.set_syringe_manufacturer_size(code, syr_size)
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
