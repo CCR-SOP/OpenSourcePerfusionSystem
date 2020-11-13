@@ -28,7 +28,7 @@ class PHDserial(USBSerial):
         self._syringes = {}
         self._response = ''
 
-    def open(self, port_name, baud, addr):
+    def open(self, port_name, baud, addr=0):
         super().open(port_name, baud)
         self.__addr = addr
         self._USBSerial__serial.xonxoff = True
