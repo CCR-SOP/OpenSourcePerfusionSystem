@@ -39,6 +39,13 @@ class PanelSyringe(wx.Panel):
         self.label_types = wx.StaticText(self, label='Syringe Type')
         self.choice_types = wx.Choice(self, choices=[])
 
+        self.label_rate = wx.StaticText(self, label='Infusion Rate')
+        self.spin_rate = wx.SpinCtrl(self, min=1, max=100000)
+        self.spin_rate.SetValue(1)
+        self.choice_rate = wx.Choice(self, choices=['ul/min', 'ml/min'])
+        self.choice_rate.SetSelection(1)
+        self.btn_update = wx.Button(self, label='Update')
+
         self.__do_layout()
         self.__set_bindings()
 
@@ -61,6 +68,13 @@ class PanelSyringe(wx.Panel):
         self.sizer_types.Add(self.label_types, flags)
         self.sizer_types.Add(self.choice_types, flags)
 
+        self.sizer_rate = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_rate.Add(self.label_rate, flags)
+        self.sizer_rate.Add(self.spin_rate, flags)
+        self.sizer_rate.Add(self.choice_rate, flags)
+        self.sizer_rate.AddSpacer(20)
+        self.sizer_rate.Add(self.btn_update)
+
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.sizer_comm)
         sizer.AddSpacer(10)
@@ -75,6 +89,8 @@ class PanelSyringe(wx.Panel):
         sizer.AddSpacer(10)
         sizer.Add(self.sizer_types)
         self.sizer.Add(sizer)
+        self.sizer.AddSpacer(10)
+        self.sizer.Add(self.sizer_rate)
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -84,6 +100,7 @@ class PanelSyringe(wx.Panel):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
         self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
         self.choice_types.Bind(wx.EVT_CHOICE, self.OnTypes)
+        self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -134,6 +151,10 @@ class PanelSyringe(wx.Panel):
         syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
         self._syringe.set_syringe_manufacturer_size(code, syr_size)
 
+    def OnUpdate(self, evt):
+        rate = self.spin_rate.GetValue()
+        unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
+        self._syringe.set_infusion_rate(rate, unit)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
