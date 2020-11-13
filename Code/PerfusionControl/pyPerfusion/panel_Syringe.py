@@ -46,6 +46,9 @@ class PanelSyringe(wx.Panel):
         self.choice_rate.SetSelection(1)
         self.btn_update = wx.Button(self, label='Update')
 
+        self.btn_infuse = wx.Button(self, label='Infuse')
+        self.btn_stop = wx.Button(self, label='Stop')
+
         self.__do_layout()
         self.__set_bindings()
 
@@ -82,15 +85,21 @@ class PanelSyringe(wx.Panel):
         sizer.AddSpacer(20)
         sizer.Add(self.btn_open, flags)
         self.sizer.Add(sizer)
-        self.sizer.AddSpacer(10)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.sizer_manu)
         sizer.AddSpacer(10)
         sizer.Add(self.sizer_types)
         self.sizer.Add(sizer)
+
         self.sizer.AddSpacer(10)
         self.sizer.Add(self.sizer_rate)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.btn_infuse)
+        sizer.Add(self.btn_stop)
+        self.sizer.AddSpacer(5)
+        self.sizer.Add(sizer)
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -101,6 +110,8 @@ class PanelSyringe(wx.Panel):
         self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
         self.choice_types.Bind(wx.EVT_CHOICE, self.OnTypes)
         self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
+        self.btn_infuse.Bind(wx.EVT_BUTTON, self.OnInfuse)
+        self.btn_stop.Bind(wx.EVT_BUTTON, self.OnStop)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -155,6 +166,12 @@ class PanelSyringe(wx.Panel):
         rate = self.spin_rate.GetValue()
         unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
         self._syringe.set_infusion_rate(rate, unit)
+
+    def OnInfuse(self, evt):
+        self._syringe.infuse()
+
+    def OnStop(self, evt):
+        self._syringe.stop()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
