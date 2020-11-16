@@ -13,15 +13,17 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelAO(wx.Panel):
-    def __init__(self, parent, aio):
+    def __init__(self, parent, aio, name):
         self.parent = parent
         self._ao = aio
+        self._name = name
         wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
 
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
+        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
         self.label_dev = wx.StaticText(self, label='NI Device Name')
         self.choice_dev = wx.Choice(self, wx.ID_ANY, choices=self._avail_dev)
 
@@ -84,7 +86,9 @@ class PanelAO(wx.Panel):
         self.sizer.AddSpacer(10)
         self.sizer.Add(self.btn_update, flags)
 
-        self.SetSizer(self.sizer)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
+        self.SetSizer(sizer)
         self.Layout()
         self.Fit()
 
@@ -127,7 +131,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.ao = NIDAQ_AO()
-        self.panel = PanelAO(self, self.ao)
+        self.panel = PanelAO(self, self.ao, name='Analog Output')
 
 
 class MyTestApp(wx.App):
