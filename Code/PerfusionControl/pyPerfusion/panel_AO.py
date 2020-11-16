@@ -5,7 +5,11 @@
 
 Panel class for testing and configuring AIO
 """
+from pathlib import Path
+
+from configparser import ConfigParser
 import wx
+
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
@@ -43,6 +47,9 @@ class PanelAO(wx.Panel):
         self.spin_hz.Digits = 3
         self.spin_offset.Digits = 3
         self.spin_pk2pk.Digits = 3
+
+        self.btn_save_cfg = wx.Button(self, label='Save Config')
+        self.btn_load_cfg = wx.Button(self, label='Load Config')
 
         self.OnSine(wx.EVT_CHECKBOX)
 
@@ -86,6 +93,13 @@ class PanelAO(wx.Panel):
         self.sizer.AddSpacer(10)
         self.sizer.Add(self.btn_update, flags)
 
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.btn_save_cfg, flags)
+        sizer.AddSpacer(5)
+        sizer.Add(self.btn_load_cfg, flags)
+        self.sizer.AddSpacer(10)
+        self.sizer.Add(sizer)
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
         self.SetSizer(sizer)
@@ -96,6 +110,8 @@ class PanelAO(wx.Panel):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
         self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
         self.check_sine.Bind(wx.EVT_CHECKBOX, self.OnSine)
+        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
+        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -125,6 +141,36 @@ class PanelAO(wx.Panel):
         want_sine = self.check_sine.IsChecked()
         self.spin_hz.Enable(want_sine)
         self.spin_pk2pk.Enable(want_sine)
+
+    def OnSaveCfg(self, evt):
+        config = ConfigParser()
+        config.add_section(self._name)
+        section = config[self._name]
+        section['DevName'] = self.choice_dev.GetStringSelection()
+        section['LineName'] = self.choice_line.GetStringSelection()
+        section['SamplingPeriod_ms'] = '10'
+        section['SampleDepth'] = '12'
+        section['VoltsPk2Pk'] = f'{self.spin_pk2pk.GetValue():.3f}'
+        section['VoltsOffset'] = f'{self.spin_offset.GetValue():.3f}'
+        section['Frequency'] = f'{self.spin_hz.GetValue():.3f}'
+        section['SineOutput'] = f'{self.check_sine.IsChecked()}'
+        with open('test.ini', 'w+') as file:
+            config.write(file)
+
+    def OnLoadCfg(self, evt):
+        config = ConfigParser()
+        config.read('test.ini')
+        section = config[self._name]
+        # _period_ms = int(section['SamplingPeriod_ms'])
+        # _bits = int(section['SampleDepth'])
+        self.choice_dev.SetStringSelection(section['DevName'])
+        self.choice_line.SetStringSelection(section['LineName'])
+        self.spin_pk2pk.SetValue(section.getfloat('VoltsPk2Pk'))
+        self.spin_offset.SetValue(section.getfloat('VoltsOffset'))
+        self.spin_hz.SetValue(section.getfloat('Frequency'))
+        self.check_sine.SetValue(section.getboolean('SineOutput'))
+        self.OnSine(wx.EVT_CHECKBOX)
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
