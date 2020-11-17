@@ -19,10 +19,9 @@ class SensorStream(Thread):
         self._fid_write = None
         self.data = None
         self._name = name
-        self._project_path = pathlib.Path.cwd()
+        self._full_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self._name}')
         self._ext = '.dat'
-        self._study_path = None
         self._timestamp = None
         self._end_of_header = 0
         self._last_idx = 0
@@ -34,7 +33,7 @@ class SensorStream(Thread):
 
     @property
     def full_path(self):
-        return self._project_path / self._study_path / self._filename.with_suffix(self._ext)
+        return self._full_path / self._filename.with_suffix(self._ext)
 
     @property
     def unit_str(self):
@@ -69,16 +68,12 @@ class SensorStream(Thread):
         super().start()
         self._hw.start()
 
-    def open(self, project_path, study_path):
-        if not isinstance(project_path, pathlib.Path):
-            project_path = pathlib.Path(project_path)
-        if not isinstance(study_path, pathlib.Path):
-            project_path = pathlib.Path(study_path)
-        self._project_path = project_path
-        self._study_path = study_path
-        self._project_path.mkdir(parents=True, exist_ok=True)
-        tmp_path = self._project_path / self._study_path
-        tmp_path.mkdir(parents=True, exist_ok=True)
+    def open(self, full_path):
+        if not isinstance(full_path, pathlib.Path):
+            full_path = pathlib.Path(project_path)
+        self._full_path = full_path
+        if not self._full_path.exists():
+            self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
         if self._fid_write:
             self._fid_write.close()

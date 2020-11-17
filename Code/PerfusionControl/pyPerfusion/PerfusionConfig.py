@@ -9,6 +9,7 @@ Author: John Kakareka
 import os
 from pathlib import Path
 from configparser import ConfigParser
+from datetime import datetime
 
 
 LP_PATH = {}
@@ -34,7 +35,6 @@ def set_base(basepath='~/Documents'):
     for key in LP_PATH.keys():
         LP_PATH[key].mkdir(parents=True, exist_ok=True)
 
-
 def update_hwcfg_section(name, updated_info):
     config = ConfigParser()
     config.read(LP_FILE['hwcfg'])
@@ -50,3 +50,10 @@ def get_hwcfg_section(name):
     config.read(LP_FILE['hwcfg'])
     section = config[name]
     return section
+
+
+def update_stream_folder(base=''):
+    if not base:
+        base = datetime.now().strftime('%Y-%m-%d')
+    LP_PATH['stream'] = LP_PATH['data'] / base
+    LP_PATH['stream'].mkdir(parents=True, exist_ok=True)
