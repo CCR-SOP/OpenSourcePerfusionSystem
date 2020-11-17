@@ -11,6 +11,8 @@ from configparser import ConfigParser
 import wx
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
+import pyPerfusion.PerfusionConfig as LP_CFG
+
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
@@ -143,9 +145,7 @@ class PanelAO(wx.Panel):
         self.spin_pk2pk.Enable(want_sine)
 
     def OnSaveCfg(self, evt):
-        config = ConfigParser()
-        config.add_section(self._name)
-        section = config[self._name]
+        section = {}
         section['DevName'] = self.choice_dev.GetStringSelection()
         section['LineName'] = self.choice_line.GetStringSelection()
         section['SamplingPeriod_ms'] = '10'
@@ -154,13 +154,10 @@ class PanelAO(wx.Panel):
         section['VoltsOffset'] = f'{self.spin_offset.GetValue():.3f}'
         section['Frequency'] = f'{self.spin_hz.GetValue():.3f}'
         section['SineOutput'] = f'{self.check_sine.IsChecked()}'
-        with open('test.ini', 'w+') as file:
-            config.write(file)
+        LP_CFG.update_hwcfg_section(self._name, section)
 
     def OnLoadCfg(self, evt):
-        config = ConfigParser()
-        config.read('test.ini')
-        section = config[self._name]
+        section = LP_CFG.get_hwcfg_section(self._name)
         # _period_ms = int(section['SamplingPeriod_ms'])
         # _bits = int(section['SampleDepth'])
         self.choice_dev.SetStringSelection(section['DevName'])

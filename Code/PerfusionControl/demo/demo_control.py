@@ -12,7 +12,7 @@ from pathlib import Path
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
 
-devices = ['AO0', 'AO1', 'AO2']
+devices = ['Centrifugal Pump 1', 'Centrifugal Pump 2', 'Peristaltic Pump 1']
 
 
 class TestFrame(wx.Frame):
