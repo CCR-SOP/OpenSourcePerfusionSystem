@@ -12,6 +12,7 @@ from pathlib import Path
 from pyPerfusion.panel_plotting import PanelPlotting
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
+import pyPerfusion.PerfusionConfig as LP_CFG
 
 sensors = [
           SensorStream('HA Flow', 'ml/min', AI(10, demo_amp=80, demo_offset=0)),
@@ -26,11 +27,11 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=2)
-
+        LP_CFG.update_stream_folder()
         for sensor in sensors:
             panel = PanelPlotting(self)
             panel.add_sensor(sensor)
-            sensor.open(Path('./__data__'), Path('2020-09-14'))
+            sensor.open(LP_CFG.LP_PATH['stream'])
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
         for sensor in sensors:
             sensor.start()
@@ -50,5 +51,6 @@ class MyTestApp(wx.App):
 app = MyTestApp(0)
 app.MainLoop()
 time.sleep(10)
-sensor.stop()
+for sensor in sensors:
+    sensor.stop()
 
