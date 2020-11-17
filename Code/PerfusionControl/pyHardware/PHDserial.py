@@ -28,7 +28,15 @@ class PHDserial(USBSerial):
         self._syringes = {}
         self._response = ''
 
-    def open(self, port_name, baud, addr):
+    @property
+    def manufacturers(self):
+        return self._manufacturers
+
+    @property
+    def syringes(self):
+        return self._syringes
+
+    def open(self, port_name, baud, addr=0):
         super().open(port_name, baud)
         self.__addr = addr
         self._USBSerial__serial.xonxoff = True
@@ -49,16 +57,13 @@ class PHDserial(USBSerial):
     def set_param(self, param, value):
         self.send(f'{param} {value}')
 
-    def set_syringe_manufacturer_size_rate(self, manu_code, syringe_size, ml_min):
-        self.set_param('syrm', '%s %d ml\r' % (manu_code, syringe_size))
+    def set_syringe_manufacturer_size(self, manu_code, syringe_size):
+        self.set_param('syrm', f'{manu_code} {syringe_size}')
         print('New Syringe Information:')
         self.get_syringe_info()
-        self.set_param('irate', f'{ml_min} ml/min\r')
-        print('Infusion rate set to :')
-        self.get_infusion_rate()
 
-    def set_infusion_rate(self, ml_min):  # can be changed mid-run
-        self.set_param('irate', f'{ml_min} ml/min\r')
+    def set_infusion_rate(self, rate, unit_str):  # can be changed mid-run
+        self.set_param('irate', f'{rate} {unit_str}\r')
         print('Infusion rate set to :')
         self.get_infusion_rate()
 
@@ -79,15 +84,16 @@ class PHDserial(USBSerial):
         self.send('ivolume\r')
         print(self._response)
 
-    def get_syringe_manufacturers(self):
+    def update_syringe_manufacturers(self):
         self.send('syrmanu ?\r')
-        response = self._response[1:-1].split('\n')  # First and last values of the string are '\n'; remove these, then separate by '\n'
-        for i in range(len(response)):
-            syringe_info = response[i]
-            syringe_info_separation = syringe_info.split('  ')  # Double spaces separate manufacturing code from manufacturing information
-            self._manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
+        if self._response:
+            response = self._response[1:-1].split('\n')  # First and last values of the string are '\n'; remove these, then separate by '\n'
+            for i in range(len(response)):
+                syringe_info = response[i]
+                syringe_info_separation = syringe_info.split('  ')  # Double spaces separate manufacturing code from manufacturing information
+                self._manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
 
-    def get_syringe_types(self):
+    def update_syringe_types(self):
         for code in self._manufacturers.keys():
             self.send(f'syrmanu {code} ?\r')
             self._syringes[code] = self._response[1:-1].split('\n')  # First and last values of each syringe's volume string are '\n', remove these, then separate by '\n'

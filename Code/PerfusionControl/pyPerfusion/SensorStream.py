@@ -17,13 +17,11 @@ class SensorStream(Thread):
         self._hw = hw
         self.__evt_halt = Event()
         self._fid_write = None
-        self._fid_read = None
         self.data = None
         self._name = name
-        self._project_path = pathlib.Path.cwd()
+        self._full_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self._name}')
         self._ext = '.dat'
-        self._study_path = None
         self._timestamp = None
         self._end_of_header = 0
         self._last_idx = 0
@@ -35,7 +33,7 @@ class SensorStream(Thread):
 
     @property
     def full_path(self):
-        return self._project_path / self._study_path / self._filename.with_suffix(self._ext)
+        return self._full_path / self._filename.with_suffix(self._ext)
 
     @property
     def unit_str(self):
@@ -70,23 +68,16 @@ class SensorStream(Thread):
         super().start()
         self._hw.start()
 
-    def open(self, project_path, study_path):
-        if not isinstance(project_path, pathlib.Path):
-            project_path = pathlib.Path(project_path)
-        if not isinstance(study_path, pathlib.Path):
-            project_path = pathlib.Path(study_path)
-        self._project_path = project_path
-        self._study_path = study_path
-        self._project_path.mkdir(parents=True, exist_ok=True)
-        tmp_path = self._project_path / self._study_path
-        tmp_path.mkdir(parents=True, exist_ok=True)
+    def open(self, full_path):
+        if not isinstance(full_path, pathlib.Path):
+            full_path = pathlib.Path(project_path)
+        self._full_path = full_path
+        if not self._full_path.exists():
+            self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
-        if self._fid_read:
-            self._fid_read.close()
-            self._fid_read = None
 
         # write file handle should be opened first as the memory mapped read handle needs
         # a file with data in it
@@ -106,8 +97,6 @@ class SensorStream(Thread):
         # JWK, probably need a join here to ensure data collection stops before file closed
         self._fid_write.close()
         self._fid_write = None
-        self._fid_read.close()
-        self._fid_read = None
 
     def _get_stream_info(self):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')

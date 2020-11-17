@@ -6,10 +6,6 @@ and under the public domain.
 
 Author: John Kakareka
 """
-
-import time
-import threading
-
 import numpy as np
 import PyDAQmx
 from PyDAQmx import Task
@@ -19,9 +15,9 @@ import pyHardware.pyDIO as pyDIO
 
 
 class NIDAQ_DIO(pyDIO.DIO):
-    def __init__(self, port, line, active_high=True, read_only=True, dev=None):
-        super().__init__(port, line, active_high, read_only)
-        self.__dev = dev
+    def __init__(self):
+        super().__init__()
+        self.__dev = None
         self.__timeout = 1.0
         self.__task = None
 
@@ -29,7 +25,9 @@ class NIDAQ_DIO(pyDIO.DIO):
     def _devname(self):
         return f"/{self.__dev}/{self._port}/{self._line}"
 
-    def open(self):
+    def open(self, port, line, active_high=True, read_only=True, dev=None):
+        self.__dev = dev
+        super().open(port, line, active_high, read_only)
         try:
             if self.__task:
                 self.close()

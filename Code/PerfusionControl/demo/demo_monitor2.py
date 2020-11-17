@@ -7,7 +7,6 @@ Demonstration of screen with chemical substances
 """
 from enum import Enum
 import time
-from pathlib import Path
 
 import wx
 
@@ -16,6 +15,8 @@ from pyPerfusion.panel_readout import PanelReadout
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
+import pyPerfusion.PerfusionConfig as LP_CFG
+
 
 sensors = {'PV Oxygen': SensorStream('PV Oxygen', '%', AI(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
            'HA Oxygen': SensorStream('HA Oxygen', '%', AI(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
@@ -72,9 +73,10 @@ class TestFrame(wx.Frame):
         self.__do_layout()
         self.__set_bindings()
 
-        [sensor.open(Path('./__data__'), Path('yyyy-mm-dd')) for sensor in sensors.values()]
+        LP_CFG.update_stream_folder()
+        [sensor.open(LP_CFG.LP_PATH['stream']) for sensor in sensors.values()]
         [sensor.start() for sensor in sensors.values()]
-        [evt.open(Path('./__data__'), Path('yyyy-mm-dd')) for evt in events.values()]
+        [evt.open(LP_CFG.LP_PATH['stream']) for evt in events.values()]
         [evt.start() for evt in events.values()]
 
     def _create_choice_time(self):

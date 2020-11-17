@@ -11,6 +11,7 @@ wxpython = "*"
 matplotlib = "*"
 numpy = "*"
 pyserial = "*"
+configparser = "*"
 
 [requires]
 python_version = "3.8"
