@@ -18,17 +18,17 @@ import pyHardware.pyAI as pyAI
 
 
 class NIDAQ_AI(pyAI.AI):
-    def __init__(self, line, period_ms, volts_p2p, volts_offset, dev=None):
-        super().__init__(period_ms, buf_type=np.float64)
-        self.__dev = dev
-        self._line = line
+    def __init__(self):
+        super().__init__()
+        self.__dev = None
+        self._line = None
         self.__timeout = 1.0
         self.__task = None
-        self._volts_p2p = volts_p2p
-        self._volts_offset = volts_offset
+        self._volts_min = 0
+        self._volts_max = 5
 
     @property
-    def _devname(self):
+    def devname(self):
         return f"/{self.__dev}/ai{self._line}"
 
     def _convert_to_units(self):
@@ -41,18 +41,17 @@ class NIDAQ_AI(pyAI.AI):
                                   self.samples_per_read, PyDAQmx.byref(samples_read), None)
         self._buffer_t = time.perf_counter()
 
-    def open(self):
+    def open(self, period_sample_ms, volts_min=0, volts_max=5, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
+        super().open()
         try:
             if self.__task:
                 self.close()
 
             self.__task = Task()
-            volt_min = self._volts_offset - 0.5 * self._volts_p2p
-            volt_max = self._volts_offset + 0.5 * self._volts_p2p
-            self.__task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
+            self.__task.CreateAIVoltageChan(self.devname, None, DAQmx_Val_RSE, volts_min, volts_max, DAQmx_Val_Volts, None)
             self.__task.StartTask()
         except PyDAQmx.DAQError as e:
-            print("Could not create AO Channel for {}".format(self._devname))
+            print("Could not create AO Channel for {}".format(self.devname))
             print(f"{e}")
             self.__task = None
 

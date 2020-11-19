@@ -24,10 +24,10 @@ class AI(Thread):
 
     """
 
-    def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, demo_amp=70, demo_offset=10, read_period_ms=500):
+    def __init__(self, demo_amp=70, demo_offset=10):
 
         Thread.__init__(self)
-        self._period_sampling_ms = period_sample_ms
+        self._period_sampling_ms = None
         self._demo_amp = demo_amp
         self._demo_offset = demo_offset
         self.__queue_buffer = Queue(maxsize=100)
@@ -38,11 +38,11 @@ class AI(Thread):
         self.__epoch = 0
         self._time = 0
 
-        self._read_period_ms = read_period_ms
-        self.data_type = data_type
-        self.buf_type = buf_type
-        self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
-        self._buffer = np.zeros(self.samples_per_read, dtype=self.buf_type)
+        self._read_period_ms = None
+        self.data_type = None
+        self.buf_type = None
+        self.samples_per_read = None
+        self._buffer = None
 
     @property
     def period_sampling_ms(self):
@@ -56,8 +56,12 @@ class AI(Thread):
     def buf_len(self):
         return len(self._buffer)
 
-    def open(self):
-        pass
+    def open(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
+        self._read_period_ms = read_period_ms
+        self.data_type = data_type
+        self.buf_type = buf_type
+        self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
+        self._buffer = np.zeros(self.samples_per_read, dtype=self.buf_type)
 
     def start(self):
         self.__epoch = perf_counter()
