@@ -17,11 +17,13 @@ class PanelTestMaintainFlow(wx.Panel):
     def __init__(self, parent):
         self.parent = parent
         wx.Panel.__init__(self, parent, -1)
+        self._inc = 0.1
 
         self._ai = NIDAQ_AI(line=0, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')
         self._ao = NIDAQ_AO()
         self._ao.open(line=1, period_ms=100, dev='Dev1')
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
+
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -29,19 +31,22 @@ class PanelTestMaintainFlow(wx.Panel):
         self.label_ao = wx.StaticText(self, label=f'Using Analog Output {self._ao.devname}')
 
         self.label_desired_output = wx.StaticText(self, label='Desired Output')
-        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
+        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=self._inc)
         self.spin_desired_output.Digits = 3
 
         self.panel_plot = PanelPlotting(self)
         self.panel_plot.add_sensor(self._sensor)
         LP_CFG.update_stream_folder()
         self._sensor.open(LP_CFG.LP_PATH['stream'])
-        self._sensor.start()
 
-        self.btn_stop = wx.Button(self, label='Stop')
+        self.btn_stop = wx.ToggleButton(self, label='Start')
 
         self.__do_layout()
         self.__set_bindings()
+
+        self.timer_flow_adjust = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimer)
+
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
@@ -63,11 +68,32 @@ class PanelTestMaintainFlow(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.btn_stop.Bind(wx.EVT_BUTTON, self.OnStop)
+        self.btn_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
 
-    def OnStop(self, evt):
-        self._sensor.stop()
+    def OnStartStop(self, evt):
+        if self.btn_stop.GetValue():
+            self._sensor.start()
+            self.btn_stop.SetLabel('Stop')
+            self.update_output()
+            self.timer_flow_adjust.Start(1000, wx.TIMER_CONTINUOUS)
+        else:
+            self._sensor.stop()
+            self.btn_stop.SetLabel('Stop')
+            self.timer_flow_adjust.Stop()
 
+    def OnTimer(self, event):
+        if event.GetId() == self.timer_flow_adjust.GetId():
+            self.update_output()
+
+    def update_output(self):
+        flow = self._sensor.get_current()
+        desired = self.spin_desired_output.GetValue()
+        if flow != desired:
+            if flow < desired:
+                new_val = self._ao.volts_offset + self._inc
+            else:
+                new_val = self._ao.volts_offset - self._inc
+            self._ao.set_dc(new_val)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
