@@ -7,6 +7,7 @@ Panel class for testing and configuring Elite 11 Syringe Pump
 """
 import wx
 from pyHardware.PHDserial import PHDserial
+import pyPerfusion.PerfusionConfig as LP_CFG
 
 COMM_LIST = [f'COM{num}' for num in range(1,10)]
 BAUD_LIST = ['9600', '115200']
@@ -18,6 +19,7 @@ class PanelSyringe(wx.Panel):
         self._syringe = syringe
         wx.Panel.__init__(self, parent, -1)
 
+        LP_CFG.set_base()
         self._avail_comm = COMM_LIST
         self._avail_baud = BAUD_LIST
 
@@ -51,6 +53,8 @@ class PanelSyringe(wx.Panel):
 
         self.btn_infuse = wx.Button(self, label='Infuse')
         self.btn_stop = wx.Button(self, label='Stop')
+
+        self.load_info()
 
         self.__do_layout()
         self.__set_bindings()
@@ -132,6 +136,12 @@ class PanelSyringe(wx.Panel):
             self.btn_open.SetLabel('Open')
             self.btn_dl_info.Enable(False)
 
+    def load_info(self):
+        codes, volumes = LP_CFG.open_syringe_info()
+        self._syringe.manufacturers = codes
+        self._syringe.syringes = volumes
+        self.update_syringe_choices()
+
     def update_syringe_choices(self):
         self.choice_manu.Clear()
         manu = self._syringe.manufacturers
@@ -181,6 +191,7 @@ class PanelSyringe(wx.Panel):
         self._syringe.update_syringe_manufacturers()
         self._syringe.update_syringe_types()
         self.update_syringe_choices()
+        LP_CFG.save_syringe_info(self._syringe.manufacturers, self._syringe.syringes)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
