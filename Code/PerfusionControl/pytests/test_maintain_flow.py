@@ -29,6 +29,7 @@ class PanelTestMaintainFlow(wx.Panel):
 
         self.label_ai = wx.StaticText(self, label=f'Using Analog Input {self._ai.devname}')
         self.label_ao = wx.StaticText(self, label=f'Using Analog Output {self._ao.devname}')
+        self.label_output = wx.StaticText(self, label='Analog Output is xxx')
 
         self.label_desired_output = wx.StaticText(self, label='Desired Output')
         self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=self._inc)
@@ -38,6 +39,7 @@ class PanelTestMaintainFlow(wx.Panel):
         self.panel_plot.add_sensor(self._sensor)
         LP_CFG.update_stream_folder()
         self._sensor.open(LP_CFG.LP_PATH['stream'])
+        self._ao.set_dc(0)
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -59,6 +61,8 @@ class PanelTestMaintainFlow(wx.Panel):
         sizer.Add(self.spin_desired_output, flags)
         sizer.Add(self.btn_stop, flags)
         self.sizer.Add(sizer)
+
+        self.sizer.Add(self.label_output, flags)
 
         self.sizer.AddSpacer(20)
         self.sizer.Add(self.panel_plot, 1, wx.ALL | wx.EXPAND, border=1)
@@ -88,12 +92,14 @@ class PanelTestMaintainFlow(wx.Panel):
     def update_output(self):
         flow = self._sensor.get_current()
         desired = self.spin_desired_output.GetValue()
+        print(f'Flow is {flow}, desired is {desired}')
         if flow != desired:
             if flow < desired:
                 new_val = self._ao.volts_offset + self._inc
             else:
                 new_val = self._ao.volts_offset - self._inc
             self._ao.set_dc(new_val)
+        self.label_output.SetLabel(f'Analog output is f{new_val}')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
