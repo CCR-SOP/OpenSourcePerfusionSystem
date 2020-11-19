@@ -56,6 +56,9 @@ class PanelSyringe(wx.Panel):
         self.btn_infuse = wx.Button(self, label='Infuse')
         self.btn_stop = wx.Button(self, label='Stop')
 
+        self.btn_save = wx.Button(self, label='Save Config')
+        self.btn_load = wx.Button(self, label='Load Config')
+
         self.load_info()
 
         self.__do_layout()
@@ -99,6 +102,12 @@ class PanelSyringe(wx.Panel):
         sizer.Add(self.btn_dl_info, flags)
         self.sizer.Add(sizer, flags)
 
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.btn_save, flags)
+        sizer.AddSpacer(10)
+        sizer.Add(self.btn_load, flags)
+        self.sizer.Add(sizer, flags)
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sizer_manu, flags)
         sizer.Add(self.sizer_types, flags)
@@ -127,6 +136,8 @@ class PanelSyringe(wx.Panel):
         self.btn_infuse.Bind(wx.EVT_BUTTON, self.OnInfuse)
         self.btn_stop.Bind(wx.EVT_BUTTON, self.OnStop)
         self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
+        self.btn_save.Bind(wx.EVT_BUTTON, self.OnSaveConfig)
+        self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -157,7 +168,8 @@ class PanelSyringe(wx.Panel):
         manu_str = [f'({code}) {desc}' for code, desc in manu.items()]
         self.choice_manu.Append(manu_str)
 
-    def update_syringe_types(self, code):
+    def update_syringe_types(self):
+        code = self.get_selected_code()
         self.choice_types.Clear()
         syringes = self._syringe.syringes
         if not syringes:
@@ -174,7 +186,7 @@ class PanelSyringe(wx.Panel):
 
     def OnManu(self, evt):
         code = self.get_selected_code()
-        self.update_syringe_types(code)
+        self.update_syringe_types()
 
     def OnTypes(self, evt):
         code = self.get_selected_code()
@@ -197,6 +209,23 @@ class PanelSyringe(wx.Panel):
         self._syringe.update_syringe_types()
         self.update_syringe_choices()
         LP_CFG.save_syringe_info(self._syringe.manufacturers, self._syringe.syringes)
+
+    def OnSaveConfig(self, evt):
+        section = LP_CFG.get_hwcfg_section(self._name)
+        section['CommPort'] = self.choice_comm.GetStringSelection()
+        section['BaudRate'] = self.choice_baud.GetStringSelection()
+        section['ManuCode'] = self.choice_manu.GetStringSelection()
+        section['Volume'] = self.choice_types.GetStringSelection()
+        LP_CFG.update_hwcfg_section(self._name, section)
+
+    def OnLoadConfig(self, evt):
+        section = LP_CFG.get_hwcfg_section(self._name)
+        self.choice_comm.SetStringSelection(section['CommPort'])
+        self.choice_baud.SetStringSelection(section['BaudRate'])
+        self.choice_manu.SetStringSelection(section['ManuCode'])
+        self.update_syringe_types()
+        self.choice_types.SetStringSelection(section['Volume'])
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
