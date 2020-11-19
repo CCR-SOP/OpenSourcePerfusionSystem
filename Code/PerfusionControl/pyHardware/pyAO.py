@@ -28,6 +28,10 @@ class AO(threading.Thread):
         self._event_halt = threading.Event()
         self._lock_buf = threading.Lock()
 
+    @property
+    def volts_offset(self):
+        return self._volts_offset
+
     def open(self, line, period_ms, bits=12):
         self._line = line
         self._period_ms = period_ms
