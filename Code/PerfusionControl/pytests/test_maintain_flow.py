@@ -35,6 +35,9 @@ class PanelTestMaintainFlow(wx.Panel):
         self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=self._inc)
         self.spin_desired_output.Digits = 3
 
+        self.label_tolerance = wx.StaticText(self, label='Tolerance (%)')
+        self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=10)
+
         self.panel_plot = PanelPlotting(self)
         self.panel_plot.add_sensor(self._sensor)
         LP_CFG.update_stream_folder()
@@ -60,6 +63,11 @@ class PanelTestMaintainFlow(wx.Panel):
         sizer.Add(self.label_desired_output, flags)
         sizer.Add(self.spin_desired_output, flags)
         sizer.Add(self.btn_stop, flags)
+        self.sizer.Add(sizer)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_tolerance, flags)
+        sizer.Add(self.spin_tolerance, flags)
         self.sizer.Add(sizer)
 
         self.sizer.Add(self.label_output, flags)
@@ -92,14 +100,17 @@ class PanelTestMaintainFlow(wx.Panel):
     def update_output(self):
         flow = self._sensor.get_current()
         desired = self.spin_desired_output.GetValue()
-        print(f'Flow is {flow}, desired is {desired}')
-        if flow != desired:
+        tol = self.spin_tolerance.GetValue() / 100.0
+        dev = desired * tol
+        print(f'Flow is {flow:.3f}, desired is {desired:.3f}')
+        print(f'Deviation is {dev}, tol is {tol}')
+        if dev > tol:
             if flow < desired:
                 new_val = self._ao.volts_offset + self._inc
             else:
                 new_val = self._ao.volts_offset - self._inc
             self._ao.set_dc(new_val)
-        self.label_output.SetLabel(f'Analog output is f{new_val}')
+        self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
