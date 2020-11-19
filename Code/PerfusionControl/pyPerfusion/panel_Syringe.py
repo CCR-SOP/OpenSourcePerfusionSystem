@@ -14,16 +14,18 @@ BAUD_LIST = ['9600', '115200']
 
 
 class PanelSyringe(wx.Panel):
-    def __init__(self, parent, syringe):
+    def __init__(self, parent, syringe, name='Syringe'):
         self.parent = parent
         self._syringe = syringe
+        self._name = name
         wx.Panel.__init__(self, parent, -1)
 
         LP_CFG.set_base()
         self._avail_comm = COMM_LIST
         self._avail_baud = BAUD_LIST
 
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
+        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.label_comm = wx.StaticText(self, label='USB COMM')
         self.choice_comm = wx.Choice(self, wx.ID_ANY, choices=self._avail_comm)
@@ -60,7 +62,7 @@ class PanelSyringe(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 5).Center().Proportion(0)
+        flags = wx.SizerFlags().Border(wx.ALL, 2).Expand().Proportion(1)
 
         self.sizer_comm = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_comm.Add(self.label_comm, flags)
@@ -86,31 +88,34 @@ class PanelSyringe(wx.Panel):
         self.sizer_rate.Add(self.btn_update)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.sizer_comm)
+        sizer.Add(self.sizer_comm, flags)
         sizer.AddSpacer(10)
-        sizer.Add(self.sizer_baud)
-        sizer.AddSpacer(20)
+        sizer.Add(self.sizer_baud, flags)
+        self.sizer.Add(sizer, flags)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_open, flags)
         sizer.AddSpacer(10)
         sizer.Add(self.btn_dl_info, flags)
-        self.sizer.Add(sizer)
+        self.sizer.Add(sizer, flags)
 
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.sizer_manu)
-        sizer.AddSpacer(10)
-        sizer.Add(self.sizer_types)
-        self.sizer.Add(sizer)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.sizer_manu, flags)
+        sizer.Add(self.sizer_types, flags)
+        self.sizer.Add(sizer, flags)
 
         self.sizer.AddSpacer(10)
-        self.sizer.Add(self.sizer_rate)
+        self.sizer.Add(self.sizer_rate, flags)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.btn_infuse)
-        sizer.Add(self.btn_stop)
+        sizer.Add(self.btn_infuse, flags)
+        sizer.Add(self.btn_stop, flags)
         self.sizer.AddSpacer(5)
-        self.sizer.Add(sizer)
+        self.sizer.Add(sizer, flags)
 
-        self.SetSizer(self.sizer)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
+        self.SetSizer(sizer)
         self.Layout()
         self.Fit()
 
