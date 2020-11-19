@@ -29,6 +29,10 @@ class AO:
         self._event_halt = threading.Event()
         self._lock_buf = threading.Lock()
 
+    @property
+    def volts_offset(self):
+        return self._volts_offset
+
     def open(self, period_ms, bits=12):
         self._period_ms = period_ms
         self._bits = bits
