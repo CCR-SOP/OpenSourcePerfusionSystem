@@ -70,7 +70,7 @@ class SensorStream(Thread):
 
     def open(self, full_path):
         if not isinstance(full_path, pathlib.Path):
-            full_path = pathlib.Path(project_path)
+            full_path = pathlib.Path(full_path)
         self._full_path = full_path
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
@@ -89,7 +89,6 @@ class SensorStream(Thread):
 
         self.print_stream_info()
 
-        self._hw.open()
 
     def stop(self):
         self._hw.halt()
