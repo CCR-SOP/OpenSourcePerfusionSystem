@@ -35,14 +35,16 @@ class NIDAQ_AI(pyAI.AI):
         return self.data_type(self._buffer)
 
     def _acq_samples(self):
-        sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
+        sleep_time = self._read_period_ms / self._period_ms / 1000.0
         samples_read = PyDAQmx.int32()
         self.__task.ReadAnalogF64(self.samples_per_read, sleep_time, DAQmx_Val_GroupByChannel, self._buffer,
                                   self.samples_per_read, PyDAQmx.byref(samples_read), None)
         self._buffer_t = time.perf_counter()
 
-    def open(self, period_sample_ms, volts_min=0, volts_max=5, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
-        super().open()
+    def open(self, period_ms, buf_type=np.float64, data_type=np.float32, read_period_ms=500, line='None', dev='None', volts_min=0, volts_max=5,):
+        self.__dev = dev
+        self._line = line
+        super().open(period_ms, buf_type, data_type, read_period_ms)
         try:
             if self.__task:
                 self.close()
