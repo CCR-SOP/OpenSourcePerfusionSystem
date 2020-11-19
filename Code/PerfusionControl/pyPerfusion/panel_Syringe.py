@@ -39,6 +39,9 @@ class PanelSyringe(wx.Panel):
         self.label_types = wx.StaticText(self, label='Syringe Type')
         self.choice_types = wx.Choice(self, choices=[])
 
+        self.btn_dl_info = wx.Button(self, label='Download Syringe Info')
+        self.btn_dl_info.Enable(False)
+
         self.label_rate = wx.StaticText(self, label='Infusion Rate')
         self.spin_rate = wx.SpinCtrl(self, min=1, max=100000)
         self.spin_rate.SetValue(1)
@@ -84,6 +87,8 @@ class PanelSyringe(wx.Panel):
         sizer.Add(self.sizer_baud)
         sizer.AddSpacer(20)
         sizer.Add(self.btn_open, flags)
+        sizer.AddSpacer(10)
+        sizer.Add(self.btn_dl_info, flags)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -112,6 +117,7 @@ class PanelSyringe(wx.Panel):
         self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
         self.btn_infuse.Bind(wx.EVT_BUTTON, self.OnInfuse)
         self.btn_stop.Bind(wx.EVT_BUTTON, self.OnStop)
+        self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -120,13 +126,11 @@ class PanelSyringe(wx.Panel):
             baud = self.choice_baud.GetStringSelection()
             self._syringe.open(comm, int(baud))
             self.btn_open.SetLabel('Close',)
-
-            self._syringe.update_syringe_manufacturers()
-            self._syringe.update_syringe_types()
-            self.update_syringe_choices()
+            self.btn_dl_info.Enable(True)
         else:
             self._syringe.close()
             self.btn_open.SetLabel('Open')
+            self.btn_dl_info.Enable(False)
 
     def update_syringe_choices(self):
         self.choice_manu.Clear()
@@ -172,6 +176,11 @@ class PanelSyringe(wx.Panel):
 
     def OnStop(self, evt):
         self._syringe.stop()
+
+    def OnDLInfo(self, evt):
+        self._syringe.update_syringe_manufacturers()
+        self._syringe.update_syringe_types()
+        self.update_syringe_choices()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
