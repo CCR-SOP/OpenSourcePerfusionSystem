@@ -12,6 +12,8 @@ import wx
 
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.SensorStream import SensorStream
 
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
@@ -25,6 +27,10 @@ class PanelAI(wx.Panel):
         self._name = name
         wx.Panel.__init__(self, parent, -1)
 
+        LP_CFG.set_base()
+        LP_CFG.update_stream_folder()
+        self._sensor = None
+
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
 
@@ -32,6 +38,9 @@ class PanelAI(wx.Panel):
         self._panel_settings = PanelAI_Settings(self, self._ai, name, 'Settings')
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+
+        self.btn_plot = wx.ToggleButton(self, label='Plot Data')
+        self.panel_plot = PanelPlotting(self)
 
         self.__do_layout()
         self.__set_bindings()
@@ -41,22 +50,34 @@ class PanelAI(wx.Panel):
 
         self.sizer.Add(self._panel_cfg, flags)
         self.sizer.AddSpacer(5)
-        self.sizer.Add(self._panel_settings)
+        self.sizer.Add(self._panel_settings, flags)
+        self.sizer.Add(self.btn_plot, flags)
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
-        self.SetSizer(sizer)
+        self.sizer.Add(self.panel_plot, 1, wx.EXPAND | wx.ALL, border=5)
+
+        self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
     def __set_bindings(self):
-        pass
+        self.btn_plot.Bind(wx.EVT_TOGGLEBUTTON, self.OnPlot)
+
+    def OnPlot(self, evt):
+        plotting = self.btn_plot.GetValue()
+        if plotting:
+            self._sensor = SensorStream(self._name, 'units', self._panel_cfg.ai)
+            self.panel_plot.add_sensor(self._sensor)
+            print(f'{LP_CFG.LP_PATH["stream"]}')
+            self._sensor.open(LP_CFG.LP_PATH['stream'])
+            self._sensor.start()
+        else:
+            self._sensor.stop()
 
 
 class PanelAI_Config(wx.Panel):
     def __init__(self, parent, aio, name, sizer_name):
         self.parent = parent
-        self._ao = aio
+        self.ai = aio
         self._name = name
         wx.Panel.__init__(self, parent, -1)
 
@@ -121,11 +142,11 @@ class PanelAI_Config(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
-            self._ao.open(line, period_ms=10, dev=dev)
+            self.ai.open(line=line, period_ms=10, dev=dev)
             self.btn_open.SetLabel('Close',)
-            self._ao.start()
+            self.ai.start()
         else:
-            self._ao.close()
+            self.ai.close()
             self.btn_open.SetLabel('Open')
 
     def OnSaveCfg(self, evt):
@@ -151,7 +172,7 @@ class PanelAI_Settings(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label=sizer_name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.btn_update = wx.Button(self, label='Update')
+        self.btn_open = wx.Button(self, label='Open')
 
         # self.spin_period_ms = wx.SpinCtrl(self, min=0, max=1000, initial=100)
         # self.lbl_period_ms = wx.StaticText(self, label='Sampling Period (ms)')
@@ -171,7 +192,7 @@ class PanelAI_Settings(wx.Panel):
         # self.sizer.Add(sizer, flags)
 
         self.sizer.AddSpacer(10)
-        self.sizer.Add(self.btn_update, flags)
+        self.sizer.Add(self.btn_open, flags)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_save_cfg, flags)
@@ -189,6 +210,10 @@ class PanelAI_Settings(wx.Panel):
     def __set_bindings(self):
         self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
+        self.btn_open.Bind(wx.EVT_BUTTON, self.OnOpen)
+
+    def OnOpen(self, evt):
+        pass
 
     def OnSaveCfg(self, evt):
         pass
@@ -203,8 +228,8 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.ao = NIDAQ_AI()
         ao_name = 'Analog Input'
-        # self.panel = PanelAI(self, self.ao, name=ao_name)
-        self.panel = PanelAI_Config(self, self.ao, name='Analog Input', sizer_name='Configuration')
+        self.panel = PanelAI(self, self.ao, name=ao_name)
+        # self.panel = PanelAI_Config(self, self.ao, name='Analog Input', sizer_name='Configuration')
         # self.panel = PanelAI_Settings(self, self.ao, name=ao_name, sizer_name='Settings')
 
 
