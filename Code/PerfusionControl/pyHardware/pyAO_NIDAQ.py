@@ -24,7 +24,7 @@ class NIDAQ_AO(pyAO.AO):
         self.__last_dc_val = None
 
     @property
-    def _devname(self):
+    def devname(self):
         return f"/{self.__dev}/ao{self._line}"
 
     def _output_samples(self):
@@ -47,10 +47,10 @@ class NIDAQ_AO(pyAO.AO):
             self.__task = Task()
             # NI USB-6009 does not support FuncGen Channels
             # self.__task.CreateAOFuncGenChan(self._devname, None, DAQmx_Val_Sine, self._Hz, self._volts_p2p, self._volts_offset)
-            self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, DAQmx_Val_Volts, None)
+            self.__task.CreateAOVoltageChan(self.devname, None, 0, 5, DAQmx_Val_Volts, None)
             self.__task.StartTask()
         except PyDAQmx.DAQError as e:
-            print("Could not create AO Func Channel for {}".format(self._devname))
+            print("Could not create AO Func Channel for {}".format(self.devname))
             print(f"{e}")
             self.__task = None
 

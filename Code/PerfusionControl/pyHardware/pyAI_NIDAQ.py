@@ -28,7 +28,7 @@ class NIDAQ_AI(pyAI.AI):
         self._volts_offset = volts_offset
 
     @property
-    def _devname(self):
+    def devname(self):
         return f"/{self.__dev}/ai{self._line}"
 
     def _convert_to_units(self):
@@ -49,10 +49,10 @@ class NIDAQ_AI(pyAI.AI):
             self.__task = Task()
             volt_min = self._volts_offset - 0.5 * self._volts_p2p
             volt_max = self._volts_offset + 0.5 * self._volts_p2p
-            self.__task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
+            self.__task.CreateAIVoltageChan(self.devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
             self.__task.StartTask()
         except PyDAQmx.DAQError as e:
-            print("Could not create AO Channel for {}".format(self._devname))
+            print("Could not create AO Channel for {}".format(self.devname))
             print(f"{e}")
             self.__task = None
 
