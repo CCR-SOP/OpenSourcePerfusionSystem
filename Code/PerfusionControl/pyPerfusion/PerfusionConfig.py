@@ -19,6 +19,7 @@ LP_PATH['data'] = LP_PATH['base'] / 'data'
 LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 LP_FILE = {}
 LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
+LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
 
 
 def set_base(basepath='~/Documents'):
@@ -31,6 +32,7 @@ def set_base(basepath='~/Documents'):
     LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 
     LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
+    LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
 
     for key in LP_PATH.keys():
         LP_PATH[key].mkdir(parents=True, exist_ok=True)
@@ -48,8 +50,35 @@ def update_hwcfg_section(name, updated_info):
 def get_hwcfg_section(name):
     config = ConfigParser()
     config.read(LP_FILE['hwcfg'])
-    section = config[name]
+    if config.has_section(name):
+        section = config[name]
+    else:
+        section = {}
     return section
+
+
+def save_syringe_info(codes, volumes):
+    config = ConfigParser
+    config.read(LP_FILE['syringe'])
+    if not config.has_section('Codes'):
+        config.add_section(('Codes'))
+    config['Codes'] = codes
+
+    if not config.has_section('Volumes'):
+        config.add_section(('Volumes'))
+    config['Volumes'] = '\t'.join(volumes)
+
+    with open(LP_FILE['syringe'], 'w') as file:
+        config.write(file)
+
+
+def open_syringe_info():
+    config = ConfigParser()
+    config.read(LP_FILE['syringe'])
+    volumes = {}
+    for key, val in config['Volumes'].items():
+        volumes[key] = val.split(',')
+    return config['Codes'], volumes
 
 
 def update_stream_folder(base=''):
