@@ -42,7 +42,7 @@ class AI(Thread):
         self.data_type = None
         self.buf_type = None
         self.samples_per_read = None
-        self._buffer = None
+        self._buffer = []
 
     @property
     def period_sampling_ms(self):
