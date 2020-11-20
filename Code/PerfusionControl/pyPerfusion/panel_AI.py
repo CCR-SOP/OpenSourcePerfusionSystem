@@ -21,26 +21,27 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelAI(wx.Panel):
-    def __init__(self, parent, aio, name):
+    def __init__(self, parent, aio, name, sensor):
         self.parent = parent
         self._ai = aio
         self._name = name
+        self._sensor = sensor
         wx.Panel.__init__(self, parent, -1)
 
         LP_CFG.set_base()
         LP_CFG.update_stream_folder()
-        self._sensor = None
 
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
 
-        self._panel_cfg = PanelAI_Config(self, self._ai, name, 'Configuration')
-        self._panel_settings = PanelAI_Settings(self, self._ai, name, 'Settings')
+        self._panel_cfg = PanelAI_Config(self, self._ai, name, 'Configuration', self._sensor)
+        self._panel_settings = PanelAI_Settings(self, self._sensor, name, 'Settings')
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.btn_plot = wx.ToggleButton(self, label='Plot Data')
         self.panel_plot = PanelPlotting(self)
+        self.panel_plot.add_sensor(self._sensor)
 
         self.__do_layout()
         self.__set_bindings()
@@ -63,22 +64,15 @@ class PanelAI(wx.Panel):
         self.btn_plot.Bind(wx.EVT_TOGGLEBUTTON, self.OnPlot)
 
     def OnPlot(self, evt):
-        plotting = self.btn_plot.GetValue()
-        if plotting:
-            self._sensor = SensorStream(self._name, 'units', self._panel_cfg.ai)
-            self.panel_plot.add_sensor(self._sensor)
-            print(f'{LP_CFG.LP_PATH["stream"]}')
-            self._sensor.open(LP_CFG.LP_PATH['stream'])
-            self._sensor.start()
-        else:
-            self._sensor.stop()
+        pass
 
 
 class PanelAI_Config(wx.Panel):
-    def __init__(self, parent, aio, name, sizer_name):
+    def __init__(self, parent, aio, name, sizer_name, sensor):
         self.parent = parent
         self.ai = aio
         self._name = name
+        self._sensor = sensor
         wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
@@ -142,11 +136,11 @@ class PanelAI_Config(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
-            self.ai.open(line=line, period_ms=10, dev=dev)
+            self.ai.open(period_ms=10, line=line, dev=dev)
             self.btn_open.SetLabel('Close',)
-            self.ai.start()
+            self._sensor.start()
         else:
-            self.ai.close()
+            self._sensor.close()
             self.btn_open.SetLabel('Open')
 
     def OnSaveCfg(self, evt):
@@ -163,17 +157,25 @@ class PanelAI_Config(wx.Panel):
         self.choice_line.SetStringSelection(section['LineName'])
 
 class PanelAI_Settings(wx.Panel):
-    def __init__(self, parent, aio, name, sizer_name):
+    def __init__(self, parent, sensor, name, sizer_name):
         self.parent = parent
-        self._ao = aio
+        self._sensor = sensor
         self._name = name
         wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=sizer_name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.btn_open = wx.Button(self, label='Open')
-
+        self.label_cal_pt1 = wx.StaticText(self, label="Calibration Pt 1")
+        self.spin_cal_pt1 = wx.SpinCtrlDouble(self, min=0, max=1000, inc=1)
+        self.label_cal_pt2 = wx.StaticText(self, label="Calibration Pt 2")
+        self.spin_cal_pt2 = wx.SpinCtrlDouble(self, min=0, max=1000, inc=1)
+        self.spin_cal_pt1.Digits = 3
+        self.spin_cal_pt2.Digits = 3
+        self.label_cal_pt1_val = wx.StaticText(self, label='No reading')
+        self.label_cal_pt2_val = wx.StaticText(self, label='No reading')
+        self.btn_cal_pt1 = wx.Button(self, label='Read Cal Pt 1')
+        self.btn_cal_pt2 = wx.Button(self, label='Read Cal Pt 2')
         # self.spin_period_ms = wx.SpinCtrl(self, min=0, max=1000, initial=100)
         # self.lbl_period_ms = wx.StaticText(self, label='Sampling Period (ms)')
 
@@ -191,14 +193,23 @@ class PanelAI_Settings(wx.Panel):
         # sizer.Add(self.lbl_period_ms, flags)
         # self.sizer.Add(sizer, flags)
 
-        self.sizer.AddSpacer(10)
-        self.sizer.Add(self.btn_open, flags)
-
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_save_cfg, flags)
         sizer.AddSpacer(5)
         sizer.Add(self.btn_load_cfg, flags)
         self.sizer.AddSpacer(10)
+        self.sizer.Add(sizer)
+
+        # Calibration
+        sizer = wx.GridSizer(cols=4)
+        sizer.Add(self.label_cal_pt1, flags)
+        sizer.Add(self.spin_cal_pt1, flags)
+        sizer.Add(self.btn_cal_pt1, flags)
+        sizer.Add(self.label_cal_pt1_val, flags)
+        sizer.Add(self.label_cal_pt2, flags)
+        sizer.Add(self.spin_cal_pt2, flags)
+        sizer.Add(self.btn_cal_pt2, flags)
+        sizer.Add(self.label_cal_pt2_val, flags)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -210,10 +221,18 @@ class PanelAI_Settings(wx.Panel):
     def __set_bindings(self):
         self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
-        self.btn_open.Bind(wx.EVT_BUTTON, self.OnOpen)
+        self.btn_cal_pt1.Bind(wx.EVT_BUTTON, self.OnCalPt1)
+        self.btn_cal_pt2.Bind(wx.EVT_BUTTON, self.OnCalPt2)
 
-    def OnOpen(self, evt):
-        pass
+
+    def OnCalPt1(self, evt):
+        val = self._sensor.get_current()
+        print(f'{val}')
+        self.label_cal_pt1_val.SetLabel(f'{val:.3f}')
+
+    def OnCalPt2(self, evt):
+        val = self._sensor.get_current()
+        self.label_cal_pt2_val.SetLabel(f'{val:.3f}')
 
     def OnSaveCfg(self, evt):
         pass
@@ -226,9 +245,14 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.ao = NIDAQ_AI()
+
+        LP_CFG.set_base()
+        LP_CFG.update_stream_folder()
+        self.ai = NIDAQ_AI()
+        self.sensor = SensorStream('Flow', 'ml/min', self.ai)
+        self.sensor.open(LP_CFG.LP_PATH['stream'])
         ao_name = 'Analog Input'
-        self.panel = PanelAI(self, self.ao, name=ao_name)
+        self.panel = PanelAI(self, self.ai, name=ao_name, sensor=self.sensor)
         # self.panel = PanelAI_Config(self, self.ao, name='Analog Input', sizer_name='Configuration')
         # self.panel = PanelAI_Settings(self, self.ao, name=ao_name, sizer_name='Settings')
 
