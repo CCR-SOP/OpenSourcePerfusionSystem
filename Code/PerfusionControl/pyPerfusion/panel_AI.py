@@ -169,6 +169,8 @@ class PanelAI_Settings(wx.Panel):
         self.label_cal_pt2_val = wx.StaticText(self, label='No reading')
         self.btn_cal_pt1 = wx.Button(self, label='Read Cal Pt 1')
         self.btn_cal_pt2 = wx.Button(self, label='Read Cal Pt 2')
+        self.btn_calibrate = wx.Button(self, label='Calibrate')
+        self.btn_reset_cal = wx.Button(self, label='Reset Cal')
         # self.spin_period_ms = wx.SpinCtrl(self, min=0, max=1000, initial=100)
         # self.lbl_period_ms = wx.StaticText(self, label='Sampling Period (ms)')
 
@@ -203,6 +205,8 @@ class PanelAI_Settings(wx.Panel):
         sizer.Add(self.spin_cal_pt2, flags)
         sizer.Add(self.btn_cal_pt2, flags)
         sizer.Add(self.label_cal_pt2_val, flags)
+        sizer.Add(self.btn_calibrate, flags)
+        sizer.Add(self.btn_reset_cal, flags)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -216,22 +220,45 @@ class PanelAI_Settings(wx.Panel):
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
         self.btn_cal_pt1.Bind(wx.EVT_BUTTON, self.OnCalPt1)
         self.btn_cal_pt2.Bind(wx.EVT_BUTTON, self.OnCalPt2)
-
+        self.btn_calibrate.Bind(wx.EVT_BUTTON, self.OnCalibrate)
+        self.btn_reset_cal.Bind(wx.EVT_BUTTON, self.OnResetCalibration)
 
     def OnCalPt1(self, evt):
         val = self._sensor.get_current()
-        print(f'{val}')
         self.label_cal_pt1_val.SetLabel(f'{val:.3f}')
 
     def OnCalPt2(self, evt):
         val = self._sensor.get_current()
         self.label_cal_pt2_val.SetLabel(f'{val:.3f}')
 
+    def OnCalibrate(self, evt):
+        low_pt = self.spin_cal_pt1.GetValue()
+        low_read = float(self.label_cal_pt1_val.GetLabel())
+        high_pt = self.spin_cal_pt2.GetValue()
+        high_read = float(self.label_cal_pt2_val.GetLabel())
+        self._sensor.hw.set_2pt_cal(low_pt, low_read, high_pt, high_read)
+
+    def OnResetCalibration(self, evt):
+        self._sensor.hw.set_2pt_cal(0, 0, 1, 1)
+        self.spin_cal_pt1.SetValue(0)
+        self.spin_cal_pt2.SetValue(1)
+        self.label_cal_pt1_val.SetLabel('0')
+        self.label_cal_pt2_val.SetLabel('1')
+
     def OnSaveCfg(self, evt):
-        pass
+        section = LP_CFG.get_hwcfg_section(self._name)
+        section['CalPt1_Target'] = f'{self.spin_cal_pt1.GetValue():.3f}'
+        section['CalPt1_Reading'] = self.label_cal_pt1_val.GetLabel()
+        section['CalPt2_Target'] = f'{self.spin_cal_pt2.GetValue():.3f}'
+        section['CalPt2_Reading'] = self.label_cal_pt2_val.GetLabel()
+        LP_CFG.update_hwcfg_section(self._name, section)
 
     def OnLoadCfg(self, evt):
-        pass
+        section = LP_CFG.get_hwcfg_section(self._name)
+        self.spin_cal_pt1.SetValue(float(section['CalPt1_Target']))
+        self.label_cal_pt1_val.SetLabel(section['CalPt1_Reading'])
+        self.spin_cal_pt2.SetValue(float(section['CalPt2_Target']))
+        self.label_cal_pt2_val.SetLabel(section['CalPt2_Reading'])
 
 
 class TestFrame(wx.Frame):
