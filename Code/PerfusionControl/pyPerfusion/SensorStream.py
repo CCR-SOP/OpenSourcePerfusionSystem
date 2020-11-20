@@ -119,24 +119,28 @@ class SensorStream(Thread):
         fid.close()
 
     def get_data(self, last_ms, samples_needed):
-        _fid, data = self._open_read()
-        file_size = len(data)
-        if last_ms > 0:
-            data_size = int(last_ms / self.hw.period_sampling_ms)
-            if samples_needed > data_size:
-                samples_needed = data_size
-            start_idx = file_size - data_size
-            if start_idx < 0:
+        if self.hw.is_open:
+            _fid, data = self._open_read()
+            file_size = len(data)
+            if last_ms > 0:
+                data_size = int(last_ms / self.hw.period_sampling_ms)
+                if samples_needed > data_size:
+                    samples_needed = data_size
+                start_idx = file_size - data_size
+                if start_idx < 0:
+                    start_idx = 0
+            else:
                 start_idx = 0
-        else:
-            start_idx = 0
-        idx = np.linspace(start_idx, file_size-1, samples_needed, dtype=np.int)
-        data = data[idx]
+            idx = np.linspace(start_idx, file_size-1, samples_needed, dtype=np.int)
+            data = data[idx]
 
-        start_t = start_idx * self.hw.period_sampling_ms / 1000.0
-        stop_t = file_size * self.hw.period_sampling_ms / 1000.0
-        data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.float32)
-        _fid.close()
+            start_t = start_idx * self.hw.period_sampling_ms / 1000.0
+            stop_t = file_size * self.hw.period_sampling_ms / 1000.0
+            data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.float32)
+            _fid.close()
+        else:
+            data_time = [0]
+            data = [0]
 
         return data_time, data
 

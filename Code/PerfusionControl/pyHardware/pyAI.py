@@ -50,6 +50,10 @@ class AI(Thread):
         self._buffer = []
 
     @property
+    def is_open(self):
+        return self._read_period_ms is not None
+
+    @property
     def period_sampling_ms(self):
         return self._period_ms
 
@@ -97,7 +101,6 @@ class AI(Thread):
         for i in range(len(self._buffer)):
             data[i] = (((self._buffer[i] - self._low_read) * (self._high_pt - self._low_pt))
                        / (self._high_read-self._low_read)) + self._low_pt
-            print(f'Convert {self._buffer[i]} to {data[i]}')
         return data
 
     def _acq_samples(self):

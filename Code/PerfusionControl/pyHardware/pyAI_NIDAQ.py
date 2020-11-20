@@ -28,6 +28,10 @@ class NIDAQ_AI(pyAI.AI):
         self._volts_max = 5
 
     @property
+    def is_open(self):
+        return self.__task is not None
+
+    @property
     def devname(self):
         return f"/{self.__dev}/ai{self._line}"
 
