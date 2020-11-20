@@ -3,7 +3,6 @@ from pyHardware.pyUSBSerial import USBSerial
 class PHDserial(USBSerial):
     """
     Class for serial communication over USB using PHD (Pump 11 Elite) command set
-
     ...
 
     Attributes

@@ -237,7 +237,7 @@ class TestFrame(wx.Frame):
                     'Vasodilator': PHDserial(),
                     'Nutrients': PHDserial(),
                    'BileSalts': PHDserial()
-                    }
+                   }
         sizer = wx.GridSizer(cols=2)
         for key, syringe in syringes.items():
             sizer.Add(PanelSyringe(self, syringe, name=key), 1, wx.EXPAND, border=2)

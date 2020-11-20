@@ -56,21 +56,22 @@ def get_hwcfg_section(name):
         section = {}
     return section
 
-
 def save_syringe_info(codes, volumes):
-    config = ConfigParser
+    config = ConfigParser()
     config.read(LP_FILE['syringe'])
     if not config.has_section('Codes'):
-        config.add_section(('Codes'))
+        config.add_section('Codes')
     config['Codes'] = codes
 
     if not config.has_section('Volumes'):
-        config.add_section(('Volumes'))
-    config['Volumes'] = '\t'.join(volumes)
+        config.add_section('Volumes')
+    volume = {}
+    for key, val in volumes.items():
+        volume[key] = str(val)[1:-1].replace("'", '')
+    config['Volumes'] = volume
 
     with open(LP_FILE['syringe'], 'w') as file:
         config.write(file)
-
 
 def open_syringe_info():
     config = ConfigParser()
@@ -79,7 +80,6 @@ def open_syringe_info():
     for key, val in config['Volumes'].items():
         volumes[key] = val.split(',')
     return config['Codes'], volumes
-
 
 def update_stream_folder(base=''):
     if not base:
