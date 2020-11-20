@@ -65,6 +65,7 @@ def save_syringe_info(codes, volumes):
 
     if not config.has_section('Volumes'):
         config.add_section('Volumes')
+    # Changed the way syringe volumes are stored in the config file:
     volume = {}
     for key, val in volumes.items():
         volume[key] = str(val)[1:-1].replace("'", '')
