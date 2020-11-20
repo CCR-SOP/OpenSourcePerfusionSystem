@@ -21,9 +21,8 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelAI(wx.Panel):
-    def __init__(self, parent, aio, name, sensor):
+    def __init__(self, parent, name, sensor):
         self.parent = parent
-        self._ai = aio
         self._name = name
         self._sensor = sensor
         wx.Panel.__init__(self, parent, -1)
@@ -34,12 +33,11 @@ class PanelAI(wx.Panel):
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
 
-        self._panel_cfg = PanelAI_Config(self, self._ai, name, 'Configuration', self._sensor)
+        self._panel_cfg = PanelAI_Config(self, name, 'Configuration', self._sensor)
         self._panel_settings = PanelAI_Settings(self, self._sensor, name, 'Settings')
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.btn_plot = wx.ToggleButton(self, label='Plot Data')
         self.panel_plot = PanelPlotting(self)
         self.panel_plot.add_sensor(self._sensor)
 
@@ -52,7 +50,6 @@ class PanelAI(wx.Panel):
         self.sizer.Add(self._panel_cfg, flags)
         self.sizer.AddSpacer(5)
         self.sizer.Add(self._panel_settings, flags)
-        self.sizer.Add(self.btn_plot, flags)
 
         self.sizer.Add(self.panel_plot, 1, wx.EXPAND | wx.ALL, border=5)
 
@@ -61,16 +58,12 @@ class PanelAI(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.btn_plot.Bind(wx.EVT_TOGGLEBUTTON, self.OnPlot)
-
-    def OnPlot(self, evt):
         pass
 
 
 class PanelAI_Config(wx.Panel):
-    def __init__(self, parent, aio, name, sizer_name, sensor):
+    def __init__(self, parent, name, sizer_name, sensor):
         self.parent = parent
-        self.ai = aio
         self._name = name
         self._sensor = sensor
         wx.Panel.__init__(self, parent, -1)
@@ -136,7 +129,7 @@ class PanelAI_Config(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
-            self.ai.open(period_ms=10, line=line, dev=dev)
+            self._sensor.hw.open(period_ms=10, line=line, dev=dev)
             self.btn_open.SetLabel('Close',)
             self._sensor.start()
         else:
@@ -252,9 +245,9 @@ class TestFrame(wx.Frame):
         self.sensor = SensorStream('Flow', 'ml/min', self.ai)
         self.sensor.open(LP_CFG.LP_PATH['stream'])
         ao_name = 'Analog Input'
-        self.panel = PanelAI(self, self.ai, name=ao_name, sensor=self.sensor)
-        # self.panel = PanelAI_Config(self, self.ao, name='Analog Input', sizer_name='Configuration')
-        # self.panel = PanelAI_Settings(self, self.ao, name=ao_name, sizer_name='Settings')
+        self.panel = PanelAI(self, name=ao_name, sensor=self.sensor)
+        # self.panel = PanelAI_Config(self, name='Analog Input', sizer_name='Configuration', sensor=self.sensor)
+        # self.panel = PanelAI_Settings(self, name=ao_name, sizer_name='Settings', sensor=self.sensor)
 
 
 class MyTestApp(wx.App):
