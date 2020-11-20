@@ -18,10 +18,10 @@ class SensorPoint(SensorStream):
         header = [f'File Format: {DATA_VERSION}',
                   f'Sensor: {self._name}',
                   f'Unit: {self._unit_str}',
-                  f'Data Format: {str(np.dtype(self._hw.data_type))}',
+                  f'Data Format: {str(np.dtype(self.hw.data_type))}',
                   f'Samples Per Timestamp: {self._samples_per_ts}',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
-                  f'Sampling Period (ms): {self._hw.period_sampling_ms}',
+                  f'Sampling Period (ms): {self.hw.period_sampling_ms}',
                   f'Start of Acquisition: {stamp_str}'
                   ]
         end_of_line = '\n'
@@ -39,7 +39,7 @@ class SensorPoint(SensorStream):
         ts_bytes = _fid.read(self._bytes_per_ts)
         if len(ts_bytes) == 4:
             ts, = struct.unpack('i', ts_bytes)
-            data_buf = np.fromfile(_fid, dtype=self._hw.data_type, count=self._samples_per_ts)
+            data_buf = np.fromfile(_fid, dtype=self.hw.data_type, count=self._samples_per_ts)
         return data_buf, ts
 
     def get_data(self, last_ms, samples_needed):
