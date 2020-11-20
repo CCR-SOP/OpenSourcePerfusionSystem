@@ -38,6 +38,11 @@ class AI(Thread):
         self.__epoch = 0
         self._time = 0
 
+        self._low_pt = 0
+        self._low_read = 0
+        self._high_read = 1
+        self._high_pt = 1
+
         self._read_period_ms = None
         self.data_type = None
         self.buf_type = None
@@ -88,12 +93,22 @@ class AI(Thread):
         return buf, t
 
     def _convert_to_units(self):
-        return self._buffer * 1.0 + 0.0
+        data = np.zeros_like(self._buffer)
+        for i in range(len(self._buffer)):
+            data[i] = (((self._buffer[i] - self._low_read) * (self._high_pt - self._low_pt))
+                       / (self._high_read-self._low_read)) + self._low_pt
+            print(f'Convert {self._buffer[i]} to {data[i]}')
+        return data
 
     def _acq_samples(self):
-
         sleep_time = self._read_period_ms / self._period_ms / 1000.0
         sleep(sleep_time)
         self.buffer_t = perf_counter()
         val = self.data_type(np.random.random_sample() * self._demo_amp + self._demo_offset)
         self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
+
+    def set_2pt_cal(self, low_pt, low_read, high_pt, high_read):
+        self._low_pt = low_pt
+        self._low_read = low_read
+        self._high_pt = high_pt
+        self._high_read = high_read
