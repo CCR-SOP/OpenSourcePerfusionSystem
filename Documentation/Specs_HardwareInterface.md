@@ -32,6 +32,8 @@
 	- Input Pins: 6-21 (Bit 1-16, respectively, level controlled)
 	- Ground: Pins 1-5, 22-25
 	- TTL: VIL <= 0.8V, VIH >=2V
+	- Use VC UI to set mode to digital; connect one of the GND pins to GND, and connect input pins (choose which pins correspond to which valve using the VC UI) to DIO to turn valves on/off
+- Rinse valves with water after every use
 
 # Flow Meter
 - Hugo Sachs Elektronik TTFM-2 Type 714
