@@ -1,4 +1,4 @@
-# Centrifugal Pump Control
+﻿# Centrifugal Pump Control
 - Hugo Sachs Elektronik (Harvard Apparatus)
 - BVP-BP
 	- D-Sub 15 
@@ -55,6 +55,7 @@
 # Peristaltic Pump
 - Ismatec Ecoline VC-280
 - 3.5-350 RPM
+- See pages 25 and 26 of manual for pump flow rates based on ID/wall thickness of tubing
 - 8-pin socket DIN 45326
 - Pin 1, GND
 - Pin 2, shield (GND)

@@ -28,6 +28,9 @@ Standard smartphone app for use with Dexcom glucose sensors. Available on iOS an
 ## Dexcom Receiver
 Hardware device provided by Dexcom which can receive data from sensor and forward to a cloud service or desktop. A Dexcom sensor can be simultaneously connected to a Dexcom Reciever and the Dexcom smartphone app. Receiver have a USB port and G6 commercial receivers should transmit the data in real-time over this port. It is currently unknown if the G6 Pro receiver has this capability.
 According to Chris Hanneman (2020-10-13 phone call), this was a common way of getting data from Dexcom sensors in the early years of the DIY movement. Python code on GitHub (openaps/dexcom_reader seems to be the original; has spawned other variants) is marketed as being compatible with this port data transmission with G6 Commerical receivers, but extensive debugging on our part as shown that the G6 Pro receivers are incompatible with this method
+* G6 Pro receivers don't seem to collect data in real time from the Dexcom sensor; traditionally, Pro receivers are used to check the status of a sensor (i.e. working or not) and also download all data after a session is ended
+* G6 Commercial receivers collect data in real time from the Dexcom sensor; the UI of these receivers is much like that of the Dexcom Smartphone app
+* Python code recommended by Chris Hannemann (2020-10-13 phone call) is compatible with G6 Commercial receivers
 ## Dexcom Share 
 Dexcom cloud service which can provide glucose readings to third-party apps. 
 ## Dexcom Follow  
