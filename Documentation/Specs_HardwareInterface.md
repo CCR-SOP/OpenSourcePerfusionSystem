@@ -1,4 +1,5 @@
 ﻿# Centrifugal Pump Control
+- HA and PV lines each use a pump
 - Hugo Sachs Elektronik (Harvard Apparatus)
 - BVP-BP
 - Max speed (999) = 3000 rpm
@@ -33,6 +34,7 @@
 	- Ground: Pins 1-5, 22-25
 	- TTL: VIL <= 0.8V, VIH >=2V
 	- Use VC UI to set mode to digital; connect one of the GND pins to GND, and connect input pins (choose which pins correspond to which valve using the VC UI) to DIO to turn valves on/off
+	- During digital control, UI and valve lights update as valves are opened/closed
 - Rinse valves with water after every use
 
 # Flow Meter
