@@ -89,10 +89,12 @@
 - APT300, 733862
 	- Hepatic Artery
 	- 5uV/V/mmHg
+	- -300 mmHg to +300 mmHg 
 	- Interfaces to PLUGSYS Amp Module TAM-A
 - P75, 730020
-	- Venous Pressure 
+	- Venous Pressure (PV and IVC)
 	- 1mV/mmHg
+	- -75 mmHg to +75 mmHg
 	- Interfaces to PLUGSYS Amp Module TAM-A
 - TAM-A 730065
 	- Front panel controls for calibration, low pass filter, and gain settings
