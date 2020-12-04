@@ -123,6 +123,9 @@
 - Whenever tubing with new dimensions is used, calibration is recommended
 - Prime pump prior to use
 
-
-
-
+# Thermometer
+- BAT-12
+	- Temperature range: -100° to +200°C
+	- Resolution: 0.1°
+	- 10mV per degree C, approximately
+	- Analog output is available
