@@ -23,7 +23,6 @@
 		- If connected to Pin1, speed can be set on front-panel instead of Pin 5
 
 -Connected pins 2 and 3 to pin 1(GND), and connected pin 5 to AO to successfully vary pump speed/gain remote control
--From what I can tell, the default settings for analog input for the pump are 0-10 V; need to change to 0-5 V to accomodate our DAQ?
 -Clean pump head after a run with: tap water, 5% acetic acid, then a final distilled water rinse
 
 # VCS Control
@@ -87,7 +86,7 @@
 
 # Pressure Transducer
 - APT300, 733862
-	- Hepatic Artery
+	- Hepatic Artery Pressure
 	- 5uV/V/mmHg
 	- -300 mmHg to +300 mmHg 
 	- Interfaces to PLUGSYS Amp Module TAM-A
@@ -125,7 +124,7 @@
 
 # Thermometer
 - BAT-12
-	- Temperature range: -100° to +200°C
+	- Temperature range: -100° to +150°C
 	- Resolution: 0.1°
 	- 10mV per degree C, approximately
 	- Analog output is available
