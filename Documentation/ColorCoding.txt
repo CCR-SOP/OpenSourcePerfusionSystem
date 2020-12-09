@@ -1,0 +1,14 @@
+Light Red - HA
+Light Blue - PV
+Light Green - VC
+Green - Perfusate
+Light Purple - Dialysis
+
+White - Pressure sensor
+Light Green - Flow sensor
+Purple - Motor
+
+Orange - temp sensor
+Black - gas sensor matches fiber
+Green - gas sensor matches fiber
+Red - gas sensor matches fiber
