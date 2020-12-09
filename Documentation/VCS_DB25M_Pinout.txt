@@ -1,0 +1,8 @@
+VCS Pin - DB25 Std - Function - Color
+1			1			GND		Brown
+6			8			Bit1	Blue
+7			20			Bit2	Cyan/Black
+8			7			Bit3	Cyan
+9			19			Bit4	Green/Black
+10			6			Bit5	Purple
+11			18			Bit6	Yellow/Black
