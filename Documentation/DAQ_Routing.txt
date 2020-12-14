@@ -1,8 +1,10 @@
 Circuit			Hardware		DAQ Line
 HA 			BVP-Z 			Dev1/AO0
 PV 			BVP-Z 			Dev1/AO1
+
 Dialysis 		Ecoline - Perfusate 	Dev2/AO0
 Dialysis 		Reglo - Dialysate	Dev2/AO1
+
 All			Temp Sensor 		Dev2/AI0
 All			Oxygen sensor 		Dev2/AI1
 All			CO2 sensor 		Dev2/AI2
