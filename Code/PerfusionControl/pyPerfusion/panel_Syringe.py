@@ -9,7 +9,7 @@ import wx
 from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-COMM_LIST = [f'COM{num}' for num in range(1,10)]
+COMM_LIST = [f'COM{num}' for num in range(1,15)]
 BAUD_LIST = ['9600', '115200']
 
 
@@ -216,6 +216,8 @@ class PanelSyringe(wx.Panel):
         section['BaudRate'] = self.choice_baud.GetStringSelection()
         section['ManuCode'] = self.choice_manu.GetStringSelection()
         section['Volume'] = self.choice_types.GetStringSelection()
+        section['Rate'] = str(self.spin_rate.GetValue())
+        section['Unit'] = self.choice_rate.GetStringSelection()
         LP_CFG.update_hwcfg_section(self._name, section)
 
     def OnLoadConfig(self, evt):
@@ -225,19 +227,24 @@ class PanelSyringe(wx.Panel):
         self.choice_manu.SetStringSelection(section['ManuCode'])
         self.update_syringe_types()
         self.choice_types.SetStringSelection(section['Volume'])
+        self.spin_rate.SetValue(int(section['Rate']))
+        self.choice_rate.SetStringSelection(section['Unit'])
+        rate = self.spin_rate.GetValue()
+        unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
+        self._syringe.set_infusion_rate(rate, unit)
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        syringes = {'Insulin': PHDserial(),
-                    'Glucose': PHDserial(),
-                    'Vasoconstrictor': PHDserial(),
-                    'Vasodilator': PHDserial(),
-                    'Nutrients': PHDserial(),
-                   'BileSalts': PHDserial()
-                   }
+        syringes = {'Insulin': PHDserial()} #,
+                   # 'Glucose': PHDserial(),
+                   # 'Vasoconstrictor': PHDserial(),
+                   # 'Vasodilator': PHDserial(),
+                   # 'Nutrients': PHDserial(),
+                   #'BileSalts': PHDserial()
+                   #}
         sizer = wx.GridSizer(cols=2)
         for key, syringe in syringes.items():
             sizer.Add(PanelSyringe(self, syringe, name=key), 1, wx.EXPAND, border=2)
