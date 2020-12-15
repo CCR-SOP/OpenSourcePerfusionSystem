@@ -222,11 +222,26 @@ class PanelSyringe(wx.Panel):
 
     def OnLoadConfig(self, evt):
         section = LP_CFG.get_hwcfg_section(self._name)
+        state = self.btn_open.GetValue()
+        if state:
+            self._syringe.close()
+            self.btn_open.SetLabel('Open')
+            self.btn_dl_info.Enable(False)
         self.choice_comm.SetStringSelection(section['CommPort'])
         self.choice_baud.SetStringSelection(section['BaudRate'])
+        comm = self.choice_comm.GetStringSelection()
+        baud = self.choice_baud.GetStringSelection()
+        self._syringe.open(comm, int(baud))
+        self.btn_open.SetLabel('Close', )
+        self.btn_dl_info.Enable(True)
+
         self.choice_manu.SetStringSelection(section['ManuCode'])
         self.update_syringe_types()
         self.choice_types.SetStringSelection(section['Volume'])
+        manu = self.choice_manu.GetString(self.choice_manu.GetSelection())
+        syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
+        self._syringe.set_syringe_manufacturer_size(manu, syr_size)
+
         self.spin_rate.SetValue(int(section['Rate']))
         self.choice_rate.SetStringSelection(section['Unit'])
         rate = self.spin_rate.GetValue()
