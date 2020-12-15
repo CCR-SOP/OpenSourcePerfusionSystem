@@ -252,14 +252,14 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        syringes = {'Insulin': PHDserial()} #,
-                   # 'Glucose': PHDserial(),
-                   # 'Vasoconstrictor': PHDserial(),
-                   # 'Vasodilator': PHDserial(),
-                   # 'Nutrients': PHDserial(),
-                   #'BileSalts': PHDserial()
-                   #}
-        sizer = wx.GridSizer(cols=2)
+        syringes = {'Insulin': PHDserial(),
+                    'Glucose': PHDserial(),
+                    'Vasoconstrictor': PHDserial(),
+                    'Vasodilator': PHDserial(),
+                    'Nutrients': PHDserial(),
+                    'BileSalts': PHDserial()
+                    }
+        sizer = wx.GridSizer(cols=3)
         for key, syringe in syringes.items():
             sizer.Add(PanelSyringe(self, syringe, name=key), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
