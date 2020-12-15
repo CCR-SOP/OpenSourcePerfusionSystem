@@ -79,7 +79,7 @@ def open_syringe_info():
     config.read(LP_FILE['syringe'])
     volumes = {}
     for key, val in config['Volumes'].items():
-        volumes[key] = val.split(',')
+        volumes[key] = val.split(', ')
     return config['Codes'], volumes
 
 def update_stream_folder(base=''):

@@ -238,7 +238,7 @@ class PanelSyringe(wx.Panel):
         self.choice_manu.SetStringSelection(section['ManuCode'])
         self.update_syringe_types()
         self.choice_types.SetStringSelection(section['Volume'])
-        manu = self.choice_manu.GetString(self.choice_manu.GetSelection())
+        manu = self.get_selected_code()
         syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
         self._syringe.set_syringe_manufacturer_size(manu, syr_size)
 
@@ -247,7 +247,6 @@ class PanelSyringe(wx.Panel):
         rate = self.spin_rate.GetValue()
         unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
         self._syringe.set_infusion_rate(rate, unit)
-
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
