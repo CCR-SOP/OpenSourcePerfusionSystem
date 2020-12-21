@@ -1,4 +1,4 @@
-import dexcom_G6_reader.readdata as readdata
+import readdata
 
 dd = readdata.Dexcom.FindDevice()
 dr = readdata.Dexcom(dd)

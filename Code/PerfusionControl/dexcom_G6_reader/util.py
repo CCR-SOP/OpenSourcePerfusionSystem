@@ -1,7 +1,7 @@
 if __package__ in {None, ''}:
-    import dexcom_G6_reader.constants as constants
+    import constants
 else:
-    import dexcom_G6_reader.constants as constants
+    import constants
 import datetime
 import platform
 import sys
