@@ -16,6 +16,6 @@ IVC 			Pressure 		Dev1/AI2
 
 HA 			Flow 			Dev1/AI3
 PV 			Flow 			Dev1/AI4
-IVC 			Flow 			Dev1/AI5
+Dialysis		Flow 			Dev1/AI5
 
 All			VCS			Dev2/PO.0,PO.1,PO.2,PO.3,PO.4,PO.5
