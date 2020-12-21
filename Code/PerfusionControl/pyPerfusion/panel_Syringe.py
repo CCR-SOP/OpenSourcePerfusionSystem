@@ -6,10 +6,11 @@
 Panel class for testing and configuring Elite 11 Syringe Pump
 """
 import wx
+from serial import SerialException
 from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-COMM_LIST = [f'COM{num}' for num in range(1,15)]
+COMM_LIST = [f'COM{num}' for num in range(1, 15)]
 BAUD_LIST = ['9600', '115200']
 
 
@@ -144,9 +145,15 @@ class PanelSyringe(wx.Panel):
         if state:
             comm = self.choice_comm.GetStringSelection()
             baud = self.choice_baud.GetStringSelection()
-            self._syringe.open(comm, int(baud))
-            self.btn_open.SetLabel('Close',)
-            self.btn_dl_info.Enable(True)
+            try:
+                self._syringe.open(comm, int(baud))
+                self.btn_open.SetLabel('Close', )
+                self.btn_dl_info.Enable(True)
+            except SerialException:
+                print('Port Could Not be Opened; it is Already in Use by Another Syringe')
+                wx.MessageBox('Port Could Not be Opened; it is Already in Use by Another Syringe', 'Error',
+                           wx.OK | wx.ICON_ERROR)
+                return
         else:
             self._syringe.close()
             self.btn_open.SetLabel('Open')
@@ -231,33 +238,40 @@ class PanelSyringe(wx.Panel):
         self.choice_baud.SetStringSelection(section['BaudRate'])
         comm = self.choice_comm.GetStringSelection()
         baud = self.choice_baud.GetStringSelection()
-        self._syringe.open(comm, int(baud))
-        self.btn_open.SetLabel('Close', )
-        self.btn_dl_info.Enable(True)
+        try:
+            self._syringe.open(comm, int(baud))
+            self.btn_open.SetLabel('Close', )
+            self.btn_dl_info.Enable(True)
 
-        self.choice_manu.SetStringSelection(section['ManuCode'])
-        self.update_syringe_types()
-        self.choice_types.SetStringSelection(section['Volume'])
-        manu = self.get_selected_code()
-        syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
-        self._syringe.set_syringe_manufacturer_size(manu, syr_size)
+            self.choice_manu.SetStringSelection(section['ManuCode'])
+            self.update_syringe_types()
+            self.choice_types.SetStringSelection(section['Volume'])
+            manu = self.get_selected_code()
+            syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
+            self._syringe.set_syringe_manufacturer_size(manu, syr_size)
 
-        self.spin_rate.SetValue(int(section['Rate']))
-        self.choice_rate.SetStringSelection(section['Unit'])
-        rate = self.spin_rate.GetValue()
-        unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
-        self._syringe.set_infusion_rate(rate, unit)
+            self.spin_rate.SetValue(int(section['Rate']))
+            self.choice_rate.SetStringSelection(section['Unit'])
+            rate = self.spin_rate.GetValue()
+            unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
+            self._syringe.set_infusion_rate(rate, unit)
+
+        except SerialException:
+            print('Port Could Not be Opened; it is Already in Use by Another Syringe')
+            wx.MessageBox('Port Could Not be Opened; it is Already in Use by Another Syringe', 'Error',
+                        wx.OK | wx.ICON_ERROR)
+            return
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        syringes = {'Insulin': PHDserial(),
-                    'Glucose': PHDserial(),
-                    'Vasoconstrictor': PHDserial(),
-                    'Vasodilator': PHDserial(),
-                    'Nutrients': PHDserial(),
-                    'BileSalts': PHDserial()
+        syringes = {'Insulin (PV)': PHDserial(),
+                    'Glucose (PV)': PHDserial(),
+                    'Phenylephrine (HA)': PHDserial(),
+                    'Epoprostenol (HA)': PHDserial(),
+                    'TPN (PV)': PHDserial(),
+                    'BileSalts (PV)': PHDserial()
                     }
         sizer = wx.GridSizer(cols=3)
         for key, syringe in syringes.items():
