@@ -1,5 +1,5 @@
-import crc16
-import util
+import dexcom_G6_reader.crc16 as crc16
+import dexcom_G6_reader.util as util
 import struct
 
 class PacketWriter(object):
