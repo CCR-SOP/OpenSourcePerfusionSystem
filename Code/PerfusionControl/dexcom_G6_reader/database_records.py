@@ -1,6 +1,6 @@
-import crc16
-import constants
-import util
+import dexcom_G6_reader.crc16 as crc16
+import dexcom_G6_reader.constants as constants
+import dexcom_G6_reader.util as util
 import struct
 import binascii
 
