@@ -19,6 +19,7 @@ LP_PATH['data'] = LP_PATH['base'] / 'data'
 LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 LP_FILE = {}
 LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
+LP_FILE['receivers'] = LP_PATH['config'] / 'receivers.ini'
 
 
 def set_base(basepath='~/Documents'):
@@ -31,6 +32,7 @@ def set_base(basepath='~/Documents'):
     LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 
     LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
+    LP_FILE['receivers'] = LP_PATH['config'] / 'receivers.ini'
 
     for key in LP_PATH.keys():
         LP_PATH[key].mkdir(parents=True, exist_ok=True)
@@ -44,13 +46,22 @@ def update_hwcfg_section(name, updated_info):
     with open(LP_FILE['hwcfg'], 'w') as file:
         config.write(file)
 
-
 def get_hwcfg_section(name):
     config = ConfigParser()
     config.read(LP_FILE['hwcfg'])
-    section = config[name]
+    if config.has_section(name):
+        section = config[name]
+    else:
+        section = {}
     return section
 
+def open_receiver_info():
+    config = ConfigParser()
+    config.read(LP_FILE['receivers'])
+    receiver_info = {}
+    for key, val in config['Dexcom Receivers'].items():
+        receiver_info[key] = val
+    return receiver_info
 
 def update_stream_folder(base=''):
     if not base:
