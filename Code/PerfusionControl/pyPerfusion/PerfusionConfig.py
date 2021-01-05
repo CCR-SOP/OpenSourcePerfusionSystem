@@ -22,7 +22,7 @@ LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 LP_FILE = {}
 LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
 LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
-
+LP_FILE['receivers'] = LP_PATH['config'] / 'receivers.ini'
 
 def set_base(basepath='~/Documents'):
     logging.getLogger(__name__).info(f'Setting configuration basepath to {basepath}')
@@ -37,6 +37,7 @@ def set_base(basepath='~/Documents'):
 
     LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
     LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
+    LP_FILE['receivers'] = LP_PATH['config'] / 'receivers.ini'
 
     for key in LP_PATH.keys():
         logging.getLogger(__name__).info('Creating configuration folder structure')
@@ -59,7 +60,10 @@ def get_hwcfg_section(name):
     config.read(LP_FILE['hwcfg'])
     if config.has_section(name):
         section = config[name]
+    else:
+        section = {}
     return section
+
 
 def save_syringe_info(codes, volumes):
     config = ConfigParser()
@@ -86,6 +90,15 @@ def open_syringe_info():
     for key, val in config['Volumes'].items():
         volumes[key] = val.split(', ')
     return config['Codes'], volumes
+
+def open_receiver_info():
+    config = ConfigParser()
+    config.read(LP_FILE['receivers'])
+    receiver_info = {}
+    for key, val in config['Dexcom Receivers'].items():
+        receiver_info[key] = val
+    return receiver_info
+
 
 def update_stream_folder(base=''):
     if not base:
