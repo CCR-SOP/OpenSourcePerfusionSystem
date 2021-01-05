@@ -28,11 +28,6 @@ class ReadPacket(object):
     return self._data
 
 class Dexcom(object):
-  @staticmethod
-  def FindDevice():
-    receivers = util.find_usbserial(constants.DEXCOM_USB_VENDOR,
-                                    constants.DEXCOM_USB_PRODUCT)
-    return receivers[0]
 
   @staticmethod
   def FindDevices():
@@ -40,26 +35,30 @@ class Dexcom(object):
                                constants.DEXCOM_USB_PRODUCT)
 
   @classmethod
-  def LocateAndDownload(cls):
-    device = cls.FindDevice()
+  def LocateAndDownload(cls, COM_port):
+    device = cls.FindDevices()
     if not device:
       sys.stderr.write('Could not find Dexcom Receiver!\n')
       sys.exit(1)
     else:
-      dex = cls(device)
-      print(('Found %s S/N: %s'
-             % (dex.GetFirmwareHeader().get('ProductName'),
-                dex.ReadManufacturingData().get('SerialNumber'))))
-      print('Transmitter paired: %s' % dex.ReadTransmitterId())
-      print('Battery Status: %s (%d%%)' % (dex.ReadBatteryState(),
-                                           dex.ReadBatteryLevel()))
-      print('Record count:')
-      print('- Meter records: %d' % (len(dex.ReadRecords('METER_DATA'))))
-      print('- CGM records: %d' % (len(dex.ReadRecords('EGV_DATA'))))
-      print(('- CGM commitable records: %d'
-             % (len([not x.display_only for x in dex.ReadRecords('EGV_DATA')]))))
-      print('- Event records: %d' % (len(dex.ReadRecords('USER_EVENT_DATA'))))
-      print('- Insertion records: %d' % (len(dex.ReadRecords('INSERTION_TIME'))))
+      if COM_port in device:
+        dex = cls(COM_port)
+        print(('Found %s S/N: %s'
+               % (dex.GetFirmwareHeader().get('ProductName'),
+                  dex.ReadManufacturingData().get('SerialNumber'))))
+        print('Transmitter paired: %s' % dex.ReadTransmitterId())
+        print('Battery Status: %s (%d%%)' % (dex.ReadBatteryState(),
+                                             dex.ReadBatteryLevel()))
+        print('Record count:')
+        print('- Meter records: %d' % (len(dex.ReadRecords('METER_DATA'))))
+        print('- CGM records: %d' % (len(dex.ReadRecords('EGV_DATA'))))
+        print(('- CGM commitable records: %d'
+               % (len([not x.display_only for x in dex.ReadRecords('EGV_DATA')]))))
+        print('- Event records: %d' % (len(dex.ReadRecords('USER_EVENT_DATA'))))
+        print('- Insertion records: %d' % (len(dex.ReadRecords('INSERTION_TIME'))))
+      else:
+        sys.stderr.write('Could not find Dexcom Receiver!\n')
+        sys.exit(1)
 
   def __init__(self, port):
     self._port_name = port
