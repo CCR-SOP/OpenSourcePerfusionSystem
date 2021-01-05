@@ -7,7 +7,9 @@ Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair
 """
 import wx
 import pyPerfusion.PerfusionConfig as LP_CFG
-from dexcom_G6_reader import readdata
+from dexcom_G6_reader.readdata import Dexcom
+
+engaged_COM_list = []
 
 class PanelDexcom(wx.Panel):
     def __init__(self, parent, receiver, name='Receiver'):
@@ -32,6 +34,9 @@ class PanelDexcom(wx.Panel):
 
         self.btn_connect = wx.Button(self, label='Connect to Receiver')
         self.btn_connect.Enable(False)
+
+        self.btn_disconnect = wx.Button(self, label='Disconnect from Receiver')
+        self.btn_disconnect.Enable(False)
 
         self.btn_start = wx.ToggleButton(self, label='Start Acquisition')
         self.btn_start.Enable(False)
@@ -87,6 +92,8 @@ class PanelDexcom(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_connect)
         sizer.AddSpacer(10)
+        sizer.Add(self.btn_disconnect)
+        sizer.AddSpacer(10)
         sizer.Add(self.btn_start)
         self.sizer.Add(sizer)
 
@@ -103,39 +110,74 @@ class PanelDexcom(wx.Panel):
     def __set_bindings(self):
         self.choice_circuit_SN_pair.Bind(wx.EVT_CHOICE, self.OnCircuitSN)
         self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
-        #self.btn_save.Bind(wx.EVT_BUTTON, self.OnSaveConfig)
-        #self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
-        #self.btn_connect.Bind(wx.EVT_BUTTON, self.OnConnect)
+        self.btn_save.Bind(wx.EVT_BUTTON, self.OnSaveConfig)
+        self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
+        self.btn_connect.Bind(wx.EVT_BUTTON, self.OnConnect)
+        self.btn_disconnect.Bind(wx.EVT_BUTTON, self.OnDisconnect)
         #self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
 
     def OnCircuitSN(self, evt):
         self.btn_connect.Enable(True)
-    #    circuit = self.choice_circuit.GetString(self.choice_circuit.GetSelection())
 
     def OnDLInfo(self, evt):
         self.load_info()
 
+    def OnConnect(self, evt):
+        receiver_choice = self.choice_circuit_SN_pair.GetStringSelection()
+        if not receiver_choice:
+            wx.MessageBox('Please Choose a Dexcom Receiver to Connect to', 'Error', wx.OK | wx.ICON_ERROR)
+            return
+        SN_choice = receiver_choice[-11:-1]
+        COM_ports = self._receiver.FindDevices()
+        for COM in COM_ports:
+            if not (COM in engaged_COM_list):
+                potential_receiver = self._receiver(COM)
+                potential_SN = potential_receiver.ReadManufacturingData().get('SerialNumber')
+                if potential_SN == SN_choice:
+                    potential_receiver.Disconnect()
+                    dexcom_receiver = self._receiver(COM)
+                    break
+                else:
+                    potential_receiver.Disconnect()
 
-  #  def OnConnect(self, evt):
-   #     circuit = self.choice_circuit.GetString(self.choice_circuit.GetSelection())
+        SN_info = '%s S/N: %s;  ' % (dexcom_receiver.GetFirmwareHeader().get('ProductName'), dexcom_receiver.ReadManufacturingData().get('SerialNumber'))
+        Transmitter_info = 'Transmitter: %s;  ' % dexcom_receiver.ReadTransmitterId().decode('utf-8')
+        CGM_info = 'CGM records: %d' % (len(dexcom_receiver.ReadRecords('EGV_DATA')))
+        Aggregate_info = SN_info + Transmitter_info + CGM_info
+        wx.MessageBox(Aggregate_info, 'Receiver Connected!', wx.OK | wx.ICON_NONE)
 
-# Once pairs are downloaded and line is choosen, enable "connect"; then, connect to the correct receiver of the three possible
-# Make this download serial number/line pairs for the three Dexcom receivers; should be first thing you do
+        engaged_COM_list.append(COM)
+        self.btn_connect.SetLabel('Connected to %s' % COM)
+        self.btn_connect.Enable(False)
+        self.btn_start.Enable(True)
+        self.btn_disconnect.Enable(True)
+
+    def OnDisconnect(self, evt):
+        connected_COM = self.btn_connect.GetLabel()[-4:]
+        engaged_COM_list.remove(connected_COM)
+        print(engaged_COM_list)
+        self.btn_start.Enable(False)
+        self.btn_connect.SetLabel('Connect to Receiver')
+        self.btn_connect.Enable(True)
+        self.btn_disconnect.Enable(False)
+
+
+    def OnSaveConfig(self, evt):
+
 # Add graph that plots RT data from sensor once data acquisition is activated
 # Fix way that the latest glucose value is displayed
-# Add "open_receiver_info" method to PerfusionConfig
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        receivers = {'Receiver #1': readdata,
-                     'Receiver #2': readdata,
-                     'Receiver #3': readdata
-                     }
+        devices = {'Receiver #1': Dexcom,
+                     'Receiver #2': Dexcom,
+                     'Receiver #3': Dexcom
+                   }
         sizer = wx.GridSizer(cols=3)
-        for key, receiver in receivers.items():
-            sizer.Add(PanelDexcom(self, receiver, name=key), 1, wx.EXPAND, border=2)
+        for key, device in devices.items():
+            sizer.Add(PanelDexcom(self, device, name=key), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
