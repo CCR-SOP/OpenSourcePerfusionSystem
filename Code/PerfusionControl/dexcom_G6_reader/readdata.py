@@ -27,10 +27,15 @@ class ReadPacket(object):
   def data(self):
     return self._data
 
-
 class Dexcom(object):
   @staticmethod
   def FindDevice():
+    receivers = util.find_usbserial(constants.DEXCOM_USB_VENDOR,
+                                    constants.DEXCOM_USB_PRODUCT)
+    return receivers[0]
+
+  @staticmethod
+  def FindDevices():
     return util.find_usbserial(constants.DEXCOM_USB_VENDOR,
                                constants.DEXCOM_USB_PRODUCT)
 

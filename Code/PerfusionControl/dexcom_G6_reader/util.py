@@ -31,6 +31,7 @@ def ReceiverTimeToTime(rtime):
 
 def windows_find_usbserial(vendor, product):
   ports = list(serial.tools.list_ports.comports())
+  receivers = []
   for p in ports:
     try:
       vid_pid_keyval = p.hwid.split()[1]
@@ -42,9 +43,11 @@ def windows_find_usbserial(vendor, product):
       if pid.lower() != product.lower():
         continue
 
-      return p.device
+      receivers.append(p.device)
     except (IndexError, ValueError) as e:
       continue
+
+  return receivers
 
 def find_usbserial(vendor, product):
   """Find the tty device for a given usbserial devices identifiers.
