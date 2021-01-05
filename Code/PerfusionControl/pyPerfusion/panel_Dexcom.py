@@ -29,13 +29,10 @@ class PanelDexcom(wx.Panel):
 
         self.btn_dl_info = wx.Button(self, label='Download Receiver Info')
 
-        self.btn_save = wx.Button(self, label='Save Config')
-        self.btn_load = wx.Button(self, label='Load Config')
-
         self.btn_connect = wx.Button(self, label='Connect to Receiver')
         self.btn_connect.Enable(False)
 
-        self.btn_disconnect = wx.Button(self, label='Disconnect from Receiver')
+        self.btn_disconnect = wx.Button(self, label='Disconnect Receiver S/N: xxxxxxxxx')
         self.btn_disconnect.Enable(False)
 
         self.btn_start = wx.ToggleButton(self, label='Start Acquisition')
@@ -81,10 +78,6 @@ class PanelDexcom(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_dl_info, flags)
-        sizer.AddSpacer(10)
-        sizer.Add(self.btn_save)
-        sizer.AddSpacer(10)
-        sizer.Add(self.btn_load)
         self.sizer.Add(sizer)
 
         self.sizer.AddSpacer(10)
@@ -93,13 +86,13 @@ class PanelDexcom(wx.Panel):
         sizer.Add(self.btn_connect)
         sizer.AddSpacer(10)
         sizer.Add(self.btn_disconnect)
-        sizer.AddSpacer(10)
-        sizer.Add(self.btn_start)
         self.sizer.Add(sizer)
 
         self.sizer.AddSpacer(10)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.btn_start)
+        sizer.AddSpacer(10)
         sizer.Add(self.sizer_latest)
         self.sizer.Add(sizer)
 
@@ -110,14 +103,14 @@ class PanelDexcom(wx.Panel):
     def __set_bindings(self):
         self.choice_circuit_SN_pair.Bind(wx.EVT_CHOICE, self.OnCircuitSN)
         self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
-        self.btn_save.Bind(wx.EVT_BUTTON, self.OnSaveConfig)
-        self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
         self.btn_connect.Bind(wx.EVT_BUTTON, self.OnConnect)
         self.btn_disconnect.Bind(wx.EVT_BUTTON, self.OnDisconnect)
-        #self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
+        self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
 
     def OnCircuitSN(self, evt):
-        self.btn_connect.Enable(True)
+        state = self.btn_connect.GetLabel()
+        if state == 'Connect to Receiver':
+            self.btn_connect.Enable(True)
 
     def OnDLInfo(self, evt):
         self.load_info()
@@ -136,21 +129,24 @@ class PanelDexcom(wx.Panel):
                 if potential_SN == SN_choice:
                     potential_receiver.Disconnect()
                     dexcom_receiver = self._receiver(COM)
-                    break
+
+                    SN_info = '%s S/N: %s;  ' % (dexcom_receiver.GetFirmwareHeader().get('ProductName'), dexcom_receiver.ReadManufacturingData().get('SerialNumber'))
+                    Transmitter_info = 'Transmitter: %s;  ' % dexcom_receiver.ReadTransmitterId().decode('utf-8')
+                    CGM_info = 'CGM records: %d' % (len(dexcom_receiver.ReadRecords('EGV_DATA')))
+                    Aggregate_info = SN_info + Transmitter_info + CGM_info
+                    wx.MessageBox(Aggregate_info, 'Receiver Connected!', wx.OK | wx.ICON_NONE)
+
+                    engaged_COM_list.append(COM)
+                    self.btn_connect.SetLabel('Connected to %s' % COM)
+                    self.btn_connect.Enable(False)
+                    self.btn_start.Enable(True)
+                    self.btn_disconnect.SetLabel('Disconnect Receiver S/N: %s' % dexcom_receiver.ReadManufacturingData().get('SerialNumber'))
+                    self.btn_disconnect.Enable(True)
+                    return
                 else:
                     potential_receiver.Disconnect()
+        wx.MessageBox('Receiver is Already Connected to a Different Panel; Choose a Different One', 'Error', wx.OK | wx.ICON_ERROR)  # Executes if the receiver that is trying to be accessed is already accessed by a different subpanel
 
-        SN_info = '%s S/N: %s;  ' % (dexcom_receiver.GetFirmwareHeader().get('ProductName'), dexcom_receiver.ReadManufacturingData().get('SerialNumber'))
-        Transmitter_info = 'Transmitter: %s;  ' % dexcom_receiver.ReadTransmitterId().decode('utf-8')
-        CGM_info = 'CGM records: %d' % (len(dexcom_receiver.ReadRecords('EGV_DATA')))
-        Aggregate_info = SN_info + Transmitter_info + CGM_info
-        wx.MessageBox(Aggregate_info, 'Receiver Connected!', wx.OK | wx.ICON_NONE)
-
-        engaged_COM_list.append(COM)
-        self.btn_connect.SetLabel('Connected to %s' % COM)
-        self.btn_connect.Enable(False)
-        self.btn_start.Enable(True)
-        self.btn_disconnect.Enable(True)
 
     def OnDisconnect(self, evt):
         connected_COM = self.btn_connect.GetLabel()[-4:]
@@ -159,10 +155,10 @@ class PanelDexcom(wx.Panel):
         self.btn_start.Enable(False)
         self.btn_connect.SetLabel('Connect to Receiver')
         self.btn_connect.Enable(True)
+        self.btn_disconnect.SetLabel('Disconnect Receiver S/N: xxxxxxxxx')
         self.btn_disconnect.Enable(False)
 
-
-    def OnSaveConfig(self, evt):
+    def OnStart(self, evt):
 
 # Add graph that plots RT data from sensor once data acquisition is activated
 # Fix way that the latest glucose value is displayed
