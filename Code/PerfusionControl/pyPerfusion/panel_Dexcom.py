@@ -105,7 +105,7 @@ class PanelDexcom(wx.Panel):
         self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
         self.btn_connect.Bind(wx.EVT_BUTTON, self.OnConnect)
         self.btn_disconnect.Bind(wx.EVT_BUTTON, self.OnDisconnect)
-        self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
+        # self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
 
     def OnCircuitSN(self, evt):
         state = self.btn_connect.GetLabel()
@@ -158,7 +158,7 @@ class PanelDexcom(wx.Panel):
         self.btn_disconnect.SetLabel('Disconnect Receiver S/N: xxxxxxxxx')
         self.btn_disconnect.Enable(False)
 
-    def OnStart(self, evt):
+  #  def OnStart(self, evt):
 
 # Add graph that plots RT data from sensor once data acquisition is activated
 # Fix way that the latest glucose value is displayed
