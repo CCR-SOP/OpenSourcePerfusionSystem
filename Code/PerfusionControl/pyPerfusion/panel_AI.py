@@ -133,7 +133,7 @@ class PanelAI_Config(wx.Panel):
             self.btn_open.SetLabel('Close',)
             self._sensor.start()
         else:
-            self._sensor.close()
+            self._sensor.hw.close()
             self.btn_open.SetLabel('Open')
 
     def OnSaveCfg(self, evt):
