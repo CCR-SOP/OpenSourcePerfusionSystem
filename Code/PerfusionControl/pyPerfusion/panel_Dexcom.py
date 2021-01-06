@@ -7,9 +7,77 @@ Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair
 """
 import wx
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.panel_plotting import PanelPlotting
 from dexcom_G6_reader.readdata import Dexcom
 
 engaged_COM_list = []
+
+class GraphingDexcom(PanelPlotting):
+    def __init__(self, parent, with_readout=True):
+        super().__init__(parent, with_readout)
+        self.__plot_len = 50
+        self._valid_range = [60, 120]
+        self._plot_frame_ms = 60_000
+
+        self.timer_plot = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimer)
+        self.timer_plot.Start(1000, wx.TIMER_CONTINUOUS)  # Time between graphing each value
+
+    def OnTimer(self, event):
+        if event.GetId() == self.timer_plot.GetId():
+            self.get_CGM_data()
+            self.plot()
+
+    def plot(self):  # Called every 1000 milliseconds)
+
+        self.axes.relim()
+        self.axes.autoscale_view()
+        self.canvas.draw()
+
+    def get_CGM_data(self):
+        print('x')
+
+    def add_Dexcom(self, color='r'):
+        self.axes.plot([0] * self.__plot_len)
+        self.axes.fill_between([0, 1], [0, 0], [0, 0])
+        if self._with_readout:
+            self.axes.text(1.06, 0.5, '0', transform=self.axes.transAxes,fontsize=18, ha='center')
+            self.axes.text(1.06, 0.4, 'mg/dL', transform=self.axes.transAxes, fontsize=8,ha='center')
+        if self._valid_range is not None:
+            rng = self._valid_range
+            self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g',alpha=0.2)
+            self._valid_range = rng
+            self._configure_plot()
+        #elif type(sensor) is SensorPoint:
+         #   self.__line[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color=color,
+          #                                              label=sensor.name)  # Plotting a vertical line @ x = 0 between ymin and ymax
+           # self.__colors[sensor.name] = color
+
+    def _configure_plot(self):
+        self.axes.set_title('Dexcom')
+        self.axes.set_ylabel('mg/dL')
+        self.show_legend()
+
+    def show_legend(self):
+        self.axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=2, mode="expand",
+                         borderaxespad=0, framealpha=0.0, fontsize='x-small')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class PanelDexcom(wx.Panel):
     def __init__(self, parent, receiver, name='Receiver'):
@@ -20,6 +88,7 @@ class PanelDexcom(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
 
         LP_CFG.set_base()
+        LP_CFG.update_stream_folder()
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -38,8 +107,9 @@ class PanelDexcom(wx.Panel):
         self.btn_start = wx.ToggleButton(self, label='Start Acquisition')
         self.btn_start.Enable(False)
 
-        self.label_latest = wx.StaticText(self, label='Latest Glucose Value')
-        self.display_latest = wx.TextCtrl(self)
+        self.panel_plot = GraphingDexcom(self)
+        self.panel_plot.add_Dexcom()
+
 
         self.load_info()
         self.__do_layout()
@@ -66,10 +136,6 @@ class PanelDexcom(wx.Panel):
         self.sizer_circuit_SN_pair.Add(self.label_circuit_SN_pair, flags)
         self.sizer_circuit_SN_pair.Add(self.choice_circuit_SN_pair, flags)
 
-        self.sizer_latest = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_latest.Add(self.label_latest, flags)
-        self.sizer_latest.Add(self.display_latest, flags)
-
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.sizer_circuit_SN_pair)
         self.sizer.Add(sizer)
@@ -92,9 +158,9 @@ class PanelDexcom(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_start)
-        sizer.AddSpacer(10)
-        sizer.Add(self.sizer_latest)
         self.sizer.Add(sizer)
+
+        self.sizer.Add(self.panel_plot, 1, wx.EXPAND | wx.ALL, border=5)
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -105,7 +171,7 @@ class PanelDexcom(wx.Panel):
         self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
         self.btn_connect.Bind(wx.EVT_BUTTON, self.OnConnect)
         self.btn_disconnect.Bind(wx.EVT_BUTTON, self.OnDisconnect)
-        # self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
+        self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
 
     def OnCircuitSN(self, evt):
         state = self.btn_connect.GetLabel()
@@ -158,10 +224,9 @@ class PanelDexcom(wx.Panel):
         self.btn_disconnect.SetLabel('Disconnect Receiver S/N: xxxxxxxxx')
         self.btn_disconnect.Enable(False)
 
-  #  def OnStart(self, evt):
+    def OnStart(self, evt):
+        print('y')
 
-# Add graph that plots RT data from sensor once data acquisition is activated
-# Fix way that the latest glucose value is displayed
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
