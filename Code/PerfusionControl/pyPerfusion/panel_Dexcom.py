@@ -7,31 +7,29 @@ Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair
 """
 import wx
 import pyPerfusion.PerfusionConfig as LP_CFG
+import matplotlib as mpl
 from pyPerfusion.panel_plotting import PanelPlotting
 from dexcom_G6_reader.readdata import Dexcom
 
-class GraphingDexcom(PanelPlotting):
+engaged_COM_list = []
+mpl.rcParams.update({'font.size': 6})
+
+class GraphingDexcom(PanelPlotting):  # Work
     def __init__(self, parent, with_readout=True):
         super().__init__(parent, with_readout)
-        self.__plot_len = 12
         self._valid_range = [80, 110]
+        self._CGM = None
+        self._time = 0
+        self._index = 0  # Delete
+        self._dexcom_receiver = None
+        self.__val_display = None
+
         self.timer_plot.Start(1000, wx.TIMER_CONTINUOUS)
         self.timer_plot.Stop()
 
-    def OnTimer(self, event):
-        if event.GetId() == self.timer_plot.GetId():
-            print('x')
-            self.plot()
-
-    def plot(self):  # Called every 1000 milliseconds)
-
-        self.axes.relim()
-        self.axes.autoscale_view()
-        self.canvas.draw()
-
-    def add_Dexcom(self, color='r'):
+    def add_Dexcom(self):
         if self._with_readout:
-            self.axes.text(1.06, 0.5, '0', transform=self.axes.transAxes, fontsize=18, ha='center')
+            self.__val_display = self.axes.text(1.06, 0.5, '0', transform=self.axes.transAxes, fontsize=18, ha='center')
             self.axes.text(1.06, 0.4, 'mg/dL', transform=self.axes.transAxes, fontsize=8, ha='center')
         if self._valid_range is not None:
             rng = self._valid_range
@@ -43,7 +41,41 @@ class GraphingDexcom(PanelPlotting):
         self.axes.set_title('Glucose Concentration (mg/dL)')
         self.axes.set_ylabel('mg/dL')
 
-engaged_COM_list = []
+    def OnTimer(self, event):  # Work
+        if event.GetId() == self.timer_plot.GetId():
+            glucose, acq_time = PanelDexcom.get_latest_CGM(self)
+            if (self._CGM is None) and (self._time is None):
+                pass
+            else:
+                self._CGM = glucose
+                self._time = acq_time
+                self.plot()
+
+    def plot(self):
+        if self._valid_range is not None:
+            if self._CGM > self._valid_range[1]:
+                self.axes.plot_date(self._time, self._CGM, color='red', marker='o', xdate=True)
+            elif self._CGM < self._valid_range[0]:
+                self.axes.plot_date(self._time, self._CGM, color='orange', marker='o', xdate=True)
+            else:
+                self.axes.plot_date(self._time, self._CGM, color='black', marker='o', xdate=True)
+        if self._with_readout:
+            readout = self._CGM
+            if readout < self._valid_range[0]:
+                color = 'orange'
+            elif readout > self._valid_range[1]:
+                color = 'red'
+            else:
+                color = 'black'
+            self.__val_display.set_text(f'{readout:.0f}')
+            self.__val_display.set_color(color)
+
+        self.axes.relim()
+        x = self.axes.get_xticklabels()
+        if len(x) >= 12:
+            self.axes.set_xlim(left=x[-12].get_text(), right=self._time)
+        self.axes.autoscale_view()
+        self.canvas.draw()
 
 class PanelDexcom(wx.Panel):
     def __init__(self, parent, receiver, name='Receiver'):
@@ -51,11 +83,11 @@ class PanelDexcom(wx.Panel):
         self._receiver = receiver
         self._dexcom_receiver = None
         self._name = name
+        self._index = 0  # Delete
         self._circuit_SN_pairs = []
         wx.Panel.__init__(self, parent, -1)
 
         LP_CFG.set_base()
-        LP_CFG.update_stream_folder()
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -71,8 +103,11 @@ class PanelDexcom(wx.Panel):
         self.btn_disconnect = wx.Button(self, label='Disconnect Receiver S/N: xxxxxxxxx')
         self.btn_disconnect.Enable(False)
 
-        self.btn_start = wx.ToggleButton(self, label='Start Acquisition')
+        self.btn_start = wx.Button(self, label='Start Acquisition')
         self.btn_start.Enable(False)
+
+        self.btn_stop = wx.Button(self, label='Stop Acquisition')
+        self.btn_stop.Enable(False)
 
         self.label_error = wx.StaticText(self, label='No Sensor Errors Detected')
 
@@ -127,6 +162,12 @@ class PanelDexcom(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_start)
         sizer.AddSpacer(10)
+        sizer.Add(self.btn_stop)
+        self.sizer.Add(sizer)
+
+        self.sizer.AddSpacer(10)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_error)
         self.sizer.Add(sizer)
 
@@ -141,7 +182,8 @@ class PanelDexcom(wx.Panel):
         self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
         self.btn_connect.Bind(wx.EVT_BUTTON, self.OnConnect)
         self.btn_disconnect.Bind(wx.EVT_BUTTON, self.OnDisconnect)
-        self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
+        self.btn_start.Bind(wx.EVT_BUTTON, self.OnStart)
+        self.btn_stop.Bind(wx.EVT_BUTTON, self.OnStop)
 
     def OnCircuitSN(self, evt):
         state = self.btn_connect.GetLabel()
@@ -165,6 +207,7 @@ class PanelDexcom(wx.Panel):
                 if potential_SN == SN_choice:
                     potential_receiver.Disconnect()
                     self._dexcom_receiver = self._receiver(COM)
+                    self.panel_plot._dexcom_receiver = self._dexcom_receiver
 
                     SN_info = '%s S/N: %s;  ' % (self._dexcom_receiver.GetFirmwareHeader().get('ProductName'), self._dexcom_receiver.ReadManufacturingData().get('SerialNumber'))
                     Transmitter_info = 'Transmitter: %s;  ' % self._dexcom_receiver.ReadTransmitterId().decode('utf-8')
@@ -183,44 +226,44 @@ class PanelDexcom(wx.Panel):
                     potential_receiver.Disconnect()
         wx.MessageBox('Receiver is Already Connected to a Different Panel; Choose a Different One', 'Error', wx.OK | wx.ICON_ERROR)  # Executes if the receiver that is trying to be accessed is already accessed by a different subpanel
 
-    def OnDisconnect(self, evt):
+    def OnDisconnect(self, evt):  # Work
         connected_COM = self.btn_connect.GetLabel()[-4:]
         engaged_COM_list.remove(connected_COM)
-        print(engaged_COM_list)
+        self._dexcom_receiver.Disconnect()
         self.btn_start.Enable(False)
+        self.btn_stop.Enable(False)
         self.btn_connect.SetLabel('Connect to Receiver')
         self.btn_connect.Enable(True)
         self.btn_disconnect.SetLabel('Disconnect Receiver S/N: xxxxxxxxx')
         self.btn_disconnect.Enable(False)
+        self.panel_plot.timer_plot.Stop()
+        self.panel_plot._dexcom_receiver = None
 
-    def OnStart(self, evt):
-        state = self.btn_start.GetValue()
-        if state:
-            # Plot first glucose value if available; if not,
-            self.btn_start.SetLabel('Stop Acquisition')
-            CGM, time = self.get_latest_CGM()
-            if (CGM is None) and (time is None):
-                wx.MessageBox(
-                    'Sensor Connected to Receiver %s is Not Active: Replace Sensor Now!' % self._dexcom_receiver.ReadManufacturingData().get('SerialNumber'), 'Error', wx.OK | wx.ICON_ERROR)
-                # Stop plotting; maybe change buttons too?
-        else:
-            self.btn_start.SetLabel('Start Acquisition')
+    def OnStart(self, evt):  # Work
+        self.btn_start.Enable(False)
+        self.btn_stop.Enable(True)
+        self.panel_plot.timer_plot.Start()
 
-        # self._dexcom_receiver._timer_plot.Start()
-        # print('y')
+    def OnStop(self, evt):  # Work
+        self.btn_start.Enable(True)
+        self.btn_stop.Enable(False)
+        self.panel_plot.timer_plot.Stop()
+        # Reset plot, save off previous plot
 
-    def get_latest_CGM(self):
+    def get_latest_CGM(self):  # Work
         CGM_records = self._dexcom_receiver.ReadRecords('EGV_DATA')
-        latest_read_split = str(CGM_records[-1]).split(': ')
-        latest_read_time = latest_read_split[0][11:]
+        CGM_records = CGM_records[25:-25]  # Delete
+        latest_read_split = str(CGM_records[self._index]).split(': ')
+        self._index += 1  # Delete
+        latest_read_time = latest_read_split[0][11:16]
         latest_read_value = latest_read_split[1]
         if (latest_read_value == 'ABSOLUTE_DEVIATION') or (latest_read_value == 'POWER_DEVIATION') or (latest_read_value == 'COUNTS_DEVIATION'):
             self.label_error.SetLabel(latest_read_value + ' Error' + '- See Receiver for More Info')
             return None, latest_read_time
-        if latest_read_value == 'SENSOR_NOT_ACTIVE':
+        elif latest_read_value == 'SENSOR_NOT_ACTIVE':
             self.label_error.SetLabel('Sensor Not Active: Replace Sensor Now!')
             return None, None
-        if latest_read_value[0:3] == 'CGM':
+        elif latest_read_value[0:3] == 'CGM':
             latest_CGM_value = int(latest_read_value.split('BG:')[1].split(' (')[0])
             return latest_CGM_value, latest_read_time
         else:
