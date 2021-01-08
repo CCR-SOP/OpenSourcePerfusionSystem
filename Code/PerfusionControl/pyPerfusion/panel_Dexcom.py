@@ -7,19 +7,20 @@ Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair
 """
 import wx
 import pyPerfusion.PerfusionConfig as LP_CFG
-import matplotlib as mpl
 from pyPerfusion.panel_plotting import PanelPlotting
+import matplotlib as mpl
+import numpy as np
 from dexcom_G6_reader.readdata import Dexcom
 
 engaged_COM_list = []
 mpl.rcParams.update({'font.size': 6})
 
-class GraphingDexcom(PanelPlotting):  # Work
+class GraphingDexcom(PanelPlotting):  # Work, just get rid of comments
     def __init__(self, parent, with_readout=True):
         super().__init__(parent, with_readout)
         self._valid_range = [80, 110]
         self._CGM = None
-        self._time = 0
+        self._time = None
         self._index = 0  # Delete
         self._dexcom_receiver = None
         self.__val_display = None
@@ -28,56 +29,82 @@ class GraphingDexcom(PanelPlotting):  # Work
         self.timer_plot.Stop()
 
     def add_Dexcom(self):
-        if self._with_readout:
-            self.__val_display = self.axes.text(1.06, 0.5, '0', transform=self.axes.transAxes, fontsize=18, ha='center')
-            self.axes.text(1.06, 0.4, 'mg/dL', transform=self.axes.transAxes, fontsize=8, ha='center')
-        if self._valid_range is not None:
-            rng = self._valid_range
-            self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
-            self._valid_range = rng
+        self.__val_display = self.axes.text(1.06, 0.5, '0', transform=self.axes.transAxes, fontsize=18, ha='center')
+        self.axes.text(1.06, 0.4, 'mg/dL', transform=self.axes.transAxes, fontsize=8, ha='center')
+        rng = self._valid_range
+        self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+        self._valid_range = rng
         self._configure_plot()
 
     def _configure_plot(self):
         self.axes.set_title('Glucose Concentration (mg/dL)')
         self.axes.set_ylabel('mg/dL')
+        self.axes.set_xlabel('No Sensor Connected')
 
-    def OnTimer(self, event):  # Work
+    def receiver_disconnect(self):
+        for value in np.linspace(0, self._valid_range[1], 100):
+            self.axes.plot_date(self._time, value, color='red', marker='x', xdate=True)
+        self._time = None
+        self._CGM = None
+
+    def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
-            glucose, acq_time = PanelDexcom.get_latest_CGM(self)
-            if (self._CGM is None) and (self._time is None):
-                pass
+            self._time, latest_read = PanelDexcom.get_latest_CGM(self)
+            if (latest_read == 'ABSOLUTE_DEVIATION') or (latest_read == 'POWER_DEVIATION') or (latest_read == 'COUNTS_DEVIATION'):
+                self.axes.set_xlabel(latest_read + ' : See Receiver')
+                self._CGM = 0
+            elif latest_read == 'SENSOR_NOT_ACTIVE':
+                self.__val_display.set_text('N/A')
+                self.__val_display.set_color('Red')
+                self.axes.set_xlabel(latest_read + ' : Replace Sensor Now!')
+                self.timer_plot.Stop()
+                self._CGM = None
+                self._time = None
+                # Turn off start/stop buttons, engage disconnect receiver (this = off, start = on), plot red line, send off an error message
+                return
+            elif latest_read[0:3] == 'CGM':
+                self._CGM = int(latest_read.split('BG:')[1].split(' (')[0])
+                self.axes.set_xlabel('Sensor Active')
             else:
-                self._CGM = glucose
-                self._time = acq_time
-                self.plot()
+                self.axes.set_xlabel('Unknown Error : See Receiver')
+                self._CGM = 0
+
+            self.plot()
 
     def plot(self):
-        if self._valid_range is not None:
-            if self._CGM > self._valid_range[1]:
-                self.axes.plot_date(self._time, self._CGM, color='red', marker='o', xdate=True)
-            elif self._CGM < self._valid_range[0]:
-                self.axes.plot_date(self._time, self._CGM, color='orange', marker='o', xdate=True)
-            else:
-                self.axes.plot_date(self._time, self._CGM, color='black', marker='o', xdate=True)
-        if self._with_readout:
-            readout = self._CGM
-            if readout < self._valid_range[0]:
-                color = 'orange'
-            elif readout > self._valid_range[1]:
-                color = 'red'
-            else:
-                color = 'black'
+        if self._CGM == 0:
+            self.axes.plot_date(self._time, self._CGM, color='white', marker='o', xdate=True)
+        elif self._CGM > self._valid_range[1]:
+            self.axes.plot_date(self._time, self._CGM, color='red', marker='o', xdate=True)
+        elif self._CGM < self._valid_range[0]:
+            self.axes.plot_date(self._time, self._CGM, color='orange', marker='o', xdate=True)
+        else:
+            self.axes.plot_date(self._time, self._CGM, color='black', marker='o', xdate=True)
+
+        readout = self._CGM
+        if readout == 0:
+            color = 'black'
+            self.__val_display.set_text('N/A')
+        elif readout < self._valid_range[0]:
+            color = 'orange'
             self.__val_display.set_text(f'{readout:.0f}')
-            self.__val_display.set_color(color)
+        elif readout > self._valid_range[1]:
+            color = 'red'
+            self.__val_display.set_text(f'{readout:.0f}')
+        else:
+            color = 'black'
+            self.__val_display.set_text(f'{readout:.0f}')
+        self.__val_display.set_color(color)
 
         self.axes.relim()
-        x = self.axes.get_xticklabels()
-        if len(x) >= 12:
-            self.axes.set_xlim(left=x[-12].get_text(), right=self._time)
+
+        labels = self.axes.get_xticklabels()  # Fix label orientation
+        if len(labels) >= 12:
+            self.axes.set_xlim(left=labels[-12].get_text(), right=self._time)
         self.axes.autoscale_view()
         self.canvas.draw()
 
-class PanelDexcom(wx.Panel):
+class PanelDexcom(wx.Panel):  # Work; just follow instructions
     def __init__(self, parent, receiver, name='Receiver'):
         self.parent = parent
         self._receiver = receiver
@@ -108,8 +135,6 @@ class PanelDexcom(wx.Panel):
 
         self.btn_stop = wx.Button(self, label='Stop Acquisition')
         self.btn_stop.Enable(False)
-
-        self.label_error = wx.StaticText(self, label='No Sensor Errors Detected')
 
         self.panel_plot = GraphingDexcom(self)
         self.panel_plot.add_Dexcom()
@@ -167,10 +192,6 @@ class PanelDexcom(wx.Panel):
 
         self.sizer.AddSpacer(10)
 
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label_error)
-        self.sizer.Add(sizer)
-
         self.sizer.Add(self.panel_plot, 1, wx.EXPAND | wx.ALL, border=5)
 
         self.SetSizer(self.sizer)
@@ -226,7 +247,7 @@ class PanelDexcom(wx.Panel):
                     potential_receiver.Disconnect()
         wx.MessageBox('Receiver is Already Connected to a Different Panel; Choose a Different One', 'Error', wx.OK | wx.ICON_ERROR)  # Executes if the receiver that is trying to be accessed is already accessed by a different subpanel
 
-    def OnDisconnect(self, evt):  # Work
+    def OnDisconnect(self, evt):
         connected_COM = self.btn_connect.GetLabel()[-4:]
         engaged_COM_list.remove(connected_COM)
         self._dexcom_receiver.Disconnect()
@@ -238,37 +259,25 @@ class PanelDexcom(wx.Panel):
         self.btn_disconnect.Enable(False)
         self.panel_plot.timer_plot.Stop()
         self.panel_plot._dexcom_receiver = None
+        self.panel_plot.receiver_disconnect()
 
-    def OnStart(self, evt):  # Work
+    def OnStart(self, evt):
         self.btn_start.Enable(False)
         self.btn_stop.Enable(True)
         self.panel_plot.timer_plot.Start()
 
-    def OnStop(self, evt):  # Work
+    def OnStop(self, evt):
         self.btn_start.Enable(True)
         self.btn_stop.Enable(False)
         self.panel_plot.timer_plot.Stop()
-        # Reset plot, save off previous plot
 
-    def get_latest_CGM(self):  # Work
+    def get_latest_CGM(self):  # Work; just follow instructions
         CGM_records = self._dexcom_receiver.ReadRecords('EGV_DATA')
-        CGM_records = CGM_records[25:-25]  # Delete
-        latest_read_split = str(CGM_records[self._index]).split(': ')
+        latest_read_split = str(CGM_records[self._index]).split(': ')  # Replace self._index with -1
         self._index += 1  # Delete
-        latest_read_time = latest_read_split[0][11:16]
+        latest_read_time = latest_read_split[0][5:10] + ' ' + latest_read_split[0][11:16]
         latest_read_value = latest_read_split[1]
-        if (latest_read_value == 'ABSOLUTE_DEVIATION') or (latest_read_value == 'POWER_DEVIATION') or (latest_read_value == 'COUNTS_DEVIATION'):
-            self.label_error.SetLabel(latest_read_value + ' Error' + '- See Receiver for More Info')
-            return None, latest_read_time
-        elif latest_read_value == 'SENSOR_NOT_ACTIVE':
-            self.label_error.SetLabel('Sensor Not Active: Replace Sensor Now!')
-            return None, None
-        elif latest_read_value[0:3] == 'CGM':
-            latest_CGM_value = int(latest_read_value.split('BG:')[1].split(' (')[0])
-            return latest_CGM_value, latest_read_time
-        else:
-            self.label_error.SetLabel('Unknown Error - See Receiver for More Info')
-            return None, latest_read_time
+        return latest_read_time, latest_read_value
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
