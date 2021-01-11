@@ -44,13 +44,14 @@ def update_hwcfg_section(name, updated_info):
     with open(LP_FILE['hwcfg'], 'w') as file:
         config.write(file)
 
-
 def get_hwcfg_section(name):
     config = ConfigParser()
     config.read(LP_FILE['hwcfg'])
-    section = config[name]
+    if config.has_section(name):
+        section = config[name]
+    else:
+        section = {}
     return section
-
 
 def update_stream_folder(base=''):
     if not base:
