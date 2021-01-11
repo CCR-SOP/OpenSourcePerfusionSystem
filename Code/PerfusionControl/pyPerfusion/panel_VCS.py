@@ -45,7 +45,9 @@ class PanelDIO(wx.Panel):
         self.check_read_only = wx.CheckBox(self, label='Read Only')
 
         self.btn_open = wx.ToggleButton(self, label='Open')
+
         self.btn_activate = wx.ToggleButton(self, label='Activate')
+        self.btn_activate.Enable(False)
 
         self.__do_layout()
         self.__set_bindings()
@@ -88,9 +90,8 @@ class PanelDIO(wx.Panel):
     def __set_bindings(self):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
         self.btn_activate.Bind(wx.EVT_TOGGLEBUTTON, self.OnActivate)
-       # self.btn_save.Bind(wx.EVT_BUTTON, self.OnSaveConfig)
-       # self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
-
+        self.btn_save.Bind(wx.EVT_BUTTON, self.OnSaveConfig)
+        self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -102,10 +103,13 @@ class PanelDIO(wx.Panel):
             read_only = self.check_read_only.GetValue()
             self._dio.open(port, line, active_high, read_only, dev)
             self.btn_open.SetLabel('Close')
+            self.btn_activate.Enable(True)
 
         else:
             self._dio.close()
             self.btn_open.SetLabel('Open')
+            self.btn_activate.SetLabel('Activate')
+            self.btn_activate.Enable(False)  # This disables the button as desired, but the button doesn't change color like usual to signal that it is deactivated
 
     def OnActivate(self, evt):
         state = self.btn_activate.GetValue()
@@ -116,14 +120,39 @@ class PanelDIO(wx.Panel):
             self._dio.deactivate()
             self.btn_activate.SetLabel('Activate')
 
-   # def OnSaveConfig(self, evt):
-   #     section = LP_CFG.get_hwcfg_section(self._name)
-   #     section['Device'] = self.choice_dev.GetStringSelection()
-   #     section['Line'] = self.choice_port.GetStringSelection()
-   #     section['Port'] = self.choice_line.GetStringSelection()
-   #     section['Active High'] = self.radio_active_sel.GetSelection() == 0
-   #     section['Read Only'] = self.check_read_only.GetValue()
-   #     LP_CFG.update_hwcfg_section(self._name, section)
+    def OnSaveConfig(self, evt):
+         section = LP_CFG.get_hwcfg_section(self._name)
+         section['Device'] = self.choice_dev.GetStringSelection()
+         section['Port'] = self.choice_port.GetStringSelection()
+         section['Line'] = self.choice_line.GetStringSelection()
+         section['Active High'] = str(self.radio_active_sel.GetSelection() == 0)
+         section['Read Only'] = str(self.check_read_only.GetValue())
+         LP_CFG.update_hwcfg_section(self._name, section)
+
+    def OnLoadConfig(self, evt):
+        section = LP_CFG.get_hwcfg_section(self._name)
+        state = self.btn_open.GetValue()
+        if state:
+            self._dio.close()
+            self.btn_open.SetLabel('Open')
+            self.btn_activate.SetLabel('Activate')
+            self.btn_activate.Enable(False)
+        self.choice_dev.SetStringSelection(section['Device'])
+        self.choice_port.SetStringSelection(section['Port'])
+        self.choice_line.SetStringSelection(section['Line'])
+        active_high_state = (section['Active High'] != 'True')
+        self.radio_active_sel.SetSelection(active_high_state)
+        read_only_state = (section['Read Only'] == 'True')
+        self.check_read_only.SetValue(read_only_state)
+        dev = self.choice_dev.GetStringSelection()
+        port = self.choice_port.GetStringSelection()
+        line = self.choice_line.GetStringSelection()
+        active_high = self.radio_active_sel.GetSelection() == 0
+        read_only = self.check_read_only.GetValue()
+        self._dio.open(port, line, active_high, read_only, dev)
+        self.btn_open.SetLabel('Close')
+        self.btn_activate.Enable(True)
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -136,7 +165,7 @@ class TestFrame(wx.Frame):
                   'Portal Vein (Glucose)': NIDAQ_DIO(),
                   'Inferior Vena Cava (Glucose)': NIDAQ_DIO(),
                   }
-        sizer = wx.GridSizer(cols=2)
+        sizer = wx.GridSizer(cols=3)
         for key, valve in valves.items():
             sizer.Add(PanelDIO(self, valve, name=key), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
