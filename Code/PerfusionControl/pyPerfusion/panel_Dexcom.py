@@ -21,7 +21,7 @@ class GraphingDexcom(PanelPlotting):  # Work, just get rid of comments
         self._valid_range = [80, 110]
         self._CGM = None
         self._time = None
-        self._index = 0  # Delete
+        self._index = 460  # Delete
         self._dexcom_receiver = None
         self.__val_display = None
 
@@ -44,24 +44,30 @@ class GraphingDexcom(PanelPlotting):  # Work, just get rid of comments
     def receiver_disconnect(self):
         for value in np.linspace(0, self._valid_range[1], 100):
             self.axes.plot_date(self._time, value, color='red', marker='x', xdate=True)
+        self.axes.relim()
+        self.axes.autoscale_view()
+        self.canvas.draw()
         self._time = None
         self._CGM = None
+
+    def EndofRun(self, error_message):
+        self.__val_display.set_text('N/A')
+        self.__val_display.set_color('Red')
+        self.axes.set_xlabel(error_message + ' : Replace Sensor Now!')
+        self.axes.relim()
+        self.axes.autoscale_view()
+        self.canvas.draw()
+        self._dexcom_receiver = None
+        self.receiver_disconnect()
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             self._time, latest_read = PanelDexcom.get_latest_CGM(self)
+            if (self._time is None) and (latest_read is None):  # Sensor Error
+                return
             if (latest_read == 'ABSOLUTE_DEVIATION') or (latest_read == 'POWER_DEVIATION') or (latest_read == 'COUNTS_DEVIATION'):
                 self.axes.set_xlabel(latest_read + ' : See Receiver')
                 self._CGM = 0
-            elif latest_read == 'SENSOR_NOT_ACTIVE':
-                self.__val_display.set_text('N/A')
-                self.__val_display.set_color('Red')
-                self.axes.set_xlabel(latest_read + ' : Replace Sensor Now!')
-                self.timer_plot.Stop()
-                self._CGM = None
-                self._time = None
-                # Turn off start/stop buttons, engage disconnect receiver (this = off, start = on), plot red line, send off an error message
-                return
             elif latest_read[0:3] == 'CGM':
                 self._CGM = int(latest_read.split('BG:')[1].split(' (')[0])
                 self.axes.set_xlabel('Sensor Active')
@@ -110,7 +116,7 @@ class PanelDexcom(wx.Panel):  # Work; just follow instructions
         self._receiver = receiver
         self._dexcom_receiver = None
         self._name = name
-        self._index = 0  # Delete
+        self._index = 460  # Delete
         self._circuit_SN_pairs = []
         wx.Panel.__init__(self, parent, -1)
 
@@ -277,7 +283,25 @@ class PanelDexcom(wx.Panel):  # Work; just follow instructions
         self._index += 1  # Delete
         latest_read_time = latest_read_split[0][5:10] + ' ' + latest_read_split[0][11:16]
         latest_read_value = latest_read_split[1]
-        return latest_read_time, latest_read_value
+        if latest_read_value == 'SENSOR_NOT_ACTIVE':
+           # self.panel_plot.EndofRun(latest_read_value)
+            print('yes')
+            self.timer_plot.Stop()
+            connected_COM = self.btn_connect.GetLabel()[-4:]
+            engaged_COM_list.remove(connected_COM)
+            self._dexcom_receiver.Disconnect()
+            self.btn_start.Enable(False)
+            self.btn_stop.Enable(False)
+            self.btn_connect.SetLabel('Connect to Receiver')
+            self.btn_connect.Enable(True)
+            self.btn_disconnect.SetLabel('Disconnect Receiver S/N: xxxxxxxxx')
+            self.btn_disconnect.Enable(False)
+            print('yes')
+            wx.MessageBox('Sensor Run Has Ended', 'Error', wx.OK | wx.ICON_ERROR)
+            print('yes')
+            return None, None
+        else:
+            return latest_read_time, latest_read_value
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
