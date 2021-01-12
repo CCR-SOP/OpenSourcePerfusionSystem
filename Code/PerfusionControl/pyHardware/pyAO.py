@@ -18,6 +18,7 @@ class AO:
         self._volts_p2p = 0
         self._volts_offset = 0
         self._Hz = 0
+
         self._bits = None
         self._fid = None
         self.__thread = None
@@ -85,7 +86,7 @@ class AO:
 
     def _gen_cycle(self):
         if self._Hz > 0:
-            t = np.arange(0, 1 / self._Hz, step=self._period_ms / 1000.0)
+            t = np.arange(0, 1.0 / self._Hz, step=self._period_ms / 1000.0)
             with self._lock_buf:
                 self._buffer = self._volts_p2p / 2.0 * \
                                np.sin(2 * np.pi * self._Hz * t, dtype=self._data_type) \
@@ -95,7 +96,7 @@ class AO:
             print(f"creating dc of {self._volts_offset}")
 
     def set_dc(self, volts):
-        self._Hz = 0
+        self._Hz = 0.0
         self._volts_offset = volts
         print(f"setting dc voltage to {self._volts_offset}")
 
