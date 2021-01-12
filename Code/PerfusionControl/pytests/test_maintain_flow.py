@@ -19,7 +19,7 @@ class PanelTestMaintainFlow(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
         self._inc = 0.1
 
-        self._ai = NIDAQ_AI(line=0, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')
+        self._ai = NIDAQ_AI(line=4, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')
         self._ao = NIDAQ_AO()
         self._ao.open(line=1, period_ms=100, dev='Dev1')
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
@@ -84,6 +84,7 @@ class PanelTestMaintainFlow(wx.Panel):
 
     def OnStartStop(self, evt):
         if self.btn_stop.GetValue():
+            self._ao.start()
             self._sensor.start()
             self.btn_stop.SetLabel('Stop')
             self.update_output()
@@ -100,8 +101,8 @@ class PanelTestMaintainFlow(wx.Panel):
     def update_output(self):
         flow = self._sensor.get_current()
         desired = self.spin_desired_output.GetValue()
-        tol = self.spin_tolerance.GetValue() / 100.0
-        dev = desired * tol
+        tol = self.spin_tolerance.GetValue() / 100
+        dev = abs(desired - flow)
         print(f'Flow is {flow:.3f}, desired is {desired:.3f}')
         print(f'Deviation is {dev}, tol is {tol}')
         if dev > tol:
@@ -110,7 +111,7 @@ class PanelTestMaintainFlow(wx.Panel):
             else:
                 new_val = self._ao.volts_offset - self._inc
             self._ao.set_dc(new_val)
-        self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
+            self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
