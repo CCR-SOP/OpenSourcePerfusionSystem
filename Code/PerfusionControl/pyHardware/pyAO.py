@@ -34,7 +34,7 @@ class AO(threading.Thread):
         self._bits = bits
         self._gen_cycle()
 
-        self._fid = open(Path('__data__') / 'sine.dat', 'w+')
+       # self._fid = open(Path('__data__') / 'sine.dat', 'w+')
 
     def _output_samples(self):
         self._buffer.tofile(self._fid)
