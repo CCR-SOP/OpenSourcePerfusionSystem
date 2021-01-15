@@ -150,7 +150,6 @@ class PanelSyringe(wx.Panel):
                 self.btn_open.SetLabel('Close', )
                 self.btn_dl_info.Enable(True)
             except SerialException:
-                print('Port Could Not be Opened; it is Already in Use by Another Syringe')
                 wx.MessageBox('Port Could Not be Opened; it is Already in Use by Another Syringe', 'Error',
                            wx.OK | wx.ICON_ERROR)
                 return
@@ -257,7 +256,6 @@ class PanelSyringe(wx.Panel):
             self._syringe.set_infusion_rate(rate, unit)
 
         except SerialException:
-            print('Port Could Not be Opened; it is Already in Use by Another Syringe')
             wx.MessageBox('Port Could Not be Opened; it is Already in Use by Another Syringe', 'Error',
                         wx.OK | wx.ICON_ERROR)
             return
