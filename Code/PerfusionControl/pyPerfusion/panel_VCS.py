@@ -13,7 +13,7 @@ DEV_LIST = ['Dev1', 'Dev2', 'Dev3']
 PORT_LIST = [f'port{p}' for p in range(0, 5)]
 LINE_LIST = [f'line{line}' for line in range(0, 9)]
 
-class PanelDIO(wx.Panel):
+class PanelVCS(wx.Panel):
     def __init__(self, parent, dio, name):
         self.parent = parent
         self._dio = dio
@@ -47,6 +47,7 @@ class PanelDIO(wx.Panel):
         self.btn_open = wx.ToggleButton(self, label='Open')
 
         self.btn_activate = wx.ToggleButton(self, label='Activate')
+        self.btn_activate.SetBackgroundColour('gray')
         self.btn_activate.Enable(False)
 
         self.__do_layout()
@@ -94,31 +95,41 @@ class PanelDIO(wx.Panel):
         self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
 
     def OnOpen(self, evt):
-        state = self.btn_open.GetValue()
-        if state:
+        state = self.btn_open.GetLabel()
+        if state == 'Open':
             dev = self.choice_dev.GetStringSelection()
             port = self.choice_port.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             active_high = self.radio_active_sel.GetSelection() == 0
             read_only = self.check_read_only.GetValue()
-            self._dio.open(port, line, active_high, read_only, dev)
-            self.btn_open.SetLabel('Close')
-            self.btn_activate.Enable(True)
-
+            try:
+                self._dio.open(port, line, active_high, read_only, dev)
+                self._dio.deactivate()  # Takes care of case where lines are active when the DAQ initially turns on
+                self.btn_open.SetLabel('Close')
+                self.btn_activate.Enable(True)
+                self.btn_activate.SetBackgroundColour('red')
+            except AttributeError:
+                wx.MessageBox('Line Could Not be Opened; it is Already in Use', 'Error',
+                              wx.OK | wx.ICON_ERROR)
+                return
         else:
+            self._dio.deactivate()
             self._dio.close()
             self.btn_open.SetLabel('Open')
             self.btn_activate.SetLabel('Activate')
-            self.btn_activate.Enable(False)  # This disables the button as desired, but the button doesn't change color like usual to signal that it is deactivated
+            self.btn_activate.SetBackgroundColour('gray')
+            self.btn_activate.Enable(False)
 
     def OnActivate(self, evt):
-        state = self.btn_activate.GetValue()
-        if state:
+        state = self.btn_activate.GetLabel()
+        if state == 'Activate':
             self._dio.activate()
             self.btn_activate.SetLabel('Deactivate')
+            self.btn_activate.SetBackgroundColour('green')
         else:
             self._dio.deactivate()
             self.btn_activate.SetLabel('Activate')
+            self.btn_activate.SetBackgroundColour('red')
 
     def OnSaveConfig(self, evt):
          section = LP_CFG.get_hwcfg_section(self._name)
@@ -131,11 +142,13 @@ class PanelDIO(wx.Panel):
 
     def OnLoadConfig(self, evt):
         section = LP_CFG.get_hwcfg_section(self._name)
-        state = self.btn_open.GetValue()
-        if state:
+        state = self.btn_open.GetLabel()
+        if state == 'Close':
+            self._dio.deactivate()
             self._dio.close()
             self.btn_open.SetLabel('Open')
             self.btn_activate.SetLabel('Activate')
+            self.btn_activate.SetBackgroundColour('gray')
             self.btn_activate.Enable(False)
         self.choice_dev.SetStringSelection(section['Device'])
         self.choice_port.SetStringSelection(section['Port'])
@@ -149,10 +162,16 @@ class PanelDIO(wx.Panel):
         line = self.choice_line.GetStringSelection()
         active_high = self.radio_active_sel.GetSelection() == 0
         read_only = self.check_read_only.GetValue()
-        self._dio.open(port, line, active_high, read_only, dev)
-        self.btn_open.SetLabel('Close')
-        self.btn_activate.Enable(True)
-
+        try:
+            self._dio.open(port, line, active_high, read_only, dev)
+            self._dio.deactivate()  # Takes care of case where lines are originally active when the DAQ initially turns on
+            self.btn_open.SetLabel('Close')
+            self.btn_activate.Enable(True)
+            self.btn_activate.SetBackgroundColour('red')
+        except AttributeError:
+            wx.MessageBox('Line Could Not be Opened; it is Already in Use', 'Error',
+                          wx.OK | wx.ICON_ERROR)
+            return
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -167,7 +186,7 @@ class TestFrame(wx.Frame):
                   }
         sizer = wx.GridSizer(cols=3)
         for key, valve in valves.items():
-            sizer.Add(PanelDIO(self, valve, name=key), 1, wx.EXPAND, border=2)
+            sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
