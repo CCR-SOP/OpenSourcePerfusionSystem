@@ -6,7 +6,9 @@
 Panel class for testing and configuring Valve Control System
 """
 import wx
+from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
+import pyPerfusion.panel_AO as AOPanel
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3']
@@ -173,6 +175,119 @@ class PanelVCS(wx.Panel):
                           wx.OK | wx.ICON_ERROR)
             return
 
+class PanelPump(wx.Panel):
+    def __init__(self, parent, name):
+        self.parent = parent
+        self._name = name
+        self._ao = NIDAQ_AO()
+        wx.Panel.__init__(self, parent, -1)
+
+        self._avail_dev = DEV_LIST
+        self._avail_lines = LINE_LIST
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self._name)
+        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.label_dev = wx.StaticText(self, label='NI Device Name')
+        self.choice_dev = wx.Choice(self, wx.ID_ANY, choices=self._avail_dev)
+
+        self.label_line = wx.StaticText(self, label='Line Number')
+        self.choice_line = wx.Choice(self, wx.ID_ANY, choices=self._avail_lines)
+
+        self.btn_open = wx.ToggleButton(self, label='Open')
+        self.btn_save_cfg = wx.Button(self, label='Save Config')
+        self.btn_load_cfg = wx.Button(self, label='Load Config')
+
+        self.btn_update = wx.Button(self, label='Update')
+        self.btn_update.Enable(False)
+
+        self.spin_voltage = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
+        self.lbl_voltage = wx.StaticText(self, label='Voltage')
+        self.spin_voltage.Digits = 3
+
+        self.__do_layout()
+        self.__set_bindings()
+
+    def __do_layout(self):
+        flags = wx.SizerFlags().Border(wx.ALL, 5).Left().Proportion(0)
+        self.sizer_dev = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_dev.Add(self.label_dev, flags)
+        self.sizer_dev.Add(self.choice_dev, flags)
+
+        self.sizer_line = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_line.Add(self.label_line, flags)
+        self.sizer_line.Add(self.choice_line, flags)
+
+        self.sizer_voltage = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_voltage.Add(self.lbl_voltage, flags)
+        self.sizer_voltage.Add(self.spin_voltage, flags)
+        self.sizer_voltage.Add(self.btn_update, flags)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.sizer_dev)
+        sizer.AddSpacer(10)
+        sizer.Add(self.sizer_line)
+        self.sizer.Add(sizer)
+
+        self.sizer.AddSpacer(5)
+        self.sizer.Add(self.btn_open, flags)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.btn_save_cfg, flags)
+        sizer.AddSpacer(5)
+        sizer.Add(self.btn_load_cfg, flags)
+        self.sizer.AddSpacer(5)
+        self.sizer.Add(sizer)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.sizer_voltage)
+        self.sizer.Add(sizer)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
+        self.SetSizer(sizer)
+        self.Layout()
+        self.Fit()
+
+    def __set_bindings(self):
+        self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
+        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
+        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
+        self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
+
+    def OnOpen(self, evt):
+        state = self.btn_open.GetLabel()
+        if state == 'Open':
+            dev = self.choice_dev.GetStringSelection()
+            line = self.choice_line.GetStringSelection()
+            self._ao.open(line=line[4], period_ms=10, dev=dev)  # AO lines are named "ao#" in the NIDAQ, not "aoline#"; DIO lines are named "line#"
+            self._ao.set_dc(0)
+            self.spin_voltage.SetValue(0)
+            self._ao.start()
+            self.btn_open.SetLabel('Close')
+            self.btn_update.Enable(True)
+        else:
+            self._ao.set_dc(0)  # Turn voltage off when closing the channel
+            self.spin_voltage.SetValue(0)
+            self._ao.close()
+            self.btn_open.SetLabel('Open')
+            self.btn_update.Enable(False)
+
+    def OnSaveCfg(self, evt):
+        section = LP_CFG.get_hwcfg_section(self._name)
+        section['VCS DevName'] = self.choice_dev.GetStringSelection()
+        section['VCS LineName'] = self.choice_line.GetStringSelection()
+        LP_CFG.update_hwcfg_section(self._name, section)
+
+    def OnLoadCfg(self, evt):
+        section = LP_CFG.get_hwcfg_section(self._name)
+        self.choice_dev.SetStringSelection(section['VCS DevName'])
+        self.choice_line.SetStringSelection(section['VCS LineName'])
+
+    def OnUpdate(self, evt):
+        volts = self.spin_voltage.GetValue()
+        self._ao.set_dc(volts)
+
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -185,6 +300,7 @@ class TestFrame(wx.Frame):
                   'Inferior Vena Cava (Glucose)': NIDAQ_DIO(),
                   }
         sizer = wx.GridSizer(cols=3)
+        sizer.Add(PanelPump(self, name='VCS Peristaltic Pump (AO)'))
         for key, valve in valves.items():
             sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
