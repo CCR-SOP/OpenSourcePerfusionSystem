@@ -29,7 +29,7 @@ class NIDAQ_AO(pyAO.AO):
 
     def _output_samples(self):
         # super()._output_samples()
-        if self._Hz > 0:
+        if self._Hz > 0.0:
             written = ctypes.c_int32()
             self.__task.WriteAnalogF64(len(self._buffer), True, 1.0 / self._Hz, DAQmx_Val_GroupByChannel, self._buffer, PyDAQmx.byref(written), None)
         else:
