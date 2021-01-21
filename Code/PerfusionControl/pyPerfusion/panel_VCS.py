@@ -55,6 +55,9 @@ class PanelVCS(wx.Panel):
         self.btn_activate.SetBackgroundColour('gray')
         self.btn_activate.Enable(False)
 
+        self.timer_valve_coordination = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.OnTimer)
+
         self.__do_layout()
         self.__set_bindings()
 
@@ -200,6 +203,9 @@ class PanelVCS(wx.Panel):
                           wx.OK | wx.ICON_ERROR)
             return
 
+    def OnTimer(self, evt):
+        pass
+
 class PanelPump(wx.Panel):
     def __init__(self, parent, name):
         self.parent = parent
@@ -325,9 +331,9 @@ class TestFrame(wx.Frame):
                   'Inferior Vena Cava (Glucose)': NIDAQ_DIO(),
                   }
         sizer = wx.GridSizer(cols=3)
-        sizer.Add(PanelPump(self, name='VCS Peristaltic Pump (AO)'))
         for key, valve in valves.items():
             sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
+        sizer.Add(PanelPump(self, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
