@@ -6,14 +6,17 @@
 Panel class for testing and configuring Valve Control System
 """
 import wx
+import time
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
-import pyPerfusion.panel_AO as AOPanel
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3']
 PORT_LIST = [f'port{p}' for p in range(0, 5)]
 LINE_LIST = [f'line{line}' for line in range(0, 9)]
+
+open_chemical_valves = {}
+open_glucose_valves = {}
 
 class PanelVCS(wx.Panel):
     def __init__(self, parent, dio, name):
@@ -117,6 +120,10 @@ class PanelVCS(wx.Panel):
         else:
             self._dio.deactivate()
             self._dio.close()
+            if self._name in open_chemical_valves.keys():
+                del open_chemical_valves[self._name]
+            elif self._name in open_glucose_valves.keys():
+                del open_glucose_valves[self._name]
             self.btn_open.SetLabel('Open')
             self.btn_activate.SetLabel('Activate')
             self.btn_activate.SetBackgroundColour('gray')
@@ -125,6 +132,15 @@ class PanelVCS(wx.Panel):
     def OnActivate(self, evt):
         state = self.btn_activate.GetLabel()
         if state == 'Activate':
+            if 'pH/CO2/O2' in self._name:
+                for key, chem in open_chemical_valves:
+                    chem._dio.deactivate()
+                    chem.btn_activate.SetLabel('Activate')
+                    chem.btn_activate.SetBackgroundColour('red')
+                    del open_chemical_valves[key]
+                open_chemical_valves.update({self._name: self})
+            elif 'Glucose' in self._name:
+                open_glucose_valves.update({self._name: self})
             self._dio.activate()
             self.btn_activate.SetLabel('Deactivate')
             self.btn_activate.SetBackgroundColour('green')
@@ -132,6 +148,10 @@ class PanelVCS(wx.Panel):
             self._dio.deactivate()
             self.btn_activate.SetLabel('Activate')
             self.btn_activate.SetBackgroundColour('red')
+            if 'pH/CO2/O2' in self._name:
+                del open_chemical_valves[self._name]
+            elif 'Glucose' in self._name:
+                del open_glucose_valves[self._name]
 
     def OnSaveConfig(self, evt):
          section = LP_CFG.get_hwcfg_section(self._name)
@@ -148,6 +168,10 @@ class PanelVCS(wx.Panel):
         if state == 'Close':
             self._dio.deactivate()
             self._dio.close()
+            if self._name in open_chemical_valves.keys():
+                del open_chemical_valves[self._name]
+            elif self._name in open_glucose_valves.keys():
+                del open_glucose_valves[self._name]
             self.btn_open.SetLabel('Open')
             self.btn_activate.SetLabel('Activate')
             self.btn_activate.SetBackgroundColour('gray')
@@ -202,7 +226,6 @@ class PanelPump(wx.Panel):
 
         self.spin_voltage = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
         self.lbl_voltage = wx.StaticText(self, label='Voltage')
-        self.spin_voltage.Digits = 3
 
         self.__do_layout()
         self.__set_bindings()
@@ -267,6 +290,7 @@ class PanelPump(wx.Panel):
             self.btn_update.Enable(True)
         else:
             self._ao.set_dc(0)  # Turn voltage off when closing the channel
+            time.sleep(0.1)  # Make sure thread updates voltage to 0 prior to closing DIO channel
             self.spin_voltage.SetValue(0)
             self._ao.close()
             self.btn_open.SetLabel('Open')
