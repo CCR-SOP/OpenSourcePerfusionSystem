@@ -133,11 +133,12 @@ class PanelVCS(wx.Panel):
         state = self.btn_activate.GetLabel()
         if state == 'Activate':
             if 'pH/CO2/O2' in self._name:
-                for key, chem in open_chemical_valves:
-                    chem._dio.deactivate()
-                    chem.btn_activate.SetLabel('Activate')
-                    chem.btn_activate.SetBackgroundColour('red')
-                    del open_chemical_valves[key]
+                if bool(open_chemical_valves):
+                    for key, chem in open_chemical_valves.items():
+                        chem._dio.deactivate()
+                        chem.btn_activate.SetLabel('Activate')
+                        chem.btn_activate.SetBackgroundColour('red')
+                    open_chemical_valves.clear()
                 open_chemical_valves.update({self._name: self})
             elif 'Glucose' in self._name:
                 open_glucose_valves.update({self._name: self})
