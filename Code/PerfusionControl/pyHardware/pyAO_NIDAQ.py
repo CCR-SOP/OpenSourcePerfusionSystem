@@ -27,6 +27,17 @@ class NIDAQ_AO(pyAO.AO):
     def _devname(self):
         return f"/{self.__dev}/ao{self._line}"
 
+    def _calc_timeout(self):
+        # NIDAQ WriteAnalog64 is a synchronous operation, so the main loop
+        # should immediately write the next cycle of a sine wave immediately
+        if self._Hz > 0:
+            timeout = 0.0
+        else:
+            # for DC, the timeout can be longer as it really just needs to check
+            # that if an new value was requested
+            timeout = 0.25
+        return timeout
+
     def _output_samples(self):
         # super()._output_samples()
         if self._Hz > 0:
