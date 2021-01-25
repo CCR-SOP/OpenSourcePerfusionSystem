@@ -15,12 +15,13 @@ import numpy as np
 class AO:
     def __init__(self):
         self._period_ms = None
-        self._volts_p2p = None
-        self._volts_offset = None
+        self._volts_p2p = 0
+        self._volts_offset = 0
         self._Hz = 0
         self._bits = None
         self._fid = None
         self.__thread = None
+        self.__ramp2dc = False
 
         self._data_type = np.float64
         self._buffer = np.array([0] * 10, dtype=self._data_type)
@@ -89,3 +90,11 @@ class AO:
         self._Hz = 0
         self._volts_offset = volts
         print(f"setting dc voltage to {self._volts_offset}")
+
+    def set_ramp(self, start_volts, stop_volts, accel):
+        self._Hz = 0
+        with self._lock_buf:
+            seconds = abs(start_volts - stop_volts) / accel
+            t = np.arange(0, seconds, step=(self._period_ms / 1000.0))
+            self._buffer = np.linspace(start_volts, stop_volts, num=len(t))
+            print(f'setting ramp from {start_volts} to {stop_volts} over {seconds} seconds')

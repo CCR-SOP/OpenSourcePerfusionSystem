@@ -7,6 +7,7 @@ and under the public domain.
 Author: John Kakareka
 """
 import ctypes
+from time import sleep
 
 import PyDAQmx
 from PyDAQmx.DAQmxConstants import *
@@ -21,7 +22,7 @@ class NIDAQ_AO(pyAO.AO):
         self.__line = None
         self.__timeout = 1.0
         self.__task = None
-        self.__last_dc_val = None
+        self.__max_accel = 1  # Volts/second
 
     @property
     def _devname(self):
@@ -62,8 +63,17 @@ class NIDAQ_AO(pyAO.AO):
                                        self._buffer, PyDAQmx.byref(written), None)
 
     def set_dc(self, volts):
-        self.__last_dc_val = None
-        super().set_dc(volts)
-        self.__clear_and_create_task()
         if self.__task:
-            self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)
+            self.__clear_and_create_task()
+
+            super().set_ramp(self._volts_offset, volts, 1.0)
+            hz = 1.0 / (self._period_ms / 1000.0)
+            written = ctypes.c_int32(0)
+            if len(self._buffer) > 0:
+                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
+                self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
+                                           self._buffer, PyDAQmx.byref(written), None)
+            else:
+                self.__task.WriteAnalogScalarF64(True, self.__timeout, volts, None)
+            super().set_dc(volts)
+
