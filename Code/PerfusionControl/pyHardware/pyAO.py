@@ -14,7 +14,6 @@ import numpy as np
 
 class AO:
     def __init__(self):
-        self._line = None
         self._period_ms = None
         self._volts_p2p = None
         self._volts_offset = None
@@ -29,13 +28,11 @@ class AO:
         self._event_halt = threading.Event()
         self._lock_buf = threading.Lock()
 
-    def open(self, line, period_ms, bits=12):
-        self._line = line
+    def open(self, period_ms, bits=12):
         self._period_ms = period_ms
         self._bits = bits
         self._gen_cycle()
         self.__thread = threading.Thread(target=self.run)
-       # self._fid = open(Path('__data__') / 'sine.dat', 'w+')
 
     def close(self):
         self.halt()

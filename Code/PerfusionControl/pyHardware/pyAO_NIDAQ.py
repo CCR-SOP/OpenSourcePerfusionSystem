@@ -18,21 +18,23 @@ class NIDAQ_AO(pyAO.AO):
     def __init__(self):
         super().__init__()
         self.__dev = None
+        self.__line = None
         self.__timeout = 1.0
         self.__task = None
         self.__last_dc_val = None
 
     @property
     def _devname(self):
-        return f"/{self.__dev}/ao{self._line}"
+        return f"/{self.__dev}/ao{self.__line}"
 
     def _output_samples(self):
         # super()._output_samples()
         pass
 
-    def open(self, line, period_ms, bits=12, dev=None):
+    def open(self, period_ms, bits=12, dev=None, line=None):
         self.__dev = dev
-        super().open(line, period_ms, bits)
+        self.__line = line
+        super().open(period_ms, bits)
         self.__task = PyDAQmx.Task()
 
     def close(self):

@@ -124,7 +124,7 @@ class PanelAO_Config(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
-            self._ao.open(line, period_ms=10, dev=dev)
+            self._ao.open(period_ms=10, dev=dev, line=line)
             self.btn_open.SetLabel('Close',)
             self._ao.start()
         else:
