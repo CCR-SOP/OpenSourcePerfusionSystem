@@ -42,23 +42,26 @@ class NIDAQ_AO(pyAO.AO):
             self.__task = None
 
     def __clear_and_create_task(self):
-        self.__task.StopTask()
-        self.__task.ClearTask()
-        self.__task = PyDAQmx.Task()
-        self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
+        if self.__task:
+            self.__task.StopTask()
+            self.__task.ClearTask()
+            self.__task = PyDAQmx.Task()
+            self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         super().set_sine(volts_p2p, volts_offset, Hz)
         written = ctypes.c_int32(0)
         self.__clear_and_create_task()
         hz = 1.0 / (self._period_ms / 1000.0)
-        self.__task.CfgSampClkTiming("", hz,
-                                     PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, len(self._buffer))
-        self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
-                                   self._buffer, PyDAQmx.byref(written), None)
+        if self.__task:
+            self.__task.CfgSampClkTiming("", hz,
+                                       PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, len(self._buffer))
+            self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
+                                       self._buffer, PyDAQmx.byref(written), None)
 
     def set_dc(self, volts):
         self.__last_dc_val = None
         super().set_dc(volts)
         self.__clear_and_create_task()
-        self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)
+        if self.__task:
+            self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)
