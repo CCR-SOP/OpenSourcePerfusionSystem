@@ -7,7 +7,8 @@ and under the public domain.
 Author: John Kakareka
 """
 import threading
-from pathlib import Path
+from time import sleep
+
 import numpy as np
 
 
@@ -52,6 +53,8 @@ class AO(threading.Thread):
                 self._output_samples()
 
     def halt(self):
+        self.set_dc(0)
+        sleep(0.1)
         self._event_halt.set()
         if self._fid:
             self._fid.close()
