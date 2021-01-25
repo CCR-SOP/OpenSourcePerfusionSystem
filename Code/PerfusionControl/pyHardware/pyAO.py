@@ -12,9 +12,8 @@ from time import sleep
 import numpy as np
 
 
-class AO(threading.Thread):
+class AO:
     def __init__(self):
-        threading.Thread.__init__(self)
         self._line = None
         self._period_ms = None
         self._volts_p2p = None
@@ -22,6 +21,7 @@ class AO(threading.Thread):
         self._Hz = 0
         self._bits = None
         self._fid = None
+        self.__thread = None
 
         self._data_type = np.float64
         self._buffer = np.array([0] * 10, dtype=self._data_type)
@@ -34,8 +34,14 @@ class AO(threading.Thread):
         self._period_ms = period_ms
         self._bits = bits
         self._gen_cycle()
-
+        self.__thread = threading.Thread(target=self.run)
        # self._fid = open(Path('__data__') / 'sine.dat', 'w+')
+
+    def close(self):
+        self.halt()
+
+    def start(self):
+        self.__thread.start()
 
     def _output_samples(self):
         self._buffer.tofile(self._fid)
@@ -56,6 +62,8 @@ class AO(threading.Thread):
         self.set_dc(0)
         sleep(0.1)
         self._event_halt.set()
+        if self.__thread:
+            self.__thread.join(timeout=2.0)
         if self._fid:
             self._fid.close()
 
