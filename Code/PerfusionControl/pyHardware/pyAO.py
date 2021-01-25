@@ -74,7 +74,7 @@ class AO(threading.Thread):
                                np.sin(2 * np.pi * self._Hz * t, dtype=self._data_type) \
                                + self._volts_offset
         else:
-            self._buffer = self._volts_offset
+            self._buffer = np.full(1, self._volts_offset)
             print(f"creating dc of {self._volts_offset}")
 
     def set_dc(self, volts):
