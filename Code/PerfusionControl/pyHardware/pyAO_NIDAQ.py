@@ -40,22 +40,7 @@ class NIDAQ_AO(pyAO.AO):
 
     def _output_samples(self):
         # super()._output_samples()
-        if self.__task:
-            if self._Hz > 0:
-                written = ctypes.c_int32(0)
-                try:
-                    #task.WriteAnalogF64(100, 1, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel,
-                    #                    buffer, PyDAQmx.byref(samples_per_channel_written), None)
-                    print(f'len of buffer is {len(self._buffer)}')
-                    self.__task.WriteAnalogF64(len(self._buffer), True, 2.0, DAQmx_Val_GroupByChannel,
-                                               self._buffer, PyDAQmx.byref(written), None)
-                except PyDAQmx.DAQmxFunctions.SamplesCanNotYetBeWrittenError as err:
-                    print('SamplesCanNotYetBeWrittenError')
-                print(f'written is {written}')
-            else:
-                if self._volts_offset != self.__last_dc_val:
-                    # self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)
-                    self.__last_dc_val = self._volts_offset
+        pass
 
     def open(self, line, period_ms, bits=12, dev=None):
         self.__dev = dev
@@ -93,9 +78,14 @@ class NIDAQ_AO(pyAO.AO):
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         super().set_sine(volts_p2p, volts_offset, Hz)
+        written = ctypes.c_int32(0)
+        self.__task.StopTask()
+        self.__task.WriteAnalogF64(len(self._buffer), True, 2.0, DAQmx_Val_GroupByChannel,
+                                   self._buffer, PyDAQmx.byref(written), None)
         # self.__update_timing()
 
     def set_dc(self, volts):
         self.__last_dc_val = None
         super().set_dc(volts)
+        self.__task.WriteAnalogScalarF64(True, self.__timeout, self._volts_offset, None)
         # self.__update_timing()
