@@ -36,6 +36,9 @@ class PanelAO(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
+    def close(self):
+        self._ao.close()
+
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
 
