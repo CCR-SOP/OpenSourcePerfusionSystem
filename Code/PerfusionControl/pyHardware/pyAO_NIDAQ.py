@@ -7,10 +7,8 @@ and under the public domain.
 Author: John Kakareka
 """
 import ctypes
-import time
 
 import PyDAQmx
-from PyDAQmx import Task
 from PyDAQmx.DAQmxConstants import *
 
 import pyHardware.pyAO as pyAO
@@ -28,17 +26,6 @@ class NIDAQ_AO(pyAO.AO):
     def _devname(self):
         return f"/{self.__dev}/ao{self._line}"
 
-    def _calc_timeout(self):
-        # NIDAQ WriteAnalog64 is a synchronous operation, so the main loop
-        # should immediately write the next cycle of a sine wave immediately
-        if self._Hz > 0:
-            timeout = 0
-        else:
-            # for DC, the timeout can be longer as it really just needs to check
-            # that if an new value was requested
-            timeout = 0.25
-        return timeout
-
     def _output_samples(self):
         # super()._output_samples()
         pass
@@ -46,7 +33,7 @@ class NIDAQ_AO(pyAO.AO):
     def open(self, line, period_ms, bits=12, dev=None):
         self.__dev = dev
         super().open(line, period_ms, bits)
-        self.__task = Task()
+        self.__task = PyDAQmx.Task()
 
     def close(self):
         self.halt()
@@ -57,14 +44,16 @@ class NIDAQ_AO(pyAO.AO):
     def __clear_and_create_task(self):
         self.__task.StopTask()
         self.__task.ClearTask()
-        self.__task = Task()
-        self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, DAQmx_Val_Volts, None)
+        self.__task = PyDAQmx.Task()
+        self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         super().set_sine(volts_p2p, volts_offset, Hz)
         written = ctypes.c_int32(0)
         self.__clear_and_create_task()
-        self.__task.CfgSampClkTiming("", 100.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 200)
+        hz = 1.0 / (self._period_ms / 1000.0)
+        self.__task.CfgSampClkTiming("", hz,
+                                     PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, len(self._buffer))
         self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
                                    self._buffer, PyDAQmx.byref(written), None)
 
