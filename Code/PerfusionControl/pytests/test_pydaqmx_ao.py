@@ -30,16 +30,17 @@ buffer = 1.0 * np.sin(2 * np.pi * 5 * t, dtype=np.float64) + 1.75
 
 task = PyDAQmx.Task()
 task.CreateAOVoltageChan("Dev3/ao0", None, -10, 10, PyDAQmx.DAQmx_Val_Volts, None)
-task.CfgSampClkTiming("", 100.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, 10000)
-#task.WriteAnalogF64(1000, 1, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel,
-#                    buffer, PyDAQmx.byref(samples_per_channel_written), None)
+task.CfgSampClkTiming("", 100.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 1000)
+task.WriteAnalogF64(100, 1, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel,
+                    buffer, PyDAQmx.byref(samples_per_channel_written), None)
+time.sleep(5.0)
 #task.StartTask()
-for i in range(1, 10):
-    print(f'loop {i}')
-    task.WriteAnalogF64(100, 1, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel,
-                        buffer, PyDAQmx.byref(samples_per_channel_written), None)
+#for i in range(1, 10):
+#    print(f'loop {i}')
+#    task.WriteAnalogF64(100, 1, 0, PyDAQmx.DAQmx_Val_GroupByChannel,
+#                        buffer, PyDAQmx.byref(samples_per_channel_written), None)
     # time.sleep(0.1)
-print(f'samples written is {samples_per_channel_written}')
+#print(f'samples written is {samples_per_channel_written}')
 
 # Try TaskHandle Method (DOES NOT WORK EITHER)
 # task_handle = PyDAQmx.TaskHandle()
