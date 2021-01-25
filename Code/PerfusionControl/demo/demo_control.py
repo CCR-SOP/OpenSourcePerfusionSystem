@@ -32,7 +32,6 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        print('OnClose')
         for panel in self._panel:
             panel.close()
         self.Destroy()
