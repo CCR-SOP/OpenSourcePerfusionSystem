@@ -23,6 +23,7 @@ class NIDAQ_AO(pyAO.AO):
         self.__timeout = 1.0
         self.__task = None
         self.__max_accel = 1  # Volts/second
+        self.__hw_clk = False
 
     @property
     def _devname(self):
@@ -38,6 +39,7 @@ class NIDAQ_AO(pyAO.AO):
         super().open(period_ms, bits)
         self.__task = PyDAQmx.Task()
 
+
     def close(self):
         self.halt()
         if self.__task:
@@ -50,6 +52,12 @@ class NIDAQ_AO(pyAO.AO):
             self.__task.ClearTask()
             self.__task = PyDAQmx.Task()
             self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
+            err = self.__task.CfgSampClkTiming("", 1.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 10)
+            self.__hw_clk = err == 0
+            if self.__hw_clk:
+                print('Hardware clock supported')
+            else:
+                print('Hardware clock not supported')
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         super().set_sine(volts_p2p, volts_offset, Hz)
@@ -57,8 +65,8 @@ class NIDAQ_AO(pyAO.AO):
         self.__clear_and_create_task()
         hz = 1.0 / (self._period_ms / 1000.0)
         if self.__task:
-            self.__task.CfgSampClkTiming("", hz,
-                                       PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, len(self._buffer))
+            self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
+                                         len(self._buffer))
             self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
                                        self._buffer, PyDAQmx.byref(written), None)
 
@@ -69,7 +77,7 @@ class NIDAQ_AO(pyAO.AO):
             super().set_ramp(self._volts_offset, volts, 1.0)
             hz = 1.0 / (self._period_ms / 1000.0)
             written = ctypes.c_int32(0)
-            if len(self._buffer) > 0:
+            if self.__hw_clk and len(self._buffer) > 0:
                 self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
                 self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
                                            self._buffer, PyDAQmx.byref(written), None)
