@@ -42,6 +42,7 @@ class NIDAQ_AI(pyAI.AI):
         self._buffer_t = time.perf_counter()
 
     def open(self):
+        super().open()
         try:
             if self.__task:
                 self.close()
@@ -63,3 +64,4 @@ class NIDAQ_AI(pyAI.AI):
         if self.__task:
             self.__task.StopTask()
             self.__task = None
+        super().close()

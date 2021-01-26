@@ -4,7 +4,7 @@ from queue import Queue
 import numpy as np
 
 
-class AI(Thread):
+class AI:
     """
     Base class for streaming data from sensors and saving to file
 
@@ -25,12 +25,11 @@ class AI(Thread):
     """
 
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, demo_amp=70, demo_offset=10, read_period_ms=500):
-
-        Thread.__init__(self)
         self._period_sampling_ms = period_sample_ms
         self._demo_amp = demo_amp
         self._demo_offset = demo_offset
         self.__queue_buffer = Queue(maxsize=100)
+        self.__thread = None
 
         self.buffer_t = 0
         self._event_halt = Event()
@@ -57,11 +56,16 @@ class AI(Thread):
         return len(self._buffer)
 
     def open(self):
-        pass
+        if self.__thread:
+            self.halt()
+            self.__thread.join(timeout=2.0)
+        self.__thread = Thread(target=self.run)
 
     def start(self):
         self.__epoch = perf_counter()
-        Thread.start(self)
+        if self.__thread:
+            print('starting thread')
+            self.__thread.start()
 
     def run(self):
         while not self._event_halt.wait(self._read_period_ms / 1000.0):
@@ -77,7 +81,7 @@ class AI(Thread):
     def get_data(self):
         buf = None
         t = None
-        if self.is_alive():
+        if self.__thread and self.__thread.is_alive():
             if not self.__queue_buffer.empty():
                 buf, t = self.__queue_buffer.get(timeout=1.0)
         return buf, t
