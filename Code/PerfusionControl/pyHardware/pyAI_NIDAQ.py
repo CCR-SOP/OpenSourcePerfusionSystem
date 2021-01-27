@@ -42,6 +42,7 @@ class NIDAQ_AI(pyAI.AI):
         self._buffer_t = time.perf_counter()
 
     def open(self):
+        super().open()
         try:
             if self.__task:
                 self.close()
@@ -50,6 +51,9 @@ class NIDAQ_AI(pyAI.AI):
             volt_min = self._volts_offset - 0.5 * self._volts_p2p
             volt_max = self._volts_offset + 0.5 * self._volts_p2p
             self.__task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
+            hz = 1.0 / (self._period_sampling_ms / 1000.0)
+            self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
+                                         self.samples_per_read)
             self.__task.StartTask()
         except PyDAQmx.DAQError as e:
             print("Could not create AO Channel for {}".format(self._devname))
@@ -60,3 +64,4 @@ class NIDAQ_AI(pyAI.AI):
         if self.__task:
             self.__task.StopTask()
             self.__task = None
+        super().close()
