@@ -52,8 +52,12 @@ class NIDAQ_AO(pyAO.AO):
             self.__task.ClearTask()
             self.__task = PyDAQmx.Task()
             self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
-            err = self.__task.CfgSampClkTiming("", 1.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 10)
-            self.__hw_clk = err == 0
+            try:
+                self.__hw_clk = True
+                self.__task.CfgSampClkTiming("", 1.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 10)
+            except PyDAQmx.DAQmxFunctions.InvalidAttributeValueError:
+                self.__hw_clk = False
+
             if self.__hw_clk:
                 print('Hardware clock supported')
             else:
