@@ -78,11 +78,12 @@ class NIDAQ_AO(pyAO.AO):
         if self.__task:
             self.__clear_and_create_task()
 
-            super().set_ramp(self._volts_offset, volts, 1.0)
+            super().set_ramp(self._volts_offset, volts, self.__max_accel)
             hz = 1.0 / (self._period_ms / 1000.0)
             written = ctypes.c_int32(0)
-            if self.__hw_clk and len(self._buffer) > 0:
-                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
+            if len(self._buffer) > 0:
+                if self.__hw_clk:
+                    self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
                 self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
                                            self._buffer, PyDAQmx.byref(written), None)
             else:
