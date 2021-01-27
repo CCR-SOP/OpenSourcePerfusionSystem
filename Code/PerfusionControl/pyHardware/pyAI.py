@@ -75,8 +75,13 @@ class AI:
 
                 self.__queue_buffer.put((data, self.buffer_t))
 
+    def close(self):
+        pass
+
     def halt(self):
         self._event_halt.set()
+        self.__thread.join(2.0)
+        self.close()
 
     def get_data(self):
         buf = None

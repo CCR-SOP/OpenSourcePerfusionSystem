@@ -9,23 +9,23 @@ import numpy as np
 DATA_VERSION = 1
 
 
-class SensorStream(Thread):
+class SensorStream:
     def __init__(self, name, unit_str, hw, valid_range=None):
-        Thread.__init__(self)
         self._unit_str = unit_str
         self._valid_range = valid_range
         self._hw = hw
         self.__evt_halt = Event()
         self._fid_write = None
         self.data = None
-        self._name = name
+        self.name = name
         self._full_path = pathlib.Path.cwd()
-        self._filename = pathlib.Path(f'{self._name}')
+        self._filename = pathlib.Path(f'{self.name}')
         self._ext = '.dat'
         self._timestamp = None
         self._end_of_header = 0
         self._last_idx = 0
         self.data = np.array(self._hw.buf_len, dtype=self._hw.data_type)
+        self.__thread = None
 
     @property
     def buf_len(self):
@@ -65,10 +65,13 @@ class SensorStream(Thread):
         self._fid_write = open(self.full_path, 'w+b')
 
     def start(self):
-        super().start()
+        self.__thread.start()
         self._hw.start()
 
     def open(self, full_path):
+        if self.__thread:
+            self.__thread.stop()
+        self.__thread = Thread(target=self.run)
         if not isinstance(full_path, pathlib.Path):
             full_path = pathlib.Path(project_path)
         self._full_path = full_path
@@ -92,16 +95,18 @@ class SensorStream(Thread):
         self._hw.open()
 
     def stop(self):
+
         self._hw.halt()
         self.__evt_halt.set()
-        # JWK, probably need a join here to ensure data collection stops before file closed
-        self._fid_write.close()
+        self.__thread.join(2.0)
+        if self._fid_write:
+            self._fid_write.close()
         self._fid_write = None
 
     def _get_stream_info(self):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
-                  f'Sensor: {self._name}',
+                  f'Sensor: {self.name}',
                   f'Unit: {self._unit_str}',
                   f'Data Format: {str(np.dtype(self._hw.data_type))}',
                   f'Sampling Period (ms): {self._hw.period_sampling_ms}',
