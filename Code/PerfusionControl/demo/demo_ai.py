@@ -15,7 +15,7 @@ from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 sensors = [
-          SensorStream('Analog Input 1', 'Volts', NIDAQ_AI(0, 10, volts_p2p=5, volts_offset=2.5, dev='Dev1'))
+          SensorStream('Analog Input 1', 'Volts', NIDAQ_AI(0, 10, volts_p2p=5, volts_offset=2.5, dev='Dev3'))
          ]
 
 
@@ -37,7 +37,12 @@ class TestFrame(wx.Frame):
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
+    def OnClose(self, evt):
+        for sensor in sensors:
+            sensor.stop()
+        self.Destroy()
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -49,7 +54,3 @@ class MyTestApp(wx.App):
 
 app = MyTestApp(0)
 app.MainLoop()
-time.sleep(10)
-for sensor in sensors:
-    sensor.stop()
-
