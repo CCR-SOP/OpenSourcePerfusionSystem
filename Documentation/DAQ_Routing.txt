@@ -1,6 +1,6 @@
 Circuit			Hardware		DAQ Line
-HA 			BVP-Z 			Dev1/AO0
-PV 			BVP-Z 			Dev1/AO1
+HA 			BVP-Z 			Dev3/AO1
+PV 			BVP-Z 			Dev3/AO0
 
 Dialysis 		Ecoline - Perfusate 	Dev2/AO0
 Dialysis 		Reglo - Dialysate	Dev2/AO1
@@ -19,3 +19,4 @@ PV 			Flow 			Dev1/AI4
 Dialysis		Flow 			Dev1/AI5
 
 All			VCS			Dev2/PO.0,PO.1,PO.2,PO.3,PO.4,PO.5
+All			VCS			Dev1/AO1
