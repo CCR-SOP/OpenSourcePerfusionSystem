@@ -62,8 +62,10 @@ class AO:
         self._event_halt.set()
         if self.__thread:
             self.__thread.join(timeout=2.0)
+            self.__thread = None
         if self._fid:
             self._fid.close()
+            self._fid = None
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         self._volts_p2p = volts_p2p
