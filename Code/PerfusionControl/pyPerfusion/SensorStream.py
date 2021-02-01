@@ -95,7 +95,8 @@ class SensorStream(Thread):
         self._hw.halt()
         self.__evt_halt.set()
         # JWK, probably need a join here to ensure data collection stops before file closed
-        self._fid_write.close()
+        if self._fid_write:
+            self._fid_write.close()
         self._fid_write = None
 
     def _get_stream_info(self):
