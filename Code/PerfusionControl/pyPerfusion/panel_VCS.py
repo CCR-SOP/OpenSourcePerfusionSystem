@@ -139,8 +139,8 @@ class PanelVCS(wx.Panel):
         state = self.btn_activate.GetLabel()
         if state == 'Activate':
             if 'pH/CO2/O2' in self._name:
-                if bool(open_chemical_valves):
-                    for key, chem in open_chemical_valves.items():
+                if bool(open_chemical_valves):  # If one or more of the chemical valves is currently open
+                    for key, chem in open_chemical_valves.items():  # Close all open chemical valves
                         chem._dio.deactivate()
                         chem.btn_activate.SetLabel('Activate')
                         chem.btn_activate.SetBackgroundColour('red')
@@ -172,7 +172,7 @@ class PanelVCS(wx.Panel):
     def OnLoadConfig(self, evt):
         section = LP_CFG.get_hwcfg_section(self._name)
         state = self.btn_open.GetLabel()
-        if state == 'Close':
+        if state == 'Close':  # If a config is loaded in on a sub panel that already has access to one of the valves, close this particular valve
             self._dio.deactivate()
             self._dio.close()
             if self._name in open_chemical_valves.keys():
