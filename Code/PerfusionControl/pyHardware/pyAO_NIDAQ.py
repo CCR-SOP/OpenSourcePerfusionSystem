@@ -41,10 +41,12 @@ class NIDAQ_AO(pyAO.AO):
 
 
     def close(self):
+        print('closing pyAO_NIDAQ')
         self.halt()
         if self.__task:
             self.__task.StopTask()
             self.__task = None
+        print('pyAO_NIDAQ closed')
 
     def __clear_and_create_task(self):
         if self.__task:
@@ -81,12 +83,8 @@ class NIDAQ_AO(pyAO.AO):
             super().set_ramp(self._volts_offset, volts, self.__max_accel)
             hz = 1.0 / (self._period_ms / 1000.0)
             written = ctypes.c_int32(0)
-            if len(self._buffer) > 0:
-                if self.__hw_clk:
-                    self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
-                self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
-                                           self._buffer, PyDAQmx.byref(written), None)
-            else:
-                self.__task.WriteAnalogScalarF64(True, self.__timeout, volts, None)
+            if self.__hw_clk:
+                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
+            self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
+                                       self._buffer, PyDAQmx.byref(written), None)
             super().set_dc(volts)
-

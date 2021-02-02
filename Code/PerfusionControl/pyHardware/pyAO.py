@@ -57,6 +57,7 @@ class AO:
                 self._output_samples()
 
     def halt(self):
+        print('halting pyAO')
         self.set_dc(0)
         sleep(0.1)
         self._event_halt.set()
@@ -66,6 +67,7 @@ class AO:
         if self._fid:
             self._fid.close()
             self._fid = None
+        print('pyAO halted')
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         self._volts_p2p = volts_p2p
@@ -96,7 +98,13 @@ class AO:
     def set_ramp(self, start_volts, stop_volts, accel):
         self._Hz = 0
         with self._lock_buf:
-            seconds = abs(start_volts - stop_volts) / accel
-            t = np.arange(0, seconds, step=(self._period_ms / 1000.0))
-            self._buffer = np.linspace(start_volts, stop_volts, num=len(t))
-            print(f'setting ramp from {start_volts} to {stop_volts} over {seconds} seconds')
+            if not start_volts == stop_volts:
+                seconds = abs(start_volts - stop_volts) / accel
+                calc_len = int(seconds/(self._period_ms / 1000.0))
+                if calc_len == 0:
+                    calc_len = 1
+                self._buffer = np.linspace(start_volts, stop_volts, num=calc_len)
+                print(f'setting ramp from {start_volts} to {stop_volts} over {seconds} seconds with {calc_len} samples')
+            else:
+                self._buffer = np.array([stop_volts])
+                print('no change, no ramp set')
