@@ -59,7 +59,7 @@ class AO:
     def halt(self):
         if self.__thread:
             self.set_dc(0)
-            sleep(0.1)
+            self.wait_for_task()
             self._event_halt.set()
             self.__thread.join(timeout=2.0)
             self.__thread = None

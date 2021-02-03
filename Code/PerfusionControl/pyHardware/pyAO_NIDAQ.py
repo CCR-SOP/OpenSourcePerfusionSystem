@@ -55,6 +55,10 @@ class NIDAQ_AO(pyAO.AO):
         else:
             print('Hardware clock not supported')
 
+    def wait_for_task(self):
+        if self.__task:
+            self.__task.WaitUntilTaskDone(10.0)
+
     def close(self):
         self.halt()
         if self.__task:
