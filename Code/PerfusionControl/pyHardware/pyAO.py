@@ -60,8 +60,9 @@ class AO:
         if self.__thread:
             self.set_dc(0)
             self.wait_for_task()
-            self._event_halt.set()
-            self.__thread.join(timeout=2.0)
+            if self.__thread.is_alive():
+                self._event_halt.set()
+                self.__thread.join(timeout=2.0)
             self.__thread = None
         if self._fid:
             self._fid.close()
