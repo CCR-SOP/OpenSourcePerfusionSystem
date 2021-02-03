@@ -57,17 +57,16 @@ class AO:
                 self._output_samples()
 
     def halt(self):
-        print('halting pyAO')
-        self.set_dc(0)
-        sleep(0.1)
-        self._event_halt.set()
         if self.__thread:
+            self.set_dc(0)
+            sleep(0.1)
+            self._event_halt.set()
             self.__thread.join(timeout=2.0)
             self.__thread = None
         if self._fid:
             self._fid.close()
             self._fid = None
-        print('pyAO halted')
+        print('halted pyAO')
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         self._volts_p2p = volts_p2p
