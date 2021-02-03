@@ -105,5 +105,5 @@ class AO:
                 self._buffer = np.linspace(start_volts, stop_volts, num=calc_len)
                 print(f'setting ramp from {start_volts} to {stop_volts} over {seconds} seconds with {calc_len} samples')
             else:
-                self._buffer = np.array([stop_volts])
+                self._buffer = np.array([stop_volts], dtype=self._data_type)
                 print('no change, no ramp set')
