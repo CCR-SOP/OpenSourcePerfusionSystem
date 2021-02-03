@@ -37,33 +37,36 @@ class NIDAQ_AO(pyAO.AO):
         self.__dev = dev
         self.__line = line
         super().open(period_ms, bits)
-        self.__task = PyDAQmx.Task()
+        self.__check_hw_clk_support()
 
+    def __check_hw_clk_support(self):
+        task = PyDAQmx.Task()
+        task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
+        try:
+            self.__hw_clk = True
+            task.CfgSampClkTiming("", 1.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 10)
+        except PyDAQmx.DAQmxFunctions.InvalidAttributeValueError:
+            self.__hw_clk = False
+
+        task.StopTask()
+        task.ClearTask()
+        if self.__hw_clk:
+            print('Hardware clock supported')
+        else:
+            print('Hardware clock not supported')
 
     def close(self):
-        print('closing pyAO_NIDAQ')
         self.halt()
         if self.__task:
             self.__task.StopTask()
             self.__task = None
-        print('pyAO_NIDAQ closed')
 
     def __clear_and_create_task(self):
         if self.__task:
             self.__task.StopTask()
             self.__task.ClearTask()
-            self.__task = PyDAQmx.Task()
-            self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
-            try:
-                self.__hw_clk = True
-                self.__task.CfgSampClkTiming("", 1.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 10)
-            except PyDAQmx.DAQmxFunctions.InvalidAttributeValueError:
-                self.__hw_clk = False
-
-            if self.__hw_clk:
-                print('Hardware clock supported')
-            else:
-                print('Hardware clock not supported')
+        self.__task = PyDAQmx.Task()
+        self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         super().set_sine(volts_p2p, volts_offset, Hz)
@@ -77,14 +80,12 @@ class NIDAQ_AO(pyAO.AO):
                                        self._buffer, PyDAQmx.byref(written), None)
 
     def set_dc(self, volts):
-        if self.__task:
-            self.__clear_and_create_task()
-
-            super().set_ramp(self._volts_offset, volts, self.__max_accel)
-            hz = 1.0 / (self._period_ms / 1000.0)
-            written = ctypes.c_int32(0)
-            if self.__hw_clk:
-                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
-            self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
-                                       self._buffer, PyDAQmx.byref(written), None)
-            super().set_dc(volts)
+        self.__clear_and_create_task()
+        super().set_ramp(self._volts_offset, volts, self.__max_accel)
+        hz = 1.0 / (self._period_ms / 1000.0)
+        written = ctypes.c_int32(0)
+        if self.__hw_clk and len(self._buffer) > 1:
+            self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
+        self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
+                                   self._buffer, PyDAQmx.byref(written), None)
+        super().set_dc(volts)
