@@ -8,8 +8,6 @@ Test app for testing how to maintain flow
 import wx
 
 from pyPerfusion.panel_VCS import TestFrame as VCSTestFrame
-
-from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_plotting import PanelPlotting
 from pyPerfusion.SensorStream import SensorStream
@@ -19,32 +17,32 @@ class PanelTestVCSSensors(wx.Panel):
     def __init__(self, parent):
         self.parent = parent
         wx.Panel.__init__(self, parent, -1)
-        self._inc = 0.1
 
-        self._ai = NIDAQ_AI(line=4, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')
-        self._ao = NIDAQ_AO()
-        self._ao.open(line=1, period_ms=100, dev='Dev1')
-        self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
-
+        self._ai_o2 = NIDAQ_AI(line=1, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev2')  # Check volts_p2p, volts_offset for these sensors
+        self._ai_co2 = NIDAQ_AI(line=2, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev2')
+        self._ai_pH = NIDAQ_AI(line=3, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev2')
+        self._sensor_o2 = SensorStream('Oxygen Sensor', 'ml/min', self._ai_o2)
+        self._sensor_co2 = SensorStream('CO2 Sensor', 'ml/min', self._ai_co2)
+        self._sensor_pH = SensorStream('pH Sensor', 'ml/min', self._ai_pH)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.label_ai = wx.StaticText(self, label=f'Using Analog Input {self._ai._devname}')
-        self.label_ao = wx.StaticText(self, label=f'Using Analog Output {self._ao._devname}')
-        self.label_output = wx.StaticText(self, label='Analog Output is xxx')
+        self.label_ai = wx.StaticText(self, label=f'Using Analog Inputs {self._ai_o2._devname}, {self._ai_co2._devname}, {self._ai_pH._devname}')
 
-        self.label_desired_output = wx.StaticText(self, label='Desired Output')
-        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=self._inc)
-        self.spin_desired_output.Digits = 3
-
-        self.label_tolerance = wx.StaticText(self, label='Tolerance (%)')
-        self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=10)
-
-        self.panel_plot = PanelPlotting(self)
-        self.panel_plot.add_sensor(self._sensor)
+        self.panel_plot_o2 = PanelPlotting(self)
+        self.panel_plot_o2.add_sensor(self._sensor_o2)
         LP_CFG.update_stream_folder()
-        self._sensor.open(LP_CFG.LP_PATH['stream'])
-        self._ao.set_dc(0)
+        self._sensor_o2.open(LP_CFG.LP_PATH['stream'])
+
+        self.panel_plot_co2 = PanelPlotting(self)
+        self.panel_plot_co2.add_sensor(self._sensor_co2)
+        LP_CFG.update_stream_folder()
+        self._sensor_co2.open(LP_CFG.LP_PATH['stream'])
+
+        self.panel_plot_pH = PanelPlotting(self)
+        self.panel_plot_pH.add_sensor(self._sensor_pH)
+        LP_CFG.update_stream_folder()
+        self._sensor_pH.open(LP_CFG.LP_PATH['stream'])
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -59,23 +57,18 @@ class PanelTestVCSSensors(wx.Panel):
         flags = wx.SizerFlags().Expand()
 
         self.sizer.Add(self.label_ai)
-        self.sizer.Add(self.label_ao)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label_desired_output, flags)
-        sizer.Add(self.spin_desired_output, flags)
         sizer.Add(self.btn_stop, flags)
         self.sizer.Add(sizer)
 
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label_tolerance, flags)
-        sizer.Add(self.spin_tolerance, flags)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.panel_plot_o2, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.AddSpacer(20)
+        sizer.Add(self.panel_plot_co2, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.AddSpacer(20)
+        sizer.Add(self.panel_plot_pH, 1, wx.ALL | wx.EXPAND, border=1)
         self.sizer.Add(sizer)
-
-        self.sizer.Add(self.label_output, flags)
-
-        self.sizer.AddSpacer(20)
-        self.sizer.Add(self.panel_plot, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(self.sizer)
         self.Layout()
