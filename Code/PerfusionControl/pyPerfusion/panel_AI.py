@@ -130,6 +130,7 @@ class PanelAI_Config(wx.Panel):
             self._sensor.hw.start()
             self.btn_open.SetLabel('Close',)
         else:
+            self._sensor.hw.stop()
             self._sensor.hw.close()
             self.btn_open.SetLabel('Open')
 
@@ -152,10 +153,14 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         ai_name = 'Analog Input'
-        sensor = SensorStream('Analog Input 1', 'Volts',
+        self.sensor = SensorStream('Analog Input 1', 'Volts',
                               NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5))
-        self.panel = PanelAI(self, sensor, name=ai_name)
+        self.panel = PanelAI(self, self.sensor, name=ai_name)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
+    def OnClose(self, evt):
+        self.sensor.stop()
+        self.Destroy()
 
 class MyTestApp(wx.App):
     def OnInit(self):
