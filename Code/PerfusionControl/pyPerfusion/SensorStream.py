@@ -9,12 +9,12 @@ import numpy as np
 DATA_VERSION = 1
 
 
-class SensorStream(Thread):
+class SensorStream():
     def __init__(self, name, unit_str, hw, valid_range=None):
-        Thread.__init__(self)
+        self.__thread = None
         self._unit_str = unit_str
         self._valid_range = valid_range
-        self._hw = hw
+        self.hw = hw
         self.__evt_halt = Event()
         self._fid_write = None
         self.data = None
@@ -25,11 +25,11 @@ class SensorStream(Thread):
         self._timestamp = None
         self._end_of_header = 0
         self._last_idx = 0
-        self.data = np.array(self._hw.buf_len, dtype=self._hw.data_type)
+        self.data = np.array(self.hw.buf_len, dtype=self.hw.data_type)
 
     @property
     def buf_len(self):
-        return self._hw.buf_len
+        return self.hw.buf_len
 
     @property
     def full_path(self):
@@ -45,8 +45,8 @@ class SensorStream(Thread):
 
     def run(self):
         # JWK, need better wait timeout
-        while not self.__evt_halt.wait(self._hw.period_sampling_ms / 1000.0 / 10.0):
-            data_buf, t = self._hw.get_data()
+        while not self.__evt_halt.wait(self.hw.period_sampling_ms / 1000.0 / 10.0):
+            data_buf, t = self.hw.get_data()
             if data_buf is not None and self._fid_write is not None:
                 buf_len = len(data_buf)
                 self._write_to_file(data_buf, t)
@@ -58,15 +58,16 @@ class SensorStream(Thread):
 
     def _open_read(self):
         _fid = open(self.full_path, 'rb')
-        data = np.memmap(_fid, dtype=self._hw.data_type, mode='r')
+        data = np.memmap(_fid, dtype=self.hw.data_type, mode='r')
         return _fid, data
 
     def _open_write(self):
         self._fid_write = open(self.full_path, 'w+b')
 
     def start(self):
-        super().start()
-        self._hw.start()
+        if self.__thread:
+            self.__thread.start()
+            self.hw.start()
 
     def open(self, full_path):
         if not isinstance(full_path, pathlib.Path):
@@ -88,13 +89,13 @@ class SensorStream(Thread):
         # self._open_read()
 
         self.print_stream_info()
-
-        self._hw.open()
+        self.__thread = Thread(target=self.run)
 
     def stop(self):
-        self._hw.halt()
+        self.hw.halt()
         self.__evt_halt.set()
-        # JWK, probably need a join here to ensure data collection stops before file closed
+        if self.__thread:
+            self.__thread.join(2.0)
         if self._fid_write:
             self._fid_write.close()
         self._fid_write = None
@@ -104,8 +105,8 @@ class SensorStream(Thread):
         header = [f'File Format: {DATA_VERSION}',
                   f'Sensor: {self._name}',
                   f'Unit: {self._unit_str}',
-                  f'Data Format: {str(np.dtype(self._hw.data_type))}',
-                  f'Sampling Period (ms): {self._hw.period_sampling_ms}',
+                  f'Data Format: {str(np.dtype(self.hw.data_type))}',
+                  f'Sampling Period (ms): {self.hw.period_sampling_ms}',
                   f'Start of Acquisition: {stamp_str}'
                   ]
         end_of_line = '\n'
@@ -124,7 +125,7 @@ class SensorStream(Thread):
         _fid, data = self._open_read()
         file_size = len(data)
         if last_ms > 0:
-            data_size = int(last_ms / self._hw.period_sampling_ms)
+            data_size = int(last_ms / self.hw.period_sampling_ms)
             if samples_needed > data_size:
                 samples_needed = data_size
             start_idx = file_size - data_size
@@ -135,8 +136,8 @@ class SensorStream(Thread):
         idx = np.linspace(start_idx, file_size-1, samples_needed, dtype=np.int)
         data = data[idx]
 
-        start_t = start_idx * self._hw.period_sampling_ms / 1000.0
-        stop_t = file_size * self._hw.period_sampling_ms / 1000.0
+        start_t = start_idx * self.hw.period_sampling_ms / 1000.0
+        stop_t = file_size * self.hw.period_sampling_ms / 1000.0
         data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.float32)
         _fid.close()
 
