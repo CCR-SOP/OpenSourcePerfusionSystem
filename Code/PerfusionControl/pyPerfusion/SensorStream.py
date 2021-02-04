@@ -67,7 +67,6 @@ class SensorStream:
     def start(self):
         if self.__thread:
             self.__thread.start()
-            self.hw.start()
 
     def open(self, full_path):
         if not isinstance(full_path, pathlib.Path):
@@ -92,7 +91,6 @@ class SensorStream:
         self.__thread = Thread(target=self.run)
 
     def stop(self):
-        self.hw.halt()
         self.__evt_halt.set()
         if self.__thread:
             self.__thread.join(2.0)
