@@ -56,7 +56,7 @@ class AI:
         return len(self._buffer)
 
     def open(self):
-        if self.__thread:
+        if self.__thread and self.__thread.is_alive():
             self.halt()
             self.__thread.join(timeout=2.0)
         self.__thread = Thread(target=self.run)
