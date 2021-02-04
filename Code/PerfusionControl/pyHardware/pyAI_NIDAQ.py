@@ -18,10 +18,10 @@ import pyHardware.pyAI as pyAI
 
 
 class NIDAQ_AI(pyAI.AI):
-    def __init__(self, line, period_ms, volts_p2p, volts_offset, dev=None):
+    def __init__(self, period_ms, volts_p2p, volts_offset):
         super().__init__(period_ms, buf_type=np.float64)
-        self.__dev = dev
-        self._line = line
+        self._dev = None
+        self._line = None
         self.__timeout = 1.0
         self.__task = None
         self._volts_p2p = volts_p2p
@@ -29,7 +29,7 @@ class NIDAQ_AI(pyAI.AI):
 
     @property
     def _devname(self):
-        return f"/{self.__dev}/ai{self._line}"
+        return f"/{self._dev}/ai{self._line}"
 
     def _convert_to_units(self):
         return self.data_type(self._buffer)
@@ -41,8 +41,10 @@ class NIDAQ_AI(pyAI.AI):
                                   self.samples_per_read, PyDAQmx.byref(samples_read), None)
         self._buffer_t = time.perf_counter()
 
-    def open(self):
+    def open(self, dev, line):
         super().open()
+        self._dev = dev
+        self._line = line
         try:
             if self.__task:
                 self.close()
@@ -64,4 +66,3 @@ class NIDAQ_AI(pyAI.AI):
         if self.__task:
             self.__task.StopTask()
             self.__task = None
-        super().close()
