@@ -35,6 +35,9 @@ class PanelAI(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
+        self._panel_plot.add_sensor(self._sensor)
+        self._sensor.start()
+
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
 
@@ -51,16 +54,12 @@ class PanelAI(wx.Panel):
     def __set_bindings(self):
         pass
 
-    def update_plot(self, sensor):
-        self._panel_plot.remove_sensor(sensor)
-        self._panel_plot.add_sensor(sensor)
 
 class PanelAI_Config(wx.Panel):
-    def __init__(self, parent, aio, name, sizer_name, plot):
+    def __init__(self, parent, sensor, name, sizer_name, plot):
         self.parent = parent
-        self._ai = aio
+        self._sensor = sensor
         self._name = name
-        self._sensor = None
         wx.Panel.__init__(self, parent, -1)
         self._update_plot = plot
 
@@ -81,6 +80,8 @@ class PanelAI_Config(wx.Panel):
 
         self.__do_layout()
         self.__set_bindings()
+
+        self._sensor.open(LP_CFG.LP_PATH['stream'])
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Left().Proportion(0)
@@ -125,18 +126,11 @@ class PanelAI_Config(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
-
-            if self._sensor:
-                self._sensor.stop()
-            self._sensor = SensorStream('Analog Input 1', 'Volts',
-                                        NIDAQ_AI(line=line, period_ms=1, volts_p2p=5, volts_offset=2.5,
-                                                 dev=dev))
-            self._sensor.open(LP_CFG.LP_PATH['stream'])
-            self._sensor.start()
-            self._update_plot.update_sensor(self._sensor)
+            self._sensor.hw.open(dev=dev, line=line)
+            self._sensor.hw.start()
             self.btn_open.SetLabel('Close',)
         else:
-            self._sensor.stop()
+            self._sensor.hw.close()
             self.btn_open.SetLabel('Open')
 
     def OnSaveCfg(self, evt):
@@ -158,7 +152,9 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         ai_name = 'Analog Input'
-        self.panel = PanelAI(self, None, name=ai_name)
+        sensor = SensorStream('Analog Input 1', 'Volts',
+                              NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5))
+        self.panel = PanelAI(self, sensor, name=ai_name)
 
 
 class MyTestApp(wx.App):
