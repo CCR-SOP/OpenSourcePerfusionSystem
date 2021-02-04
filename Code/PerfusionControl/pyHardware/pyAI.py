@@ -58,14 +58,20 @@ class AI:
     def open(self):
         if self.__thread and self.__thread.is_alive():
             self.halt()
-            self.__thread.join(timeout=2.0)
-        self.__thread = Thread(target=self.run)
 
     def start(self):
+        self._event_halt.clear()
         self.__epoch = perf_counter()
         if self.__thread:
-            print('starting thread')
-            self.__thread.start()
+            self.halt()
+        self.__thread = Thread(target=self.run)
+        self.__thread.start()
+
+    def halt(self):
+        if self.__thread and self.__thread.is_alive():
+            self._event_halt.set()
+            self.__thread.join(2.0)
+            self.__thread = None
 
     def run(self):
         while not self._event_halt.wait(self._read_period_ms / 1000.0):
@@ -74,9 +80,6 @@ class AI:
                 data = self._convert_to_units()
 
                 self.__queue_buffer.put((data, self.buffer_t))
-
-    def halt(self):
-        self._event_halt.set()
 
     def get_data(self):
         buf = None
