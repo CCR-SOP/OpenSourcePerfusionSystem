@@ -79,6 +79,14 @@ class PHDserial(USBSerial):
         print('Infusion volume reset to :')
         self.get_infused_volume()
 
+    def set_target_volume(self, volume, volume_units):
+        self.set_param('tvolume', f'{volume} {volume_units}\r')
+        print('Target volume set to %s' % volume + ' ' + volume_units)
+
+    def reset_target_volume(self):
+        self.send('ctvolume\r')
+        print('Target volume cleared')
+
     def get_syringe_info(self):
         self.send('syrm\r')
         print(self._response)
