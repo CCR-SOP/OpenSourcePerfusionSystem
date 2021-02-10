@@ -10,11 +10,12 @@ DATA_VERSION = 1
 
 
 class SensorStream:
-    def __init__(self, name, unit_str, hw, valid_range=None):
+    def __init__(self, name, unit_str, hw, ch_id, valid_range=None):
         self.__thread = None
         self._unit_str = unit_str
         self._valid_range = valid_range
         self.hw = hw
+        self._ch_id = ch_id
         self.__evt_halt = Event()
         self._fid_write = None
         self.data = None
@@ -46,7 +47,7 @@ class SensorStream:
     def run(self):
         # JWK, need better wait timeout
         while not self.__evt_halt.wait(self.hw.period_sampling_ms / 1000.0 / 10.0):
-            data_buf, t = self.hw.get_data()
+            data_buf, t = self.hw.get_data(self._ch_id)
             if data_buf is not None and self._fid_write is not None:
                 buf_len = len(data_buf)
                 self._write_to_file(data_buf, t)
@@ -62,6 +63,7 @@ class SensorStream:
         return _fid, data
 
     def _open_write(self):
+        print(f'opening {self.full_path}')
         self._fid_write = open(self.full_path, 'w+b')
 
     def start(self):
@@ -70,7 +72,7 @@ class SensorStream:
 
     def open(self, full_path):
         if not isinstance(full_path, pathlib.Path):
-            full_path = pathlib.Path(project_path)
+            full_path = pathlib.Path(full_path)
         self._full_path = full_path
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
