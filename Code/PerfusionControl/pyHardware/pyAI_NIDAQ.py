@@ -19,7 +19,7 @@ import pyHardware.pyAI as pyAI
 
 class NIDAQ_AI(pyAI.AI):
     def __init__(self, period_ms, volts_p2p, volts_offset):
-        super().__init__(period_ms, buf_type=np.float64)
+        super().__init__(period_ms, buf_type=np.float32)
         self._dev = None
         self._line = None
         self.__timeout = 1.0
@@ -39,12 +39,12 @@ class NIDAQ_AI(pyAI.AI):
         samples_read = PyDAQmx.int32()
         buffer_t = time.perf_counter()
         ch_ids = self._queue_buffer.keys()
-        buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=self.buf_type)
+        buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=np.float64)
         self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
                                   len(buffer), PyDAQmx.byref(samples_read), None)
         offset = 0
         for ch in ch_ids:
-            buf = buffer[offset::len(ch_ids)]
+            buf = self.data_type(buffer[offset::len(ch_ids)])
             self._queue_buffer[ch].put((buf, buffer_t))
             offset += 1
 
