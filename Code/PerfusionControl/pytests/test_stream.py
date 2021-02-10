@@ -7,11 +7,11 @@ from pyPerfusion.SensorStream import SensorStream
 dev = 'Dev2'
 acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 
-sensor0 = SensorStream('test0', 'ml/min', acq, '0')
-sensor1 = SensorStream('test1', 'ml/min', acq, '1')
+sensor0 = SensorStream('test0', 'ml/min', acq)
+sensor1 = SensorStream('test1', 'ml/min', acq)
 
-sensor0.open(Path('./__data__/test'))
-sensor1.open(Path('./__data__/test'))
+sensor0.open('0', Path('./__data__/test'))
+sensor1.open('1', Path('./__data__/test'))
 acq.add_channel('0')
 acq.add_channel('1')
 acq.open(dev)

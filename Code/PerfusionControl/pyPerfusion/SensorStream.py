@@ -10,12 +10,12 @@ DATA_VERSION = 1
 
 
 class SensorStream:
-    def __init__(self, name, unit_str, hw, ch_id, valid_range=None):
+    def __init__(self, name, unit_str, hw, valid_range=None):
         self.__thread = None
         self._unit_str = unit_str
         self._valid_range = valid_range
         self.hw = hw
-        self._ch_id = ch_id
+        self._ch_id = None
         self.__evt_halt = Event()
         self._fid_write = None
         self.data = None
@@ -70,7 +70,8 @@ class SensorStream:
         if self.__thread:
             self.__thread.start()
 
-    def open(self, full_path):
+    def open(self, ch_id, full_path):
+        self._ch_id = ch_id
         if not isinstance(full_path, pathlib.Path):
             full_path = pathlib.Path(full_path)
         self._full_path = full_path
