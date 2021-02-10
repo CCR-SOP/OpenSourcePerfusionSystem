@@ -25,15 +25,15 @@ class AI:
     """
 
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, demo_amp=70, demo_offset=10, read_period_ms=500):
+        self.__thread = None
+        self._event_halt = Event()
+        self.__lock_buf = Lock()
         self._period_sampling_ms = period_sample_ms
         self._demo_amp = demo_amp
         self._demo_offset = demo_offset
-        self.__queue_buffer = Queue(maxsize=100)
-        self.__thread = None
 
-        self.buffer_t = 0
-        self._event_halt = Event()
-        self.__lock_buf = Lock()
+        self.__queue_buffer = {}
+
         self.__epoch = 0
         self._time = 0
 
@@ -41,7 +41,6 @@ class AI:
         self.data_type = data_type
         self.buf_type = buf_type
         self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
-        self._buffer = np.zeros(self.samples_per_read, dtype=self.buf_type)
 
     @property
     def period_sampling_ms(self):
@@ -53,21 +52,34 @@ class AI:
 
     @property
     def buf_len(self):
-        return len(self._buffer)
+        return self.samples_per_read
+
+    def add_channel(self, channel_id):
+        if channel_id in self.__queue_buffer.keys():
+            print(f'{channel_id} already open')
+        else:
+            self.__queue_buffer[channel_id] = Queue(maxsize=100)
+
+    def remove_channel(self, channel_id):
+        if channel_id in self.__queue_buffer.keys():
+            del self.__queue_buffer[channel_id]
+            print(f'removing channel {channel_id}')
 
     def open(self):
-        if self.__thread and self.__thread.is_alive():
-            self.halt()
+        pass
+
+    def close(self):
+        self.stop()
+        self.__queue_buffer.clear()
 
     def start(self):
+        self.stop()
         self._event_halt.clear()
         self.__epoch = perf_counter()
-        if self.__thread:
-            self.halt()
         self.__thread = Thread(target=self.run)
         self.__thread.start()
 
-    def halt(self):
+    def stop(self):
         if self.__thread and self.__thread.is_alive():
             self._event_halt.set()
             self.__thread.join(2.0)
@@ -77,25 +89,21 @@ class AI:
         while not self._event_halt.wait(self._read_period_ms / 1000.0):
             with self.__lock_buf:
                 self._acq_samples()
-                data = self._convert_to_units()
 
-                self.__queue_buffer.put((data, self.buffer_t))
-
-    def get_data(self):
+    def get_data(self, ch_id):
         buf = None
         t = None
         if self.__thread and self.__thread.is_alive():
-            if not self.__queue_buffer.empty():
-                buf, t = self.__queue_buffer.get(timeout=1.0)
+            if ch_id in self.__queue_buffer.keys():
+                buf, t = self.__queue_buffer[ch_id].get(timeout=1.0)
         return buf, t
 
-    def _convert_to_units(self):
-        return self._buffer * 1.0 + 0.0
-
     def _acq_samples(self):
-
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         sleep(sleep_time)
-        self.buffer_t = perf_counter()
-        val = self.data_type(np.random.random_sample() * self._demo_amp + self._demo_offset)
-        self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
+        buffer_t = perf_counter()
+        for ch in self.__queue_buffer.keys():
+            val = self.data_type(np.random.random_sample() * self._demo_amp + self._demo_offset)
+            buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
+            print(f'putting {len(buffer)} samples in channel {ch}')
+            self.__queue_buffer[ch].put((buffer, buffer_t))
