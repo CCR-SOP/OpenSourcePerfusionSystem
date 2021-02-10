@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-@author: John Kakareka
+@author: Allen Luna
 Test app for initiating syringe injections based on pressure/flow conditions
 """
 import wx
 
-from pyHardware.pyAO_NIDAQ import NIDAQ_AO
+from pyPerfusion.panel_Syringe import PanelSyringe
+from pyHardware.PHDserial import PHDserial
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_plotting import PanelPlotting
 from pyPerfusion.SensorStream import SensorStream
@@ -17,13 +18,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
         self._inc = 0.1
 
-        self._ai = NIDAQ_AI(line=0, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')  # HA Pressure
-        # self._ai = NIDAQ_AI(line=1, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')  # PV Pressure
-        # self._ai = NIDAQ_AI(line=2, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')  # IVC Pressure
-        # self._ai = NIDAQ_AI(line=3, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')  # HA Flow
-        # self._ai = NIDAQ_AI(line=4, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')  # PV Flow
-        self._ao = NIDAQ_AO()
-        self._ao.open(line=1, period_ms=100, dev='Dev1')
+        self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
 
 
@@ -119,10 +114,16 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.ao = NIDAQ_AO()
-        ao_name = 'Analog Output'
-        self.panel = PanelTestVasoactiveSyringe(self)
-
+        vasoactive_syringes = {'Phenylephrine (HA)': PHDserial(),
+                               'Epoprostenol (HA)': PHDserial()
+                               }
+        sizer = wx.GridSizer(cols=3)
+        for key, syringe in vasoactive_syringes.items():
+            sizer.Add(PanelSyringe(self, syringe, name=key), 1, wx.EXPAND, border=2)
+        sizer.Add(PanelTestVasoactiveSyringe(self))
+        self.SetSizer(sizer)
+        self.Fit()
+        self.Layout()
 
 class MyTestApp(wx.App):
     def OnInit(self):
