@@ -6,6 +6,7 @@
 Panel class for testing and configuring Elite 11 Syringe Pump
 """
 import wx
+import time
 from serial import SerialException
 from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -56,6 +57,11 @@ class PanelSyringe(wx.Panel):
 
         self.btn_infuse = wx.Button(self, label='Infuse')
         self.btn_stop = wx.Button(self, label='Stop')
+
+        self.label_volume_infuse = wx.StaticText(self, label='Volume Infusion (ml)')
+        self.spin_volume_infuse = wx.SpinCtrl(self, min=0, max=10)
+        self.spin_volume_infuse.SetValue(1)
+        self.btn_volume_infuse = wx.Button(self, label='Initiate Set Volume Infusion')
 
         self.btn_save = wx.Button(self, label='Save Config')
         self.btn_load = wx.Button(self, label='Load Config')
@@ -123,6 +129,13 @@ class PanelSyringe(wx.Panel):
         self.sizer.AddSpacer(5)
         self.sizer.Add(sizer, flags)
 
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_volume_infuse, flags)
+        sizer.Add(self.spin_volume_infuse, flags)
+        sizer.Add(self.btn_volume_infuse, flags)
+        self.sizer.AddSpacer(5)
+        self.sizer.Add(sizer, flags)
+
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
         self.SetSizer(sizer)
@@ -139,6 +152,7 @@ class PanelSyringe(wx.Panel):
         self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
         self.btn_save.Bind(wx.EVT_BUTTON, self.OnSaveConfig)
         self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
+        self.btn_volume_infuse.Bind(wx.EVT_BUTTON, self.OnSetInfusion)
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
@@ -209,6 +223,18 @@ class PanelSyringe(wx.Panel):
 
     def OnStop(self, evt):
         self._syringe.stop()
+
+    def OnSetInfusion(self, evt):
+        self._syringe.reset_infusion_volume()
+        self._syringe.reset_target_volume()
+        target_volume = self.spin_volume_infuse.GetValue()
+        self._syringe.set_target_volume(target_volume, 'ml')
+        infusion_rate = int(self._syringe.get_infusion_rate().split(' ')[0])
+        wait_time = ((target_volume/infusion_rate) * 60) + 0.5
+        self._syringe.infuse()
+        time.sleep(wait_time)
+        self._syringe.reset_infusion_volume()
+        self._syringe.reset_target_volume()
 
     def OnDLInfo(self, evt):
         self._syringe.update_syringe_manufacturers()
