@@ -71,21 +71,21 @@ class PHDserial(USBSerial):
 
     def set_infusion_rate(self, rate, unit_str):  # can be changed mid-run
         self.set_param('irate', f'{rate} {unit_str}\r')
-        print('Infusion rate set to :')
+        # print('Infusion rate set to :')
         self.get_infusion_rate()
 
     def reset_infusion_volume(self):
         self.send('civolume\r')
-        print('Infusion volume reset to :')
-        self.get_infused_volume()
+        # print('Infusion volume reset to :')
+        # self.get_infused_volume()
 
     def set_target_volume(self, volume, volume_units):
         self.set_param('tvolume', f'{volume} {volume_units}\r')
-        print('Target volume set to %s' % volume + ' ' + volume_units)
+        # print('Target volume set to %s' % volume + ' ' + volume_units)
 
     def reset_target_volume(self):
         self.send('ctvolume\r')
-        print('Target volume cleared')
+        # print('Target volume cleared')
 
     def get_syringe_info(self):
         self.send('syrm\r')
@@ -93,11 +93,13 @@ class PHDserial(USBSerial):
 
     def get_infusion_rate(self):
         self.send('irate\r')
-        print(self._response)
+        # print(self._response)
+        return self._response
 
     def get_infused_volume(self):
         self.send('ivolume\r')
         print(self._response)
+        return self._response
 
     def update_syringe_manufacturers(self):
         self.send('syrmanu ?\r')
