@@ -29,26 +29,33 @@ class NIDAQ_AI(pyAI.AI):
 
     @property
     def _devname(self):
-        return f"/{self._dev}/ai{self._line}"
-
-    def _convert_to_units(self):
-        return self.data_type(self._buffer)
+        lines = self._queue_buffer.keys()
+        devstr = ','.join([f'{self._dev}/ai{line}' for line in lines])
+        print(devstr)
+        return devstr
 
     def _acq_samples(self):
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         samples_read = PyDAQmx.int32()
-        self.__task.ReadAnalogF64(self.samples_per_read, sleep_time, DAQmx_Val_GroupByChannel, self._buffer,
-                                  self.samples_per_read, PyDAQmx.byref(samples_read), None)
-        self._buffer_t = time.perf_counter()
+        buffer_t = time.perf_counter()
+        ch_ids = self._queue_buffer.keys()
+        buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=self.buf_type)
+        self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
+                                  len(buffer), PyDAQmx.byref(samples_read), None)
+        offset = 0
+        for ch in ch_ids:
+            buf = buffer[offset::len(ch_ids)]
+            self._queue_buffer[ch].put((buf, buffer_t))
+            offset += 1
 
-    def open(self, dev, line):
+    def open(self, dev):
         super().open()
         self._dev = dev
-        self._line = line
         try:
             if self.__task:
                 self.close()
 
+            print('Creating task')
             self.__task = Task()
             volt_min = self._volts_offset - 0.5 * self._volts_p2p
             volt_max = self._volts_offset + 0.5 * self._volts_p2p
@@ -62,7 +69,7 @@ class NIDAQ_AI(pyAI.AI):
             self.__task = None
 
     def close(self):
-        self.halt()
+        self.stop()
         if self.__task:
             self.__task.StopTask()
             self.__task = None
@@ -73,7 +80,6 @@ class NIDAQ_AI(pyAI.AI):
         super().start()
 
     def stop(self):
-        self.halt()
+        super().stop()
         if self.__task:
             self.__task.StopTask()
-            self.__task = None

@@ -32,7 +32,7 @@ class AI:
         self._demo_amp = demo_amp
         self._demo_offset = demo_offset
 
-        self.__queue_buffer = {}
+        self._queue_buffer = {}
 
         self.__epoch = 0
         self._time = 0
@@ -55,14 +55,14 @@ class AI:
         return self.samples_per_read
 
     def add_channel(self, channel_id):
-        if channel_id in self.__queue_buffer.keys():
+        if channel_id in self._queue_buffer.keys():
             print(f'{channel_id} already open')
         else:
-            self.__queue_buffer[channel_id] = Queue(maxsize=100)
+            self._queue_buffer[channel_id] = Queue(maxsize=100)
 
     def remove_channel(self, channel_id):
-        if channel_id in self.__queue_buffer.keys():
-            del self.__queue_buffer[channel_id]
+        if channel_id in self._queue_buffer.keys():
+            del self._queue_buffer[channel_id]
             print(f'removing channel {channel_id}')
 
     def open(self):
@@ -70,7 +70,7 @@ class AI:
 
     def close(self):
         self.stop()
-        self.__queue_buffer.clear()
+        self._queue_buffer.clear()
 
     def start(self):
         self.stop()
@@ -94,16 +94,16 @@ class AI:
         buf = None
         t = None
         if self.__thread and self.__thread.is_alive():
-            if ch_id in self.__queue_buffer.keys():
-                buf, t = self.__queue_buffer[ch_id].get(timeout=1.0)
+            if ch_id in self._queue_buffer.keys():
+                buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
         return buf, t
 
     def _acq_samples(self):
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         sleep(sleep_time)
         buffer_t = perf_counter()
-        for ch in self.__queue_buffer.keys():
+        for ch in self._queue_buffer.keys():
             val = self.data_type(np.random.random_sample() * self._demo_amp + self._demo_offset)
             buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
             print(f'putting {len(buffer)} samples in channel {ch}')
-            self.__queue_buffer[ch].put((buffer, buffer_t))
+            self._queue_buffer[ch].put((buffer, buffer_t))
