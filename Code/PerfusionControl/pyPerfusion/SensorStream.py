@@ -70,8 +70,10 @@ class SensorStream:
         if self.__thread:
             self.__thread.start()
 
-    def open(self, ch_id, full_path):
+    def set_ch_id(self, ch_id):
         self._ch_id = ch_id
+
+    def open(self, full_path):
         if not isinstance(full_path, pathlib.Path):
             full_path = pathlib.Path(full_path)
         self._full_path = full_path

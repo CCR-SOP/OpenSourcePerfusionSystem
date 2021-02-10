@@ -1,6 +1,6 @@
 from threading import Thread, Lock, Event
 from time import perf_counter, sleep
-from queue import Queue
+from queue import Queue, Empty
 import numpy as np
 
 
@@ -95,7 +95,10 @@ class AI:
         t = None
         if self.__thread and self.__thread.is_alive():
             if ch_id in self._queue_buffer.keys():
-                buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
+                try:
+                    buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
+                except Empty:
+                    pass
         return buf, t
 
     def _acq_samples(self):
