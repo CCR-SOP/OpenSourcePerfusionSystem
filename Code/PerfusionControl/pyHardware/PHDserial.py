@@ -66,13 +66,13 @@ class PHDserial(USBSerial):
 
     def set_syringe_manufacturer_size(self, manu_code, syringe_size):
         self.set_param('syrm', f'{manu_code} {syringe_size}')
-        print('New Syringe Information:')
-        self.get_syringe_info()
+       # print('New Syringe Information:')
+       # self.get_syringe_info()
 
     def set_infusion_rate(self, rate, unit_str):  # can be changed mid-run
         self.set_param('irate', f'{rate} {unit_str}\r')
         # print('Infusion rate set to :')
-        self.get_infusion_rate()
+       # self.get_infusion_rate()
 
     def reset_infusion_volume(self):
         self.send('civolume\r')
