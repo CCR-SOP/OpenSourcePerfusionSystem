@@ -44,9 +44,10 @@ class NIDAQ_AI(pyAI.AI):
                                   len(buffer), PyDAQmx.byref(samples_read), None)
         offset = 0
         for ch in ch_ids:
-            buf = self.data_type(buffer[offset::len(ch_ids)])
+            # buf = self.data_type(buffer[offset::len(ch_ids)])
+            buf = self.data_type(buffer[offset:offset+self.samples_per_read])
             self._queue_buffer[ch].put((buf, buffer_t))
-            offset += 1
+            offset += self.samples_per_read
 
     def open(self, dev):
         super().open()
