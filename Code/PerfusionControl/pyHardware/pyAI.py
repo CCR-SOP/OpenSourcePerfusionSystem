@@ -99,7 +99,7 @@ class AI:
         for i in range(len(self._buffer)):
             data[i] = (((self._buffer[i] - self._low_read) * (self._high_pt - self._low_pt))
                        / (self._high_read - self._low_read)) + self._low_pt
-            print(f'Convert {self._buffer[i]} to {data[i]}')
+          #  print(f'Convert {self._buffer[i]} to {data[i]}')
         return data
 
     def _acq_samples(self):
