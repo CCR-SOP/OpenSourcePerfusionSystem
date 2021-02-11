@@ -9,14 +9,10 @@ import wx
 import time
 from pathlib import Path
 
-from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.panel_AI import PanelAI
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
-
-sensors = [
-          SensorStream('Analog Input 1', 'Volts', NIDAQ_AI(0, 10, volts_p2p=5, volts_offset=2.5, dev='Dev3'))
-         ]
 
 
 class TestFrame(wx.Frame):
@@ -26,21 +22,23 @@ class TestFrame(wx.Frame):
         sizer = wx.GridSizer(cols=2)
         LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
-        for sensor in sensors:
-            panel = PanelPlotting(self)
-            panel.add_sensor(sensor)
-
-            sensor.open(LP_CFG.LP_PATH['stream'])
+        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
+        self.sensors = [
+            SensorStream('Analog Input 1', 'Volts', self.acq),
+            SensorStream('Analog Input 2', 'Volts', self.acq),
+            SensorStream('Analog Input 3', 'Volts', self.acq)
+        ]
+        for sensor in self.sensors:
+            panel = PanelAI(self, sensor, name=sensor.name)
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-        for sensor in sensors:
-            sensor.start()
+
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for sensor in sensors:
+        for sensor in self.sensors:
             sensor.stop()
         self.Destroy()
 
