@@ -83,6 +83,10 @@ class PHDserial(USBSerial):
         self.set_param('tvolume', f'{volume} {volume_units}\r')
         # print('Target volume set to %s' % volume + ' ' + volume_units)
 
+    def get_target_volume(self):
+        self.send('tvolume\r')
+        print(self._response)
+
     def reset_target_volume(self):
         self.send('ctvolume\r')
         # print('Target volume cleared')
