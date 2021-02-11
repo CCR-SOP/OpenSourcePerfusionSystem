@@ -65,7 +65,7 @@ class PHDserial(USBSerial):
         self.send(f'{param} {value}')
 
     def set_syringe_manufacturer_size(self, manu_code, syringe_size):
-        self.set_param('syrm', f'{manu_code} {syringe_size}')
+        self.set_param('syrm', f'{manu_code} {syringe_size}\r')
        # print('New Syringe Information:')
        # self.get_syringe_info()
 
@@ -93,7 +93,7 @@ class PHDserial(USBSerial):
 
     def get_infusion_rate(self):
         self.send('irate\r')
-        # print(self._response)
+        print(self._response)
         return self._response
 
     def get_infused_volume(self):
