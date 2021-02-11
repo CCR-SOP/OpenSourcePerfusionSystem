@@ -24,17 +24,17 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         self._syringe_vasodilator = PHDserial()
         self._syringe_vasodilator.open('COM11', 9600)
-        self._syringe_vasodilator.set_syringe_manufacturer_size('bdp', '60 ml')
-        self._syringe_vasodilator.set_infusion_rate(30, 'ml')
         self._syringe_vasodilator.reset_infusion_volume()
         self._syringe_vasodilator.reset_target_volume()
+        self._syringe_vasodilator.set_syringe_manufacturer_size('bdp', '60 ml')
+        self._syringe_vasodilator.set_infusion_rate(30, 'ml/min')
 
         self._syringe_vasoconstrictor = PHDserial()
         self._syringe_vasoconstrictor.open('COM4', 9600)
-        self._syringe_vasoconstrictor.set_syringe_manufacturer_size('bdp', '60 ml')
-        self._syringe_vasoconstrictor.set_infusion_rate(30, 'ml')
         self._syringe_vasoconstrictor.reset_infusion_volume()
         self._syringe_vasoconstrictor.reset_target_volume()
+        self._syringe_vasoconstrictor.set_syringe_manufacturer_size('bdp', '60 ml')
+        self._syringe_vasoconstrictor.set_infusion_rate(30, 'ml/min')
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
@@ -52,6 +52,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.btn_reset_cal = wx.Button(self, label='Reset Cal')
         self.btn_save_settings = wx.Button(self, label='Save Settings')
         self.btn_load_settings = wx.Button(self, label='Load Settings')
+        self.btn_start_calibration = wx.ToggleButton(self, label='Start Calibration')
 
         self.label_min_flow = wx.StaticText(self, label='Minimum Flow: ')
         self.spin_min_flow = wx.SpinCtrlDouble(self, min=0, max=400, initial=0.0, inc=self._inc)
@@ -101,6 +102,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         sizer.Add(self.label_cal_pt2_val, flags)
         sizer.Add(self.btn_calibrate, flags)
         sizer.Add(self.btn_reset_cal, flags)
+        sizer.Add(self.btn_start_calibration)
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
 
@@ -136,16 +138,28 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.btn_cal_pt1.Bind(wx.EVT_BUTTON, self.OnCalPt1)
         self.btn_cal_pt2.Bind(wx.EVT_BUTTON, self.OnCalPt2)
         self.btn_calibrate.Bind(wx.EVT_BUTTON, self.OnCalibrate)
+        self.btn_start_calibration.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartCalibration)
         self.btn_reset_cal.Bind(wx.EVT_BUTTON, self.OnResetCalibration)
+
+    def OnStartCalibration(self, evt):
+        state = self.btn_start_calibration.GetLabel()
+        if state == 'Start Calibration':
+            self._sensor.hw.open(dev='Dev1', line=1)  # HA Pressure Sensor
+            self._sensor.hw.start()
+            self.btn_start_calibration.SetLabel('Stop Calibration')
+        else:
+            self._sensor.hw.stop()
+            self._sensor.hw.close()
+            self.btn_start_calibration.SetLabel('Start Calibration')
 
     def OnStartStop(self, evt):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
-            self._sensor.hw.open(dev='Dev1', line=0)  # HA Pressure Sensor
+            self._sensor.hw.open(dev='Dev1', line=1)  # HA Pressure Sensor
             self._sensor.hw.start()
             self.btn_stop.SetLabel('Stop')
-            self.check_for_injection()
-            self.timer_injection.Start(1000000, wx.TIMER_CONTINUOUS)
+          #  self.check_for_injection()
+            self.timer_injection.Start(10000, wx.TIMER_CONTINUOUS)
         else:
             self._sensor.hw.stop()
             self._sensor.hw.close()
@@ -198,21 +212,21 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.check_for_injection()
 
     def check_for_injection(self):
-        pressure = self._sensor.get_current()
+        pressure = int(self._sensor.get_current())
         print(pressure)
-        min_pressure = self.spin_min_flow.GetValue()
-        max_pressure = self.spin_max_flow.GetValue()
-        tol = self.spin_tolerance.GetValue()
+        min_pressure = int(self.spin_min_flow.GetValue())
+        max_pressure = int(self.spin_max_flow.GetValue())
+        tol = int(self.spin_tolerance.GetValue())
         if pressure > (max_pressure + tol):
             print(f'Pressure is {pressure:.3f} , which is too high')
             pressure_diff = pressure - (max_pressure + tol)
-            injection_volume = pressure_diff / 5
+            injection_volume = pressure_diff / 3
             self._syringe_vasoconstrictor.set_target_volume(injection_volume, 'ml')
             self._syringe_vasoconstrictor.infuse()
         elif pressure < (min_pressure - tol):
             print(f'Pressure is {pressure:.3f} , which is too low')
             pressure_diff = (min_pressure - tol) - pressure
-            injection_volume = pressure_diff / 5
+            injection_volume = pressure_diff / 3
             self._syringe_vasodilator.set_target_volume(injection_volume, 'ml')
             self._syringe_vasodilator.infuse()
 
