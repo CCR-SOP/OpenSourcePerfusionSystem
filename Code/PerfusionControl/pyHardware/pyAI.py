@@ -54,16 +54,28 @@ class AI:
     def buf_len(self):
         return self.samples_per_read
 
+    def active_channels(self):
+        return len(self._queue_buffer) > 0
+
+    def get_ids(self):
+        return sorted(self._queue_buffer.keys())
+
     def add_channel(self, channel_id):
         if channel_id in self._queue_buffer.keys():
             print(f'{channel_id} already open')
         else:
+            self.close()
             self._queue_buffer[channel_id] = Queue(maxsize=100)
+            self.reopen()
+            self.start()
 
     def remove_channel(self, channel_id):
         if channel_id in self._queue_buffer.keys():
+            self.close()
             del self._queue_buffer[channel_id]
             print(f'removing channel {channel_id}')
+            self.reopen()
+            self.start()
 
     def open(self):
         pass

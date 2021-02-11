@@ -29,19 +29,22 @@ class NIDAQ_AI(pyAI.AI):
 
     @property
     def _devname(self):
-        lines = self._queue_buffer.keys()
+        lines = self.get_ids()
         devstr = ','.join([f'{self._dev}/ai{line}' for line in lines])
-        print(devstr)
         return devstr
 
     def _acq_samples(self):
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         samples_read = PyDAQmx.int32()
         buffer_t = time.perf_counter()
-        ch_ids = self._queue_buffer.keys()
+        ch_ids = self.get_ids()
         buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=np.float64)
-        self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
-                                  len(buffer), PyDAQmx.byref(samples_read), None)
+        try:
+            if self.__task:
+                self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
+                                          len(buffer), PyDAQmx.byref(samples_read), None)
+        except PyDAQmx.ReadBufferTooSmallError:
+            pass
         offset = 0
         for ch in ch_ids:
             # buf = self.data_type(buffer[offset::len(ch_ids)])
@@ -52,18 +55,21 @@ class NIDAQ_AI(pyAI.AI):
     def open(self, dev):
         super().open()
         self._dev = dev
+        self.reopen()
+
+    def reopen(self):
         try:
             if self.__task:
                 self.close()
 
-            print('Creating task')
-            self.__task = Task()
-            volt_min = self._volts_offset - 0.5 * self._volts_p2p
-            volt_max = self._volts_offset + 0.5 * self._volts_p2p
-            self.__task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
-            hz = 1.0 / (self._period_sampling_ms / 1000.0)
-            self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
-                                         self.samples_per_read)
+            if self._dev:
+                self.__task = Task()
+                volt_min = self._volts_offset - 0.5 * self._volts_p2p
+                volt_max = self._volts_offset + 0.5 * self._volts_p2p
+                self.__task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
+                hz = 1.0 / (self._period_sampling_ms / 1000.0)
+                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
+                                             self.samples_per_read)
         except PyDAQmx.DAQError as e:
             print("Could not create AO Channel for {}".format(self._devname))
             print(f"{e}")
@@ -84,3 +90,4 @@ class NIDAQ_AI(pyAI.AI):
         super().stop()
         if self.__task:
             self.__task.StopTask()
+            self.__task.WaitUntilTaskDone(2.0)

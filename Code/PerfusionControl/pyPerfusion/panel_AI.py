@@ -125,17 +125,13 @@ class PanelAI_Config(wx.Panel):
         dev = self.choice_dev.GetStringSelection()
         line = self.choice_line.GetStringSelection()
         if state:
-
-            print(f'dev is {dev}, line is {line}')
             self._sensor.hw.add_channel(line)
+            self._sensor.set_ch_id(line)
+            self.btn_open.SetLabel('Close')
             self._sensor.hw.open(dev=dev)
             self._sensor.hw.start()
-            self._sensor.set_ch_id(line)
-            self.btn_open.SetLabel('Close',)
         else:
-            self._sensor.hw.stop()
             self._sensor.hw.remove_channel(line)
-            self._sensor.hw.close()
             self.btn_open.SetLabel('Open')
 
     def OnSaveCfg(self, evt):
