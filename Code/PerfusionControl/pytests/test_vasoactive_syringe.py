@@ -19,18 +19,15 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self._inc = 0.1
 
         self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
-        self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
-
+        self._sensor = SensorStream('Pressure Sensor', 'mmHg', self._ai)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.label_ai = wx.StaticText(self, label=f'Using Analog Input {self._ai.devname}')
-        self.label_ao = wx.StaticText(self, label=f'Using Analog Output {self._ao.devname}')
-        self.label_output = wx.StaticText(self, label='Analog Output is xxx')
-
         self.label_desired_output = wx.StaticText(self, label='Desired Output')
-        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=self._inc)
-        self.spin_desired_output.Digits = 3
+        self.spin_min_flow = wx.SpinCtrlDouble(self, min=0.0, max=400.0, initial=0.0, inc=self._inc)
+        self.spin_min_flow.Digits = 3
+        self.spin_max_flow = wx.SpinCtrlDouble(self, min=0.0, max=400.0, initial=100.0, inc=self._inc)
+        self.spin_max_flow.Digits = 3
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (%)')
         self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=10)
@@ -39,7 +36,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.panel_plot.add_sensor(self._sensor)
         LP_CFG.update_stream_folder()
         self._sensor.open(LP_CFG.LP_PATH['stream'])
-        self._ao.set_dc(0)
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -49,16 +45,13 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.timer_flow_adjust = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
 
-
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
 
-        self.sizer.Add(self.label_ai)
-        self.sizer.Add(self.label_ao)
-
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_desired_output, flags)
-        sizer.Add(self.spin_desired_output, flags)
+        sizer.Add(self.spin_min_flow, flags)
+        sizer.Add(self.spin_max_flow, flags)
         sizer.Add(self.btn_stop, flags)
         self.sizer.Add(sizer)
 
@@ -66,8 +59,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         sizer.Add(self.label_tolerance, flags)
         sizer.Add(self.spin_tolerance, flags)
         self.sizer.Add(sizer)
-
-        self.sizer.Add(self.label_output, flags)
 
         self.sizer.AddSpacer(20)
         self.sizer.Add(self.panel_plot, 1, wx.ALL | wx.EXPAND, border=1)
