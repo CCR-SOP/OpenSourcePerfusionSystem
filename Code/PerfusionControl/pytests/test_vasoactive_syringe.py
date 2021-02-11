@@ -71,35 +71,37 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.btn_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
 
     def OnStartStop(self, evt):
-        if self.btn_stop.GetValue():
-            self._ao.start()
-            self._sensor.start()
-            self.btn_stop.SetLabel('Stop')
-            self.update_output()
-            self.timer_flow_adjust.Start(1000, wx.TIMER_CONTINUOUS)
-        else:
-            self._sensor.stop()
-            self.btn_stop.SetLabel('Stop')
-            self.timer_flow_adjust.Stop()
+        pass
+ #       if self.btn_stop.GetValue():
+ #           self._ao.start()
+ #           self._sensor.start()
+ #           self.btn_stop.SetLabel('Stop')
+ #           self.update_output()
+ #           self.timer_flow_adjust.Start(1000, wx.TIMER_CONTINUOUS)
+ #       else:
+ #           self._sensor.stop()
+ #           self.btn_stop.SetLabel('Stop')
+ #           self.timer_flow_adjust.Stop()
 
     def OnTimer(self, event):
-        if event.GetId() == self.timer_flow_adjust.GetId():
-            self.update_output()
+        pass
+ #       if event.GetId() == self.timer_flow_adjust.GetId():
+ #           self.update_output()
 
-    def update_output(self):
-        flow = self._sensor.get_current()
-        desired = self.spin_desired_output.GetValue()
-        tol = self.spin_tolerance.GetValue() / 100
-        dev = abs(desired - flow)
-        print(f'Flow is {flow:.3f}, desired is {desired:.3f}')
-        print(f'Deviation is {dev}, tol is {tol}')
-        if dev > tol:
-            if flow < desired:
-                new_val = self._ao.volts_offset + self._inc
-            else:
-                new_val = self._ao.volts_offset - self._inc
-            self._ao.set_dc(new_val)
-            self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
+  #  def update_output(self):
+  #      flow = self._sensor.get_current()
+  #      desired = self.spin_desired_output.GetValue()
+  #      tol = self.spin_tolerance.GetValue() / 100
+  #      dev = abs(desired - flow)
+  #      print(f'Flow is {flow:.3f}, desired is {desired:.3f}')
+  #      print(f'Deviation is {dev}, tol is {tol}')
+  #      if dev > tol:
+  #          if flow < desired:
+  #              new_val = self._ao.volts_offset + self._inc
+  #          else:
+  #              new_val = self._ao.volts_offset - self._inc
+  #          self._ao.set_dc(new_val)
+   #         self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
