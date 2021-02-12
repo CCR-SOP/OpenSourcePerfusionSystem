@@ -17,8 +17,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self._sensor = sensor
         self._name = name
         self._inc = 1.0
-        self._reset_vasodilator = True
-        self._reset_vasoconstrictor = True
         wx.Panel.__init__(self, parent, -1)
 
         syringe_list = 'Phenylephrine, Epoprostenol'
@@ -204,12 +202,12 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_injection.GetId():
-            if self._reset_vasodilator:
+            if self._syringe_vasodilator.reset:
                 self.ResetSyringe(self._syringe_vasodilator)
-                self._reset_vasodilator = False
-            if self._reset_vasoconstrictor:
+                self._syringe_vasodilator.reset = False
+            if self._syringe_vasoconstrictor.reset:
                 self.ResetSyringe(self._syringe_vasoconstrictor)
-                self._reset_vasoconstrictor = False
+                self._syringe_vasoconstrictor.reset = False
             self.check_for_injection()
 
     def ResetSyringe(self, syringe):
@@ -228,19 +226,20 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         if pressure > (max_pressure + tol):
             pressure_diff = pressure - (max_pressure + tol)
             injection_volume = pressure_diff / 3
-            print(f'Pressure is {pressure:.2f} , which is too high; injecting {injection_volume:.2f} mL of epoprostenol')
-            self._syringe_vasodilator.set_target_volume(injection_volume, 'ml')
-            self._syringe_vasodilator.infuse()
-            self._reset_vasodilator = True
+            self.injection(self._syringe_vasodilator, 'epoprostenol', pressure, injection_volume, direction='high')
         elif pressure < (min_pressure - tol):
             pressure_diff = (min_pressure - tol) - pressure
             injection_volume = pressure_diff / 3
-            print(f'Pressure is {pressure:.2f} , which is too low; injecting {injection_volume:.2f} mL of phenylephrine')
-            self._syringe_vasoconstrictor.set_target_volume(injection_volume, 'ml')
-            self._syringe_vasoconstrictor.infuse()
-            self._reset_vasoconstrictor = True
+            self.injection(self._syringe_vasoconstrictor, 'phenylephrine', pressure, injection_volume, direction='low')
         else:
             print(f'Pressure is {pressure:.2f} , which is in range')
+
+    def injection(self, syringe, name, pressure, volume, direction):
+        print(f'Pressure is {pressure:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
+        syringe.set_target_volume(volume, 'ml')
+        syringe.infuse()
+        syringe.reset = True
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
