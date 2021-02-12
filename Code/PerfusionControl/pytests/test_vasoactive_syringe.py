@@ -23,10 +23,12 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         self._syringe_vasodilator = PHDserial()
         self._syringe_vasodilator.open('COM11', 9600)
+        self.ResetSyringe(self._syringe_vasodilator)
         self.syringe_configuration(self._syringe_vasodilator)
 
         self._syringe_vasoconstrictor = PHDserial()
         self._syringe_vasoconstrictor.open('COM4', 9600)
+        self.ResetSyringe(self._syringe_vasoconstrictor)
         self.syringe_configuration(self._syringe_vasoconstrictor)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -73,12 +75,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.Bind(wx.EVT_TIMER, self.OnTimer)
 
         self._sensor.start()
-
-    def syringe_configuration(self, syringe):
-        syringe.reset_infusion_volume()
-        syringe.reset_target_volume()
-        syringe.set_syringe_manufacturer_size('bdp', '60 ml')
-        syringe.set_infusion_rate(30, 'ml/min')
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
@@ -156,10 +152,10 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
             self.btn_start_calibration.Enable(False)
-            self._sensor.hw.open(dev='Dev1', line=1)  # HA Pressure Sensor
+            self._sensor.hw.open(dev='Dev1', line=1)  # PV Pressure Sensor
             self._sensor.hw.start()
             self.btn_stop.SetLabel('Stop')
-            self.timer_injection.Start(10000, wx.TIMER_CONTINUOUS)
+            self.timer_injection.Start(15000, wx.TIMER_CONTINUOUS)
         else:
             self.btn_start_calibration.Enable(True)
             self._sensor.hw.stop()
@@ -206,18 +202,23 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_injection.GetId():
-            self._syringe_vasodilator.reset_infusion_volume()
-            self._syringe_vasodilator.reset_target_volume()
-            self._syringe_vasoconstrictor.reset_infusion_volume()
-            self._syringe_vasoconstrictor.reset_target_volume()
+            self.ResetSyringe(self._syringe_vasodilator)
+            self.ResetSyringe(self._syringe_vasoconstrictor)
             self.check_for_injection()
 
+    def ResetSyringe(self, syringe):
+        syringe.reset_infusion_volume()
+        syringe.reset_target_volume()
+
+    def syringe_configuration(self, syringe):
+        syringe.set_syringe_manufacturer_size('bdp', '60 ml')
+        syringe.set_infusion_rate(30, 'ml/min')
+
     def check_for_injection(self):
-        pressure = int(self._sensor.get_current())
-        print(pressure)
-        min_pressure = int(self.spin_min_flow.GetValue())
-        max_pressure = int(self.spin_max_flow.GetValue())
-        tol = int(self.spin_tolerance.GetValue())
+        pressure = float(self._sensor.get_current())
+        min_pressure = float(self.spin_min_flow.GetValue())
+        max_pressure = float(self.spin_max_flow.GetValue())
+        tol = float(self.spin_tolerance.GetValue())
         if pressure > (max_pressure + tol):
             print(f'Pressure is {pressure:.2f} , which is too high')
             pressure_diff = pressure - (max_pressure + tol)
@@ -225,6 +226,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self._syringe_vasodilator.set_target_volume(injection_volume, 'ml')
             self._syringe_vasodilator.infuse()
             print(f'Injecting {injection_volume:.2f} mL of epoprostenol')
+            injection_vasodilator = True
         elif pressure < (min_pressure - tol):
             print(f'Pressure is {pressure:.2f} , which is too low')
             pressure_diff = (min_pressure - tol) - pressure
@@ -232,6 +234,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self._syringe_vasoconstrictor.set_target_volume(injection_volume, 'ml')
             self._syringe_vasoconstrictor.infuse()
             print(f'Injecting {injection_volume:.2f} mL of phenylephrine')
+            injection_vasoconstrictor = True
         else:
             print(f'Pressure is {pressure:.2f} , which is in range')
 
