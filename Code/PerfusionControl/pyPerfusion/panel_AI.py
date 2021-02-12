@@ -73,7 +73,7 @@ class PanelAI_Config(wx.Panel):
         self._avail_lines = LINE_LIST
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=sizer_name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
         self.label_dev = wx.StaticText(self, label='NI Device Name')
         self.choice_dev = wx.Choice(self, wx.ID_ANY, choices=self._avail_dev)
 
