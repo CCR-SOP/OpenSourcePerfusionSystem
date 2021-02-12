@@ -71,8 +71,14 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
-        self.timer_injection = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimer)
+        self.timer_injection = wx.Timer(self, id=0)
+        self.Bind(wx.EVT_TIMER, self.OnTimer, id=0)
+
+        self.timer_vasodilator_injection = wx.Timer(self, id=1)
+        self.Bind(wx.EVT_TIMER, self.OnVasodilatorInjectionTimer, id=1)
+
+        self.timer_vasoconstrictor_injection = wx.Timer(self, id=2)
+        self.Bind(wx.EVT_TIMER, self.OnVasoconstrictorInjectionTimer, id=2)
 
         self._sensor.start()
 
@@ -155,7 +161,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self._sensor.hw.open(dev='Dev1', line=1)  # PV Pressure Sensor
             self._sensor.hw.start()
             self.btn_stop.SetLabel('Stop')
-            self.timer_injection.Start(15000, wx.TIMER_CONTINUOUS)
+            self.timer_injection.Start(10000, wx.TIMER_CONTINUOUS)
         else:
             self.btn_start_calibration.Enable(True)
             self._sensor.hw.stop()
@@ -210,6 +216,16 @@ class PanelTestVasoactiveSyringe(wx.Panel):
                 self._syringe_vasoconstrictor.reset = False
             self.check_for_injection()
 
+    def OnVasodilatorInjectionTimer(self, event):
+        if event.GetId() == self.timer_vasodilator_injection.GetId():
+            self._syringe_vasodilator.cooldown = False
+            self.timer_vasodilator_injection.Stop()
+
+    def OnVasoconstrictorInjectionTimer(self, event):
+        if event.GetId() == self.timer_vasoconstrictor_injection.GetId():
+            self._syringe_vasoconstrictor.cooldown = False
+            self.timer_vasoconstrictor_injection.Stop()
+
     def ResetSyringe(self, syringe):
         syringe.reset_infusion_volume()
         syringe.reset_target_volume()
@@ -224,13 +240,21 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         max_pressure = float(self.spin_max_flow.GetValue())
         tol = float(self.spin_tolerance.GetValue())
         if pressure > (max_pressure + tol):
-            pressure_diff = pressure - (max_pressure + tol)
-            injection_volume = pressure_diff / 3
-            self.injection(self._syringe_vasodilator, 'epoprostenol', pressure, injection_volume, direction='high')
+            if not self._syringe_vasodilator.cooldown:
+                pressure_diff = pressure - (max_pressure + tol)
+                injection_volume = pressure_diff / 3
+                self.injection(self._syringe_vasodilator, 'epoprostenol', pressure, injection_volume, direction='high')
+                self.timer_vasodilator_injection.Start(30000, wx.TIMER_CONTINUOUS)
+            else:
+                print(f'Pressure is {pressure:.2f} , which is too high; however, vasodilator injections are currently frozen')
         elif pressure < (min_pressure - tol):
-            pressure_diff = (min_pressure - tol) - pressure
-            injection_volume = pressure_diff / 3
-            self.injection(self._syringe_vasoconstrictor, 'phenylephrine', pressure, injection_volume, direction='low')
+            if not self._syringe_vasoconstrictor.cooldown:
+                pressure_diff = (min_pressure - tol) - pressure
+                injection_volume = pressure_diff / 3
+                self.injection(self._syringe_vasoconstrictor, 'phenylephrine', pressure, injection_volume, direction='low')
+                self.timer_vasoconstrictor_injection.Start(30000, wx.TIMER_CONTINUOUS)
+            else:
+                print(f'Pressure is {pressure:.2f} , which is too low; however, vasoconstrictor injections are currently frozen')
         else:
             print(f'Pressure is {pressure:.2f} , which is in range')
 
@@ -239,6 +263,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         syringe.set_target_volume(volume, 'ml')
         syringe.infuse()
         syringe.reset = True
+        syringe.cooldown = True
 
 
 class TestFrame(wx.Frame):
