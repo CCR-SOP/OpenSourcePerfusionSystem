@@ -24,9 +24,12 @@ class TestFrame(wx.Frame):
         LP_CFG.update_stream_folder()
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensors = [
-            SensorStream('Analog Input 1', 'Volts', self.acq),
-            SensorStream('Analog Input 2', 'Volts', self.acq),
-            SensorStream('Analog Input 3', 'Volts', self.acq)
+            SensorStream('HA Flow', 'Volts', self.acq),
+            SensorStream('PV Flow', 'Volts', self.acq),
+            SensorStream('IVC Flow', 'Volts', self.acq),
+            SensorStream('HA Pressure', 'Volts', self.acq),
+            SensorStream('PV Pressure', 'Volts', self.acq),
+            SensorStream('IVC Pressure', 'Volts', self.acq)
         ]
         dlg = wx.SingleChoiceDialog(self, 'Choose NI Device', 'Device', DEV_LIST)
         if dlg.ShowModal() == wx.ID_OK:
