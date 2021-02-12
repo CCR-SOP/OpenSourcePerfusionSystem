@@ -27,6 +27,7 @@ class PHDserial(USBSerial):
         self._syringes = {}
         self._response = ''
         self.reset = True
+        self.cooldown = False
 
     @property
     def manufacturers(self):
