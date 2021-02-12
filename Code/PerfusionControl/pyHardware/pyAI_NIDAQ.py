@@ -84,7 +84,7 @@ class NIDAQ_AI(pyAI.AI):
     def start(self):
         if self.__task:
             self.__task.StartTask()
-        super().start()
+            super().start()
 
     def stop(self):
         super().stop()

@@ -34,11 +34,13 @@ class TestFrame(wx.Frame):
         dlg = wx.SingleChoiceDialog(self, 'Choose NI Device', 'Device', DEV_LIST)
         if dlg.ShowModal() == wx.ID_OK:
             dev = dlg.GetStringSelection()
+        dlg.Destroy()
 
+        self.panel = {}
         for sensor in self.sensors:
-            panel = PanelAI(self, sensor, name=sensor.name)
-            sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-            panel.force_device(dev)
+            self.panel[sensor.name] = PanelAI(self, sensor, name=sensor.name)
+            sizer.Add(self.panel[sensor.name], 1, wx.ALL | wx.EXPAND, border=1)
+            self.panel[sensor.name].force_device(dev)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -48,7 +50,10 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         for sensor in self.sensors:
             sensor.stop()
+        for panel in self.panel.keys():
+            self.panel[panel].Destroy()
         self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
