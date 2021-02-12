@@ -22,6 +22,7 @@ class PanelAI(wx.Panel):
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._dev = None
         wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
@@ -53,6 +54,11 @@ class PanelAI(wx.Panel):
 
     def __set_bindings(self):
         pass
+
+    def force_device(self, dev):
+        self._dev = dev
+        self._panel_cfg.choice_dev.SetStringSelection(self._dev)
+        self._panel_cfg.choice_dev.Enable(False)
 
 
 class PanelAI_Config(wx.Panel):
