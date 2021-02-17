@@ -29,8 +29,8 @@ class AI:
         self._event_halt = Event()
         self.__lock_buf = Lock()
         self._period_sampling_ms = period_sample_ms
-        self._demo_amp = 0
-        self._demo_offset = 0
+        self._demo_amp = {}
+        self._demo_offset = {}
 
         self._queue_buffer = {}
 
@@ -54,9 +54,9 @@ class AI:
     def buf_len(self):
         return self.samples_per_read
 
-    def set_demo_properties(self, demo_amp, demo_offset):
-        self._demo_amp = demo_amp
-        self._demo_offset = demo_offset
+    def set_demo_properties(self, ch, demo_amp, demo_offset):
+        self._demo_amp[ch] = demo_amp
+        self._demo_offset[ch] = demo_offset
 
     def set_read_period_ms(self, period_ms):
         self._read_period_ms = period_ms
@@ -72,7 +72,7 @@ class AI:
         if channel_id in self._queue_buffer.keys():
             print(f'{channel_id} already open')
         else:
-            self.close()
+            self.stop()
             self._queue_buffer[channel_id] = Queue(maxsize=100)
             self.reopen()
             self.start()
@@ -81,11 +81,13 @@ class AI:
         if channel_id in self._queue_buffer.keys():
             self.close()
             del self._queue_buffer[channel_id]
-            print(f'removing channel {channel_id}')
             self.reopen()
             self.start()
 
     def open(self):
+        pass
+
+    def reopen(self):
         pass
 
     def close(self):
@@ -126,7 +128,6 @@ class AI:
         sleep(sleep_time)
         buffer_t = perf_counter()
         for ch in self._queue_buffer.keys():
-            val = self.data_type(np.random.random_sample() * self._demo_amp + self._demo_offset)
+            val = self.data_type(np.random.random_sample() * self._demo_amp[ch] + self._demo_offset[ch])
             buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
-            print(f'putting {len(buffer)} samples in channel {ch}')
             self._queue_buffer[ch].put((buffer, buffer_t))
