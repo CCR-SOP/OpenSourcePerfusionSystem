@@ -64,11 +64,6 @@ class PanelVCS(PanelDIO):
     def OnLoadConfig(self, evt):
         super().OnLoadConfig(evt)
         self.btn_activate.SetBackgroundColour('gray')
- #       if state == 'Close':
- #           if self._name in open_chemical_valves.keys():
- #               del open_chemical_valves[self._name]
- #           elif self._name in open_glucose_valves.keys():
- #               del open_glucose_valves[self._name]
 
 class PanelCoordination(wx.Panel):
     def __init__(self, parent, name):
@@ -113,15 +108,14 @@ class PanelCoordination(wx.Panel):
         self.btn_start_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
 
     def OnStartStop(self, evt):
+        self.close_all_chemical_valves()
         state = self.btn_start_stop.GetLabel()
         if state == 'Start':
-            self.close_all_chemical_valves()
             switching_time = int(self.spin_time_chemical.GetValue())
             self.timer_chemical.Start(switching_time * 1000, wx.TIMER_CONTINUOUS)
             self.btn_start_stop.SetLabel('Stop')
         else:
             self.timer_chemical.Stop()
-            self.close_all_chemical_valves()
             self.btn_start_stop.SetLabel('Start')
 
     def OnChemicalTimer(self, event):
@@ -130,6 +124,10 @@ class PanelCoordination(wx.Panel):
 
     def update_chemical_valves(self):
         valve_names = list(chemical_valves.keys())
+        try:
+            self._last_valve = list(open_chemical_valves.keys())[0]
+        except IndexError:
+            self._last_valve = ''
         if 'Hepatic Artery' in self._last_valve:
             self._valve_to_open = valve_names[1]
         elif 'Portal Vein' in self._last_valve:
@@ -149,7 +147,6 @@ class PanelCoordination(wx.Panel):
             valve.btn_activate.SetLabel('Activate')
             valve.btn_activate.SetBackgroundColour('red')
         open_chemical_valves.clear()
-
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
