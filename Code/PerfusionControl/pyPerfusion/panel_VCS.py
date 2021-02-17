@@ -11,7 +11,6 @@ from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 from pyPerfusion.panel_DIO import PanelDIO
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
-import pyPerfusion.PerfusionConfig as LP_CFG
 
 chemical_valves = {}
 glucose_valves = {}
@@ -75,6 +74,8 @@ class PanelCoordination(wx.Panel):
     def __init__(self, parent, name):
         self.parent = parent
         self._name = name
+        self._valve_to_open = None
+        self._last_valve = ''
         wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self._name)
@@ -84,8 +85,6 @@ class PanelCoordination(wx.Panel):
         self.lbl_time_chemical = wx.StaticText(self, label='Chemical Sensor Switching Time (sec)')  # Amount of time where one valve (corresponding to HA/PV/IVC line) will be open for reading of chemical parameters before this valve is closed an another is opened; will depend on how quickly data is collected by the chemical sensors/how many reads we want before a valve switch (TBD)
 
         self.btn_start_stop = wx.ToggleButton(self, label='Start')
-        self.btn_save_cfg = wx.Button(self, label='Save Config')
-        self.btn_load_cfg = wx.Button(self, label='Load Config')
 
         self.timer_chemical = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnChemicalTimer)
@@ -100,14 +99,9 @@ class PanelCoordination(wx.Panel):
         self.sizer_chemical.Add(self.lbl_time_chemical, flags)
         self.sizer_chemical.Add(self.spin_time_chemical, flags)
 
-        self.sizer_config = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_config.Add(self.btn_start_stop, flags)
-        self.sizer_config.Add(self.btn_save_cfg, flags)
-        self.sizer_config.Add(self.btn_load_cfg, flags)
-
         self.sizer.Add(self.sizer_chemical)
         self.sizer.AddSpacer(5)
-        self.sizer.Add(self.sizer_config)
+        self.sizer.Add(self.btn_start_stop)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
@@ -116,27 +110,18 @@ class PanelCoordination(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
-        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
         self.btn_start_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
-
-    def OnSaveCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
-        section['Chemical Sensor Switching Time (sec)'] = str(self.spin_time_chemical.GetValue())
-        LP_CFG.update_hwcfg_section(self._name, section)
-
-    def OnLoadCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
-        self.spin_time_chemical.SetValue(float((section['Chemical Sensor Switching Time (sec)'])))
 
     def OnStartStop(self, evt):
         state = self.btn_start_stop.GetLabel()
         if state == 'Start':
+            self.close_all_chemical_valves()
             switching_time = int(self.spin_time_chemical.GetValue())
             self.timer_chemical.Start(switching_time * 1000, wx.TIMER_CONTINUOUS)
             self.btn_start_stop.SetLabel('Stop')
         else:
             self.timer_chemical.Stop()
+            self.close_all_chemical_valves()
             self.btn_start_stop.SetLabel('Start')
 
     def OnChemicalTimer(self, event):
@@ -144,35 +129,26 @@ class PanelCoordination(wx.Panel):
             self.update_chemical_valves()
 
     def update_chemical_valves(self):
-        if bool(open_chemical_valves):  # If one of the chemical valves is already open
-            for key, valve in open_chemical_valves.items():
-                valve._dio.deactivate()
-                valve.btn_activate.SetLabel('Activate')
-                valve.btn_activate.SetBackgroundColour('red')
-            open_valve_name = list(open_chemical_valves.keys())[0]
-            open_chemical_valves.clear()
-            valve_names = list(chemical_valves.keys())
-            if 'Hepatic Artery' in open_valve_name:
-                chemical_valves[valve_names[1]]._dio.activate()
-                chemical_valves[valve_names[1]].btn_activate.SetLabel('Deactivate')
-                chemical_valves[valve_names[1]].btn_activate.SetBackgroundColour('green')
-                open_chemical_valves.update({valve_names[1]: chemical_valves[valve_names[1]]})
-            elif 'Portal Vein' in open_valve_name:
-                chemical_valves[valve_names[2]]._dio.activate()
-                chemical_valves[valve_names[2]].btn_activate.SetLabel('Deactivate')
-                chemical_valves[valve_names[2]].btn_activate.SetBackgroundColour('green')
-                open_chemical_valves.update({valve_names[2]: chemical_valves[valve_names[2]]})
-            else:
-                chemical_valves[valve_names[0]]._dio.activate()
-                chemical_valves[valve_names[0]].btn_activate.SetLabel('Deactivate')
-                chemical_valves[valve_names[0]].btn_activate.SetBackgroundColour('green')
-                open_chemical_valves.update({valve_names[0]: chemical_valves[valve_names[0]]})
-        else:  # If no chemical valves are currently open; in this case, open HA valve
-            valve_names = list(chemical_valves.keys())
-            chemical_valves[valve_names[0]]._dio.activate()
-            chemical_valves[valve_names[0]].btn_activate.SetLabel('Deactivate')
-            chemical_valves[valve_names[0]].btn_activate.SetBackgroundColour('green')
-            open_chemical_valves.update({valve_names[0]: chemical_valves[valve_names[0]]})
+        valve_names = list(chemical_valves.keys())
+        if 'Hepatic Artery' in self._last_valve:
+            self._valve_to_open = valve_names[1]
+        elif 'Portal Vein' in self._last_valve:
+            self._valve_to_open = valve_names[2]
+        elif 'Inferior Vena Cava' in self._last_valve:
+            self._valve_to_open = valve_names[0]
+        else:
+            self._valve_to_open = valve_names[0]
+        chemical_valves[self._valve_to_open]._dio.activate()
+        chemical_valves[self._valve_to_open].btn_activate.SetLabel('Deactivate')
+        chemical_valves[self._valve_to_open].btn_activate.SetBackgroundColor('Green')
+        open_chemical_valves.update({self._valve_to_open: chemical_valves[self._valve_to_open]})
+
+    def close_all_chemical_valves(self):
+        for key, valve in open_chemical_valves.items():
+            valve._dio.deactivate()
+            valve.btn_activate.SetLabel('Activate')
+            valve.btn_activate.SetBackgroundColour('red')
+        open_chemical_valves.clear()
 
 
 class TestFrame(wx.Frame):
