@@ -13,6 +13,7 @@ import wx
 from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.panel_readout import PanelReadout
 from pyHardware.pyAI import AI
+from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -34,7 +35,7 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.__plot_frame = PlotFrame.LAST_5_SECONDS
 
-        self.hw_stream = AI(period_sample_ms=10)
+        self.hw_stream = AI(period_sample_ms=100)
         self.hw_events = AI(period_sample_ms=1000)
         self.sensors = [
             SensorStream('HA Flow', 'ml/min', self.hw_stream, valid_range=[20, 60]),
@@ -43,11 +44,16 @@ class TestFrame(wx.Frame):
             SensorStream('PV Pressure', 'mmHg', self.hw_stream, valid_range=[3, 7]),
             SensorStream('IVC Pressure', 'mmHg', self.hw_stream, valid_range=[0, 2])
             ]
-        self.sensors[0].hw.set_demo_properties(demo_amp=80, demo_offset=0)
-        self.sensors[1].hw.set_demo_properties(demo_amp=40, demo_offset=20)
-        self.sensors[2].hw.set_demo_properties(demo_amp=100, demo_offset=0)
-        self.sensors[3].hw.set_demo_properties(demo_amp=10, demo_offset=0)
-        self.sensors[4].hw.set_demo_properties(demo_amp=3, demo_offset=0)
+        self.sensors[0].hw.set_demo_properties(0, demo_amp=80, demo_offset=0)
+        self.sensors[1].hw.set_demo_properties(1, demo_amp=40, demo_offset=20)
+        self.sensors[2].hw.set_demo_properties(2, demo_amp=100, demo_offset=0)
+        self.sensors[3].hw.set_demo_properties(3, demo_amp=10, demo_offset=0)
+        self.sensors[4].hw.set_demo_properties(4, demo_amp=3, demo_offset=0)
+        for ch, sensor in enumerate(self.sensors):
+            sensor.hw.add_channel(ch)
+            sensor.set_ch_id(ch)
+
+        sensor.hw.open()
 
         self.events = [SensorPoint('Vasodilator', '2 ml', self.hw_events),
                        SensorPoint('Vasoconstrictor', '2 ml', self.hw_events)
@@ -84,6 +90,7 @@ class TestFrame(wx.Frame):
         self.__do_layout()
         self.__set_bindings()
 
+        LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
         [sensor.open(LP_CFG.LP_PATH['stream']) for sensor in self.sensors]
         [sensor.start() for sensor in self.sensors]
@@ -93,11 +100,12 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def get_sensor(self, sensor_name):
-        sensor = next((sensor for sensor in self.sensors if sensor.name == sensor.name), None)
+        sensor = next((sensor for sensor in self.sensors if sensor.name == sensor_name), None)
+        print(f'{sensor.name}')
         return sensor
 
     def get_event(self, sensor_name):
-        sensor = next((sensor for sensor in self.events if sensor.name == sensor.name), None)
+        sensor = next((sensor for sensor in self.events if sensor.name == sensor_name), None)
         return sensor
 
     def _create_choice_time(self):
