@@ -71,7 +71,7 @@ class NIDAQ_AI(pyAI.AI):
                 self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
                                              self.samples_per_read)
         except PyDAQmx.DAQError as e:
-            print("Could not create AO Channel for {}".format(self._devname))
+            print("Could not create AI Channel for {}".format(self._devname))
             print(f"{e}")
             self.__task = None
 
