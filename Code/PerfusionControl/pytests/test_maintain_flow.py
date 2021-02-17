@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
-"""
+"""Provides test app for controlling a flow based on a PID
 
-@author: John Kakareka
+This work was created by an employee of the US Federal Gov
+and under the public domain.
 
-Test app for testing how to maintain flow
+Author: John Kakareka
 """
 import wx
+
+from simple_pid import PID
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_plotting import PanelPlotting
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.panel_PID import PanelPID
 
 class PanelTestMaintainFlow(wx.Panel):
     def __init__(self, parent):
@@ -19,13 +23,15 @@ class PanelTestMaintainFlow(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
         self._inc = 0.1
 
+        self.pid = PID(1.0, 0.1, 0.05, setpoint=1)
+        self.pid.sample_time = 0.001
         self._ai = NIDAQ_AI(line=4, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')
         self._ao = NIDAQ_AO()
         self._ao.open(line=1, period_ms=100, dev='Dev1')
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
 
-
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.panel_pid = PanelPID(self)
+        self.panel_pid.set_pid(self.pid)
 
         self.label_ai = wx.StaticText(self, label=f'Using Analog Input {self._ai.devname}')
         self.label_ao = wx.StaticText(self, label=f'Using Analog Output {self._ao.devname}')
@@ -34,9 +40,6 @@ class PanelTestMaintainFlow(wx.Panel):
         self.label_desired_output = wx.StaticText(self, label='Desired Output')
         self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=self._inc)
         self.spin_desired_output.Digits = 3
-
-        self.label_tolerance = wx.StaticText(self, label='Tolerance (%)')
-        self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=10)
 
         self.panel_plot = PanelPlotting(self)
         self.panel_plot.add_sensor(self._sensor)
@@ -56,18 +59,21 @@ class PanelTestMaintainFlow(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
 
-        self.sizer.Add(self.label_ai)
-        self.sizer.Add(self.label_ao)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.label_ai)
+        sizer.Add(self.label_ao)
+        self.sizer.Add(sizer, flags)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.label_desired_output, flags)
         sizer.Add(self.spin_desired_output, flags)
-        sizer.Add(self.btn_stop, flags)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label_tolerance, flags)
-        sizer.Add(self.spin_tolerance, flags)
+        sizer.Add(self.panel_pid, flags)
+        sizer.Add(self.btn_stop, flags)
         self.sizer.Add(sizer)
 
         self.sizer.Add(self.label_output, flags)
@@ -100,18 +106,10 @@ class PanelTestMaintainFlow(wx.Panel):
 
     def update_output(self):
         flow = self._sensor.get_current()
-        desired = self.spin_desired_output.GetValue()
-        tol = self.spin_tolerance.GetValue() / 100
-        dev = abs(desired - flow)
-        print(f'Flow is {flow:.3f}, desired is {desired:.3f}')
-        print(f'Deviation is {dev}, tol is {tol}')
-        if dev > tol:
-            if flow < desired:
-                new_val = self._ao.volts_offset + self._inc
-            else:
-                new_val = self._ao.volts_offset - self._inc
-            self._ao.set_dc(new_val)
-            self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
+        self.pid.setpoint = self.spin_desired_output.GetValue()
+        new_val = self.pid(flow)
+        self._ao.set_dc(new_val)
+        self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
