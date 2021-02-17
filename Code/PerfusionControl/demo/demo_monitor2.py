@@ -187,7 +187,3 @@ class MyTestApp(wx.App):
 
 app = MyTestApp(0)
 app.MainLoop()
-time.sleep(10)
-[sensor.stop() for sensor in sensors.values()]
-
-
