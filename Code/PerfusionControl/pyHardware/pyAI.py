@@ -24,13 +24,13 @@ class AI:
 
     """
 
-    def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, demo_amp=70, demo_offset=10, read_period_ms=500):
+    def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
         self.__thread = None
         self._event_halt = Event()
         self.__lock_buf = Lock()
         self._period_sampling_ms = period_sample_ms
-        self._demo_amp = demo_amp
-        self._demo_offset = demo_offset
+        self._demo_amp = 0
+        self._demo_offset = 0
 
         self._queue_buffer = {}
 
@@ -53,6 +53,14 @@ class AI:
     @property
     def buf_len(self):
         return self.samples_per_read
+
+    def set_demo_properties(self, demo_amp, demo_offset):
+        self._demo_amp = demo_amp
+        self._demo_offset = demo_offset
+
+    def set_read_period_ms(self, period_ms):
+        self._read_period_ms = period_ms
+        self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
 
     def active_channels(self):
         return len(self._queue_buffer) > 0
