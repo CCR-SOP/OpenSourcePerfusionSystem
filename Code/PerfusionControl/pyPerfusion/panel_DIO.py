@@ -13,7 +13,6 @@ DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 PORT_LIST = [f'port{p}' for p in range(0, 5)]
 LINE_LIST = [f'line{line}' for line in range(0, 9)]
 
-
 class PanelDIO(wx.Panel):
     def __init__(self, parent, dio, name):
         self.parent = parent
