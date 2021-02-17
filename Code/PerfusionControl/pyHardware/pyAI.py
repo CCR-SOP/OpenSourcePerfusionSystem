@@ -73,14 +73,20 @@ class AI:
             print(f'{channel_id} already open')
         else:
             self.stop()
-            self._queue_buffer[channel_id] = Queue(maxsize=100)
+            with self.__lock_buf:
+                self._queue_buffer[channel_id] = Queue(maxsize=100)
+                self._demo_amp[channel_id] = 0
+                self._demo_offset[channel_id] = 0
             self.reopen()
             self.start()
 
     def remove_channel(self, channel_id):
+        print(f'keys are {self._queue_buffer.keys()}')
         if channel_id in self._queue_buffer.keys():
-            self.close()
-            del self._queue_buffer[channel_id]
+            self.stop()
+            with self.__lock_buf:
+                del self._queue_buffer[channel_id]
+            print(f'keys after deletion are {self._queue_buffer.keys()}')
             self.reopen()
             self.start()
 
