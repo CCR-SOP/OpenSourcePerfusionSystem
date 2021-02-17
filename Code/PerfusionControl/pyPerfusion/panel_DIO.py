@@ -116,6 +116,7 @@ class PanelDIO(wx.Panel):
                 self._dio.deactivate()  # Make sure lines are turned off upon opening; due to fact that sometimes when the DAQ is first powered on, all lines will be open
                 self.btn_open.SetLabel('Close')
                 self.btn_activate.Enable(True)
+                self.btn_load.Enable(False)
             except AttributeError:
                 wx.MessageBox('Line Could Not be Opened; it is Already in Use', 'Error', wx.OK | wx.ICON_ERROR)
                 return
@@ -125,6 +126,7 @@ class PanelDIO(wx.Panel):
             self.btn_open.SetLabel('Open')
             self.btn_activate.SetLabel('Activate')
             self.btn_activate.Enable(False)
+            self.btn_load.Enable(True)
 
     def OnActivate(self, evt):
         state = self.btn_activate.GetLabel()
@@ -151,11 +153,6 @@ class PanelDIO(wx.Panel):
 
     def OnLoadConfig(self, evt):
         section = LP_CFG.get_hwcfg_section(self._name)
-        self._dio.deactivate()  # If a config is loaded in on when a DIO channel is already open, close this channel
-        self._dio.close()
-        self.btn_open.SetLabel('Open')
-        self.btn_activate.SetLabel('Activate')
-        self.btn_activate.Enable(False)
         self.choice_dev.SetStringSelection(section['Device'])
         self.choice_port.SetStringSelection(section['Port'])
         self.choice_line.SetStringSelection(section['Line'])
