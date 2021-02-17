@@ -18,19 +18,6 @@ from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 
-sensors = {'PV Oxygen': SensorStream('PV Oxygen', '%', AI(10, demo_amp=80, demo_offset=0), valid_range=[20, 60]),
-           'HA Oxygen': SensorStream('HA Oxygen', '%', AI(10, demo_amp=40, demo_offset=20), valid_range=[25, 35]),
-           'Temperature': SensorStream('Temperature', 'F', AI(10, demo_amp=100, demo_offset=0), valid_range=[40, 60]),
-           'pH': SensorStream('pH', '', AI(10, demo_amp=10, demo_offset=0), valid_range=[3, 7]),
-           'CO2': SensorStream('CO2', '%', AI(10, demo_amp=3, demo_offset=0), valid_range=[0, 2]),
-           'Glucose': SensorStream('Glucose', 'ml', AI(10, demo_amp=100, demo_offset=0), valid_range=[10, 90]),
-           }
-
-events = {'Insulin': SensorPoint('Insulin', '2 ml', AI(1000, read_period_ms=2250)),
-          'Glucagen': SensorPoint('Glucagen', '2 ml', AI(1000, read_period_ms=3725))
-          }
-
-
 class PlotFrame(Enum):
     FROM_START = 0
     LAST_SECOND = 1_000
@@ -44,26 +31,57 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.__plot_frame = PlotFrame.LAST_5_SECONDS
 
+        self.hw_stream = AI(period_sample_ms=100)
+        self.hw_events = AI(period_sample_ms=1000)
+        self.sensors = [
+            SensorStream('PV Oxygen', '%', self.hw_stream, valid_range=[20, 60]),
+            SensorStream('HA Oxygen', '%', self.hw_stream, valid_range=[25, 35]),
+            SensorStream('Temperature', 'F', self.hw_stream, valid_range=[40, 60]),
+            SensorStream('pH', '', self.hw_stream, valid_range=[3, 7]),
+            SensorStream('CO2', '%', self.hw_stream, valid_range=[0, 2]),
+            SensorStream('Glucose', 'ml', self.hw_stream, valid_range=[10, 90]),
+            ]
+        self.sensors[0].hw.set_demo_properties(0, demo_amp=80, demo_offset=0)
+        self.sensors[1].hw.set_demo_properties(1, demo_amp=40, demo_offset=20)
+        self.sensors[2].hw.set_demo_properties(2, demo_amp=100, demo_offset=0)
+        self.sensors[3].hw.set_demo_properties(3, demo_amp=10, demo_offset=0)
+        self.sensors[4].hw.set_demo_properties(4, demo_amp=3, demo_offset=0)
+        self.sensors[5].hw.set_demo_properties(5, demo_amp=50, demo_offset=25)
+        for ch, sensor in enumerate(self.sensors):
+            sensor.hw.add_channel(ch)
+            sensor.set_ch_id(ch)
+        self.hw_events.open()
+        self.hw_stream.open()
+
+        self.events = [SensorPoint('Insulin', '2 ml', self.hw_events),
+                       SensorPoint('Glucagen', '2 ml', self.hw_events)
+                       ]
+        self.events[0].hw.set_read_period_ms(2250)
+        self.events[1].hw.set_read_period_ms(3725)
         self.sizer_main = wx.BoxSizer(wx.HORIZONTAL)
 
         self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)
         self.sizer_plots = []
-        self._plots_main = {}
-        self._plots_lt = {}
+        self._plots_main = []
+        self._plots_lt = []
         self._readouts = {}
-        self.sizer_plots.append(self._add_lt(sensors['PV Oxygen']))
-        self.sizer_plots.append(self._add_lt(sensors['pH']))
-        self.sizer_plots.append(self._add_lt(sensors['CO2']))
-        self.sizer_plots.append(self._add_lt(sensors['Glucose']))
 
-        self._plots_main['Glucose'].add_sensor(events['Glucagen'], color='orange')
-        self._plots_main['Glucose'].add_sensor(events['Insulin'], color='blue')
-        self._plots_lt['Glucose'].add_sensor(events['Glucagen'], color='orange')
-        self._plots_lt['Glucose'].add_sensor(events['Insulin'], color='blue')
-        self._plots_main['Glucose'].show_legend()
+        for sensor_name in ['PV Oxygen', 'pH', 'CO2', 'Glucose']:
+            self.sizer_plots.append(self._add_lt(self.get_sensor(sensor_name)))
 
-        self._readouts['HA Oxygen'] = PanelReadout(self, sensors['HA Oxygen'])
-        self._readouts['Temperature'] = PanelReadout(self, sensors['Temperature'])
+        for plot in self._plots_main:
+            plot.add_sensor(self.get_event('Glucagen'), color='orange')
+            plot.add_sensor(self.get_event('Insulin'), color='blue')
+
+        for plot in self._plots_lt:
+            plot.add_sensor(self.get_event('Glucagen'), color='orange')
+            plot.add_sensor(self.get_event('Insulin'), color='blue')
+
+        for plot in self._plots_main:
+            plot.show_legend()
+
+        self._readouts['HA Oxygen'] = PanelReadout(self, self.get_sensor('HA Oxygen'))
+        self._readouts['Temperature'] = PanelReadout(self, self.get_sensor('Temperature'))
 
         self.sizer_readout = wx.GridSizer(cols=1)
         self.sizer_config = wx.BoxSizer(wx.VERTICAL)
@@ -73,11 +91,23 @@ class TestFrame(wx.Frame):
         self.__do_layout()
         self.__set_bindings()
 
+        LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
-        [sensor.open(LP_CFG.LP_PATH['stream']) for sensor in sensors.values()]
-        [sensor.start() for sensor in sensors.values()]
-        [evt.open(LP_CFG.LP_PATH['stream']) for evt in events.values()]
-        [evt.start() for evt in events.values()]
+        [sensor.open(LP_CFG.LP_PATH['stream']) for sensor in self.sensors]
+        [sensor.start() for sensor in self.sensors]
+        [evt.open(LP_CFG.LP_PATH['stream']) for evt in self.events]
+        [evt.start() for evt in self.events]
+
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def get_sensor(self, sensor_name):
+        sensor = next((sensor for sensor in self.sensors if sensor.name == sensor_name), None)
+        print(f'{sensor.name}')
+        return sensor
+
+    def get_event(self, sensor_name):
+        sensor = next((sensor for sensor in self.events if sensor.name == sensor_name), None)
+        return sensor
 
     def _create_choice_time(self):
         parameters = [item.name for item in PlotFrame]
@@ -121,19 +151,31 @@ class TestFrame(wx.Frame):
         panel = PanelPlotting(self)
         panel.add_sensor(sensor)
         sizer.Add(panel, 6, wx.ALL | wx.EXPAND, border=0)
-        self._plots_main[sensor.name] = panel
+        self._plots_main.append(panel)
         panel = PanelPlotLT(self)
         panel.plot_frame_ms = 0
         panel.add_sensor(sensor)
         sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=0)
-        self._plots_lt[sensor.name] = panel
+        self._plots_lt.append(panel)
         return sizer
 
     def _add_plot(self, sensor):
         panel = PanelPlotting(self)
         panel.add_sensor(sensor)
-        return panel
+        return
 
+    def OnClose(self, evt):
+        for sensor in self.sensors:
+            sensor.stop()
+        for sensor in self.events:
+            sensor.stop()
+        self.hw_stream.close()
+        self.hw_events.close()
+        for plot in self._plots_main:
+            plot.Destroy()
+        for plot in self._plots_lt:
+            plot.Destroy()
+        self.Destroy()
 
 class MyTestApp(wx.App):
     def OnInit(self):

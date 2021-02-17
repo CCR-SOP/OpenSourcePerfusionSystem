@@ -52,8 +52,8 @@ class TestFrame(wx.Frame):
         for ch, sensor in enumerate(self.sensors):
             sensor.hw.add_channel(ch)
             sensor.set_ch_id(ch)
-
-        sensor.hw.open()
+        self.hw_events.open()
+        self.hw_stream.open()
 
         self.events = [SensorPoint('Vasodilator', '2 ml', self.hw_events),
                        SensorPoint('Vasoconstrictor', '2 ml', self.hw_events)
