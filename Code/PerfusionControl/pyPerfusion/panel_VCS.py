@@ -138,6 +138,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
+        self.ao = NIDAQ_AO()
         valves = {'Hepatic Artery (pH/CO2/O2)': NIDAQ_DIO(),
                   'Portal Vein (pH/CO2/O2)': NIDAQ_DIO(),
                   'Inferior Vena Cava (pH/CO2/O2)': NIDAQ_DIO(),
@@ -148,7 +149,7 @@ class TestFrame(wx.Frame):
         sizer = wx.GridSizer(cols=4)
         for key, valve in valves.items():
             sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
-        sizer.Add(PanelAO(self, NIDAQ_AO, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
+        sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
         sizer.Add(PanelCoordination(self, name='Valve Coordination'), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
         self.Fit()
