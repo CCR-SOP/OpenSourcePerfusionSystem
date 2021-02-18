@@ -15,7 +15,6 @@ from pyPerfusion.panel_AO import PanelAO
 chemical_valves = {}
 glucose_valves = {}
 open_chemical_valves = {}
-open_glucose_valves = {}
 
 class PanelVCS(PanelDIO):
 
@@ -26,36 +25,24 @@ class PanelVCS(PanelDIO):
             self.btn_activate.SetBackgroundColour('red')
             if 'pH/CO2/O2' in self._name:
                chemical_valves.update({self._name: self})
-            else:
+            elif 'Glucose' in self._name:
                glucose_valves.update({self._name: self})
         else:  # If channel was just closed
             self.btn_activate.SetBackgroundColour('gray')
-            if self._name in open_chemical_valves.keys():
-                del open_chemical_valves[self._name]
-            elif self._name in open_glucose_valves.keys():
-                del open_glucose_valves[self._name]
 
     def OnActivate(self, evt):
         super().OnActivate(evt)
         state = self.btn_activate.GetLabel()
         if state == 'Activate':  # If valve was just deactivated
             self.btn_activate.SetBackgroundColour('red')
-            if 'pH/CO2/O2' in self._name:
-                del open_chemical_valves[self._name]
-            elif 'Glucose' in self._name:
-                del open_glucose_valves[self._name]
         else:  # If valve was just activated
              self.btn_activate.SetBackgroundColour('green')
              if 'pH/CO2/O2' in self._name:
-                if len(open_chemical_valves):  # If another chemical valve is already open
-                    for key, chem in open_chemical_valves.items():  # Close the other open chemical valves
-                        chem._dio.deactivate()
-                        chem.btn_activate.SetLabel('Activate')
-                        chem.btn_activate.SetBackgroundColour('red')
-                    open_chemical_valves.clear()
-                open_chemical_valves.update({self._name: self})
-             elif 'Glucose' in self._name:
-                open_glucose_valves.update({self._name: self})
+                 for key, chem in chemical_valves.items():  # For all chemical valves
+                     if chem._dio.value and key != self._name:  # If the valve is open AND the valve is not the one just opened;
+                         chem._dio.deactivate()
+                         chem.btn_activate.SetLabel('Activate')
+                         chem.btn_activate.SetBackgroundColour('red')
 
     def OnLoadConfig(self, evt):
         super().OnLoadConfig(evt)
