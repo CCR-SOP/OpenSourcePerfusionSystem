@@ -59,3 +59,6 @@ class NIDAQ_DIO(pyDIO.DIO):
         self.__task.WriteDigitalLines(1, True, self.__timeout, DAQmx_Val_GroupByChannel, data, None, None)
         super()._deactivate()
         print("deactivated channel")
+
+    def is_open(self):
+        return self.__task
