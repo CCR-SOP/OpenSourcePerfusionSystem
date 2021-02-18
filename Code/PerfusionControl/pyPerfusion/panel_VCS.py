@@ -47,19 +47,15 @@ class PanelVCS(PanelDIO):
         else:  # If valve was just activated
              self.btn_activate.SetBackgroundColour('green')
              if 'pH/CO2/O2' in self._name:
-                if len(open_chemical_valves) > 1:  # If the activation of the valve caused two chemical valves to be open simultaneously
+                if len(open_chemical_valves):  # If another chemical valve is already open
                     for key, chem in open_chemical_valves.items():  # Close the other open chemical valves
-                        if key != self._name:
-                            chem._dio.deactivate()
-                            chem.btn_activate.SetLabel('Activate')
-                            chem.btn_activate.SetBackgroundColour('red')
+                        chem._dio.deactivate()
+                        chem.btn_activate.SetLabel('Activate')
+                        chem.btn_activate.SetBackgroundColour('red')
                     open_chemical_valves.clear()
                 open_chemical_valves.update({self._name: self})
              elif 'Glucose' in self._name:
                 open_glucose_valves.update({self._name: self})
-
-   # def OnPulse(self, evt):
-   #     pass
 
     def OnLoadConfig(self, evt):
         super().OnLoadConfig(evt)
@@ -130,15 +126,18 @@ class PanelCoordination(wx.Panel):
             self._last_valve = ''
         if 'Hepatic Artery' in self._last_valve:
             self._valve_to_open = valve_names[1]
+            self.close_last_chemical_valve(self._last_valve)
         elif 'Portal Vein' in self._last_valve:
             self._valve_to_open = valve_names[2]
+            self.close_last_chemical_valve(self._last_valve)
         elif 'Inferior Vena Cava' in self._last_valve:
             self._valve_to_open = valve_names[0]
+            self.close_last_chemical_valve(self._last_valve)
         else:
             self._valve_to_open = valve_names[0]
         chemical_valves[self._valve_to_open]._dio.activate()
         chemical_valves[self._valve_to_open].btn_activate.SetLabel('Deactivate')
-        chemical_valves[self._valve_to_open].btn_activate.SetBackgroundColor('Green')
+        chemical_valves[self._valve_to_open].btn_activate.SetBackgroundColour('Green')
         open_chemical_valves.update({self._valve_to_open: chemical_valves[self._valve_to_open]})
 
     def close_all_chemical_valves(self):
@@ -147,6 +146,12 @@ class PanelCoordination(wx.Panel):
             valve.btn_activate.SetLabel('Activate')
             valve.btn_activate.SetBackgroundColour('red')
         open_chemical_valves.clear()
+
+    def close_last_chemical_valve(self, valve):
+        chemical_valves[valve]._dio.deactivate()
+        chemical_valves[valve].btn_activate.SetLabel('Activate')
+        chemical_valves[valve].btn_activate.SetBackgroundColour('Red')
+        del open_chemical_valves[valve]
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
