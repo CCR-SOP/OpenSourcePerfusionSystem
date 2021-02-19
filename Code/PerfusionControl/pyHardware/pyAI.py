@@ -87,6 +87,11 @@ class AI:
             with self.__lock_buf:
                 del self._queue_buffer[channel_id]
             print(f'keys after deletion are {self._queue_buffer.keys()}')
+            #    if len(self._queue_buffer.keys()):
+            #        self.reopen()
+            #        self.start()
+            #    else:
+            #        pass
             self.reopen()
             self.start()
 
