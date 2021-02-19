@@ -6,6 +6,7 @@ and under the public domain.
 
 Author: John Kakareka
 """
+
 import time
 import threading
 
@@ -18,51 +19,81 @@ import pyHardware.pyAI as pyAI
 
 
 class NIDAQ_AI(pyAI.AI):
-    def __init__(self):
-        super().__init__()
-        self.__dev = None
+    def __init__(self, period_ms, volts_p2p, volts_offset):
+        super().__init__(period_ms, buf_type=np.float32)
+        self._dev = None
         self._line = None
         self.__timeout = 1.0
         self.__task = None
-        self._volts_min = 0
-        self._volts_max = 5
+        self._volts_p2p = volts_p2p
+        self._volts_offset = volts_offset
 
     @property
-    def is_open(self):
-        return self.__task is not None
+    def _devname(self):
+        lines = self.get_ids()
+        devstr = ','.join([f'{self._dev}/ai{line}' for line in lines])
+        return devstr
 
-    @property
-    def devname(self):
-        return f"/{self.__dev}/ai{self._line}"
-
-    def _convert_to_units(self):
-        data = super()._convert_to_units()
+    def _convert_to_units(self, buffer, channel):
+        data = super()._convert_to_units(buffer, channel)
         return self.data_type(data)
 
     def _acq_samples(self):
-        sleep_time = self._read_period_ms / self._period_ms / 1000.0
+        sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         samples_read = PyDAQmx.int32()
-        self.__task.ReadAnalogF64(self.samples_per_read, sleep_time, DAQmx_Val_GroupByChannel, self._buffer,
-                                  self.samples_per_read, PyDAQmx.byref(samples_read), None)
-        self._buffer_t = time.perf_counter()
+        buffer_t = time.perf_counter()
+        ch_ids = self.get_ids()
+        buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=np.float64)
+        try:
+            if self.__task:
+                self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
+                                          len(buffer), PyDAQmx.byref(samples_read), None)
+        except PyDAQmx.ReadBufferTooSmallError:
+            pass
+        offset = 0
+        for ch in ch_ids:
+            # buf = self.data_type(buffer[offset::len(ch_ids)])
+            buf = self.data_type(buffer[offset:offset+self.samples_per_read])
+            buf = self._convert_to_units(buf, ch)
+            self._queue_buffer[ch].put((buf, buffer_t))
+            offset += self.samples_per_read
 
-    def open(self, period_ms, buf_type=np.float64, data_type=np.float32, read_period_ms=500, line='None', dev='None', volts_min=0, volts_max=5,):
-        self.__dev = dev
-        self._line = line
-        super().open(period_ms, buf_type, data_type, read_period_ms)
+    def open(self, dev):
+        super().open()
+        self._dev = dev
+        self.reopen()
+
+    def reopen(self):
         try:
             if self.__task:
                 self.close()
 
-            self.__task = Task()
-            self.__task.CreateAIVoltageChan(self.devname, None, DAQmx_Val_RSE, volts_min, volts_max, DAQmx_Val_Volts, None)
-            self.__task.StartTask()
+            if self._dev:
+                self.__task = Task()
+                volt_min = self._volts_offset - 0.5 * self._volts_p2p
+                volt_max = self._volts_offset + 0.5 * self._volts_p2p
+                self.__task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
+                hz = 1.0 / (self._period_sampling_ms / 1000.0)
+                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
+                                             self.samples_per_read)
         except PyDAQmx.DAQError as e:
-            print("Could not create AO Channel for {}".format(self.devname))
+            print("Could not create AI Channel for {}".format(self._devname))
             print(f"{e}")
             self.__task = None
 
     def close(self):
+        self.stop()
         if self.__task:
             self.__task.StopTask()
             self.__task = None
+
+    def start(self):
+        if self.__task:
+            self.__task.StartTask()
+            super().start()
+
+    def stop(self):
+        super().stop()
+        if self.__task:
+            self.__task.StopTask()
+            self.__task.WaitUntilTaskDone(2.0)

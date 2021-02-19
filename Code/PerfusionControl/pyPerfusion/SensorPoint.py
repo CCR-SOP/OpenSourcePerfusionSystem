@@ -16,7 +16,7 @@ class SensorPoint(SensorStream):
     def _get_stream_info(self):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
-                  f'Sensor: {self._name}',
+                  f'Sensor: {self.name}',
                   f'Unit: {self._unit_str}',
                   f'Data Format: {str(np.dtype(self.hw.data_type))}',
                   f'Samples Per Timestamp: {self._samples_per_ts}',

@@ -3,7 +3,6 @@ from pyHardware.pyUSBSerial import USBSerial
 class PHDserial(USBSerial):
     """
     Class for serial communication over USB using PHD (Pump 11 Elite) command set
-
     ...
 
     Attributes
@@ -32,9 +31,17 @@ class PHDserial(USBSerial):
     def manufacturers(self):
         return self._manufacturers
 
+    @manufacturers.setter
+    def manufacturers(self, codes):
+        self._manufacturers = codes
+
     @property
     def syringes(self):
         return self._syringes
+
+    @syringes.setter
+    def syringes(self, syringes):
+        self._syringes = syringes
 
     def open(self, port_name, baud, addr=0):
         super().open(port_name, baud)
