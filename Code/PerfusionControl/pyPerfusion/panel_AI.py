@@ -22,6 +22,7 @@ class PanelAI(wx.Panel):
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._dev = None
         wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
@@ -54,6 +55,11 @@ class PanelAI(wx.Panel):
     def __set_bindings(self):
         pass
 
+    def force_device(self, dev):
+        self._dev = dev
+        self._panel_cfg.choice_dev.SetStringSelection(self._dev)
+        self._panel_cfg.choice_dev.Enable(False)
+
 
 class PanelAI_Config(wx.Panel):
     def __init__(self, parent, sensor, name, sizer_name, plot):
@@ -67,7 +73,7 @@ class PanelAI_Config(wx.Panel):
         self._avail_lines = LINE_LIST
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=sizer_name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
         self.label_dev = wx.StaticText(self, label='NI Device Name')
         self.choice_dev = wx.Choice(self, wx.ID_ANY, choices=self._avail_dev)
 
@@ -122,16 +128,16 @@ class PanelAI_Config(wx.Panel):
 
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
+        dev = self.choice_dev.GetStringSelection()
+        line = self.choice_line.GetStringSelection()
         if state:
-            dev = self.choice_dev.GetStringSelection()
-            line = self.choice_line.GetStringSelection()
-            print(f'dev is {dev}, line is {line}')
-            self._sensor.hw.open(dev=dev, line=line)
+            self._sensor.hw.add_channel(line)
+            self._sensor.set_ch_id(line)
+            self.btn_open.SetLabel('Close')
+            self._sensor.hw.open(dev=dev)
             self._sensor.hw.start()
-            self.btn_open.SetLabel('Close',)
         else:
-            self._sensor.hw.stop()
-            self._sensor.hw.close()
+            self._sensor.hw.remove_channel(line)
             self.btn_open.SetLabel('Open')
 
     def OnSaveCfg(self, evt):
@@ -153,8 +159,8 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         ai_name = 'Analog Input'
-        self.sensor = SensorStream('Analog Input 1', 'Volts',
-                              NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5))
+        self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
+        self.sensor = SensorStream('Analog Input 1', 'Volts', self.acq)
         self.panel = PanelAI(self, self.sensor, name=ai_name)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
