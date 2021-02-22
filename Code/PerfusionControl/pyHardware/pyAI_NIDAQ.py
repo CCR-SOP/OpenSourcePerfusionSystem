@@ -57,7 +57,7 @@ class NIDAQ_AI(pyAI.AI):
         for ch in ch_ids:
             # buf = self.data_type(buffer[offset::len(ch_ids)])
             buf = self.data_type(buffer[offset:offset+self.samples_per_read])
-            if len(self._calibration[ch]):
+            if len(self._calibration[ch]):  # If the ai channel has been calibrated:
                 buf = self._convert_to_units(buf, ch)
             self._queue_buffer[ch].put((buf, buffer_t))
             offset += self.samples_per_read

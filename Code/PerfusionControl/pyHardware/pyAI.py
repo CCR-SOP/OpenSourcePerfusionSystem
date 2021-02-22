@@ -82,7 +82,7 @@ class AI:
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
                 self._demo_amp[channel_id] = 0
                 self._demo_offset[channel_id] = 0
-                if channel_id in self._calibration.keys():
+                if channel_id in self._calibration.keys():  # If a calibration has already been performed for this channel, retain it
                     pass
                 else:
                     self._calibration[channel_id] = []
