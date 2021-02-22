@@ -39,6 +39,7 @@ def set_base(basepath='~/Documents'):
 
 def update_hwcfg_section(name, updated_info):
     config = ConfigParser()
+    config.optionxform = str
     config.read(LP_FILE['hwcfg'])
     if not config.has_section(name):
         config.add_section(name)
@@ -49,11 +50,11 @@ def update_hwcfg_section(name, updated_info):
 
 def get_hwcfg_section(name):
     config = ConfigParser()
+    config.optionxform = str
+    section = {}
     config.read(LP_FILE['hwcfg'])
     if config.has_section(name):
         section = config[name]
-    else:
-        section = {}
     return section
 
 def save_syringe_info(codes, volumes):

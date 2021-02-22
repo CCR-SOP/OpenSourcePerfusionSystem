@@ -6,6 +6,7 @@ and under the public domain.
 
 Author: John Kakareka
 """
+
 import time
 import threading
 
@@ -33,6 +34,13 @@ class NIDAQ_AI(pyAI.AI):
         devstr = ','.join([f'{self._dev}/ai{line}' for line in lines])
         return devstr
 
+    def _convert_to_units(self, buffer, channel):
+        data = super()._convert_to_units(buffer, channel)
+        return self.data_type(data)
+
+    def set_calibration(self, ch, low_pt, low_read, high_pt, high_read):
+        super().set_calibration(ch, low_pt, low_read, high_pt, high_read)
+
     def _acq_samples(self):
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         samples_read = PyDAQmx.int32()
@@ -49,6 +57,8 @@ class NIDAQ_AI(pyAI.AI):
         for ch in ch_ids:
             # buf = self.data_type(buffer[offset::len(ch_ids)])
             buf = self.data_type(buffer[offset:offset+self.samples_per_read])
+            if len(self._calibration[ch]):  # If the ai channel has been calibrated:
+                buf = self._convert_to_units(buf, ch)
             self._queue_buffer[ch].put((buf, buffer_t))
             offset += self.samples_per_read
 
