@@ -82,7 +82,10 @@ class AI:
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
                 self._demo_amp[channel_id] = 0
                 self._demo_offset[channel_id] = 0
-                self._calibration[channel_id] = []
+                if channel_id in self._calibration.keys():
+                    pass
+                else:
+                    self._calibration[channel_id] = []
             self.reopen()
             self.start()
 
@@ -156,5 +159,5 @@ class AI:
                         self._calibration[channel][2] - self._calibration[channel][0]))
                        / (self._calibration[channel][3] - self._calibration[channel][1])) + self._calibration[channel][
                           0]
-            print(f'Convert {buffer[i]} to {data[i]}')
+        #    print(f'Convert {buffer[i]} to {data[i]}')
         return data
