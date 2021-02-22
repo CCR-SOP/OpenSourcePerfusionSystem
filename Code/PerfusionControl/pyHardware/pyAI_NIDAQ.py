@@ -38,6 +38,9 @@ class NIDAQ_AI(pyAI.AI):
         data = super()._convert_to_units(buffer, channel)
         return self.data_type(data)
 
+    def set_calibration(self, ch, low_pt, low_read, high_pt, high_read):
+        super().set_calibration(ch, low_pt, low_read, high_pt, high_read)
+
     def _acq_samples(self):
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         samples_read = PyDAQmx.int32()
