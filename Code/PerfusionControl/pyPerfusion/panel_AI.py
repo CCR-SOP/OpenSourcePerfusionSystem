@@ -118,15 +118,15 @@ class PanelAI_Config(wx.Panel):
         sizer.Add(self.btn_open, flags)
         self.sizer.Add(sizer)
 
-        self.sizer.AddSpacer(10)
-
-        sizer = wx.GridSizer(cols=4)
+        sizer = wx.GridSizer(cols=5)
         sizer.Add(self.label_cal_pt1, flags)
         sizer.Add(self.spin_cal_pt1, flags)
+        sizer.AddSpacer(1)
         sizer.Add(self.btn_cal_pt1, flags)
         sizer.Add(self.label_cal_pt1_val, flags)
         sizer.Add(self.label_cal_pt2, flags)
         sizer.Add(self.spin_cal_pt2, flags)
+        sizer.AddSpacer(1)
         sizer.Add(self.btn_cal_pt2, flags)
         sizer.Add(self.label_cal_pt2_val, flags)
         sizer.Add(self.btn_calibrate, flags)
