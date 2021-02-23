@@ -27,28 +27,29 @@ class PanelTestMaintainFlow(wx.Panel):
         self.pid.sample_time = 0.001
         self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self._ao = NIDAQ_AO()
-        self._ao.open(line=0, period_ms=100, dev='Dev2')
-        self._ai.open(dev='Dev2')
-        self._ai.add_channel(channel_id=1)
+        self._ao.open(line=1, period_ms=100, dev='Dev3')
+        self._ai.add_channel(channel_id=3)
+        self._ai.open(dev='Dev1')
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
-        self._sensor.start()
 
         self.panel_pid = PanelPID(self)
         self.panel_pid.set_pid(self.pid)
 
-        self.label_ai = wx.StaticText(self, label=f'Using Analog Input Dev2/ai1')
-        self.label_ao = wx.StaticText(self, label=f'Using Analog Output Dev2/ao1')
+        self.label_ai = wx.StaticText(self, label=f'Using Analog Input Dev1/ai3')
+        self.label_ao = wx.StaticText(self, label=f'Using Analog Output Dev3/ao1')
         self.label_output = wx.StaticText(self, label='Analog Output is xxx')
 
         self.label_desired_output = wx.StaticText(self, label='Desired Output')
-        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=self._inc)
+        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=1.0, initial=0.5, inc=self._inc)
         self.spin_desired_output.Digits = 3
 
         self.panel_plot = PanelPlotting(self)
-        self.panel_plot.add_sensor(self._sensor)
         LP_CFG.update_stream_folder()
         self._sensor.open(LP_CFG.LP_PATH['stream'])
         self._ao.set_dc(0)
+
+        self.panel_plot.add_sensor(self._sensor)
+        self._sensor.start()
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -57,7 +58,6 @@ class PanelTestMaintainFlow(wx.Panel):
 
         self.timer_flow_adjust = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
-
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
@@ -93,12 +93,15 @@ class PanelTestMaintainFlow(wx.Panel):
 
     def OnStartStop(self, evt):
         if self.btn_stop.GetValue():
+            self._sensor.set_ch_id(3)
+            self._sensor.hw.start()
             self._ao.start()
             self.btn_stop.SetLabel('Stop')
             self.update_output()
             self.timer_flow_adjust.Start(1000, wx.TIMER_CONTINUOUS)
         else:
             self._ao.halt()
+            self._sensor.stop()
             self.btn_stop.SetLabel('Start')
             self.timer_flow_adjust.Stop()
 
