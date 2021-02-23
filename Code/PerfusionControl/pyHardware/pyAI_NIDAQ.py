@@ -33,9 +33,6 @@ class NIDAQ_AI(pyAI.AI):
         devstr = ','.join([f'{self._dev}/ai{line}' for line in lines])
         return devstr
 
-    def _convert_to_units(self):
-        return self.data_type(self._buffer)
-
     def _acq_samples(self):
         sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         samples_read = PyDAQmx.int32()
