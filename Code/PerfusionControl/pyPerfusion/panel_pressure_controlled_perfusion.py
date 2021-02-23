@@ -83,6 +83,7 @@ class PanelTestPressure(wx.Panel):
             self.timer_pressure_adjust.Start(1000, wx.TIMER_CONTINUOUS)
         else:
             self.timer_pressure_adjust.Stop()
+            self._ao.set_dc(0)
             self._ao.close()
             self._ao.halt()
 
@@ -109,16 +110,23 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=2)
+        sizer = wx.GridSizer(cols=3)
         self.acq =  NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.pressure_sensors = {
             SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq): ['Dev3', 1],
             SensorStream('Portal Vein Pressure', 'mmHg', self.acq): ['Dev3', 0]
         }
 
+        self.flow_sensors = [SensorStream('Portal Vein Flow', 'L/min', self.acq), SensorStream('Hepatic Artery Flow', 'ml/min', self.acq)]
+
         for sensor, pump in self.pressure_sensors.items():
             sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.ALL | wx.EXPAND, border=1)
+            sizer.Add(PanelAI(self, self.flow_sensors[pump[1]], name=self.flow_sensors[pump[1]].name), 1, wx.ALL | wx.EXPAND, border=1)
             sizer.Add(PanelTestPressure(self, sensor, name=sensor.name, dev=pump[0], line=pump[1]), 1, wx.ALL | wx.EXPAND, border=1)
+
+        self._IVC_pressure = SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq)
+
+        sizer.Add(PanelAI(self, self._IVC_pressure, name=self._IVC_pressure.name), 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -128,6 +136,7 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         for sensor in self.pressure_sensors.keys():
             sensor.stop()
+        self._IVC_pressure.stop()
         self.Destroy()
 
 class MyTestApp(wx.App):
