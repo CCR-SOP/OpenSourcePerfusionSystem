@@ -31,10 +31,10 @@ class PanelTestPressure(wx.Panel):
         self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=100, initial=50, inc=self._inc)
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (mmHg)')
-        self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=10)
+        self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=2)
 
         self.label_increment = wx.StaticText(self, label='Voltage Increment')
-        self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0, inc=0.01)
+        self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0, inc=0.001)
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -81,11 +81,13 @@ class PanelTestPressure(wx.Panel):
             self._ao.open(period_ms=100, dev=self._dev, line=self._line)
             self._ao.set_dc(0)
             self.timer_pressure_adjust.Start(1000, wx.TIMER_CONTINUOUS)
+            self.btn_stop.SetLabel('Stop')
         else:
             self.timer_pressure_adjust.Stop()
             self._ao.set_dc(0)
             self._ao.close()
             self._ao.halt()
+            self.btn_stop.SetLabel('Start')
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_pressure_adjust.GetId():
@@ -104,8 +106,10 @@ class PanelTestPressure(wx.Panel):
                 new_val = self._ao._volts_offset + inc
             else:
                 new_val = self._ao._volts_offset - inc
-            self._ao.set_dc(new_val)
-
+            if "Hepatic Artery" in self._sensor.name:
+                self._ao.set_sine(new_val/4, new_val, Hz=1)
+            else:
+                self._ao.set_dc(new_val)
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
