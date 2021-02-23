@@ -25,16 +25,19 @@ class PanelTestMaintainFlow(wx.Panel):
 
         self.pid = PID(1.0, 0.1, 0.05, setpoint=1)
         self.pid.sample_time = 0.001
-        self._ai = NIDAQ_AI(line=4, period_ms=100, volts_p2p=5, volts_offset=2.5, dev='Dev1')
+        self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self._ao = NIDAQ_AO()
-        self._ao.open(line=1, period_ms=100, dev='Dev1')
+        self._ao.open(line=0, period_ms=100, dev='Dev2')
+        self._ai.open(dev='Dev2')
+        self._ai.add_channel(channel_id=1)
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
+        self._sensor.start()
 
         self.panel_pid = PanelPID(self)
         self.panel_pid.set_pid(self.pid)
 
-        self.label_ai = wx.StaticText(self, label=f'Using Analog Input {self._ai.devname}')
-        self.label_ao = wx.StaticText(self, label=f'Using Analog Output {self._ao.devname}')
+        self.label_ai = wx.StaticText(self, label=f'Using Analog Input Dev2/ai1')
+        self.label_ao = wx.StaticText(self, label=f'Using Analog Output Dev2/ao1')
         self.label_output = wx.StaticText(self, label='Analog Output is xxx')
 
         self.label_desired_output = wx.StaticText(self, label='Desired Output')
@@ -91,13 +94,12 @@ class PanelTestMaintainFlow(wx.Panel):
     def OnStartStop(self, evt):
         if self.btn_stop.GetValue():
             self._ao.start()
-            self._sensor.start()
             self.btn_stop.SetLabel('Stop')
             self.update_output()
             self.timer_flow_adjust.Start(1000, wx.TIMER_CONTINUOUS)
         else:
-            self._sensor.stop()
-            self.btn_stop.SetLabel('Stop')
+            self._ao.halt()
+            self.btn_stop.SetLabel('Start')
             self.timer_flow_adjust.Stop()
 
     def OnTimer(self, event):
