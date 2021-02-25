@@ -7,21 +7,17 @@ import numpy as np
 class AI:
     """
     Base class for streaming data from sensors and saving to file
-
     ...
-
     Attributes
     ----------
     _period_sampling_ms : int
         sampling period, in milliseconds, for all sensors
-
     Methods
     -------
     start()
         starts the acquisition of sensor data
     halt()
         halts the acquisition of  sensor data
-
     """
 
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
