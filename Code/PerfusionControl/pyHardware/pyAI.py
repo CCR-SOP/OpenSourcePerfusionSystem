@@ -7,21 +7,17 @@ import numpy as np
 class AI:
     """
     Base class for streaming data from sensors and saving to file
-
     ...
-
     Attributes
     ----------
     _period_sampling_ms : int
         sampling period, in milliseconds, for all sensors
-
     Methods
     -------
     start()
         starts the acquisition of sensor data
     halt()
         halts the acquisition of  sensor data
-
     """
 
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
@@ -41,6 +37,8 @@ class AI:
         self.data_type = data_type
         self.buf_type = buf_type
         self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
+
+        self._calibration = {}
 
     @property
     def period_sampling_ms(self):
@@ -62,6 +60,9 @@ class AI:
         self._read_period_ms = period_ms
         self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
 
+    def set_calibration(self, ch, low_pt, low_read, high_pt, high_read):
+        self._calibration[ch] = [low_pt, low_read, high_pt, high_read]
+
     def active_channels(self):
         return len(self._queue_buffer) > 0
 
@@ -77,6 +78,10 @@ class AI:
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
                 self._demo_amp[channel_id] = 0
                 self._demo_offset[channel_id] = 0
+                if channel_id in self._calibration.keys():  # If a calibration has already been performed for this channel, retain it
+                    pass
+                else:
+                    self._calibration[channel_id] = []
             self.reopen()
             self.start()
 
@@ -142,3 +147,13 @@ class AI:
             val = self.data_type(np.random.random_sample() * self._demo_amp[ch] + self._demo_offset[ch])
             buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
             self._queue_buffer[ch].put((buffer, buffer_t))
+
+    def _convert_to_units(self, buffer, channel):
+        data = np.zeros_like(buffer)
+        for i in range(len(buffer)):
+            data[i] = (((buffer[i] - self._calibration[channel][1]) * (
+                        self._calibration[channel][2] - self._calibration[channel][0]))
+                       / (self._calibration[channel][3] - self._calibration[channel][1])) + self._calibration[channel][
+                          0]
+        #    print(f'Convert {buffer[i]} to {data[i]}')
+        return data
