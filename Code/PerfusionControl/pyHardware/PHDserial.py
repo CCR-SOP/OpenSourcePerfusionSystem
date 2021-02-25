@@ -3,7 +3,6 @@ from pyHardware.pyUSBSerial import USBSerial
 class PHDserial(USBSerial):
     """
     Class for serial communication over USB using PHD (Pump 11 Elite) command set
-
     ...
 
     Attributes
@@ -27,14 +26,24 @@ class PHDserial(USBSerial):
         self._manufacturers = {}
         self._syringes = {}
         self._response = ''
+        self.reset = True
+        self.cooldown = False
 
     @property
     def manufacturers(self):
         return self._manufacturers
 
+    @manufacturers.setter
+    def manufacturers(self, codes):
+        self._manufacturers = codes
+
     @property
     def syringes(self):
         return self._syringes
+
+    @syringes.setter
+    def syringes(self, syringes):
+        self._syringes = syringes
 
     def open(self, port_name, baud, addr=0):
         super().open(port_name, baud)
@@ -58,19 +67,31 @@ class PHDserial(USBSerial):
         self.send(f'{param} {value}')
 
     def set_syringe_manufacturer_size(self, manu_code, syringe_size):
-        self.set_param('syrm', f'{manu_code} {syringe_size}')
-        print('New Syringe Information:')
-        self.get_syringe_info()
+        self.set_param('syrm', f'{manu_code} {syringe_size}\r')
+       # print('New Syringe Information:')
+       # self.get_syringe_info()
 
     def set_infusion_rate(self, rate, unit_str):  # can be changed mid-run
         self.set_param('irate', f'{rate} {unit_str}\r')
-        print('Infusion rate set to :')
-        self.get_infusion_rate()
+        # print('Infusion rate set to :')
+       # self.get_infusion_rate()
 
     def reset_infusion_volume(self):
         self.send('civolume\r')
-        print('Infusion volume reset to :')
-        self.get_infused_volume()
+        # print('Infusion volume reset to :')
+        # self.get_infused_volume()
+
+    def set_target_volume(self, volume, volume_units):
+        self.set_param('tvolume', f'{volume} {volume_units}\r')
+        # print('Target volume set to %s' % volume + ' ' + volume_units)
+
+    def get_target_volume(self):
+        self.send('tvolume\r')
+        print(self._response)
+
+    def reset_target_volume(self):
+        self.send('ctvolume\r')
+        # print('Target volume cleared')
 
     def get_syringe_info(self):
         self.send('syrm\r')
@@ -79,10 +100,12 @@ class PHDserial(USBSerial):
     def get_infusion_rate(self):
         self.send('irate\r')
         print(self._response)
+        return self._response
 
     def get_infused_volume(self):
         self.send('ivolume\r')
         print(self._response)
+        return self._response
 
     def update_syringe_manufacturers(self):
         self.send('syrmanu ?\r')

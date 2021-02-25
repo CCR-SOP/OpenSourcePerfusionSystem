@@ -37,6 +37,9 @@ class PanelAO(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
+    def close(self):
+        self._ao.close()
+
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
 
@@ -120,7 +123,7 @@ class PanelAO_Config(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
-            self._ao.open(line, period_ms=10, dev=dev)
+            self._ao.open(period_ms=10, dev=dev, line=line)
             self._ao.set_dc(0)  # Some of the peristaltic pumps need to be set to run at 0 V to activate their analog control
             self.btn_open.SetLabel('Close')
             self._ao.start()

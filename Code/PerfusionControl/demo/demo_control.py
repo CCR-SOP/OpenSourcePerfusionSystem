@@ -21,13 +21,20 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=2)
 
+        self._panel = []
         for device in devices:
-            panel = PanelAO(self, NIDAQ_AO(), device)
-            sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+            self._panel.append(PanelAO(self, NIDAQ_AO(), device))
+            sizer.Add(self._panel[-1], 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, evt):
+        for panel in self._panel:
+            panel.close()
+        self.Destroy()
 
 
 class MyTestApp(wx.App):
