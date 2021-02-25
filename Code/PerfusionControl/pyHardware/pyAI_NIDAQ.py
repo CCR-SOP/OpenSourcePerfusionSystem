@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """Provides concrete class for controlling AI through NIDAQmx
-
 This work was created by an employee of the US Federal Gov
 and under the public domain.
-
 Author: John Kakareka
 """
 

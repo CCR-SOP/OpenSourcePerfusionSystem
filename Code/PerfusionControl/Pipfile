@@ -12,6 +12,7 @@ matplotlib = "*"
 numpy = "*"
 pyserial = "*"
 configparser = "*"
+simple-pid = "*"
 
 [requires]
 python_version = "3.8"
