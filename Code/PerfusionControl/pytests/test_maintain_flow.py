@@ -25,15 +25,23 @@ class PanelTestMaintainFlow(wx.Panel):
 
         self.pid = PID(1.0, 0.1, 0.05, setpoint=1)
         self.pid.sample_time = 0.001
-        self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
-        self._ao = NIDAQ_AO()
-        self._ao.open(line=1, period_ms=100, dev='Dev3')
-        self._ai.add_channel(channel_id=3)
-        self._ai.open(dev='Dev1')
-        self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
-
         self.panel_pid = PanelPID(self)
         self.panel_pid.set_pid(self.pid)
+
+        self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
+        self._ai.add_channel(channel_id=3)
+        self._ai.open(dev='Dev1') # Hepatic Artery Flow Sensor
+
+        self._ao = NIDAQ_AO()
+        self._ao.open(line=1, period_ms=100, dev='Dev3')  # Hepatic Artery BVP Pump
+        self._ao.set_dc(0)
+
+        self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
+        self.panel_plot = PanelPlotting(self)
+        LP_CFG.update_stream_folder()
+        self._sensor.open(LP_CFG.LP_PATH['stream'])
+        self.panel_plot.add_sensor(self._sensor)
+        self._sensor.start()
 
         self.label_ai = wx.StaticText(self, label=f'Using Analog Input Dev1/ai3')
         self.label_ao = wx.StaticText(self, label=f'Using Analog Output Dev3/ao1')
@@ -42,14 +50,6 @@ class PanelTestMaintainFlow(wx.Panel):
         self.label_desired_output = wx.StaticText(self, label='Desired Output')
         self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=1.0, initial=0.5, inc=self._inc)
         self.spin_desired_output.Digits = 3
-
-        self.panel_plot = PanelPlotting(self)
-        LP_CFG.update_stream_folder()
-        self._sensor.open(LP_CFG.LP_PATH['stream'])
-        self._ao.set_dc(0)
-
-        self.panel_plot.add_sensor(self._sensor)
-        self._sensor.start()
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -98,10 +98,11 @@ class PanelTestMaintainFlow(wx.Panel):
             self._ao.start()
             self.btn_stop.SetLabel('Stop')
             self.update_output()
-            self.timer_flow_adjust.Start(1000, wx.TIMER_CONTINUOUS)
+            self.timer_flow_adjust.Start(5000, wx.TIMER_CONTINUOUS)
         else:
             self._ao.halt()
             self._sensor.stop()
+            self._sensor.hw.remove_channel(3)
             self.btn_stop.SetLabel('Start')
             self.timer_flow_adjust.Stop()
 
@@ -120,8 +121,6 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.ao = NIDAQ_AO()
-        ao_name = 'Analog Output'
         self.panel = PanelTestMaintainFlow(self)
 
 
