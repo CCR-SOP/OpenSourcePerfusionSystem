@@ -7,10 +7,10 @@ Panel class for testing and configuring Valve Control System
 """
 import wx
 
-from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
-from pyPerfusion.panel_DIO import PanelDIO
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
+from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
+from pyPerfusion.panel_DIO import PanelDIO
 
 chemical_valves = {}
 glucose_valves = {}
@@ -110,6 +110,7 @@ class PanelCoordination(wx.Panel):
         for key, valve in chemical_valves.items():
             if valve._dio.value:
                 self._last_valve = key
+                break
         if 'Hepatic Artery' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Portal Vein' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
@@ -138,23 +139,26 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.ao = NIDAQ_AO()
+        sizer = wx.GridSizer(cols=4)
+
         valves = {'Hepatic Artery (pH/CO2/O2)': NIDAQ_DIO(),
                   'Portal Vein (pH/CO2/O2)': NIDAQ_DIO(),
                   'Inferior Vena Cava (pH/CO2/O2)': NIDAQ_DIO(),
                   'Hepatic Artery (Glucose)': NIDAQ_DIO(),
                   'Portal Vein (Glucose)': NIDAQ_DIO(),
-                  'Inferior Vena Cava (Glucose)': NIDAQ_DIO(),
+                  'Inferior Vena Cava (Glucose)': NIDAQ_DIO()
                   }
-        sizer = wx.GridSizer(cols=4)
         for key, valve in valves.items():
             sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
+
+        self.ao = NIDAQ_AO()
         sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
+
         sizer.Add(PanelCoordination(self, name='Valve Coordination'), 1, wx.EXPAND, border=2)
+
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
-
 
 class MyTestApp(wx.App):
     def OnInit(self):
