@@ -11,6 +11,10 @@ from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 from pyPerfusion.panel_DIO import PanelDIO
+from pyHardware.pyAI_NIDAQ import NIDAQ_AI
+from pyPerfusion.panel_AI import PanelAI
+from pyPerfusion.SensorStream import SensorStream
+import pyPerfusion.PerfusionConfig as LP_CFG
 
 chemical_valves = {}
 glucose_valves = {}
@@ -141,24 +145,37 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=4)
 
-        valves = {'Hepatic Artery (pH/CO2/O2)': NIDAQ_DIO(),
-                  'Portal Vein (pH/CO2/O2)': NIDAQ_DIO(),
-                  'Inferior Vena Cava (pH/CO2/O2)': NIDAQ_DIO(),
-                  'Hepatic Artery (Glucose)': NIDAQ_DIO(),
-                  'Portal Vein (Glucose)': NIDAQ_DIO(),
-                  'Inferior Vena Cava (Glucose)': NIDAQ_DIO()
-                  }
-        for key, valve in valves.items():
-            sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
+        self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
+        self._chemical_sensors = [SensorStream('Oxygen', 'mmHg', self.acq),
+                                  SensorStream('Carbon Dioxide', 'mmHg', self.acq),
+                                  SensorStream('pH', 'Units', self.acq)]
+        for sensor in self._chemical_sensors:
+            sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
 
         self.ao = NIDAQ_AO()
         sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
+
+        valves = {'Hepatic Artery (pH/CO2/O2)': NIDAQ_DIO(),
+                  'Portal Vein (pH/CO2/O2)': NIDAQ_DIO(),
+                  'Inferior Vena Cava (pH/CO2/O2)': NIDAQ_DIO(),
+                 # 'Hepatic Artery (Glucose)': NIDAQ_DIO(),
+                 # 'Portal Vein (Glucose)': NIDAQ_DIO(),
+                 # 'Inferior Vena Cava (Glucose)': NIDAQ_DIO()
+                  }
+        for key, valve in valves.items():
+            sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
 
         sizer.Add(PanelCoordination(self, name='Valve Coordination'), 1, wx.EXPAND, border=2)
 
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, evt):
+        for sensor in self._chemical_sensors:
+            sensor.stop()
+        self.Destroy()
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -169,5 +186,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
     app = MyTestApp(0)
     app.MainLoop()
