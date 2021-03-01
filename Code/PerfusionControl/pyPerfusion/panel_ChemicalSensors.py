@@ -18,9 +18,9 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=3)
         self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
-        self._chemical_sensors = [SensorStream('Oxygen', 'Volts', self.acq),
-                            SensorStream('Carbon Dioxide', 'Volts', self.acq),
-                            SensorStream('pH', 'Volts', self.acq)]
+        self._chemical_sensors = [SensorStream('Oxygen', 'mmHg', self.acq),
+                                  SensorStream('Carbon Dioxide', 'mmHg', self.acq),
+                                  SensorStream('pH', 'Units', self.acq)]
         for sensor in self._chemical_sensors:
             sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
 
