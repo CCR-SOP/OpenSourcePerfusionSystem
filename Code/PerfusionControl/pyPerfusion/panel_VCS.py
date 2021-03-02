@@ -3,7 +3,7 @@
 
 @author: Allen Luna
 
-Panel class for testing and configuring Valve Control System
+Panel class for testing and configuring Valve Control System and associated Chemical Sensors
 """
 import wx
 
@@ -42,7 +42,7 @@ class PanelVCS(PanelDIO):
              self.btn_activate.SetBackgroundColour('green')
              if 'pH/CO2/O2' in self._name:
                  for key, chem in chemical_valves.items():  # For all chemical valves
-                     if (chem._dio.value) and (key != self._name):  # If the valve is open AND the valve is not the one just opened;
+                     if chem._dio.value and (key != self._name):  # If the valve is open AND the valve is not the one just opened;
                          chem._dio.deactivate()
                          chem.btn_activate.SetLabel('Activate')
                          chem.btn_activate.SetBackgroundColour('red')
@@ -52,33 +52,41 @@ class PanelVCS(PanelDIO):
         self.btn_activate.SetBackgroundColour('gray')
 
 class PanelCoordination(wx.Panel):
-    def __init__(self, parent, name):
+    def __init__(self, parent, sensors, name):
         self.parent = parent
+        self._sensors = sensors
         self._name = name
+
         self._valve_to_open = None
         self._last_valve = ''
+        self._readings = None  # Amount of readings taken before switching to the next valve
+        self._sampling_period_ms = 3000  # New readings (O2/CO2/pH) are collected every 3 seconds and are coordinated (occur @ the same time)
+        self._clearance_time_ms = None
         wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self._name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.spin_time_chemical = wx.SpinCtrlDouble(self, min=0, max=300, initial=10, inc=1)
-        self.lbl_time_chemical = wx.StaticText(self, label='Chemical Sensor Switching Time (sec)')  # Amount of time where one valve (corresponding to HA/PV/IVC line) will be open for reading of chemical parameters before this valve is closed an another is opened; will depend on how quickly data is collected by the chemical sensors/how many reads we want before a valve switch (TBD)
+        self.spin_readings_chemical = wx.SpinCtrlDouble(self, min=0, max=100, initial=0, inc=1)
+        self.lbl_readings_chemical = wx.StaticText(self, label='Sensor Readings per Switch')
 
         self.btn_start_stop = wx.ToggleButton(self, label='Start')
 
-        self.timer_chemical = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnChemicalTimer)
-
         self.__do_layout()
         self.__set_bindings()
+
+        self.timer_clear_valve = wx.Timer(self, id=0)
+        self.Bind(wx.EVT_TIMER, self.OnClearValve, id=0)
+
+        self.timer_read_values = wx.Timer(self, id=1)
+        self.Bind(wx.EVT_TIMER, self.OnReadValues, id=1)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Left().Proportion(0)
 
         self.sizer_chemical = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_chemical.Add(self.lbl_time_chemical, flags)
-        self.sizer_chemical.Add(self.spin_time_chemical, flags)
+        self.sizer_chemical.Add(self.lbl_readings_chemical, flags)
+        self.sizer_chemical.Add(self.spin_readings_chemical, flags)
 
         self.sizer.Add(self.sizer_chemical)
         self.sizer.AddSpacer(5)
@@ -94,20 +102,35 @@ class PanelCoordination(wx.Panel):
         self.btn_start_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
 
     def OnStartStop(self, evt):
+        for sensor in self._sensors:
+            sensor.stop()
         self.close_all_chemical_valves()
         self._last_valve = ''
         state = self.btn_start_stop.GetLabel()
         if state == 'Start':
-            switching_time = int(self.spin_time_chemical.GetValue())
-            self.timer_chemical.Start(switching_time * 1000, wx.TIMER_CONTINUOUS)
+            self._readings = int(self.spin_readings_chemical.GetValue())
+            self.update_chemical_valves()
+            self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
             self.btn_start_stop.SetLabel('Stop')
         else:
-            self.timer_chemical.Stop()
             self.btn_start_stop.SetLabel('Start')
 
-    def OnChemicalTimer(self, event):
-        if event.GetId() == self.timer_chemical.GetId():
-            self.update_chemical_valves()
+    def OnReadValues(self, event):
+        if event.GetId() == self.timer_read_values.GetId():
+            self.timer_read_values.Stop()
+            for sensor in self._sensors:
+                sensor.stop()  # Stop sensors in anticipation of a valve switch
+                latest = sensor.get_latest(self._readings)
+                print(latest, sensor.name)  # Print last x values read from sensor
+            self.update_chemical_valves()  # Switch valve
+            self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
+
+    def OnClearValve(self, event):
+        if event.GetId() == self.timer_clear_valve.GetId():
+            self.timer_clear_valve.Stop()  # Fresh perfusate has now reached the sensors
+            for sensor in self._sensors:
+                sensor.start()  # Restart sensors
+            self.timer_read_values.Start((self._readings + 1) * self._sampling_period_ms, wx.TIMER_CONTINUOUS)  # Have sensors read for (seconds/reading) x (# of readings), plus an extra three seconds to ensure that at least (# of readings) are recorded (as Python timers and chemical sensors aren't perfectly coordinated)
 
     def update_chemical_valves(self):
         valve_names = list(chemical_valves.keys())
@@ -118,14 +141,18 @@ class PanelCoordination(wx.Panel):
         if 'Hepatic Artery' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Portal Vein' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
+            self._clearance_time_ms = 40000
         elif 'Portal Vein' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Inferior Vena Cava' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
+            self._clearance_time_ms = 10000
         elif 'Inferior Vena Cava' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
+            self._clearance_time_ms = 35000
         else:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
+            self._clearance_time_ms = 35000
         chemical_valves[self._valve_to_open]._dio.activate()
         chemical_valves[self._valve_to_open].btn_activate.SetLabel('Deactivate')
         chemical_valves[self._valve_to_open].btn_activate.SetBackgroundColour('Green')
@@ -145,16 +172,6 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=4)
 
-        self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
-        self._chemical_sensors = [SensorStream('Oxygen', 'mmHg', self.acq),
-                                  SensorStream('Carbon Dioxide', 'mmHg', self.acq),
-                                  SensorStream('pH', 'Units', self.acq)]
-        for sensor in self._chemical_sensors:
-            sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
-
-        self.ao = NIDAQ_AO()
-        sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
-
         valves = {'Hepatic Artery (pH/CO2/O2)': NIDAQ_DIO(),
                   'Portal Vein (pH/CO2/O2)': NIDAQ_DIO(),
                   'Inferior Vena Cava (pH/CO2/O2)': NIDAQ_DIO(),
@@ -165,7 +182,17 @@ class TestFrame(wx.Frame):
         for key, valve in valves.items():
             sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
 
-        sizer.Add(PanelCoordination(self, name='Valve Coordination'), 1, wx.EXPAND, border=2)
+        self.ao = NIDAQ_AO()
+        sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
+
+        self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
+        self._chemical_sensors = [SensorStream('Oxygen', 'mmHg', self.acq),
+                                  SensorStream('Carbon Dioxide', 'mmHg', self.acq),
+                                  SensorStream('pH', '', self.acq)]
+        for sensor in self._chemical_sensors:
+            sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
+
+        sizer.Add(PanelCoordination(self, self._chemical_sensors, name='Valve Coordination'), 1, wx.EXPAND, border=2)
 
         self.SetSizer(sizer)
         self.Fit()
