@@ -7,20 +7,21 @@ and under the public domain.
 Author: John Kakareka
 """
 import threading
-from pathlib import Path
+from time import sleep
+
 import numpy as np
 
 
-class AO(threading.Thread):
+class AO:
     def __init__(self):
-        threading.Thread.__init__(self)
-        self._line = None
         self._period_ms = None
-        self._volts_p2p = None
-        self._volts_offset = None
+        self._volts_p2p = 0
+        self._volts_offset = 0
         self._Hz = 0
         self._bits = None
         self._fid = None
+        self.__thread = None
+        self.__ramp2dc = False
 
         self._data_type = np.float64
         self._buffer = np.array([0] * 10, dtype=self._data_type)
@@ -28,13 +29,17 @@ class AO(threading.Thread):
         self._event_halt = threading.Event()
         self._lock_buf = threading.Lock()
 
-    def open(self, line, period_ms, bits=12):
-        self._line = line
+    def open(self, period_ms, bits=12):
         self._period_ms = period_ms
         self._bits = bits
         self._gen_cycle()
+        self.__thread = threading.Thread(target=self.run)
 
-        self._fid = open(Path('__data__') / 'sine.dat', 'w+')
+    def close(self):
+        self.halt()
+
+    def start(self):
+        self.__thread.start()
 
     def _output_samples(self):
         self._buffer.tofile(self._fid)
@@ -52,9 +57,17 @@ class AO(threading.Thread):
                 self._output_samples()
 
     def halt(self):
-        self._event_halt.set()
+        if self.__thread:
+            self.set_dc(0)
+            self.wait_for_task()
+            if self.__thread.is_alive():
+                self._event_halt.set()
+                self.__thread.join(timeout=2.0)
+            self.__thread = None
         if self._fid:
             self._fid.close()
+            self._fid = None
+        print('halted pyAO')
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         self._volts_p2p = volts_p2p
@@ -74,10 +87,24 @@ class AO(threading.Thread):
                                np.sin(2 * np.pi * self._Hz * t, dtype=self._data_type) \
                                + self._volts_offset
         else:
-            self._buffer = self._volts_offset
+            self._buffer = np.full(1, self._volts_offset)
             print(f"creating dc of {self._volts_offset}")
 
     def set_dc(self, volts):
         self._Hz = 0
         self._volts_offset = volts
         print(f"setting dc voltage to {self._volts_offset}")
+
+    def set_ramp(self, start_volts, stop_volts, accel):
+        self._Hz = 0
+        with self._lock_buf:
+            if not start_volts == stop_volts:
+                seconds = abs(start_volts - stop_volts) / accel
+                calc_len = int(seconds/(self._period_ms / 1000.0))
+                if calc_len == 0:
+                    calc_len = 1
+                self._buffer = np.linspace(start_volts, stop_volts, num=calc_len)
+                print(f'setting ramp from {start_volts} to {stop_volts} over {seconds} seconds with {calc_len} samples')
+            else:
+                self._buffer = np.array([stop_volts], dtype=self._data_type)
+                print('no change, no ramp set')
