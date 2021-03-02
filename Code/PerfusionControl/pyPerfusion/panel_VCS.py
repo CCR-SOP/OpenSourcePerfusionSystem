@@ -59,15 +59,17 @@ class PanelCoordination(wx.Panel):
 
         self._valve_to_open = None
         self._last_valve = ''
-        self._readings = None  # Amount of readings taken before switching to the next valve
+
+        self._readings = None  # Readings taken before switching to next valve
         self._sampling_period_ms = 3000  # New readings (O2/CO2/pH) are collected every 3 seconds and are coordinated (occur @ the same time)
         self._clearance_time_ms = None
+
         wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self._name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.spin_readings_chemical = wx.SpinCtrlDouble(self, min=0, max=100, initial=0, inc=1)
+        self.spin_readings_chemical = wx.SpinCtrlDouble(self, min=0, max=20, initial=0, inc=1)
         self.lbl_readings_chemical = wx.StaticText(self, label='Sensor Readings per Switch')
 
         self.btn_start_stop = wx.ToggleButton(self, label='Start')
@@ -102,7 +104,7 @@ class PanelCoordination(wx.Panel):
         self.btn_start_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
 
     def OnStartStop(self, evt):
-        for sensor in self._sensors:
+        for sensor in self._sensors:  # Stop all sensors, as all valves are about to be closed
             sensor.stop()
         self.close_all_chemical_valves()
         self._last_valve = ''
@@ -113,15 +115,17 @@ class PanelCoordination(wx.Panel):
             self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
             self.btn_start_stop.SetLabel('Stop')
         else:
+            self.timer_read_values.Stop()
+            self.timer_clear_valve.Stop()
             self.btn_start_stop.SetLabel('Start')
 
     def OnReadValues(self, event):
         if event.GetId() == self.timer_read_values.GetId():
-            self.timer_read_values.Stop()
+            self.timer_read_values.Stop()  # Requested number of reads have now been taken
             for sensor in self._sensors:
                 sensor.stop()  # Stop sensors in anticipation of a valve switch
-                latest = sensor.get_latest(self._readings)
-                print(latest, sensor.name)  # Print last x values read from sensor
+                latest = sensor.get_latest(self._readings)  # Get last (# of readings) from sensor
+                print(latest, sensor.name)
             self.update_chemical_valves()  # Switch valve
             self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
 
@@ -141,18 +145,18 @@ class PanelCoordination(wx.Panel):
         if 'Hepatic Artery' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Portal Vein' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 40000
+            self._clearance_time_ms = 40000  # Time for PV perfusate to reach all sensors once PV valve is opened
         elif 'Portal Vein' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Inferior Vena Cava' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 10000
+            self._clearance_time_ms = 10000  # Time for IVC perfusate to reach all sensors once IVC valve is opened
         elif 'Inferior Vena Cava' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 35000
+            self._clearance_time_ms = 35000  # Time for HA perfusate to reach all sensors once HA valve is opened
         else:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
-            self._clearance_time_ms = 35000
+            self._clearance_time_ms = 35000  # Time for HA perfusate to reach all sensors once HA valve is opened
         chemical_valves[self._valve_to_open]._dio.activate()
         chemical_valves[self._valve_to_open].btn_activate.SetLabel('Deactivate')
         chemical_valves[self._valve_to_open].btn_activate.SetBackgroundColour('Green')
