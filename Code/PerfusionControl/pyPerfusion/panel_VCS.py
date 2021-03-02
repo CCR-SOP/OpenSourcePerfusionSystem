@@ -105,7 +105,7 @@ class PanelCoordination(wx.Panel):
 
     def OnStartStop(self, evt):
         for sensor in self._sensors:  # Stop all sensors, as all valves are about to be closed
-            sensor.stop()
+            sensor.hw.remove_channel(sensor._ch_id)
         self.close_all_chemical_valves()
         self._last_valve = ''
         state = self.btn_start_stop.GetLabel()
@@ -117,13 +117,16 @@ class PanelCoordination(wx.Panel):
         else:
             self.timer_read_values.Stop()
             self.timer_clear_valve.Stop()
+            for sensor in self._sensors:
+                sensor.hw.add_channel(sensor._ch_id)
+                sensor.hw.start()
             self.btn_start_stop.SetLabel('Start')
 
     def OnReadValues(self, event):
         if event.GetId() == self.timer_read_values.GetId():
             self.timer_read_values.Stop()  # Requested number of reads have now been taken
             for sensor in self._sensors:
-                sensor.stop()  # Stop sensors in anticipation of a valve switch
+                sensor.hw.remove_channel(sensor._ch_id)  # Stop sensors in anticipation of a valve switch
                 latest = sensor.get_latest(self._readings)  # Get last (# of readings) from sensor
                 print(latest, sensor.name)
             self.update_chemical_valves()  # Switch valve
@@ -133,7 +136,8 @@ class PanelCoordination(wx.Panel):
         if event.GetId() == self.timer_clear_valve.GetId():
             self.timer_clear_valve.Stop()  # Fresh perfusate has now reached the sensors
             for sensor in self._sensors:
-                sensor.start()  # Restart sensors
+                sensor.hw.add_channel(sensor._ch_id)
+                sensor.hw.start()
             self.timer_read_values.Start((self._readings + 1) * self._sampling_period_ms, wx.TIMER_CONTINUOUS)  # Have sensors read for (seconds/reading) x (# of readings), plus an extra three seconds to ensure that at least (# of readings) are recorded (as Python timers and chemical sensors aren't perfectly coordinated)
 
     def update_chemical_valves(self):
@@ -145,18 +149,18 @@ class PanelCoordination(wx.Panel):
         if 'Hepatic Artery' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Portal Vein' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 40000  # Time for PV perfusate to reach all sensors once PV valve is opened
+            self._clearance_time_ms = 60000  # Time for PV perfusate to reach all sensors once PV valve is opened
         elif 'Portal Vein' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Inferior Vena Cava' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 10000  # Time for IVC perfusate to reach all sensors once IVC valve is opened
+            self._clearance_time_ms = 60000  # Time for IVC perfusate to reach all sensors once IVC valve is opened
         elif 'Inferior Vena Cava' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 35000  # Time for HA perfusate to reach all sensors once HA valve is opened
+            self._clearance_time_ms = 60000  # Time for HA perfusate to reach all sensors once HA valve is opened
         else:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
-            self._clearance_time_ms = 35000  # Time for HA perfusate to reach all sensors once HA valve is opened
+            self._clearance_time_ms = 60000  # Time for HA perfusate to reach all sensors once HA valve is opened
         chemical_valves[self._valve_to_open]._dio.activate()
         chemical_valves[self._valve_to_open].btn_activate.SetLabel('Deactivate')
         chemical_valves[self._valve_to_open].btn_activate.SetBackgroundColour('Green')
@@ -174,20 +178,17 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=4)
+        sizer = wx.GridSizer(cols=3)
 
         valves = {'Hepatic Artery (pH/CO2/O2)': NIDAQ_DIO(),
                   'Portal Vein (pH/CO2/O2)': NIDAQ_DIO(),
                   'Inferior Vena Cava (pH/CO2/O2)': NIDAQ_DIO(),
-                 # 'Hepatic Artery (Glucose)': NIDAQ_DIO(),
-                 # 'Portal Vein (Glucose)': NIDAQ_DIO(),
-                 # 'Inferior Vena Cava (Glucose)': NIDAQ_DIO()
+                  'Hepatic Artery (Glucose)': NIDAQ_DIO(),
+                  'Portal Vein (Glucose)': NIDAQ_DIO(),
+                  'Inferior Vena Cava (Glucose)': NIDAQ_DIO()
                   }
         for key, valve in valves.items():
             sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
-
-        self.ao = NIDAQ_AO()
-        sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
 
         self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
         self._chemical_sensors = [SensorStream('Oxygen', 'mmHg', self.acq),
@@ -197,6 +198,9 @@ class TestFrame(wx.Frame):
             sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
 
         sizer.Add(PanelCoordination(self, self._chemical_sensors, name='Valve Coordination'), 1, wx.EXPAND, border=2)
+
+        self.ao = NIDAQ_AO()
+        sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
 
         self.SetSizer(sizer)
         self.Fit()
