@@ -3,26 +3,27 @@
 
 @author: Allen Luna
 
-Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair
+Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair, and for initiating glucose controlled insulin/glucagon infusions
 """
 import wx
-import pyPerfusion.PerfusionConfig as LP_CFG
-from pyPerfusion.panel_plotting import PanelPlotting
 import matplotlib as mpl
 import numpy as np
+
 from dexcom_G6_reader.readdata import Dexcom
+
+import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.panel_plotting import PanelPlotting
 
 engaged_COM_list = []
 mpl.rcParams.update({'font.size': 6})
 
-class GraphingDexcom(PanelPlotting):  # Work, just get rid of comments
+class GraphingDexcom(PanelPlotting):
     def __init__(self, parent, with_readout=True):
         super().__init__(parent, with_readout)
         self._valid_range = [80, 110]
         self._CGM = None
         self._time = None
-        self._index = 460  # Delete
-        self._dexcom_receiver = None
+        self.dexcom_receiver = None
         self.__val_display = None
 
         self.timer_plot.Start(1000, wx.TIMER_CONTINUOUS)
@@ -33,44 +34,24 @@ class GraphingDexcom(PanelPlotting):  # Work, just get rid of comments
         self.axes.text(1.06, 0.4, 'mg/dL', transform=self.axes.transAxes, fontsize=8, ha='center')
         rng = self._valid_range
         self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
-        self._valid_range = rng
-        self._configure_plot()
+        self._configure_dexcom_plot()
 
-    def _configure_plot(self):
+    def _configure_dexcom_plot(self):
         self.axes.set_title('Glucose Concentration (mg/dL)')
         self.axes.set_ylabel('mg/dL')
         self.axes.set_xlabel('No Sensor Connected')
 
-    def receiver_disconnect(self):
-        for value in np.linspace(0, self._valid_range[1], 100):
-            self.axes.plot_date(self._time, value, color='red', marker='x', xdate=True)
-        self.axes.relim()
-        self.axes.autoscale_view()
-        self.canvas.draw()
-        self._time = None
-        self._CGM = None
-
-    def EndofRun(self, error_message):
-        self.__val_display.set_text('N/A')
-        self.__val_display.set_color('Red')
-        self.axes.set_xlabel(error_message + ' : Replace Sensor Now!')
-        self.axes.relim()
-        self.axes.autoscale_view()
-        self.canvas.draw()
-        self._dexcom_receiver = None
-        self.receiver_disconnect()
-
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
-            self._time, latest_read = PanelDexcom.get_latest_CGM(self)
-            if (self._time is None) and (latest_read is None):  # Sensor Error
-                return
+            self._time, latest_read = self.dexcom_receiver.get_latest_CGM()
+            if (self._time is None) and (latest_read is None):  # Sensor is dead; end of run
+                self._CGM = None
             if (latest_read == 'ABSOLUTE_DEVIATION') or (latest_read == 'POWER_DEVIATION') or (latest_read == 'COUNTS_DEVIATION'):
                 self.axes.set_xlabel(latest_read + ' : See Receiver')
                 self._CGM = 0
             elif latest_read[0:3] == 'CGM':
-                self._CGM = int(latest_read.split('BG:')[1].split(' (')[0])
                 self.axes.set_xlabel('Sensor Active')
+                self._CGM = int(latest_read.split('BG:')[1].split(' (')[0])
             else:
                 self.axes.set_xlabel('Unknown Error : See Receiver')
                 self._CGM = 0
@@ -78,49 +59,64 @@ class GraphingDexcom(PanelPlotting):  # Work, just get rid of comments
             self.plot()
 
     def plot(self):
+        if self._CGM is None:
+            self.EndofRun()
+            return
         if self._CGM == 0:
             self.axes.plot_date(self._time, self._CGM, color='white', marker='o', xdate=True)
+            self.__val_display.set_text('N/A')
+            color = 'black'
         elif self._CGM > self._valid_range[1]:
             self.axes.plot_date(self._time, self._CGM, color='red', marker='o', xdate=True)
+            self.__val_display.set_text(f'{self._CGM:.0f}')
+            color = 'red'
         elif self._CGM < self._valid_range[0]:
             self.axes.plot_date(self._time, self._CGM, color='orange', marker='o', xdate=True)
+            self.__val_display.set_text(f'{self._CGM:.0f}')
+            color = 'orange'
         else:
             self.axes.plot_date(self._time, self._CGM, color='black', marker='o', xdate=True)
+            self.__val_display.set_text(f'{self._CGM:.0f}')
+            color = 'black'
 
-        readout = self._CGM
-        if readout == 0:
-            color = 'black'
-            self.__val_display.set_text('N/A')
-        elif readout < self._valid_range[0]:
-            color = 'orange'
-            self.__val_display.set_text(f'{readout:.0f}')
-        elif readout > self._valid_range[1]:
-            color = 'red'
-            self.__val_display.set_text(f'{readout:.0f}')
-        else:
-            color = 'black'
-            self.__val_display.set_text(f'{readout:.0f}')
         self.__val_display.set_color(color)
 
         self.axes.relim()
 
-        labels = self.axes.get_xticklabels()  # Fix label orientation
+        labels = self.axes.get_xticklabels()
         if len(labels) >= 12:
             self.axes.set_xlim(left=labels[-12].get_text(), right=self._time)
         self.axes.autoscale_view()
         self.canvas.draw()
 
-class PanelDexcom(wx.Panel):  # Work; just follow instructions
-    def __init__(self, parent, receiver, name='Receiver'):
+    def EndofRun(self):
+        self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
+        for value in np.linspace(0, self._valid_range[1], 100):
+            self.axes.plot_date(self._time, value, color='red', marker='x', xdate=True)
+        self.__val_display.set_text('End of Run')
+        self.__val_display.set_color('Red')
+        self.axes.relim()
+        labels = self.axes.get_xticklabels()
+        if len(labels) >= 12:
+            self.axes.set_xlim(left=labels[-12].get_text(), right=self._time)
+        self.axes.autoscale_view()
+        self.canvas.draw()
+
+        self.timer_plot.Stop()
+        self.dexcom_receiver.Disconnect()
+        self.dexcom_receiver = None
+        self._time = None
+        self._CGM = None
+        wx.MessageBox('Sensor Run has Ended; Please Disconnect Receiver and Begin a New Sensor Session', 'Error', wx.OK | wx.ICON_ERROR)
+
+class PanelDexcom(wx.Panel):
+    def __init__(self, parent, receiver, name):
         self.parent = parent
         self._receiver = receiver
-        self._dexcom_receiver = None
         self._name = name
-        self._index = 460  # Delete
         self._circuit_SN_pairs = []
-        wx.Panel.__init__(self, parent, -1)
 
-        LP_CFG.set_base()
+        wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -130,22 +126,17 @@ class PanelDexcom(wx.Panel):  # Work; just follow instructions
 
         self.btn_dl_info = wx.Button(self, label='Download Receiver Info')
 
-        self.btn_connect = wx.Button(self, label='Connect to Receiver')
+        self.btn_connect = wx.Button(self, label='Connect to Receiver xxxxxxxxxx / COMX')
         self.btn_connect.Enable(False)
-
-        self.btn_disconnect = wx.Button(self, label='Disconnect Receiver S/N: xxxxxxxxx')
-        self.btn_disconnect.Enable(False)
 
         self.btn_start = wx.Button(self, label='Start Acquisition')
         self.btn_start.Enable(False)
 
-        self.btn_stop = wx.Button(self, label='Stop Acquisition')
-        self.btn_stop.Enable(False)
-
-        self.panel_plot = GraphingDexcom(self)
-        self.panel_plot.add_Dexcom()
+        self._panel_plot = GraphingDexcom(self)
+        self._panel_plot.add_Dexcom()
 
         self.load_info()
+
         self.__do_layout()
         self.__set_bindings()
 
@@ -160,45 +151,30 @@ class PanelDexcom(wx.Panel):  # Work; just follow instructions
         self.choice_circuit_SN_pair.Clear()
         pairs = self._circuit_SN_pairs
         if not pairs:
-            pairs = ['Perfusion Circuit (SN = 123456789)']
+            pairs = ['Perfusion Circuit (SN = 0123456789)']
         self.choice_circuit_SN_pair.Append(pairs)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 2).Center().Proportion(1)
 
-        self.sizer_circuit_SN_pair = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_circuit_SN_pair.Add(self.label_circuit_SN_pair, flags)
-        self.sizer_circuit_SN_pair.Add(self.choice_circuit_SN_pair, flags)
-
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.sizer_circuit_SN_pair)
+        sizer.Add(self.label_circuit_SN_pair, flags)
+        sizer.Add(self.choice_circuit_SN_pair, flags)
         self.sizer.Add(sizer)
 
         self.sizer.AddSpacer(10)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_dl_info, flags)
+        sizer.AddSpacer(10)
+        sizer.Add(self.btn_connect, flags)
         self.sizer.Add(sizer)
-
-        self.sizer.AddSpacer(10)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.btn_connect)
-        sizer.AddSpacer(10)
-        sizer.Add(self.btn_disconnect)
+        sizer.Add(self.btn_start, flags)
         self.sizer.Add(sizer)
 
-        self.sizer.AddSpacer(10)
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.btn_start)
-        sizer.AddSpacer(10)
-        sizer.Add(self.btn_stop)
-        self.sizer.Add(sizer)
-
-        self.sizer.AddSpacer(10)
-
-        self.sizer.Add(self.panel_plot, 1, wx.EXPAND | wx.ALL, border=5)
+        self.sizer.Add(self._panel_plot, 1, wx.EXPAND | wx.ALL, border=5)
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -208,100 +184,58 @@ class PanelDexcom(wx.Panel):  # Work; just follow instructions
         self.choice_circuit_SN_pair.Bind(wx.EVT_CHOICE, self.OnCircuitSN)
         self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
         self.btn_connect.Bind(wx.EVT_BUTTON, self.OnConnect)
-        self.btn_disconnect.Bind(wx.EVT_BUTTON, self.OnDisconnect)
         self.btn_start.Bind(wx.EVT_BUTTON, self.OnStart)
-        self.btn_stop.Bind(wx.EVT_BUTTON, self.OnStop)
 
     def OnCircuitSN(self, evt):
-        state = self.btn_connect.GetLabel()
-        if state == 'Connect to Receiver':
-            self.btn_connect.Enable(True)
+        receiver_choice = self.choice_circuit_SN_pair.GetStringSelection()
+        self.btn_connect.SetLabel('Connect to Receiver %s / COMX' % receiver_choice[-11:-1])
+        self.btn_connect.Enable(True)
+        self.btn_dl_info.Enable(False)
 
     def OnDLInfo(self, evt):
         self.load_info()
 
     def OnConnect(self, evt):
-        receiver_choice = self.choice_circuit_SN_pair.GetStringSelection()
-        if not receiver_choice:
-            wx.MessageBox('Please Choose a Dexcom Receiver to Connect to', 'Error', wx.OK | wx.ICON_ERROR)
-            return
-        SN_choice = receiver_choice[-11:-1]
-        COM_ports = self._receiver.FindDevices()
-        for COM in COM_ports:
-            if not (COM in engaged_COM_list):
-                potential_receiver = self._receiver(COM)
-                potential_SN = potential_receiver.ReadManufacturingData().get('SerialNumber')
-                if potential_SN == SN_choice:
-                    potential_receiver.Disconnect()
-                    self._dexcom_receiver = self._receiver(COM)
-                    self.panel_plot._dexcom_receiver = self._dexcom_receiver
-
-                    SN_info = '%s S/N: %s;  ' % (self._dexcom_receiver.GetFirmwareHeader().get('ProductName'), self._dexcom_receiver.ReadManufacturingData().get('SerialNumber'))
-                    Transmitter_info = 'Transmitter: %s;  ' % self._dexcom_receiver.ReadTransmitterId().decode('utf-8')
-                    CGM_info = 'CGM records: %d' % (len(self._dexcom_receiver.ReadRecords('EGV_DATA')))
-                    Aggregate_info = SN_info + Transmitter_info + CGM_info
-                    wx.MessageBox(Aggregate_info, 'Receiver Connected!', wx.OK | wx.ICON_NONE)
-
-                    engaged_COM_list.append(COM)
-                    self.btn_connect.SetLabel('Connected to %s' % COM)
-                    self.btn_connect.Enable(False)
-                    self.btn_start.Enable(True)
-                    self.btn_disconnect.SetLabel('Disconnect Receiver S/N: %s' % self._dexcom_receiver.ReadManufacturingData().get('SerialNumber'))
-                    self.btn_disconnect.Enable(True)
-                    return
-                else:
-                    potential_receiver.Disconnect()
-        wx.MessageBox('Receiver is Already Connected to a Different Panel; Choose a Different One', 'Error', wx.OK | wx.ICON_ERROR)  # Executes if the receiver that is trying to be accessed is already accessed by a different subpanel
-
-    def OnDisconnect(self, evt):
-        connected_COM = self.btn_connect.GetLabel()[-4:]
-        engaged_COM_list.remove(connected_COM)
-        self._dexcom_receiver.Disconnect()
-        self.btn_start.Enable(False)
-        self.btn_stop.Enable(False)
-        self.btn_connect.SetLabel('Connect to Receiver')
-        self.btn_connect.Enable(True)
-        self.btn_disconnect.SetLabel('Disconnect Receiver S/N: xxxxxxxxx')
-        self.btn_disconnect.Enable(False)
-        self.panel_plot.timer_plot.Stop()
-        self.panel_plot._dexcom_receiver = None
-        self.panel_plot.receiver_disconnect()
+        if 'Connect' in self.btn_connect.GetLabel():
+            receiver_choice = self.choice_circuit_SN_pair.GetStringSelection()
+            SN_choice = receiver_choice[-11:-1]
+            COM_ports = self._receiver.FindDevices()
+            for COM in COM_ports:  # When multiple receivers are connected, make sure you connect/extract data from the receiver of interest
+                if not (COM in engaged_COM_list):
+                    potential_receiver = self._receiver(COM)
+                    potential_SN = potential_receiver.ReadManufacturingData().get('SerialNumber')
+                    if potential_SN == SN_choice:
+                        potential_receiver.Disconnect()
+                        self._panel_plot.dexcom_receiver = self._receiver(COM)
+                        engaged_COM_list.append(COM)
+                        self.btn_connect.SetLabel('Disconnect Receiver %s / %s' % (SN_choice, COM))
+                        self.btn_start.Enable(True)
+                        self.choice_circuit_SN_pair.Enable(False)
+                        return
+                    else:
+                        potential_receiver.Disconnect()
+            wx.MessageBox('Receiver is Already Connected to a Different Panel; Choose a Different One', 'Error', wx.OK | wx.ICON_ERROR)  # Executes only if the receiver that is trying to be accessed is already accessed by a different subpanel
+        else:
+            self._panel_plot.timer_plot.Stop()
+            self._panel_plot.dexcom_receiver.Disconnect()
+            self._panel_plot.dexcom_receiver = None
+            self._panel_plot._time = None
+            self._panel_plot._CGM = None
+            connected_COM = (self.btn_connect.GetLabel().split('/ '))[1]
+            engaged_COM_list.remove(connected_COM)
+            self.btn_start.Enable(False)
+            self.btn_start.SetLabel('Start Acquisition')
+            self.btn_connect.SetLabel('Connect to Receiver %s / COMX' % self.choice_circuit_SN_pair.GetStringSelection()[-11:-1])
+            self.choice_circuit_SN_pair.Enable(True)
 
     def OnStart(self, evt):
-        self.btn_start.Enable(False)
-        self.btn_stop.Enable(True)
-        self.panel_plot.timer_plot.Start()
-
-    def OnStop(self, evt):
-        self.btn_start.Enable(True)
-        self.btn_stop.Enable(False)
-        self.panel_plot.timer_plot.Stop()
-
-    def get_latest_CGM(self):  # Work; just follow instructions
-        CGM_records = self._dexcom_receiver.ReadRecords('EGV_DATA')
-        latest_read_split = str(CGM_records[self._index]).split(': ')  # Replace self._index with -1
-        self._index += 1  # Delete
-        latest_read_time = latest_read_split[0][5:10] + ' ' + latest_read_split[0][11:16]
-        latest_read_value = latest_read_split[1]
-        if latest_read_value == 'SENSOR_NOT_ACTIVE':
-           # self.panel_plot.EndofRun(latest_read_value)
-            print('yes')
-            self.timer_plot.Stop()
-            connected_COM = self.btn_connect.GetLabel()[-4:]
-            engaged_COM_list.remove(connected_COM)
-            self._dexcom_receiver.Disconnect()
-            self.btn_start.Enable(False)
-            self.btn_stop.Enable(False)
-            self.btn_connect.SetLabel('Connect to Receiver')
-            self.btn_connect.Enable(True)
-            self.btn_disconnect.SetLabel('Disconnect Receiver S/N: xxxxxxxxx')
-            self.btn_disconnect.Enable(False)
-            print('yes')
-            wx.MessageBox('Sensor Run Has Ended', 'Error', wx.OK | wx.ICON_ERROR)
-            print('yes')
-            return None, None
+        state = self.btn_start.GetLabel()
+        if state == 'Start Acquisition':
+            self._panel_plot.timer_plot.Start(1000, wx.TIMER_CONTINUOUS )
+            self.btn_start.SetLabel('Stop Acquisition')
         else:
-            return latest_read_time, latest_read_value
+            self._panel_plot.timer_plot.Stop()
+            self.btn_start.SetLabel('Start Acquisition')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -326,5 +260,7 @@ class MyTestApp(wx.App):
         return True
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
     app = MyTestApp(0)
     app.MainLoop()
