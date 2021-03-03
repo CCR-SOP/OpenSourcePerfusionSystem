@@ -44,8 +44,10 @@ class GraphingDexcom(PanelPlotting):
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             self._time, latest_read = self.dexcom_receiver.get_latest_CGM()
-            if (self._time is None) and (latest_read is None):  # Sensor is dead; end of run
+            if latest_read is None:  # Sensor is dead; end of run
                 self._CGM = None
+                self.plot()
+                return
             if (latest_read == 'ABSOLUTE_DEVIATION') or (latest_read == 'POWER_DEVIATION') or (latest_read == 'COUNTS_DEVIATION'):
                 self.axes.set_xlabel(latest_read + ' : See Receiver')
                 self._CGM = 0
@@ -93,7 +95,7 @@ class GraphingDexcom(PanelPlotting):
         self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
         for value in np.linspace(0, self._valid_range[1], 100):
             self.axes.plot_date(self._time, value, color='red', marker='x', xdate=True)
-        self.__val_display.set_text('End of Run')
+        self.__val_display.set_text('End')
         self.__val_display.set_color('Red')
         self.axes.relim()
         labels = self.axes.get_xticklabels()
@@ -104,9 +106,6 @@ class GraphingDexcom(PanelPlotting):
 
         self.timer_plot.Stop()
         self.dexcom_receiver.Disconnect()
-        self.dexcom_receiver = None
-        self._time = None
-        self._CGM = None
         wx.MessageBox('Sensor Run has Ended; Please Disconnect Receiver and Begin a New Sensor Session', 'Error', wx.OK | wx.ICON_ERROR)
 
 class PanelDexcom(wx.Panel):
