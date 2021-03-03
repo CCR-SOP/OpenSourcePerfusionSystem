@@ -34,6 +34,14 @@ class GraphingDexcom(PanelPlotting):
         self.axes.text(1.06, 0.4, 'mg/dL', transform=self.axes.transAxes, fontsize=8, ha='center')
         rng = self._valid_range
         self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+
+        self.__line['Insulin'] = self.axes.vlines(0, ymin=0, ymax=100, color='blue', label='Insulin')
+        self.__colors['Insulin'] = 'blue'
+        self.__line['Glucagon'] = self.axes.vlines(0, ymin=0, ymax=100, color='blue', label='Glucagon')
+        self.__colors['Glucagon'] = 'green'
+        self.__line['End of Sensor Session'] = self.axes.vlines(0, ymin=0, ymax=100, color='red', label='End of Sensor Session')
+        self.__colors['End of Sensor Session'] = 'red'
+
         self._configure_dexcom_plot()
 
     def _configure_dexcom_plot(self):
