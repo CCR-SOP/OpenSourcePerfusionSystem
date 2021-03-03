@@ -11,7 +11,6 @@ import sys
 import struct
 import xml.etree.ElementTree as ET
 
-
 class ReadPacket(object):
   def __init__(self, command, data):
     if util.python3():
@@ -383,6 +382,16 @@ class Dexcom(object):
     for x in range(start, end):
       records.extend(self.ReadDatabasePage(record_type, x))
     return records
+
+  def get_latest_CGM(self):
+    CGM_records = self.ReadRecords('EGV_DATA')
+    latest_read_split = str(CGM_records[-1]).split(': ')
+    latest_read_time = latest_read_split[0][5:16]
+    latest_read_value = latest_read_split[1]
+    if latest_read_value == 'SENSOR_NOT_ACTIVE':
+      return None, None
+    else:
+      return latest_read_time, latest_read_value
 
 class DexcomG5 (Dexcom):
   PARSER_MAP = {
