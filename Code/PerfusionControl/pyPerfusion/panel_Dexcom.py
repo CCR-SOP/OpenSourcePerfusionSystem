@@ -10,6 +10,7 @@ import matplotlib as mpl
 import numpy as np
 
 from dexcom_G6_reader.readdata import Dexcom
+from pyHardware.PHDserial import PHDserial
 
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_plotting import PanelPlotting
@@ -18,15 +19,29 @@ engaged_COM_list = []
 mpl.rcParams.update({'font.size': 6})
 
 class GraphingDexcom(PanelPlotting):
-    def __init__(self, parent, with_readout=True):
+    def __init__(self, parent, name, with_readout=True):
         super().__init__(parent, with_readout)
+        self._name = name
         self._valid_range = [80, 110]
         self._CGM = None
         self._time = None
         self.dexcom_receiver = None
         self.__val_display = None
+        self.__line = {}
+        self.__colors = {}
 
-        self.timer_plot.Start(1000, wx.TIMER_CONTINUOUS)
+        if 'Hepatic Artery' in self._name:
+            self._syringe_insulin = PHDserial()
+            self._syringe_insulin.open('COM12', 9600)
+            self._syringe_insulin.ResetSyringe()
+            self._syringe_insulin.syringe_configuration()
+
+            self._syringe_glucagon = PHDserial()
+            self._syringe_glucagon.open('COM6', 9600)
+            self._syringe_glucagon.ResetSyringe()
+            self._syringe_glucagon.syringe_configuration()
+
+        self.timer_plot.Start(10000, wx.TIMER_CONTINUOUS)
         self.timer_plot.Stop()
 
     def add_Dexcom(self):
@@ -35,12 +50,13 @@ class GraphingDexcom(PanelPlotting):
         rng = self._valid_range
         self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
 
-        self.__line['Insulin'] = self.axes.vlines(0, ymin=0, ymax=100, color='blue', label='Insulin')
-        self.__colors['Insulin'] = 'blue'
-        self.__line['Glucagon'] = self.axes.vlines(0, ymin=0, ymax=100, color='blue', label='Glucagon')
-        self.__colors['Glucagon'] = 'green'
-        self.__line['End of Sensor Session'] = self.axes.vlines(0, ymin=0, ymax=100, color='red', label='End of Sensor Session')
-        self.__colors['End of Sensor Session'] = 'red'
+        if 'Hepatic Artery' in self._name:
+            self.__line['Insulin'] = self.axes.vlines(0, ymin=0, ymax=100, color='blue', label='Insulin')
+            self.__colors['Insulin'] = 'blue'
+            self.__line['Glucagon'] = self.axes.vlines(0, ymin=0, ymax=100, color='blue', label='Glucagon')
+            self.__colors['Glucagon'] = 'green'
+            self.__line['End of Sensor Session'] = self.axes.vlines(0, ymin=0, ymax=100, color='red', label='End of Sensor Session')
+            self.__colors['End of Sensor Session'] = 'red'
 
         self._configure_dexcom_plot()
 
@@ -51,6 +67,13 @@ class GraphingDexcom(PanelPlotting):
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
+            if 'Hepatic Artery' in self._name:
+                if self._syringe_insulin.reset:
+                    self._syringe_insulin.ResetSyringe()
+                    self._syringe_insulin.reset = False
+                if self._syringe_glucagon.reset:
+                    self._syringe_glucagon.ResetSyringe()
+                    self._syringe_glucagon.reset = False
             self._time, latest_read = self.dexcom_receiver.get_latest_CGM()
             if latest_read is None:  # Sensor is dead; end of run
                 self._CGM = None
@@ -80,10 +103,16 @@ class GraphingDexcom(PanelPlotting):
             self.axes.plot_date(self._time, self._CGM, color='red', marker='o', xdate=True)
             self.__val_display.set_text(f'{self._CGM:.0f}')
             color = 'red'
+            if 'Hepatic Artery' in self._name:
+                volume = (self._CGM - self._valid_range[1]) / 100
+                self.injection(self._syringe_insulin, 'Insulin', self._CGM, volume, 'High')
         elif self._CGM < self._valid_range[0]:
             self.axes.plot_date(self._time, self._CGM, color='orange', marker='o', xdate=True)
             self.__val_display.set_text(f'{self._CGM:.0f}')
             color = 'orange'
+            if 'Hepatic Artery' in self._name:
+                volume = (self._valid_range[0] - self._CGM) / 100
+                self.injection(self._syringe_glucagon, 'Glucagon', self._CGM, volume, 'Low')
         else:
             self.axes.plot_date(self._time, self._CGM, color='black', marker='o', xdate=True)
             self.__val_display.set_text(f'{self._CGM:.0f}')
@@ -116,6 +145,12 @@ class GraphingDexcom(PanelPlotting):
         self.dexcom_receiver.Disconnect()
         wx.MessageBox('Sensor Run has Ended; Please Disconnect Receiver and Begin a New Sensor Session', 'Error', wx.OK | wx.ICON_ERROR)
 
+    def injection(self, syringe, name, glucose, volume, direction):
+        print(f'Blood glucose is {glucose:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
+        syringe.set_target_volume(volume, 'ml')
+        syringe.infuse()
+        syringe.reset = True
+
 class PanelDexcom(wx.Panel):
     def __init__(self, parent, receiver, name):
         self.parent = parent
@@ -139,7 +174,7 @@ class PanelDexcom(wx.Panel):
         self.btn_start = wx.Button(self, label='Start Acquisition')
         self.btn_start.Enable(False)
 
-        self._panel_plot = GraphingDexcom(self)
+        self._panel_plot = GraphingDexcom(self, self._name)
         self._panel_plot.add_Dexcom()
 
         self.load_info()
@@ -238,7 +273,7 @@ class PanelDexcom(wx.Panel):
     def OnStart(self, evt):
         state = self.btn_start.GetLabel()
         if state == 'Start Acquisition':
-            self._panel_plot.timer_plot.Start(1000, wx.TIMER_CONTINUOUS )
+            self._panel_plot.timer_plot.Start(15000, wx.TIMER_CONTINUOUS )
             self.btn_start.SetLabel('Stop Acquisition')
         else:
             self._panel_plot.timer_plot.Stop()
@@ -248,9 +283,9 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        devices = {'Receiver #1': Dexcom,
-                     'Receiver #2': Dexcom,
-                     'Receiver #3': Dexcom
+        devices = {'Receiver #1 - Hepatic Artery': Dexcom,
+                     'Receiver #2 - Portal Vein': Dexcom,
+                     'Receiver #3 - Inferior Vena Cava': Dexcom
                    }
         sizer = wx.GridSizer(cols=3)
         for key, device in devices.items():
