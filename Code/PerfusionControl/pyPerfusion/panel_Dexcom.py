@@ -7,13 +7,12 @@ Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair, and for 
 """
 import wx
 import matplotlib as mpl
-import numpy as np
 
 from dexcom_G6_reader.readdata import Dexcom
 from pyHardware.PHDserial import PHDserial
 
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 
 engaged_COM_list = []
 mpl.rcParams.update({'font.size': 6})
@@ -28,7 +27,7 @@ class GraphingDexcom(PanelPlotting):
         self.dexcom_receiver = None
         self.__val_display = None
         self.__line = {}
-        self.__colors = {}
+        self._tolerance = 10
 
         if 'Hepatic Artery' in self._name:
             self._syringe_insulin = PHDserial()
@@ -41,7 +40,7 @@ class GraphingDexcom(PanelPlotting):
             self._syringe_glucagon.ResetSyringe()
             self._syringe_glucagon.syringe_configuration()
 
-        self.timer_plot.Start(10000, wx.TIMER_CONTINUOUS)
+        self.timer_plot.Start(500, wx.TIMER_CONTINUOUS)
         self.timer_plot.Stop()
 
     def add_Dexcom(self):
@@ -49,15 +48,9 @@ class GraphingDexcom(PanelPlotting):
         self.axes.text(1.06, 0.4, 'mg/dL', transform=self.axes.transAxes, fontsize=8, ha='center')
         rng = self._valid_range
         self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
-
-        if 'Hepatic Artery' in self._name:
-            self.__line['Insulin'] = self.axes.vlines(0, ymin=0, ymax=100, color='blue', label='Insulin')
-            self.__colors['Insulin'] = 'blue'
-            self.__line['Glucagon'] = self.axes.vlines(0, ymin=0, ymax=100, color='blue', label='Glucagon')
-            self.__colors['Glucagon'] = 'green'
-            self.__line['End of Sensor Session'] = self.axes.vlines(0, ymin=0, ymax=100, color='red', label='End of Sensor Session')
-            self.__colors['End of Sensor Session'] = 'red'
-
+        self.__line['Insulin'] = None
+        self.__line['Glucagon'] = None
+        self.__line['End of Sensor Session'] = None
         self._configure_dexcom_plot()
 
     def _configure_dexcom_plot(self):
@@ -68,10 +61,10 @@ class GraphingDexcom(PanelPlotting):
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             if 'Hepatic Artery' in self._name:
-                if self._syringe_insulin.reset:
+               if self._syringe_insulin.reset:
                     self._syringe_insulin.ResetSyringe()
                     self._syringe_insulin.reset = False
-                if self._syringe_glucagon.reset:
+               if self._syringe_glucagon.reset:
                     self._syringe_glucagon.ResetSyringe()
                     self._syringe_glucagon.reset = False
             self._time, latest_read = self.dexcom_receiver.get_latest_CGM()
@@ -103,20 +96,25 @@ class GraphingDexcom(PanelPlotting):
             self.axes.plot_date(self._time, self._CGM, color='red', marker='o', xdate=True)
             self.__val_display.set_text(f'{self._CGM:.0f}')
             color = 'red'
-            if 'Hepatic Artery' in self._name:
+            if ('Hepatic Artery' in self._name) and (self._CGM > (self._valid_range[1] + self._tolerance)):
                 volume = (self._CGM - self._valid_range[1]) / 100
-                self.injection(self._syringe_insulin, 'Insulin', self._CGM, volume, 'High')
+                self.injection(self._syringe_insulin, 'Insulin', self._CGM, volume, 'high')
+                del self.__line['Insulin']
+                self.__line['Insulin'] = self.axes.vlines(self._time, ymin=0, ymax=500, color='blue', label='Insulin')
         elif self._CGM < self._valid_range[0]:
             self.axes.plot_date(self._time, self._CGM, color='orange', marker='o', xdate=True)
             self.__val_display.set_text(f'{self._CGM:.0f}')
             color = 'orange'
-            if 'Hepatic Artery' in self._name:
+            if ('Hepatic Artery' in self._name) and (self._CGM < (self._valid_range[0] - self._tolerance)):
                 volume = (self._valid_range[0] - self._CGM) / 100
-                self.injection(self._syringe_glucagon, 'Glucagon', self._CGM, volume, 'Low')
+                self.injection(self._syringe_glucagon, 'Glucagon', self._CGM, volume, 'low')
+                del self.__line['Glucagon']
+                self.__line['Glucagon'] = self.axes.vlines(self._time, ymin=0, ymax=500, color='green', label='Glucagon')
         else:
             self.axes.plot_date(self._time, self._CGM, color='black', marker='o', xdate=True)
             self.__val_display.set_text(f'{self._CGM:.0f}')
             color = 'black'
+            print(f'Blood glucose is {self._CGM:.2f} , which is in range')
 
         self.__val_display.set_color(color)
 
@@ -130,10 +128,10 @@ class GraphingDexcom(PanelPlotting):
 
     def EndofRun(self):
         self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
-        for value in np.linspace(0, self._valid_range[1], 100):
-            self.axes.plot_date(self._time, value, color='red', marker='x', xdate=True)
         self.__val_display.set_text('End')
         self.__val_display.set_color('Red')
+        del self.__line['End of Sensor Session']
+        self.__line['End of Sensor Session'] = self.axes.vlines(self._time, ymin=0, ymax=500, color='red', label='End of Sensor Session')
         self.axes.relim()
         labels = self.axes.get_xticklabels()
         if len(labels) >= 12:
@@ -142,7 +140,6 @@ class GraphingDexcom(PanelPlotting):
         self.canvas.draw()
 
         self.timer_plot.Stop()
-        self.dexcom_receiver.Disconnect()
         wx.MessageBox('Sensor Run has Ended; Please Disconnect Receiver and Begin a New Sensor Session', 'Error', wx.OK | wx.ICON_ERROR)
 
     def injection(self, syringe, name, glucose, volume, direction):
@@ -273,7 +270,7 @@ class PanelDexcom(wx.Panel):
     def OnStart(self, evt):
         state = self.btn_start.GetLabel()
         if state == 'Start Acquisition':
-            self._panel_plot.timer_plot.Start(15000, wx.TIMER_CONTINUOUS )
+            self._panel_plot.timer_plot.Start(500, wx.TIMER_CONTINUOUS )
             self.btn_start.SetLabel('Stop Acquisition')
         else:
             self._panel_plot.timer_plot.Stop()
