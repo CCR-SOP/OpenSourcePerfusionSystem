@@ -9,6 +9,7 @@ import datetime
 import serial
 import sys
 import struct
+import numpy as np
 import xml.etree.ElementTree as ET
 
 class ReadPacket(object):
@@ -62,6 +63,11 @@ class Dexcom(object):
   def __init__(self, port):
     self._port_name = port
     self._port = None
+    self.buf_len = 1
+    self.data_type = np.float32
+    self.period_sampling_ms = 5000  # Time between readings = 5 seconds
+    self.read_data = False
+    self._index = 360
 
   def Connect(self):
     if self._port is None:
@@ -383,15 +389,16 @@ class Dexcom(object):
       records.extend(self.ReadDatabasePage(record_type, x))
     return records
 
-  def get_latest_CGM(self):
-    CGM_records = self.ReadRecords('EGV_DATA')
-    latest_read_split = str(CGM_records[-1]).split(': ')
-    latest_read_time = latest_read_split[0][5:16]
-    latest_read_value = latest_read_split[1]
-    if latest_read_value == 'SENSOR_NOT_ACTIVE':
-      return None, None
-    else:
-      return latest_read_time, latest_read_value
+  def get_data(self, ch_id):  # Provides latest CGM value
+    latest_read_value = None
+    latest_read_time = None
+    if self.read_data is True:
+      CGM_records = self.ReadRecords('EGV_DATA')
+      self._index += 1
+      latest_read_split = str(CGM_records[self._index]).split(': ')
+      latest_read_time = latest_read_split[0][5:16]
+      latest_read_value = latest_read_split[1]
+    return latest_read_value, latest_read_time
 
 class DexcomG5 (Dexcom):
   PARSER_MAP = {
