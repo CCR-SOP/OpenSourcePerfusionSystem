@@ -6,154 +6,22 @@
 Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair, and for initiating glucose controlled insulin/glucagon infusions
 """
 import wx
-import matplotlib as mpl
 
 from dexcom_G6_reader.readdata import Dexcom
-from pyHardware.PHDserial import PHDserial
 
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
+from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.SensorStream import SensorStream
 
 engaged_COM_list = []
-mpl.rcParams.update({'font.size': 6})
-
-class GraphingDexcom(PanelPlotting):
-    def __init__(self, parent, name, with_readout=True):
-        super().__init__(parent, with_readout)
-        self._name = name
-        self._valid_range = [80, 110]
-        self._CGM = None
-        self._time = None
-        self.dexcom_receiver = None
-        self.__val_display = None
-        self.__line = {}
-        self._tolerance = 10
-
-        if 'Hepatic Artery' in self._name:
-            self._syringe_insulin = PHDserial()
-            self._syringe_insulin.open('COM12', 9600)
-            self._syringe_insulin.ResetSyringe()
-            self._syringe_insulin.syringe_configuration()
-
-            self._syringe_glucagon = PHDserial()
-            self._syringe_glucagon.open('COM6', 9600)
-            self._syringe_glucagon.ResetSyringe()
-            self._syringe_glucagon.syringe_configuration()
-
-        self.timer_plot.Start(500, wx.TIMER_CONTINUOUS)
-        self.timer_plot.Stop()
-
-    def add_Dexcom(self):
-        self.__val_display = self.axes.text(1.06, 0.5, '0', transform=self.axes.transAxes, fontsize=18, ha='center')
-        self.axes.text(1.06, 0.4, 'mg/dL', transform=self.axes.transAxes, fontsize=8, ha='center')
-        rng = self._valid_range
-        self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
-        self.__line['Insulin'] = None
-        self.__line['Glucagon'] = None
-        self.__line['End of Sensor Session'] = None
-        self._configure_dexcom_plot()
-
-    def _configure_dexcom_plot(self):
-        self.axes.set_title('Glucose Concentration (mg/dL)')
-        self.axes.set_ylabel('mg/dL')
-        self.axes.set_xlabel('No Sensor Connected')
-
-    def OnTimer(self, event):
-        if event.GetId() == self.timer_plot.GetId():
-            if 'Hepatic Artery' in self._name:
-               if self._syringe_insulin.reset:
-                    self._syringe_insulin.ResetSyringe()
-                    self._syringe_insulin.reset = False
-               if self._syringe_glucagon.reset:
-                    self._syringe_glucagon.ResetSyringe()
-                    self._syringe_glucagon.reset = False
-            self._time, latest_read = self.dexcom_receiver.get_latest_CGM()
-            if latest_read is None:  # Sensor is dead; end of run
-                self._CGM = None
-                self.plot()
-                return
-            if (latest_read == 'ABSOLUTE_DEVIATION') or (latest_read == 'POWER_DEVIATION') or (latest_read == 'COUNTS_DEVIATION'):
-                self.axes.set_xlabel(latest_read + ' : See Receiver')
-                self._CGM = 0
-            elif latest_read[0:3] == 'CGM':
-                self.axes.set_xlabel('Sensor Active')
-                self._CGM = int(latest_read.split('BG:')[1].split(' (')[0])
-            else:
-                self.axes.set_xlabel('Unknown Error : See Receiver')
-                self._CGM = 0
-
-            self.plot()
-
-    def plot(self):
-        if self._CGM is None:
-            self.EndofRun()
-            return
-        if self._CGM == 0:
-            self.axes.plot_date(self._time, self._CGM, color='white', marker='o', xdate=True)
-            self.__val_display.set_text('N/A')
-            color = 'black'
-        elif self._CGM > self._valid_range[1]:
-            self.axes.plot_date(self._time, self._CGM, color='red', marker='o', xdate=True)
-            self.__val_display.set_text(f'{self._CGM:.0f}')
-            color = 'red'
-            if ('Hepatic Artery' in self._name) and (self._CGM > (self._valid_range[1] + self._tolerance)):
-                volume = (self._CGM - self._valid_range[1]) / 100
-                self.injection(self._syringe_insulin, 'Insulin', self._CGM, volume, 'high')
-                del self.__line['Insulin']
-                self.__line['Insulin'] = self.axes.vlines(self._time, ymin=0, ymax=500, color='blue', label='Insulin')
-        elif self._CGM < self._valid_range[0]:
-            self.axes.plot_date(self._time, self._CGM, color='orange', marker='o', xdate=True)
-            self.__val_display.set_text(f'{self._CGM:.0f}')
-            color = 'orange'
-            if ('Hepatic Artery' in self._name) and (self._CGM < (self._valid_range[0] - self._tolerance)):
-                volume = (self._valid_range[0] - self._CGM) / 100
-                self.injection(self._syringe_glucagon, 'Glucagon', self._CGM, volume, 'low')
-                del self.__line['Glucagon']
-                self.__line['Glucagon'] = self.axes.vlines(self._time, ymin=0, ymax=500, color='green', label='Glucagon')
-        else:
-            self.axes.plot_date(self._time, self._CGM, color='black', marker='o', xdate=True)
-            self.__val_display.set_text(f'{self._CGM:.0f}')
-            color = 'black'
-            print(f'Blood glucose is {self._CGM:.2f} , which is in range')
-
-        self.__val_display.set_color(color)
-
-        self.axes.relim()
-
-        labels = self.axes.get_xticklabels()
-        if len(labels) >= 12:
-            self.axes.set_xlim(left=labels[-12].get_text(), right=self._time)
-        self.axes.autoscale_view()
-        self.canvas.draw()
-
-    def EndofRun(self):
-        self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
-        self.__val_display.set_text('End')
-        self.__val_display.set_color('Red')
-        del self.__line['End of Sensor Session']
-        self.__line['End of Sensor Session'] = self.axes.vlines(self._time, ymin=0, ymax=500, color='red', label='End of Sensor Session')
-        self.axes.relim()
-        labels = self.axes.get_xticklabels()
-        if len(labels) >= 12:
-            self.axes.set_xlim(left=labels[-12].get_text(), right=self._time)
-        self.axes.autoscale_view()
-        self.canvas.draw()
-
-        self.timer_plot.Stop()
-        wx.MessageBox('Sensor Run has Ended; Please Disconnect Receiver and Begin a New Sensor Session', 'Error', wx.OK | wx.ICON_ERROR)
-
-    def injection(self, syringe, name, glucose, volume, direction):
-        print(f'Blood glucose is {glucose:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
-        syringe.set_target_volume(volume, 'ml')
-        syringe.infuse()
-        syringe.reset = True
+sensors = []
 
 class PanelDexcom(wx.Panel):
-    def __init__(self, parent, receiver, name):
+    def __init__(self, parent, receiver_class, name):
         self.parent = parent
-        self._receiver = receiver
+        self._receiver_class = receiver_class
         self._name = name
-        self._circuit_SN_pairs = []
+        self._connected_receiver = None
 
         wx.Panel.__init__(self, parent, -1)
 
@@ -161,37 +29,49 @@ class PanelDexcom(wx.Panel):
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.label_circuit_SN_pair = wx.StaticText(self, label='Dexcom Receiver')
-        self.choice_circuit_SN_pair = wx.Choice(self, wx.ID_ANY, choices=[])
+        self.choice_circuit_SN_pair = wx.StaticText(self, label='')
 
-        self.btn_dl_info = wx.Button(self, label='Download Receiver Info')
-
-        self.btn_connect = wx.Button(self, label='Connect to Receiver xxxxxxxxxx / COMX')
-        self.btn_connect.Enable(False)
+        self.label_connect = wx.StaticText(self, label='')
 
         self.btn_start = wx.Button(self, label='Start Acquisition')
         self.btn_start.Enable(False)
 
-        self._panel_plot = GraphingDexcom(self, self._name)
-        self._panel_plot.add_Dexcom()
+        self.set_receiver()
 
-        self.load_info()
+        self.sensor = SensorStream(self._name[14:] + ' Glucose', 'mg/dL', self._connected_receiver, valid_range=[80, 110])
+        sensors.append(self.sensor)
+
+        self._panel_plot = PanelPlotting(self)
+        LP_CFG.update_stream_folder()
+        self.sensor.open(LP_CFG.LP_PATH['stream'])
+        self._panel_plot.add_sensor(self.sensor)
+        self.sensor.set_ch_id(0)
+        self.sensor.start()
 
         self.__do_layout()
         self.__set_bindings()
 
-    def load_info(self):
+    def set_receiver(self):
         receiver_info = LP_CFG.open_receiver_info()
-        self._circuit_SN_pairs.clear()
         for key, val in receiver_info.items():
-            self._circuit_SN_pairs.append('%s (SN = %s)' % (key, val))
-        self.update_receiver_choices()
-
-    def update_receiver_choices(self):
-        self.choice_circuit_SN_pair.Clear()
-        pairs = self._circuit_SN_pairs
-        if not pairs:
-            pairs = ['Perfusion Circuit (SN = 0123456789)']
-        self.choice_circuit_SN_pair.Append(pairs)
+            if key in self._name:
+                self.choice_circuit_SN_pair.SetLabel('%s (SN = %s)' % (key, val))
+        receiver_choice = self.choice_circuit_SN_pair.GetLabel
+        SN_choice = receiver_choice[-11:-1]
+        COM_ports = self._receiver_class.FindDevices()
+        for COM in COM_ports:
+            if not (COM in engaged_COM_list):
+                potential_receiver = self._receiver_class(COM)
+                potential_SN = potential_receiver.ReadManufacturingData().get('SerialNumber')
+                if potential_SN == SN_choice:
+                    potential_receiver.Disconnect()
+                    self._connected_receiver = self._receiver_class(COM)
+                    engaged_COM_list.append(COM)
+                    self.label_connect.SetLabel('Connected to %s' % COM)
+                    self.btn_start.Enable(True)
+                    return
+                else:
+                    potential_receiver.Disconnect()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 2).Center().Proportion(1)
@@ -204,12 +84,7 @@ class PanelDexcom(wx.Panel):
         self.sizer.AddSpacer(10)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.btn_dl_info, flags)
-        sizer.AddSpacer(10)
-        sizer.Add(self.btn_connect, flags)
-        self.sizer.Add(sizer)
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_connect, flags)
         sizer.Add(self.btn_start, flags)
         self.sizer.Add(sizer)
 
@@ -220,60 +95,15 @@ class PanelDexcom(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.choice_circuit_SN_pair.Bind(wx.EVT_CHOICE, self.OnCircuitSN)
-        self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
-        self.btn_connect.Bind(wx.EVT_BUTTON, self.OnConnect)
         self.btn_start.Bind(wx.EVT_BUTTON, self.OnStart)
-
-    def OnCircuitSN(self, evt):
-        receiver_choice = self.choice_circuit_SN_pair.GetStringSelection()
-        self.btn_connect.SetLabel('Connect to Receiver %s / COMX' % receiver_choice[-11:-1])
-        self.btn_connect.Enable(True)
-        self.btn_dl_info.Enable(False)
-
-    def OnDLInfo(self, evt):
-        self.load_info()
-
-    def OnConnect(self, evt):
-        if 'Connect' in self.btn_connect.GetLabel():
-            receiver_choice = self.choice_circuit_SN_pair.GetStringSelection()
-            SN_choice = receiver_choice[-11:-1]
-            COM_ports = self._receiver.FindDevices()
-            for COM in COM_ports:  # When multiple receivers are connected, make sure you connect/extract data from the receiver of interest
-                if not (COM in engaged_COM_list):
-                    potential_receiver = self._receiver(COM)
-                    potential_SN = potential_receiver.ReadManufacturingData().get('SerialNumber')
-                    if potential_SN == SN_choice:
-                        potential_receiver.Disconnect()
-                        self._panel_plot.dexcom_receiver = self._receiver(COM)
-                        engaged_COM_list.append(COM)
-                        self.btn_connect.SetLabel('Disconnect Receiver %s / %s' % (SN_choice, COM))
-                        self.btn_start.Enable(True)
-                        self.choice_circuit_SN_pair.Enable(False)
-                        return
-                    else:
-                        potential_receiver.Disconnect()
-            wx.MessageBox('Receiver is Already Connected to a Different Panel; Choose a Different One', 'Error', wx.OK | wx.ICON_ERROR)  # Executes only if the receiver that is trying to be accessed is already accessed by a different subpanel
-        else:
-            self._panel_plot.timer_plot.Stop()
-            self._panel_plot.dexcom_receiver.Disconnect()
-            self._panel_plot.dexcom_receiver = None
-            self._panel_plot._time = None
-            self._panel_plot._CGM = None
-            connected_COM = (self.btn_connect.GetLabel().split('/ '))[1]
-            engaged_COM_list.remove(connected_COM)
-            self.btn_start.Enable(False)
-            self.btn_start.SetLabel('Start Acquisition')
-            self.btn_connect.SetLabel('Connect to Receiver %s / COMX' % self.choice_circuit_SN_pair.GetStringSelection()[-11:-1])
-            self.choice_circuit_SN_pair.Enable(True)
 
     def OnStart(self, evt):
         state = self.btn_start.GetLabel()
         if state == 'Start Acquisition':
-            self._panel_plot.timer_plot.Start(500, wx.TIMER_CONTINUOUS )
+            self.sensor.hw.read_data = True
             self.btn_start.SetLabel('Stop Acquisition')
         else:
-            self._panel_plot.timer_plot.Stop()
+            self.sensor.hw.read_data = False
             self.btn_start.SetLabel('Start Acquisition')
 
 class TestFrame(wx.Frame):
@@ -290,6 +120,12 @@ class TestFrame(wx.Frame):
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, evt):
+        for sensor in sensors:
+            sensor.stop()
+        self.Destroy()
 
 class MyTestApp(wx.App):
     def OnInit(self):
