@@ -1,0 +1,16 @@
+Dialysis Circuit:
+
+Tubing:
+
+1.6 mm ID, 4.8 mm OD, 1.6 mm wall: 55 cm + 82.5 cm + 56.5 cm = 194 cm
+2.4 mm ID, 5.5 mm OD, 1.6 mm wall: 39 cm + 2 cm = 41 cm
+3.2 mm ID, 6.3 mm OD, 1.6 mm wall: 190 cm + 31.5 cm = 221.5 cm
+4.8 mm ID, 8 mm OD, 1.6 mm wall: 2.3 cm + 5 cm + 4 cm + 4 cm = 15.3 cm
+
+Peristaltic Pump Tubing: 1.52 mm ID Yellow/Blue/Yellow
+
+Ports: 23710 (1/8" x 1/8"), 23784 (3/16" x 3/16")
+
+Connectors: 72-1418 (x2; female luer to 1/10" barb), 72-1419 (female luer to 3/32" barb), 72-1421 (female luer to 5/32" barb), 72-1425 (male luer to 3/32" barb), 72-1426 (male luer to 1/8" barb), 72-1428 (male luer to 3/16" barb), 72-1475 (double 1/16" barb), 72-1478 (1/16" barb to 3/32" barb), 72-1479 (1/16" barb to 1/8" barb)
+
+VCS Circuit:
