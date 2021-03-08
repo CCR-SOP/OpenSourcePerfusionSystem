@@ -65,8 +65,10 @@ class Dexcom(object):
     self._port = None
     self.buf_len = 1
     self.data_type = np.float32
-    self.period_sampling_ms = 5000  # Time between readings = 5 seconds
+    self.period_sampling_ms = 5000
     self.read_data = False
+    self.samples_per_read = 1
+    self._buffer = None
     self._index = 360
 
   def Connect(self):
@@ -390,15 +392,20 @@ class Dexcom(object):
     return records
 
   def get_data(self, ch_id):  # Provides latest CGM value
-    latest_read_value = None
-    latest_read_time = None
+    self._buffer = None
+    latest_time_raw = None
     if self.read_data is True:
       CGM_records = self.ReadRecords('EGV_DATA')
       self._index += 1
       latest_read_split = str(CGM_records[self._index]).split(': ')
-      latest_read_time = latest_read_split[0][5:16]
-      latest_read_value = latest_read_split[1]
-    return latest_read_value, latest_read_time
+      latest_time_raw = latest_read_split[0][5:16]
+      latest_value_raw = latest_read_split[1]
+      if latest_value_raw[0:3] == 'CGM':
+        latest_value_processed = int(latest_value_raw.split('BG:')[1].split(' (')[0])
+        self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * np.float32(latest_value_processed)
+      else:
+        self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * np.float32('0')
+    return self._buffer, latest_time_raw
 
 class DexcomG5 (Dexcom):
   PARSER_MAP = {
