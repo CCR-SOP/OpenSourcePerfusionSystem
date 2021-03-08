@@ -1,0 +1,28 @@
+Circuit			Hardware		DAQ Line
+HA 			BVP-Z 			Dev3/AO1
+PV 			BVP-Z 			Dev3/AO0
+
+Dialysis 		Ecoline - Perfusate 	Dev2/AO0
+Dialysis 		Reglo - Dialysate	Dev2/AO1
+
+All			Temp Sensor 		Dev2/AI0
+All			Oxygen sensor 		Dev2/AI1
+All			CO2 sensor 		Dev2/AI2
+All			pH sensor 		Dev2/AI3
+			
+HA 			Pressure 		Dev1/AI0
+PV 			Pressure 		Dev1/AI1
+IVC 			Pressure 		Dev1/AI2
+
+HA 			Flow 			Dev1/AI3
+PV 			Flow 			Dev1/AI4
+Dialysis		Flow 			Dev1/AI5
+
+All			VCS			Dev2/PO.0,PO.1,PO.2,PO.3,PO.4,PO.5
+All			VCS			Dev1/AO1
+
+
+As of 2021-02-10
+Dev1 - NI USB-6009
+Dev2 - NI USB-6009
+Dev3 - NI USB-6211

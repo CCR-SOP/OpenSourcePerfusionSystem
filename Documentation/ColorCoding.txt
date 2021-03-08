@@ -1,0 +1,17 @@
+Circuits:
+Light Pink - HA
+Light Blue - PV
+Light Green - IVC
+
+Dialysis Circuit:
+Yellow - Dialysate
+Light Purple - Perfusate
+
+Wiring:
+White - Pressure sensor
+Dark Green - Flow sensor
+Dark Purple - Motor
+Orange - temp sensor
+Black - Oxygen sensor
+Deep Green - CO2 sensor
+Red - pH sensor
