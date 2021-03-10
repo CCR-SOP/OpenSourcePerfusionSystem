@@ -16,6 +16,7 @@ import matplotlib.transforms as mtransforms
 # from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 
 from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.DexcomStream import DexcomStream
 from pyPerfusion.SensorPoint import SensorPoint
 
 
@@ -25,9 +26,9 @@ class PanelPlotting(wx.Panel):
         self.__sensors = []
         self._with_readout = with_readout
         wx.Panel.__init__(self, parent, -1)
-        self.__plot_len = 200
+        self.__plot_len = 200  # Need to change?
         self._valid_range = None
-        self._plot_frame_ms = 5_000
+        self._plot_frame_ms = 5_000  # Need to change?
 
         self.fig = mpl.figure.Figure()
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
@@ -54,7 +55,7 @@ class PanelPlotting(wx.Panel):
     def plot_frame_ms(self):
         return self._plot_frame_ms
 
-    @plot_frame_ms.setter
+    @plot_frame_ms.setter  # Can I use this?
     def plot_frame_ms(self, ms):
         self._plot_frame_ms = ms
 
@@ -105,10 +106,30 @@ class PanelPlotting(wx.Panel):
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
                 except ValueError:
                     pass
+
+            elif type(sensor) is DexcomStream and data_time is not None:  # DexcomStream.get_data returns 'None' for data_time if DexcomStream thread is not running
+                if readout == 0:  # Make sure this can be reached
+                    self.axes.plot_date(data_time, readout, color='white', marker='o', xdate=True)
+                    self.__val_display[sensor.name].set_text('N/A')
+                    color = 'black'
+                elif readout > self._valid_range[1]:
+                    self.axes.plot_date(data_time, readout, color='red', marker='o', xdate=True)
+                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    color = 'red'
+                elif readout < self._valid_range[0]:
+                    self.axes.plot_date(data_time, readout, color='orange', marker='o', xdate=True)
+                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    color = 'orange'
+                else:
+                    self.axes.plot_date(data_time, readout, color='black', marker='o', xdate=True)
+                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    color = 'black'
+                self.__val_display[sensor.name].set_color(color)
+
             elif type(sensor) is SensorPoint:
-                color = self.__colors[sensor.name]
-                del self.__line[sensor.name]
-                self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
+                    color = self.__colors[sensor.name]
+                    del self.__line[sensor.name]
+                    self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
 
 
     def OnTimer(self, event):
@@ -118,8 +139,11 @@ class PanelPlotting(wx.Panel):
     def add_sensor(self, sensor, color='r'):
         assert isinstance(sensor, SensorStream)
         self.__sensors.append(sensor)
-        if type(sensor) is SensorStream:
-            self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
+        if type(sensor) is SensorStream or DexcomStream:
+            if type(sensor) is SensorStream:
+                self.__line[sensor.name] = self.axes.plot([0] * self.__plot_len)
+            elif type(sensor) is DexcomStream:
+                self.__line[sensor.name] = None
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
             if self._with_readout:
                 self.__val_display[sensor.name] = self.axes.text(1.06, 0.5, '0',
@@ -145,7 +169,7 @@ class PanelPlotting(wx.Panel):
                          borderaxespad=0, framealpha=0.0, fontsize='x-small')
 
 
-class PanelPlotLT(PanelPlotting):
+class PanelPlotLT(PanelPlotting):  # Want this underneath each graph
     def __init__(self, parent):
         PanelPlotting.__init__(self, parent, with_readout=False)
 
