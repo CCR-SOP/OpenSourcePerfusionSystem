@@ -10,7 +10,7 @@ import wx
 from dexcom_G6_reader.readdata import Dexcom
 
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.DexcomStream import DexcomStream
 
 engaged_COM_list = []
@@ -26,7 +26,7 @@ class PanelDexcom(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.sizer_main = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.label_circuit_SN_pair = wx.StaticText(self, label='Dexcom Receiver')
         self.choice_circuit_SN_pair = wx.StaticText(self, label='')
@@ -41,14 +41,21 @@ class PanelDexcom(wx.Panel):
         self.sensor = DexcomStream(self._name[14:] + ' Glucose', 'mg/dL', self._connected_receiver, valid_range=[80, 110])
         sensors.append(self.sensor)
 
+        self.sizer_plot = wx.BoxSizer(wx.VERTICAL)
         self._panel_plot = PanelPlotting(self)
-        LP_CFG.update_stream_folder()
-        self.sensor.open(LP_CFG.LP_PATH['stream'])
         self._panel_plot.add_sensor(self.sensor)
-        self.sensor.start()
+        self.sizer_plot.Add(self._panel_plot, 6, wx.ALL | wx.EXPAND, border=0)
+        self._sub_panel = PanelPlotLT(self)
+        self._sub_panel.plot_frame_ms = 20000
+        self._sub_panel.add_sensor(self.sensor)
+        self.sizer_plot.Add(self._sub_panel, 1, wx.ALL | wx.EXPAND, border=0)
 
         self.__do_layout()
         self.__set_bindings()
+
+        LP_CFG.update_stream_folder()
+        self.sensor.open(LP_CFG.LP_PATH['stream'])
+        self.sensor.start()
 
     def set_receiver(self):
         receiver_info = LP_CFG.open_receiver_info()
@@ -78,19 +85,21 @@ class PanelDexcom(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_circuit_SN_pair, flags)
         sizer.Add(self.choice_circuit_SN_pair, flags)
-        self.sizer.Add(sizer)
+        self.sizer_main.Add(sizer)
 
-        self.sizer.AddSpacer(10)
+        self.sizer_main.AddSpacer(10)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_connect, flags)
         sizer.AddSpacer(30)
         sizer.Add(self.btn_start, flags)
-        self.sizer.Add(sizer)
+        self.sizer_main.Add(sizer)
 
-        self.sizer.Add(self._panel_plot, 1, wx.EXPAND | wx.ALL, border=5)
+        self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)
+        self.sizer_plot_grid.Add(self.sizer_plot, 1, wx.ALL | wx.EXPAND)
+        self.sizer_main.Add(self.sizer_plot_grid, 1, wx.ALL | wx.EXPAND)
 
-        self.SetSizer(self.sizer)
+        self.SetSizer(self.sizer_main)
         self.Layout()
         self.Fit()
 
