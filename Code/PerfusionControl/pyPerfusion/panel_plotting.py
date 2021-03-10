@@ -110,21 +110,23 @@ class PanelPlotting(wx.Panel):
             elif type(sensor) is DexcomStream and data_time is not None:  # DexcomStream.get_data returns 'None' for data_time if DexcomStream thread is not running
                 if readout == 0:  # Make sure this can be reached
                     self.axes.plot_date(data_time, readout, color='white', marker='o', xdate=True)
-                    self.__val_display[sensor.name].set_text('N/A')
+                    text = 'N/A'
                     color = 'black'
                 elif readout > self._valid_range[1]:
                     self.axes.plot_date(data_time, readout, color='red', marker='o', xdate=True)
-                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    text = f'{readout:.0f}'
                     color = 'red'
                 elif readout < self._valid_range[0]:
                     self.axes.plot_date(data_time, readout, color='orange', marker='o', xdate=True)
-                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    text = f'{readout:.0f}'
                     color = 'orange'
                 else:
                     self.axes.plot_date(data_time, readout, color='black', marker='o', xdate=True)
-                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    text = f'{readout:.0f}'
                     color = 'black'
-                self.__val_display[sensor.name].set_color(color)
+                if type(self) is not PanelPlotLT:
+                    self.__val_display[sensor.name].set_text(text)
+                    self.__val_display[sensor.name].set_color(color)
 
             elif type(sensor) is SensorPoint:
                     color = self.__colors[sensor.name]
