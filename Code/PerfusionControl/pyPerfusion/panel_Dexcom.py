@@ -11,7 +11,7 @@ from dexcom_G6_reader.readdata import Dexcom
 
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_plotting import PanelPlotting
-from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.DexcomStream import DexcomStream
 
 engaged_COM_list = []
 sensors = []
@@ -38,14 +38,13 @@ class PanelDexcom(wx.Panel):
 
         self.set_receiver()
 
-        self.sensor = SensorStream(self._name[14:] + ' Glucose', 'mg/dL', self._connected_receiver, valid_range=[80, 110])
+        self.sensor = DexcomStream(self._name[14:] + ' Glucose', 'mg/dL', self._connected_receiver, valid_range=[80, 110])
         sensors.append(self.sensor)
 
         self._panel_plot = PanelPlotting(self)
         LP_CFG.update_stream_folder()
         self.sensor.open(LP_CFG.LP_PATH['stream'])
         self._panel_plot.add_sensor(self.sensor)
-        self.sensor.set_ch_id(0)
         self.sensor.start()
 
         self.__do_layout()
@@ -54,9 +53,9 @@ class PanelDexcom(wx.Panel):
     def set_receiver(self):
         receiver_info = LP_CFG.open_receiver_info()
         for key, val in receiver_info.items():
-            if key in self._name:
+            if key in self._name.lower():
                 self.choice_circuit_SN_pair.SetLabel('%s (SN = %s)' % (key, val))
-        receiver_choice = self.choice_circuit_SN_pair.GetLabel
+        receiver_choice = self.choice_circuit_SN_pair.GetLabel()
         SN_choice = receiver_choice[-11:-1]
         COM_ports = self._receiver_class.FindDevices()
         for COM in COM_ports:
@@ -85,6 +84,7 @@ class PanelDexcom(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_connect, flags)
+        sizer.AddSpacer(30)
         sizer.Add(self.btn_start, flags)
         self.sizer.Add(sizer)
 
@@ -111,10 +111,10 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         devices = {'Receiver #1 - Hepatic Artery': Dexcom,
-                     'Receiver #2 - Portal Vein': Dexcom,
-                     'Receiver #3 - Inferior Vena Cava': Dexcom
+                  # 'Receiver #2 - Portal Vein': Dexcom,
+                  # 'Receiver #3 - Inferior Vena Cava': Dexcom
                    }
-        sizer = wx.GridSizer(cols=3)
+        sizer = wx.GridSizer(cols=1)
         for key, device in devices.items():
             sizer.Add(PanelDexcom(self, device, name=key), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
