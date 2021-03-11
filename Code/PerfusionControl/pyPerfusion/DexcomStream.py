@@ -1,7 +1,7 @@
-from pyPerfusion.SensorStream import SensorStream
 import numpy as np
+from pyPerfusion.SensorStream import SensorStream
 
-DATA_VERSION = 2
+DATA_VERSION = 1
 
 
 class DexcomStream(SensorStream):
@@ -9,22 +9,22 @@ class DexcomStream(SensorStream):
         super().__init__(name, unit_str, hw, valid_range)
         self._time = None
 
-    def run(self):  # Find to also write time data to file, and pair this with CGM data?
+    def run(self):
         while not self._SensorStream__evt_halt.wait(self.hw.period_sampling_ms / 1000.0):
             data_buf, self._time = self.hw.get_data()
             if data_buf is not None and self._fid_write is not None:
                 buf_len = len(data_buf)
-                self._write_to_file(data_buf, self._time)  # find a way to write times to a file too?
+                self._write_to_file(data_buf, self._time)
                 self._last_idx += buf_len
                 self._fid_write.flush()
 
-    def get_data(self, last_ms, samples_needed):  # 5000, 200
+    def get_data(self, last_ms, samples_needed):
         _fid, data = self._open_read()
         file_size = len(data)
         if last_ms > 0:
-            data_size = int(last_ms / self.hw.period_sampling_ms)  # 5
+            data_size = int(last_ms / self.hw.period_sampling_ms)
             if samples_needed > data_size:
-                samples_needed = data_size  # 5
+                samples_needed = data_size
             start_idx = file_size - data_size
             if start_idx < 0:
                 start_idx = 0
@@ -34,5 +34,8 @@ class DexcomStream(SensorStream):
         data = data[idx]
 
         _fid.close()
+
+        if data[-1] == 5000:  # Signifies end of run
+            self.stop()
 
         return self._time, data
