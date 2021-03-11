@@ -8,10 +8,10 @@ Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair, and for 
 import wx
 
 from dexcom_G6_reader.readdata import Dexcom
-
-import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.DexcomStream import DexcomStream
+
+import pyPerfusion.PerfusionConfig as LP_CFG
 
 engaged_COM_list = []
 sensors = []
@@ -44,9 +44,10 @@ class PanelDexcom(wx.Panel):
         self.sizer_plot = wx.BoxSizer(wx.VERTICAL)
         self._panel_plot = PanelPlotting(self)
         self._panel_plot.add_sensor(self.sensor)
+        self._panel_plot.plot_frame_ms = 12000
         self.sizer_plot.Add(self._panel_plot, 6, wx.ALL | wx.EXPAND, border=0)
         self._sub_panel = PanelPlotLT(self)
-        self._sub_panel.plot_frame_ms = 20000
+        self._sub_panel.plot_frame_ms = 0
         self._sub_panel.add_sensor(self.sensor)
         self.sizer_plot.Add(self._sub_panel, 1, wx.ALL | wx.EXPAND, border=0)
 
