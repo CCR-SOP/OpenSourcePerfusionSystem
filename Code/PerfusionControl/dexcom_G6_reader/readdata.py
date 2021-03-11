@@ -66,13 +66,13 @@ class Dexcom(object):
 
     self.buf_len = 1
     self.data_type = np.float32
-    self.period_sampling_ms = 1000
+    self.period_sampling_ms = 300
     self.samples_per_read = 1
 
     self.read_data = False
     self._buffer = None
     self._time = None
-    self._index = 360
+    self._index = 450
 
   def Connect(self):
     if self._port is None:
@@ -409,6 +409,7 @@ class Dexcom(object):
         latest_value_processed = '0'
       elif latest_value_raw == 'SENSOR_NOT_ACTIVE':
         latest_value_processed = '5000'  # Signifying end of run
+        self.read_data = False
       else:
         latest_value_processed = '0'  # Unknown sensor error
       self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * np.float32(latest_value_processed)
