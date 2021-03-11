@@ -44,7 +44,6 @@ class PanelDexcom(wx.Panel):
         self.sizer_plot = wx.BoxSizer(wx.VERTICAL)
         self._panel_plot = PanelPlotting(self)
         self._panel_plot.add_sensor(self.sensor)
-        self._panel_plot.plot_frame_ms = 12000
         self.sizer_plot.Add(self._panel_plot, 6, wx.ALL | wx.EXPAND, border=0)
         self._sub_panel = PanelPlotLT(self)
         self._sub_panel.plot_frame_ms = 0
