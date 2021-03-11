@@ -37,7 +37,7 @@ class PanelPlotting(wx.Panel):
         self._with_readout = with_readout
         self.__plot_len = 200
         self._valid_range = None
-        self._plot_frame_ms = 5_000  # Need to change?
+        self._plot_frame_ms = 5_000
 
         self.fig = mpl.figure.Figure()
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
@@ -117,7 +117,13 @@ class PanelPlotting(wx.Panel):
                     pass
 
             elif type(sensor) is DexcomStream and data_time is not None:  # DexcomStream.get_data returns 'None' for data_time if DexcomStream thread is not running
-                if readout == 0:  # Make sure this can be reached
+                if readout == 5000:  # Signifies end of run
+                    self.timer_plot.Stop()
+                    print('stopped plotting')
+                    self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
+                    text = 'End'
+                    color = 'red'
+                elif readout == 0:
                     self.axes.plot_date(data_time, readout, color='white', marker='o', xdate=True)
                     text = 'N/A'
                     color = 'black'
@@ -136,8 +142,11 @@ class PanelPlotting(wx.Panel):
                 if type(self) is not PanelPlotLT:
                     self.__val_display[sensor.name].set_text(text)
                     self.__val_display[sensor.name].set_color(color)
+                    labels = self.axes.get_xticklabels()
+                    if len(labels) >= 12:
+                        self.axes.set_xlim(left=labels[-12].get_text(), right=data_time)
 
-            elif type(sensor) is SensorPoint:
+        elif type(sensor) is SensorPoint:
                     color = self.__colors[sensor.name]
                     del self.__line[sensor.name]
                     self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
@@ -180,7 +189,7 @@ class PanelPlotting(wx.Panel):
                          borderaxespad=0, framealpha=0.0, fontsize='x-small')
 
 
-class PanelPlotLT(PanelPlotting):  # Want this underneath each graph
+class PanelPlotLT(PanelPlotting):
     def __init__(self, parent):
         PanelPlotting.__init__(self, parent, with_readout=False)
 
