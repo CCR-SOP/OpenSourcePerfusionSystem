@@ -1,0 +1,106 @@
+HA Circuit:
+
+Tubing:
+1.6 mm ID, 4.8 mm OD, 1.6 mm wall: 25 cm + 28 cm + 11 cm + 11 cm + 1.5 cm + 1.5 cm = 78 cm
+2.4 mm ID, 5.5 mm OD, 1.6 mm wall: 34 cm + 3 cm + 5.5 cm + 2.9 cm + 5.7 cm + 5.6 cm + 2.3 cm = 59 cm
+6.3 mm ID, 9.5 mm OD, 1.6 mm wall: 9.5 cm + 53 cm + 49 cm = 111.5 cm
+9.5 mm ID, 12.7 mm OD, 1.6 mm wall: 27.5 cm (for suction tubing)
+9.5 mm ID, 15.9 mm OD, 3.2 mm wall: 4 cm + 3 cm + 8 cm + 37 cm = 52 cm
+Water tubing (~ 7 mm ID, ~ 11 mm OD): 3.5 cm
+Water tubing (~ 4 mm ID, ~ 7 mm OD): 2 cm
+
+Ports: 23711 (1/8" x 1/16"), 23712 (1/8" x 3/32"), 23783 (3/8" x 5/16"; for pump head filling apparatus)
+
+Connectors: 72-1418 (female luer to 1/10" barb), 72-1424 (male luer to 1/10" barb), 72-1425 (x2; male luer to 3/32" barb), 72-1427 (male luer to 5/32" barb), 72-1429 (male luer to 1/4" barb), 72-1476 (3/32" barb to 3/32" barb), 72-1481 (x2; 1/16" elbow), 72-1482 (x2; 3/32" elbow), 72-1488 (3/32" T piece), 72-1494 (3/32" Y piece), 72-1551 (1/4" barb to 3/8" barb), 72-1552 (5/16" barb to 3/8" barb), 72-1558 (3/8" T piece), 72-1560 (for HA/PV split from suction tubing; 3/8" Y piece)
+
+Miscellaneous: Adapter for suction tubing, 3 4-way stopcocks (B Braun), 2 syringe tubings (60 inch Microbore Extension Set) for epoprostenol and phenylephrine, centrifugal pump head
+
+
+
+PV Circuit:
+
+Tubing:
+1.6 mm ID, 4.8 mm OD, 1.6 mm wall: 27.5 cm + 1.5 cm + 1.5 cm + 11.5 cm + 11.5 cm + 38 cm = 91.5 cm
+2.4 mm ID, 5.5 mm OD, 1.6 mm wall: 4 cm + 4 cm = 8 cm
+4.8 mm ID, 8 mm OD, 1.6 mm wall: 2.8 cm + 43.5 cm + 14 cm + 7 cm = 67.3 cm
+6.3 mm ID, 9.5 mm OD, 1.6 mm wall: 6.5 cm
+9.5 mm ID, 15.9 mm OD, 3.2 mm wall: 4 cm + 8 cm + 2.5 cm + 34.5 cm = 49 cm
+Water tubing (~ 7 mm ID, ~ 11 mm OD): 2.5 cm
+Water tubing (~ 4 mm ID, ~ 7 mm OD): 3 cm
+
+Ports: 23784 (3/16" x 3/16"), 23711 (1/8" x 1/16"), 23783 (3/8" x 5/16"; for pump head filling apparatus)
+
+Connectors: 72-1418 (female luer to 1/10" barb), 72-1425 (male luer to 3/32" barb), 72-1426 (male luer to 1/8" barb), 72-1427 (x2; male luer to 5/32" barb), 72-1428 (x3; male luer to 3/16" barb), 72-1429 (x2; male luer to 1/4" barb), 72-1434 (x2; white female/female), 72-1436 (x2; white T piece), 72-1481 (x2; 1/16" elbow), 72-1482 (3/32" elbow), 72-1494 (3/32" Y piece), 72-1551 (1/4" barb to 3/8" barb), 72-1552 (5/16" barb to 3/8" barb), 72-1558 (3/8" T piece)
+
+Miscellaneous: 5 4-way stopcocks (B Braun), 4 syringe tubings (60 inch Microbore Extension Set) for insulin, glucagon, TPN/bile salts, and heparin/methylprednisolone/ampicillin + sulbactam, centrifugal pump head
+
+
+
+IVC Circuit:
+
+Tubing:
+1.6 mm ID, 4.8 mm OD, 1.6 mm wall: 1.5 cm + 1.5 cm + 11.5 cm + 11.5 cm + 20 cm + 15.6 cm = 61.6 cm
+2.4 mm ID, 5.5 mm OD, 1.6 mm wall: 1.8 cm + 4.5 cm + 2 cm + 1.5 cm  = 9.8 cm
+6.3 mm ID, 9.5 mm OD, 1.6 mm wall: 4.5 cm + 4 cm = 8.5 cm
+
+Ports: 23786 (female luer to tubing), 23712 (1/8" x 3/32")
+
+Connectors: 72-1418 (female luer to 1/10" barb), 72-1426 (male luer to 1/8" barb), 72-1429 (x2; male luer to 1/4" barb), 72-1434 (white female/female), 72-1436 (white T piece), 72-1478 (1/16" barb to 3/32" barb), 72-1481 (x2; 1/16" elbow), 72-1482 (x2; 3/32" elbow), 72-1494 (3/32" Y piece), 72-1556 (1/4" T piece)
+
+
+
+Dialysis Circuit:
+
+Tubing:
+1.6 mm ID, 4.8 mm OD, 1.6 mm wall: 55 cm + 82.5 cm + 56.5 cm = 194 cm
+2.4 mm ID, 5.5 mm OD, 1.6 mm wall: 39 cm + 2 cm = 41 cm
+3.2 mm ID, 6.3 mm OD, 1.6 mm wall: 190 cm + 31.5 cm = 221.5 cm
+4.8 mm ID, 8 mm OD, 1.6 mm wall: 2.3 cm + 5 cm + 4 cm + 4 cm = 15.3 cm
+
+Peristaltic Pump Tubing: 1.52 mm ID Yellow/Blue/Yellow
+
+Ports: 23710 (1/8" x 1/8"), 23784 (3/16" x 3/16")
+
+Connectors: 72-1418 (x2; female luer to 1/10" barb), 72-1419 (female luer to 3/32" barb), 72-1421 (female luer to 5/32" barb), 72-1425 (male luer to 3/32" barb), 72-1426 (male luer to 1/8" barb), 72-1428 (male luer to 3/16" barb), 72-1475 (double 1/16" barb), 72-1478 (1/16" barb to 3/32" barb), 72-1479 (1/16" barb to 1/8" barb)
+
+
+
+VCS Circuit:
+
+Tubing:
+1.6 mm ID, 4.8 mm OD, 1.6 mm wall: 4.7 cm + 4.7 cm + 2.8 cm + 9 cm + 23.5 cm + 15 cm + 8.5 cm + 8.5 cm + 8.5 cm = 85.2 cm
+2.4 mm ID, 5.5 mm OD, 1.6 mm wall: 45.5 cm + 42 cm + 2.5 cm + 2.5 cm + 3 cm + 3 cm = 98.5 cm
+4.8 mm ID, 8 mm OD, 1.6 mm wall: 2 cm + 2 cm + 3.5 cm + 3.5 cm = 11 cm
+3.17 mm ID, 4.97 mm OD, 0.9 mm wall: 36 cm + 9.5 cm + 28 cm + 9.5 cm + 15.5 cm + 14 cm = 112.5 cm
+
+Peristaltic Pump Tubing: 4 x 1.02 mm ID White/White/White
+
+Ports: 23784 (3/16" x 3/16") x 2
+
+Connectors: 72-1424 (x4; male luer to 1/10" barb), 72-1426 (x2; male luer to 1/8" barb), 72-1427 (x2; male luer to 5/32" barb), 72-1428 (x2; male luer to 3/16" barb), 72-1433 (x2; white double barb connecter), 72-1434 (x4; white female/female), 72-1475 (double 1/16" barb), 72-1478 (x4; 1/16" barb to 3/32" barb), 72-1479 (x6; 1/16" barb to 1/8" barb), 72-1493 (x2; 1/16" Y piece), 72-1494 (x2; 3/32" Y piece)
+
+Miscellaneous: Zip ties (x6), Flow-thru cells (x3), Temperature probe adapter (73-5083), Dexcom adapter mounts (x3)
+
+
+
+Gas Circuit:
+
+Tubing:
+4.8 mm ID, 8 mm OD, 1.6 mm wall: 130 cm + 5.5 cm = 135.5 cm
+Gas mixer tubing: 11 cm + 8.5 cm = 19.5 cm
+
+Connectors: 72-1422 (female luer to 3/16" barb), 72-1428 (male luer to 3/16" barb), 72-1559 (1/4" Y piece)
+
+Miscellaneous: One-way stopcock
+
+
+
+Thermocirculator Circuit:
+
+Tubing:
+9.5 mm ID, 12.7 mm OD, 1.6 mm wall: 57 cm + 55 cm + 47 cm + 105 cm = 264 cm
+8 mm ID, 11 mm OD, 1.5 mm wall: 44 cm + 50 cm + 50 cm + 10 cm + 44 cm + 50 cm + 6.5 cm + 47 cm = 301.5 cm
+
+Connectors: 72-1549 (x2; 3/8" barb to 3/8" barb), 72-1596 (x2; 1/2" Y piece), water tubing Y connector (x2; white)
+
+Miscellaneous: 4 screws
