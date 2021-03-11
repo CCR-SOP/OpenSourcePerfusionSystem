@@ -68,6 +68,7 @@ class Dexcom(object):
     self.data_type = np.float32
     self.period_sampling_ms = 1000
     self.samples_per_read = 1
+
     self.read_data = False
     self._buffer = None
     self._time = None
@@ -393,7 +394,7 @@ class Dexcom(object):
       records.extend(self.ReadDatabasePage(record_type, x))
     return records
 
-  def get_data(self):  # Provides latest CGM value; modify to handle end of run signal
+  def get_data(self):  # Provides latest CGM value
     self._buffer = None
     self._time = None
     if self.read_data is True:
@@ -404,9 +405,13 @@ class Dexcom(object):
       latest_value_raw = latest_read_split[1]
       if latest_value_raw[0:3] == 'CGM':
         latest_value_processed = int(latest_value_raw.split('BG:')[1].split(' (')[0])
-        self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * np.float32(latest_value_processed)
+      elif (latest_value_raw == 'ABSOLUTE_DEVIATION') or (latest_value_raw == 'POWER_DEVIATION') or (latest_value_raw == 'COUNTS_DEVIATION'):
+        latest_value_processed = '0'
+      elif latest_value_raw == 'SENSOR_NOT_ACTIVE':
+        latest_value_processed = '5000'  # Signifying end of run
       else:
-        self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * np.float32('0')  # Make sure this works
+        latest_value_processed = '0'  # Unknown sensor error
+      self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * np.float32(latest_value_processed)
     return self._buffer, self._time
 
 class DexcomG5 (Dexcom):
