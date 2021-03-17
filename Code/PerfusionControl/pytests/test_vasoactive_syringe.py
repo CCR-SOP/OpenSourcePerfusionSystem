@@ -5,9 +5,9 @@ Test app for initiating syringe injections based on pressure/flow conditions
 """
 import wx
 
-from pyHardware.PHDserial import PHDserial
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI
+from pyPerfusion.syringe_timer import SyringeTimer
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 
@@ -17,20 +17,12 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self._sensor = sensor
         self._name = name
         self._inc = 1.0
+        self._vasodilator_injection = None
+        self._vasoconstrictor_injection = None
 
         wx.Panel.__init__(self, parent, -1)
 
         syringe_list = 'Phenylephrine, Epoprostenol'
-
-        self._syringe_vasodilator = PHDserial()
-        self._syringe_vasodilator.open('COM11', 9600)
-        self.ResetSyringe(self._syringe_vasodilator)
-        self.syringe_configuration(self._syringe_vasodilator)
-
-        self._syringe_vasoconstrictor = PHDserial()
-        self._syringe_vasoconstrictor.open('COM4', 9600)
-        self.ResetSyringe(self._syringe_vasoconstrictor)
-        self.syringe_configuration(self._syringe_vasoconstrictor)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -49,15 +41,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         self.__do_layout()
         self.__set_bindings()
-
-        self.timer_injection = wx.Timer(self, id=0)
-        self.Bind(wx.EVT_TIMER, self.OnTimer, id=0)
-
-        self.timer_vasodilator_injection = wx.Timer(self, id=1)
-        self.Bind(wx.EVT_TIMER, self.OnVasodilatorInjectionTimer, id=1)
-
-        self.timer_vasoconstrictor_injection = wx.Timer(self, id=2)
-        self.Bind(wx.EVT_TIMER, self.OnVasoconstrictorInjectionTimer, id=2)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
@@ -102,70 +85,12 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
             self.btn_stop.SetLabel('Stop')
-            self.timer_injection.Start(10000, wx.TIMER_CONTINUOUS)
+            self._vasoconstrictor_injection = SyringeTimer('Phenylephrine', 'COM4', 9600, 100, self.spin_tolerance.GetValue(), self._sensor)
+            self._vasodilator_injection = SyringeTimer('Epoprostenol', 'COM11', 9600, 50, self.spin_tolerance.GetValue(), self._sensor)
         else:
+            self._vasoconstrictor_injection.stop_injection_timer()
+            self._vasodilator_injection.stop_injection_timer()
             self.btn_stop.SetLabel('Start')
-            self.timer_injection.Stop()
-
-    def OnTimer(self, event):
-        if event.GetId() == self.timer_injection.GetId():
-            if self._syringe_vasodilator.reset:
-                self.ResetSyringe(self._syringe_vasodilator)
-                self._syringe_vasodilator.reset = False
-            if self._syringe_vasoconstrictor.reset:
-                self.ResetSyringe(self._syringe_vasoconstrictor)
-                self._syringe_vasoconstrictor.reset = False
-            self.check_for_injection()
-
-    def OnVasodilatorInjectionTimer(self, event):
-        if event.GetId() == self.timer_vasodilator_injection.GetId():
-            self._syringe_vasodilator.cooldown = False
-            self.timer_vasodilator_injection.Stop()
-
-    def OnVasoconstrictorInjectionTimer(self, event):
-        if event.GetId() == self.timer_vasoconstrictor_injection.GetId():
-            self._syringe_vasoconstrictor.cooldown = False
-            self.timer_vasoconstrictor_injection.Stop()
-
-    def ResetSyringe(self, syringe):
-        syringe.reset_infusion_volume()
-        syringe.reset_target_volume()
-
-    def syringe_configuration(self, syringe):
-        syringe.set_syringe_manufacturer_size('bdp', '60 ml')
-        syringe.set_infusion_rate(30, 'ml/min')
-
-    def check_for_injection(self):
-        flow = float(self._sensor.get_current())
-        min_flow = float(self.spin_min_flow.GetValue())
-        max_flow = float(self.spin_max_flow.GetValue())
-        tol = float(self.spin_tolerance.GetValue())
-        if flow > (max_flow + tol):
-            if not self._syringe_vasoconstrictor.cooldown:
-                flow_diff = flow - (max_flow + tol)
-                injection_volume = flow_diff / 10
-                self.injection(self._syringe_vasoconstrictor, 'phenylephrine', flow, injection_volume, direction='high')
-                self.timer_vasoconstrictor_injection.Start(30000, wx.TIMER_CONTINUOUS)
-            else:
-                print(f'Flow is {flow:.2f} , which is too high; however, vasoconstrictor injections are currently frozen')
-        elif flow < (min_flow - tol):
-            if not self._syringe_vasodilator.cooldown:
-                flow_diff = (min_flow - tol) - flow
-                injection_volume = flow_diff / 10
-                self.injection(self._syringe_vasodilator, 'epoprostenol', flow, injection_volume, direction='low')
-                self.timer_vasodilator_injection.Start(30000, wx.TIMER_CONTINUOUS)
-            else:
-                print(f'Flow is {flow:.2f} , which is too low; however, vasodilator injections are currently frozen')
-        else:
-            print(f'Flow is {flow:.2f} , which is in range')
-
-    def injection(self, syringe, name, flow, volume, direction):
-        print(f'Flow is {flow:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
-        syringe.set_target_volume(volume, 'ml')
-        syringe.infuse()
-        syringe.reset = True
-        syringe.cooldown = True
-
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
