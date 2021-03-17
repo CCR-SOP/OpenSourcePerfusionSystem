@@ -4,15 +4,17 @@
 General code for initiating syringe injections based on a specific system parameter
 """
 import wx
+from pyHardware.PHDserial import PHDserial
 
 class SyringeTimer(wx):
-    def __init__(self, name, syringe, COM, baud, tolerance, sensor):
+    def __init__(self, name, COM, baud, threshold_value, tolerance, sensor):
         self.name = name
-        self.syringe = syringe
         self.COM = COM
         self.baud = baud
+        self.threshold_value = threshold_value
         self.tolerance = tolerance
         self.sensor = sensor
+        self.syringe = PHDserial()
 
         self.timer_injection = wx.Timer(self, id=0)
         self.Bind(wx.EVT_TIMER, self.OnTimer, id=0)
