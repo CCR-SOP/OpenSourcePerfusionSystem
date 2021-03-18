@@ -85,8 +85,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
             self.btn_stop.SetLabel('Stop')
-            self._vasoconstrictor_injection = SyringeTimer('Phenylephrine', 'COM4', 9600, 100, self.spin_tolerance.GetValue(), self._sensor)
-            self._vasodilator_injection = SyringeTimer('Epoprostenol', 'COM11', 9600, 50, self.spin_tolerance.GetValue(), self._sensor)
+            self._vasoconstrictor_injection = SyringeTimer(self, 'Phenylephrine', 'COM4', 9600, self.spin_max_flow.GetValue(), self.spin_tolerance.GetValue(), self._sensor)
+            self._vasodilator_injection = SyringeTimer(self, 'Epoprostenol', 'COM11', 9600, self.spin_min_flow.GetValue(), self.spin_tolerance.GetValue(), self._sensor)
         else:
             self._vasoconstrictor_injection.stop_injection_timer()
             self._vasodilator_injection.stop_injection_timer()
