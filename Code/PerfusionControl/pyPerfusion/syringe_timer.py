@@ -6,8 +6,8 @@ General code for initiating syringe injections based on a specific system parame
 import wx
 from pyHardware.PHDserial import PHDserial
 
-class SyringeTimer(wx):
-    def __init__(self, name, COM, baud, threshold_value, tolerance, sensor):
+class SyringeTimer(wx.Panel):
+    def __init__(self, parent, name, COM, baud, threshold_value, tolerance, sensor):
         self.name = name
         self.COM = COM
         self.baud = baud
@@ -15,6 +15,8 @@ class SyringeTimer(wx):
         self.tolerance = tolerance
         self.sensor = sensor
         self.syringe = PHDserial()
+
+        wx.Panel.__init__(self, parent, -1)
 
         self.timer_injection = wx.Timer(self, id=0)
         self.Bind(wx.EVT_TIMER, self.OnTimer, id=0)
@@ -28,7 +30,7 @@ class SyringeTimer(wx):
         self.syringe.open(self.COM, self.baud)
         self.syringe.ResetSyringe()
         self.syringe.syringe_configuration()
-        self.timer_injection.Start(30000, wx.TIMER_CONTINUOUS)  # Check to see if this executes prior to syringes being ready for injections
+        self.timer_injection.Start(10000, wx.TIMER_CONTINUOUS)
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_injection.GetId():
@@ -50,9 +52,11 @@ class SyringeTimer(wx):
                     diff = glucose - (self.threshold_value + self.tolerance)
                     injection_volume = diff / 25
                     self.injection(self.syringe, self.name, 'Glucose', glucose, injection_volume, direction='high')
-                    self.timer_reset.Start(60000, wx.TIMER_CONTINUOUS)
+                    self.timer_reset.Start(30000, wx.TIMER_CONTINUOUS)
                 else:
                     print(f'Glucose is {glucose:.2f} , which is too high; however, insulin injections are currently frozen')
+            else:
+                print('Glucose does not need to be modulated by insulin')
         elif self.name == 'Glucagon':
             glucose = float(self.sensor.get_current())
             if glucose < (self.threshold_value - self.tolerance):
@@ -60,9 +64,11 @@ class SyringeTimer(wx):
                     diff = (self.threshold_value - self.tolerance) - glucose
                     injection_volume = diff / 25
                     self.injection(self.syringe, self.name, 'Glucose', glucose, injection_volume, direction='low')
-                    self.timer_reset.Start(60000, wx.TIMER_CONTINUOUS)
+                    self.timer_reset.Start(30000, wx.TIMER_CONTINUOUS)
                 else:
                     print(f'Glucose is {glucose:.2f} , which is too low; however, glucagon injections are currently frozen')
+            else:
+                print('Glucose does not need to be modulated by glucagon')
         elif self.name == 'Phenylephrine':
             flow = float(self.sensor.get_current())
             if flow > (self.threshold_value + self.tolerance):
@@ -70,9 +76,11 @@ class SyringeTimer(wx):
                     diff = flow - (self.threshold_value + self.tolerance)
                     injection_volume = diff / 25
                     self.injection(self.syringe, self.name, 'Flow', flow, injection_volume, direction='high')
-                    self.timer_reset.Start(60000, wx.TIMER_CONTINUOUS)
+                    self.timer_reset.Start(30000, wx.TIMER_CONTINUOUS)
                 else:
                     print(f'Flow is {flow:.2f} , which is too high; however, phenylephrine injections are currently frozen')
+            else:
+                print('Flow does not need to be modulated by phenylephrine')
         elif self.name == 'Epoprostenol':
             flow = float(self.sensor.get_current())
             if flow < (self.threshold_value - self.tolerance):
@@ -80,9 +88,11 @@ class SyringeTimer(wx):
                     diff = (self.threshold_value - self.tolerance) - flow
                     injection_volume = diff / 25
                     self.injection(self.syringe, self.name, 'Flow', flow, injection_volume, direction='low')
-                    self.timer_reset.Start(60000, wx.TIMER_CONTINUOUS)
+                    self.timer_reset.Start(30000, wx.TIMER_CONTINUOUS)
                 else:
                     print(f'Flow is {flow:.2f} , which is too low; however, epoprostenol injections are currently frozen')
+            else:
+                print('Flow does not need to be modulated by epoprostenol')
 
     def injection(self, syringe, name, parameter_name, parameter, volume, direction):
         print(f'{parameter_name} is {parameter:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
