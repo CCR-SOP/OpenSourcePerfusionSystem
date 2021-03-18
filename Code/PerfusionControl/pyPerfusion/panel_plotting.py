@@ -146,7 +146,7 @@ class PanelPlotting(wx.Panel):
                     if len(labels) >= 12:
                         self.axes.set_xlim(left=labels[-12].get_text(), right=data_time)
 
-        elif type(sensor) is SensorPoint:
+            elif type(sensor) is SensorPoint:
                     color = self.__colors[sensor.name]
                     del self.__line[sensor.name]
                     self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
