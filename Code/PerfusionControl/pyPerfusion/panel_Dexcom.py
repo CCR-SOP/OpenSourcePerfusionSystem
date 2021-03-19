@@ -10,6 +10,7 @@ import wx
 from dexcom_G6_reader.readdata import Dexcom
 from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.DexcomStream import DexcomStream
+from pyPerfusion.syringe_timer import SyringeTimer
 
 import pyPerfusion.PerfusionConfig as LP_CFG
 
@@ -36,13 +37,21 @@ class PanelDexcom(wx.Panel):
         self.btn_start = wx.Button(self, label='Start Acquisition')
         self.btn_start.Enable(False)
 
+        self.btn_injection = wx.Button(self, label='Start Injections')
+        self.btn_injection.Enable(False)
+
         self.set_receiver()
 
         self.sensor = DexcomStream(self._name[14:] + ' Glucose', 'mg/dL', self._connected_receiver, valid_range=[80, 110])
         sensors.append(self.sensor)
 
+        self.tolerance = 5
+        self._insulin_injection = SyringeTimer(self, 'Insulin', 'COM12', 9600, self.sensor._valid_range[1], self.tolerance, self.sensor)
+        self._glucagon_injection = SyringeTimer(self, 'Glucagon', 'COM6', 9600, self.sensor._valid_range[0], self.tolerance, self.sensor)
+
         self.sizer_plot = wx.BoxSizer(wx.VERTICAL)
         self._panel_plot = PanelPlotting(self)
+        self._panel_plot.plot_frame_ms = 300000
         self._panel_plot.add_sensor(self.sensor)
         self.sizer_plot.Add(self._panel_plot, 6, wx.ALL | wx.EXPAND, border=0)
         self._sub_panel = PanelPlotLT(self)
@@ -75,6 +84,7 @@ class PanelDexcom(wx.Panel):
                     engaged_COM_list.append(COM)
                     self.label_connect.SetLabel('Connected to %s' % COM)
                     self.btn_start.Enable(True)
+                    self.btn_injection.Enable(True)
                     return
                 else:
                     potential_receiver.Disconnect()
@@ -93,6 +103,8 @@ class PanelDexcom(wx.Panel):
         sizer.Add(self.label_connect, flags)
         sizer.AddSpacer(30)
         sizer.Add(self.btn_start, flags)
+        sizer.AddSpacer(30)
+        sizer.Add(self.btn_injection, flags)
         self.sizer_main.Add(sizer)
 
         self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)
@@ -105,6 +117,7 @@ class PanelDexcom(wx.Panel):
 
     def __set_bindings(self):
         self.btn_start.Bind(wx.EVT_BUTTON, self.OnStart)
+        self.btn_injection.Bind(wx.EVT_BUTTON, self.OnInjection)
 
     def OnStart(self, evt):
         state = self.btn_start.GetLabel()
@@ -114,6 +127,17 @@ class PanelDexcom(wx.Panel):
         else:
             self.sensor.hw.read_data = False
             self.btn_start.SetLabel('Start Acquisition')
+
+    def OnInjection(self, evt):
+        state = self.btn_injection.GetLabel()
+        if state == 'Start Injections':
+            self._insulin_injection.start_injection_timer(10000)
+            self._glucagon_injection.start_injection_timer(10000)
+            self.btn_injection.SetLabel('Stop Injections')
+        else:
+            self._insulin_injection.stop_injection_timer()
+            self._glucagon_injection.stop_injection_timer()
+            self.btn_injection.SetLabel('Start Injections')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
