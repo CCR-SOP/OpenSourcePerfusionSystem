@@ -24,13 +24,18 @@ class SyringeTimer(wx.Panel):
         self.timer_reset = wx.Timer(self, id=1)
         self.Bind(wx.EVT_TIMER, self.OnResetTimer, id=1)
 
-        self.open()
+        self.connect()
 
-    def open(self):
+    def connect(self):
         self.syringe.open(self.COM, self.baud)
         self.syringe.ResetSyringe()
         self.syringe.syringe_configuration()
-        self.timer_injection.Start(10000, wx.TIMER_CONTINUOUS)
+
+    def start_injection_timer(self, time_ms):
+        self.timer_injection.Start(time_ms, wx.TIMER_CONTINUOUS)
+
+    def stop_injection_timer(self):
+        self.timer_injection.Stop()
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_injection.GetId():
@@ -47,7 +52,7 @@ class SyringeTimer(wx.Panel):
     def check_for_injection(self):
         if self.name == 'Insulin':
             glucose = float(self.sensor.get_current())
-            if glucose > (self.threshold_value + self.tolerance):
+            if glucose > (self.threshold_value + self.tolerance) and glucose != 5000:
                 if not self.syringe.cooldown:
                     diff = glucose - (self.threshold_value + self.tolerance)
                     injection_volume = diff / 25
@@ -59,7 +64,7 @@ class SyringeTimer(wx.Panel):
                 print('Glucose does not need to be modulated by insulin')
         elif self.name == 'Glucagon':
             glucose = float(self.sensor.get_current())
-            if glucose < (self.threshold_value - self.tolerance):
+            if glucose < (self.threshold_value - self.tolerance) and glucose != 0:
                 if not self.syringe.cooldown:
                     diff = (self.threshold_value - self.tolerance) - glucose
                     injection_volume = diff / 25
@@ -100,10 +105,4 @@ class SyringeTimer(wx.Panel):
         syringe.infuse()
         syringe.reset = True
         syringe.cooldown = True
-
-    def stop_injection_timer(self):
-        self.timer_injection.Stop()
-
-    def start_injection_timer(self, time):
-        self.timer_injection.Start(time, wx.TIMER_CONTINUOUS)
 
