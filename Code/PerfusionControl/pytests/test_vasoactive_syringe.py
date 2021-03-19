@@ -17,12 +17,12 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self._sensor = sensor
         self._name = name
         self._inc = 1.0
-        self._vasodilator_injection = None
-        self._vasoconstrictor_injection = None
 
         wx.Panel.__init__(self, parent, -1)
 
         syringe_list = 'Phenylephrine, Epoprostenol'
+        self._vasoconstrictor_injection = SyringeTimer(self, 'Phenylephrine', 'COM4', 9600, 0, 0, self._sensor)
+        self._vasodilator_injection = SyringeTimer(self, 'Epoprostenol', 'COM11', 9600, 0, 0, self._sensor)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -85,11 +85,16 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
             self.btn_stop.SetLabel('Stop')
-            self._vasoconstrictor_injection = SyringeTimer(self, 'Phenylephrine', 'COM4', 9600, self.spin_max_flow.GetValue(), self.spin_tolerance.GetValue(), self._sensor)
-            self._vasodilator_injection = SyringeTimer(self, 'Epoprostenol', 'COM11', 9600, self.spin_min_flow.GetValue(), self.spin_tolerance.GetValue(), self._sensor)
+            self._vasoconstrictor_injection.threshold_value = self.spin_max_flow.GetValue()
+            self._vasoconstrictor_injection.tolerance = self.spin_tolerance.GetValue()
+            self._vasoconstrictor_injection.start_injection_timer(10000)
+
+            self._vasodilator_injection.threshold_value = self.spin_min_flow.GetValue()
+            self._vasodilator_injection.tolerance = self.spin_tolerance.GetValue()
+            self._vasodilator_injection.start_injection_timer(10000)
         else:
-            self._vasoconstrictor_injection.stop_injection_timer()
             self._vasodilator_injection.stop_injection_timer()
+            self._vasoconstrictor_injection.stop_injection_timer()
             self.btn_stop.SetLabel('Start')
 
 class TestFrame(wx.Frame):
