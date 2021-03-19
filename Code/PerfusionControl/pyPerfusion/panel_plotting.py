@@ -9,7 +9,6 @@ from enum import Enum
 import numpy as np
 
 import wx
-import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 import matplotlib.transforms as mtransforms
@@ -109,7 +108,6 @@ class PanelPlotting(wx.Panel):
             elif type(sensor) is DexcomStream and data_time is not None:  # DexcomStream.get_data returns 'None' for data_time if DexcomStream thread is not running
                 if readout == 5000:  # Signifies end of run
                     self.timer_plot.Stop()
-                    print('stopped plotting')
                     self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
                     text = 'End'
                     color = 'red'
@@ -153,7 +151,7 @@ class PanelPlotting(wx.Panel):
             if type(sensor) is SensorStream:
                 self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             elif type(sensor) is DexcomStream:
-                self.__line[sensor.name], = None
+                self.__line[sensor.name] = None
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
             if self._with_readout:
                 self.__val_display[sensor.name] = self.axes.text(1.06, 0.5, '0',
