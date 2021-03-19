@@ -55,7 +55,7 @@ class PanelPlotting(wx.Panel):
     def plot_frame_ms(self):
         return self._plot_frame_ms
 
-    @plot_frame_ms.setter  # Can I use this?
+    @plot_frame_ms.setter
     def plot_frame_ms(self, ms):
         self._plot_frame_ms = ms
 
@@ -106,7 +106,6 @@ class PanelPlotting(wx.Panel):
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
                 except ValueError:
                     pass
-
             elif type(sensor) is DexcomStream and data_time is not None:  # DexcomStream.get_data returns 'None' for data_time if DexcomStream thread is not running
                 if readout == 5000:  # Signifies end of run
                     self.timer_plot.Stop()
@@ -152,9 +151,9 @@ class PanelPlotting(wx.Panel):
         self.__sensors.append(sensor)
         if type(sensor) is SensorStream or DexcomStream:
             if type(sensor) is SensorStream:
-                self.__line[sensor.name] = self.axes.plot([0] * self.__plot_len)
+                self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             elif type(sensor) is DexcomStream:
-                self.__line[sensor.name] = None
+                self.__line[sensor.name], = None
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
             if self._with_readout:
                 self.__val_display[sensor.name] = self.axes.text(1.06, 0.5, '0',
