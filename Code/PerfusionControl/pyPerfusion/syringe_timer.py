@@ -105,4 +105,3 @@ class SyringeTimer(wx.Panel):
         syringe.infuse()
         syringe.reset = True
         syringe.cooldown = True
-
