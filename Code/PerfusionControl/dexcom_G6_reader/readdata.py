@@ -66,13 +66,13 @@ class Dexcom(object):
 
     self.buf_len = 1
     self.data_type = np.float32
-    self.period_sampling_ms = 300
+    self.period_sampling_ms = 1000
     self.samples_per_read = 1
 
     self.read_data = False
     self._buffer = None
     self._time = None
-    self._index = 450
+    self._index = 1
 
   def Connect(self):
     if self._port is None:
@@ -406,12 +406,12 @@ class Dexcom(object):
       if latest_value_raw[0:3] == 'CGM':
         latest_value_processed = int(latest_value_raw.split('BG:')[1].split(' (')[0])
       elif (latest_value_raw == 'ABSOLUTE_DEVIATION') or (latest_value_raw == 'POWER_DEVIATION') or (latest_value_raw == 'COUNTS_DEVIATION'):
-        latest_value_processed = '0'
+        latest_value_processed = '0.1'
       elif latest_value_raw == 'SENSOR_NOT_ACTIVE':
         latest_value_processed = '5000'  # Signifying end of run
         self.read_data = False
       else:
-        latest_value_processed = '0'  # Unknown sensor error
+        latest_value_processed = '0.1'  # Unknown sensor error
       self._buffer = np.ones(self.samples_per_read, dtype=self.data_type) * np.float32(latest_value_processed)
     return self._buffer, self._time
 
