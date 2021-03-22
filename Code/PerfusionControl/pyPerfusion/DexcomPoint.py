@@ -54,17 +54,18 @@ class DexcomPoint(SensorStream):
 
     def get_data(self, last_ms, samples_needed):
         _fid, tmp = self._open_read()
-        cur_time = int(perf_counter() * 1000)
+        cur_time = int(perf_counter() * 1000.0)
         _fid.seek(0)
         chunk = [1]
+        data_time = []
         data = []
         while chunk:
             chunk, ts = self.__read_chunk(_fid)
             if chunk and (cur_time - ts < last_ms or last_ms == 0):
                 data.append(chunk)
+                data_time.append(ts / 1000.0)
         _fid.close()
-
-  #      if data[-1] == 5000:  # Signifies end of run
-  #          self.stop()
-
+        if data and data[-1] == 5000:
+            self.stop()
+            print('stopped')
         return self._time, data
