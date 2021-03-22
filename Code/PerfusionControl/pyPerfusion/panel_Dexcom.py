@@ -9,7 +9,7 @@ import wx
 
 from dexcom_G6_reader.readdata import Dexcom
 from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
-from pyPerfusion.DexcomStream import DexcomStream
+from pyPerfusion.DexcomPoint import DexcomPoint
 from pyPerfusion.syringe_timer import SyringeTimer
 
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -42,7 +42,7 @@ class PanelDexcom(wx.Panel):
 
         self.set_receiver()
 
-        self.sensor = DexcomStream(self._name[14:] + ' Glucose', 'mg/dL', self._connected_receiver, valid_range=[80, 110])
+        self.sensor = DexcomPoint(self._name[14:] + ' Glucose', 'mg/dL', self._connected_receiver, valid_range=[80, 110])
         sensors.append(self.sensor)
 
         self.tolerance = 5
