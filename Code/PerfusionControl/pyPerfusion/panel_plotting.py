@@ -21,7 +21,7 @@ import matplotlib.transforms as mtransforms
 # from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 
 from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.DexcomStream import DexcomStream
+from pyPerfusion.DexcomPoint import DexcomPoint
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -114,7 +114,8 @@ class PanelPlotting(wx.Panel):
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
                 except ValueError:
                     pass
-            elif type(sensor) is DexcomStream and data_time is not None:  # DexcomStream.get_data returns 'None' for data_time if DexcomStream thread is not running
+            elif type(sensor) is DexcomPoint and data_time is not None:  # DexcomPoint.get_data returns 'None' for data_time if DexcomPoint thread is not running
+                readout = float(readout)
                 if readout == 5000:  # Signifies end of run
                     self.timer_plot.Stop()
                     self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
@@ -156,10 +157,10 @@ class PanelPlotting(wx.Panel):
     def add_sensor(self, sensor, color='r'):
         assert isinstance(sensor, SensorStream)
         self.__sensors.append(sensor)
-        if type(sensor) is SensorStream or DexcomStream:
+        if type(sensor) is SensorStream or DexcomPoint:
             if type(sensor) is SensorStream:
                 self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
-            elif type(sensor) is DexcomStream:
+            elif type(sensor) is DexcomPoint:
                 self.__line[sensor.name] = None
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
             if self._with_readout:
