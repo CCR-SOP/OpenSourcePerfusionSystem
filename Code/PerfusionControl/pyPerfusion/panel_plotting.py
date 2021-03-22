@@ -115,13 +115,13 @@ class PanelPlotting(wx.Panel):
                 except ValueError:
                     pass
             elif type(sensor) is DexcomPoint and data_time is not None:  # DexcomPoint.get_data returns 'None' for data_time if DexcomPoint thread is not running
-                readout = float(readout)
+                readout = float(readout[-1])
                 if readout == 5000:  # Signifies end of run
                     self.timer_plot.Stop()
                     self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
                     text = 'End'
                     color = 'red'
-                elif readout == 0:
+                elif readout == 0.10000000149011612:  # Due to storage of data in file, 0.1 becomes this value after extraction and conversion to float
                     self.axes.plot_date(data_time, readout, color='white', marker='o', xdate=True)
                     text = 'N/A'
                     color = 'black'
