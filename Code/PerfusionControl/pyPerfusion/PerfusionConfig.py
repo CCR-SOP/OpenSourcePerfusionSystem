@@ -16,6 +16,7 @@ LP_PATH = {}
 LP_PATH['base'] = Path(os.path.expanduser('~')) / 'Documents/LiverPerfusion'
 LP_PATH['config'] = LP_PATH['base'] / 'config'
 LP_PATH['data'] = LP_PATH['base'] / 'data'
+LP_PATH['logs'] = LP_PATH['base'] / 'logs'
 LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 LP_FILE = {}
 LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
@@ -29,6 +30,7 @@ def set_base(basepath='~/Documents'):
     LP_PATH['base'] = base / 'LiverPerfusion'
     LP_PATH['config'] = LP_PATH['base'] / 'config'
     LP_PATH['data'] = LP_PATH['base'] / 'data'
+    LP_PATH['logs'] = LP_PATH['base'] / 'logs'
     LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 
     LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
