@@ -7,7 +7,7 @@ and under the public domain.
 Author: John Kakareka
 """
 import ctypes
-from time import sleep
+import logging
 
 import PyDAQmx
 from PyDAQmx.DAQmxConstants import *
@@ -17,6 +17,7 @@ import pyHardware.pyAO as pyAO
 
 class NIDAQ_AO(pyAO.AO):
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         super().__init__()
         self.__dev = None
         self.__line = None
@@ -51,9 +52,10 @@ class NIDAQ_AO(pyAO.AO):
         task.StopTask()
         task.ClearTask()
         if self.__hw_clk:
-            print('Hardware clock supported')
+            phrase = 'is'
         else:
-            print('Hardware clock not supported')
+            phrase = 'is not'
+        self._logger.info(f'Hardware clock {phrase} supported for {self._devname}')
 
     def wait_for_task(self):
         if self.__task:

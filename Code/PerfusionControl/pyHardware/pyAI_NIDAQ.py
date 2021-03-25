@@ -6,7 +6,7 @@ Author: John Kakareka
 """
 
 import time
-import threading
+import logging
 
 import numpy as np
 import PyDAQmx
@@ -18,6 +18,7 @@ import pyHardware.pyAI as pyAI
 
 class NIDAQ_AI(pyAI.AI):
     def __init__(self, period_ms, volts_p2p, volts_offset):
+        self._logger = logging.getLogger(__name__)
         super().__init__(period_ms, buf_type=np.float32)
         self._dev = None
         self._line = None
@@ -50,7 +51,8 @@ class NIDAQ_AI(pyAI.AI):
                 self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
                                           len(buffer), PyDAQmx.byref(samples_read), None)
         except PyDAQmx.ReadBufferTooSmallError:
-            pass
+            self._logger.error(f'ReadBufferTooSmallError when reading {self._devname}')
+            self._logger.error(f'Samples/read = {self.samples_per_read}, Buffer len = {len(buffer)}')
         offset = 0
         for ch in ch_ids:
             # buf = self.data_type(buffer[offset::len(ch_ids)])
@@ -79,8 +81,8 @@ class NIDAQ_AI(pyAI.AI):
                 self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
                                              self.samples_per_read)
         except PyDAQmx.DAQError as e:
-            print("Could not create AI Channel for {}".format(self._devname))
-            print(f"{e}")
+            self._logger.error("Could not create AI Channel for {}".format(self._devname))
+            self._logger.error(f"{e}")
             self.__task = None
 
     def close(self):
