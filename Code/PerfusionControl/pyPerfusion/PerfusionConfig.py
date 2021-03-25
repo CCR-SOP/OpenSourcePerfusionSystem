@@ -10,6 +10,10 @@ import os
 from pathlib import Path
 from configparser import ConfigParser
 from datetime import datetime
+import logging
+
+import pyPerfusion.utils as utils
+
 
 
 LP_PATH = {}
@@ -24,6 +28,7 @@ LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
 
 
 def set_base(basepath='~/Documents'):
+    logging.getLogger(__name__).info(f'Setting configuration basepath to {basepath}')
     global LP_PATH
     base = Path(os.path.expanduser(basepath))
 
@@ -37,6 +42,7 @@ def set_base(basepath='~/Documents'):
     LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
 
     for key in LP_PATH.keys():
+        logging.getLogger(__name__).info('Creating configuration folder structure')
         LP_PATH[key].mkdir(parents=True, exist_ok=True)
 
 def update_hwcfg_section(name, updated_info):
