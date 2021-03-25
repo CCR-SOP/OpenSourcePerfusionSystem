@@ -11,6 +11,7 @@ from pyPerfusion.syringe_timer import SyringeTimer
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 
+
 class PanelTestVasoactiveSyringe(wx.Panel):
     def __init__(self, parent, sensor, name):
         self.parent = parent
@@ -21,8 +22,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
 
         syringe_list = 'Phenylephrine, Epoprostenol'
-        self._vasoconstrictor_injection = SyringeTimer(self, 'Phenylephrine', 'COM4', 9600, 0, 0, self._sensor)
-        self._vasodilator_injection = SyringeTimer(self, 'Epoprostenol', 'COM11', 9600, 0, 0, self._sensor)
+        self._vasoconstrictor_injection = SyringeTimer('Phenylephrine', 'COM4', 9600, 0, 0, self._sensor)
+        self._vasodilator_injection = SyringeTimer('Epoprostenol', 'COM11', 9600, 0, 0, self._sensor)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -87,15 +88,16 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.btn_stop.SetLabel('Stop')
             self._vasoconstrictor_injection.threshold_value = self.spin_max_flow.GetValue()
             self._vasoconstrictor_injection.tolerance = self.spin_tolerance.GetValue()
-            self._vasoconstrictor_injection.start_injection_timer(10000)
+            self._vasoconstrictor_injection.start_injection_timer()
 
             self._vasodilator_injection.threshold_value = self.spin_min_flow.GetValue()
             self._vasodilator_injection.tolerance = self.spin_tolerance.GetValue()
-            self._vasodilator_injection.start_injection_timer(10000)
+            self._vasodilator_injection.start_injection_timer()
         else:
             self._vasodilator_injection.stop_injection_timer()
             self._vasoconstrictor_injection.stop_injection_timer()
             self.btn_stop.SetLabel('Start')
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -115,6 +117,7 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         self.sensor.stop()
         self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
