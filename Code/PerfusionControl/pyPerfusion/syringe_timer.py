@@ -6,7 +6,6 @@ General code for initiating syringe injections based on a specific system parame
 from pyHardware.PHDserial import PHDserial
 from threading import Thread, Event
 
-
 class SyringeTimer:
     def __init__(self, name, COM, baud, threshold_value, tolerance, sensor):
         self.name = name
@@ -46,18 +45,18 @@ class SyringeTimer:
             self.__thread_timer_reset = None
 
     def OnTimer(self):
-        while not self.__evt_halt_injection.wait(10000):
+        while not self.__evt_halt_injection.wait(10.0):
             if self.syringe.reset:
                 self.syringe.ResetSyringe()
                 self.syringe.reset = False
             self.check_for_injection()
 
     def OnResetTimer(self):
-        while not self.__evt_halt_reset.wait(60000):
+        while not self.__evt_halt_reset.wait(30.0):
             self.syringe.cooldown = False
             self.__evt_halt_reset.set()
-            self.__thread_timer_reset.join(2.0)
             self.__thread_timer_reset = None
+            return
 
     def check_for_injection(self):
         if self.name == 'Insulin':
@@ -123,3 +122,5 @@ class SyringeTimer:
         syringe.infuse()
         syringe.reset = True
         syringe.cooldown = True
+
+
