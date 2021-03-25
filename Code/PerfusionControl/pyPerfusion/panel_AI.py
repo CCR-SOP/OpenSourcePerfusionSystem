@@ -5,6 +5,9 @@
 
 Panel class for testing and configuring AIO
 """
+import logging
+import pyPerfusion.utils as utils
+
 import wx
 
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
@@ -19,6 +22,7 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 class PanelAI(wx.Panel):
     def __init__(self, parent, sensor, name):
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
@@ -62,6 +66,8 @@ class PanelAI(wx.Panel):
 
 class PanelAI_Config(wx.Panel):
     def __init__(self, parent, sensor, name, sizer_name, plot):
+        self._logger = logging.getLogger(__name__)
+        self._logger.debug(f'Creating PanelAI_Config for sensor {name}')
         self.parent = parent
         self._sensor = sensor
         self._name = name
@@ -155,12 +161,14 @@ class PanelAI_Config(wx.Panel):
         dev = self.choice_dev.GetStringSelection()
         line = self.choice_line.GetStringSelection()
         if state:
+            self._logger.debug(f'Opening device {dev}, {line}')
             self._sensor.hw.add_channel(line)
             self._sensor.set_ch_id(line)
             self.btn_open.SetLabel('Close')
             self._sensor.hw.open(dev=dev)
             self._sensor.hw.start()
         else:
+            self._logger.debug(f'Closing device {dev}, {line}')
             self._sensor.hw.remove_channel(line)
             self.btn_open.SetLabel('Open')
 
@@ -233,5 +241,6 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_AI')
     app = MyTestApp(0)
     app.MainLoop()
