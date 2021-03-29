@@ -12,9 +12,6 @@ from configparser import ConfigParser
 from datetime import datetime
 import logging
 
-import pyPerfusion.utils as utils
-
-
 
 LP_PATH = {}
 LP_PATH['base'] = Path(os.path.expanduser('~')) / 'Documents/LiverPerfusion'
