@@ -17,7 +17,7 @@ import matplotlib.transforms as mtransforms
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
-from pyPerfusion.PerfusionConfig import LP_CFG
+import pyPerfusion.PerfusionConfig as LP_CFG
 
 
 class PanelPlotting(wx.Panel):
