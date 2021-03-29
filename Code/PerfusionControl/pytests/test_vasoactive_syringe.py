@@ -118,7 +118,7 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         for syringe in self._syringes:
-            syringe.syringe.close()
+            syringe.syringe.stop_stream()
         self.sensor.stop()
         self.Destroy()
 
