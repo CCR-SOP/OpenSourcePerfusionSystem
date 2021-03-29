@@ -6,7 +6,6 @@
 Panel class for testing and configuring AIO
 """
 import logging
-import pyPerfusion.utils as utils
 
 import wx
 
@@ -14,7 +13,7 @@ from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_plotting import PanelPlotting
 from pyPerfusion.SensorStream import SensorStream
-
+import pyPerfusion.utils as utils
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
