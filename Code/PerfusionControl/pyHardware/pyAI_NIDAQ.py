@@ -27,6 +27,7 @@ class NIDAQ_AI(pyAI.AI):
         self.__task = None
         self._volts_p2p = volts_p2p
         self._volts_offset = volts_offset
+        self._exception_msg_ack = False
 
     @property
     def _devname(self):
@@ -51,9 +52,28 @@ class NIDAQ_AI(pyAI.AI):
             if self.__task:
                 self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
                                           len(buffer), PyDAQmx.byref(samples_read), None)
+            if self._exception_msg_ack:
+                self._logger.info('Recovered from previous exception.')
+                self._exception_msg_ack = False
         except PyDAQmx.ReadBufferTooSmallError:
-            self._logger.error(f'ReadBufferTooSmallError when reading {self._devname}')
-            self._logger.error(f'Samples/read = {self.samples_per_read}, Buffer len = {len(buffer)}')
+            if not self._exception_msg_ack:
+                self._logger.error(f'ReadBufferTooSmallError when reading {self._devname}')
+                self._logger.error(f'Samples/read = {self.samples_per_read}, Buffer len = {len(buffer)}')
+                self._exception_msg_ack = True
+        except PyDAQmx.DAQmxFunctions.ResourceNotInPool_RoutingError:
+            # the RuntimeAborted_RoutingError will probably got caught first
+            if not self._exception_msg_ack:
+                self._logger.error(f'DAQ resource no longer available, possibly due to hibernation or USB disconnect')
+                self._exception_msg_ack = True
+        except PyDAQmx.DAQmxFunctions.RuntimeAborted_RoutingError:
+            if not self._exception_msg_ack:
+                self._logger.error(f'DAQ resource no longer available, possibly due to hibernation or USB disconnect')
+                self._exception_msg_ack = True
+        except PyDAQmx.DAQException as e:
+            if not self._exception_msg_ack:
+                self._logger.error('Exception attempting to read analog data')
+                self._logger.exception(e)
+                self._exception_msg_ack = True
         offset = 0
         for ch in ch_ids:
             # buf = self.data_type(buffer[offset::len(ch_ids)])
