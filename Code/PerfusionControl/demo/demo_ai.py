@@ -5,14 +5,15 @@
 
 Demonstration of plots created with real data
 """
+import logging
+
 import wx
-import time
-from pathlib import Path
 
 from pyPerfusion.panel_AI import PanelAI, DEV_LIST
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.utils as utils
 
 
 class TestFrame(wx.Frame):
@@ -63,5 +64,8 @@ class MyTestApp(wx.App):
         return True
 
 
+LP_CFG.set_base(basepath='~/Documents/LPTEST')
+LP_CFG.update_stream_folder()
+utils.setup_default_logging(filename='demo_ai')
 app = MyTestApp(0)
 app.MainLoop()

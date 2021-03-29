@@ -5,7 +5,13 @@
 
 Panel class for general settings for Portal Vein branch parameters
 """
+import logging
+
 import wx
+
+import pyPerfusion.utils as utils
+from pyPerfusion.PerfusionConfig import LP_CFG
+
 
 
 class DummyPerfusion:
@@ -14,6 +20,7 @@ class DummyPerfusion:
 
 class PanelPVParameters(wx.Panel):
     def __init__(self, parent, perfusion):
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.perfusion = perfusion
         wx.Panel.__init__(self, parent, -1)
@@ -62,5 +69,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_pv_parameters')
     app = MyTestApp(0)
     app.MainLoop()

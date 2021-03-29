@@ -6,15 +6,19 @@
 Panel class for showing single number readout
 """
 from pathlib import Path
+import logging
 
 import wx
 
+import pyPerfusion.utils as utils
+from pyPerfusion.PerfusionConfig import LP_CFG
 from pyPerfusion.SensorStream import SensorStream
 from pyHardware.pyAI import AI
 
 
 class PanelReadout(wx.Panel):
     def __init__(self, parent, sensor:SensorStream):
+        self._logger = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
         self._sensor = sensor
 
@@ -82,5 +86,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_readout')
     app = MyTestApp(0)
     app.MainLoop()

@@ -5,9 +5,9 @@
 
 Panel class for testing and configuring AIO
 """
-from pathlib import Path
+import logging
+import pyPerfusion.utils as utils
 
-from configparser import ConfigParser
 import wx
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
@@ -20,6 +20,7 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 class PanelAO(wx.Panel):
     def __init__(self, parent, aio, name):
+        self._logger = logging.getLogger()
         self.parent = parent
         self._ao = aio
         self._name = name
@@ -123,7 +124,7 @@ class PanelAO_Config(wx.Panel):
         if state:
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
-            print(f'dev is {dev}, line is {line}')
+            self._logger.info(f'dev is {dev}, line is {line}')
             self._ao.open(period_ms=10, dev=dev, line=line)
             self.btn_open.SetLabel('Close',)
             self._ao.start()
@@ -264,5 +265,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_AO')
     app = MyTestApp(0)
     app.MainLoop()
