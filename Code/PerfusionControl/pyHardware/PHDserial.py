@@ -50,6 +50,7 @@ class PHDserial(USBSerial):
         self._filename = pathlib.Path(f'{self.name}')
         self._ext = '.dat'
         self._timestamp = None
+        self._timestamp_perf = None
         self._end_of_header = 0
         self._last_idx = 0
         self._datapoints_per_ts = 2
@@ -90,6 +91,7 @@ class PHDserial(USBSerial):
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
+        self._timestamp_perf = perf_counter()
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
@@ -128,7 +130,7 @@ class PHDserial(USBSerial):
                   f'Data Format: {str(np.dtype(np.float32))}',
                   f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Infusion Volume and Infusion Rate)',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
-                  f'Start of Acquisition: {stamp_str}'
+                  f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
         end_of_line = '\n'
         hdr_str = f'{end_of_line.join(header)}{end_of_line}'
@@ -228,7 +230,7 @@ class PHDserial(USBSerial):
 
     def get_infusion_rate(self):
         self.send('irate\r')
-        print(self._response)
+     #   print(self._response)
         return self._response
 
     def get_infused_volume(self):
