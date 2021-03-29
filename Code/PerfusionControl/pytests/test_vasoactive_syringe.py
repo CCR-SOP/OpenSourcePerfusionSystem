@@ -11,9 +11,8 @@ from pyPerfusion.syringe_timer import SyringeTimer
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-
 class PanelTestVasoactiveSyringe(wx.Panel):
-    def __init__(self, parent, sensor, name):
+    def __init__(self, parent, sensor, name, vasoconstrictor_injection, vasodilator_injection):
         self.parent = parent
         self._sensor = sensor
         self._name = name
@@ -22,8 +21,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
 
         syringe_list = 'Phenylephrine, Epoprostenol'
-        self._vasoconstrictor_injection = SyringeTimer('Phenylephrine', 'COM4', 9600, 0, 0, self._sensor)
-        self._vasodilator_injection = SyringeTimer('Epoprostenol', 'COM11', 9600, 0, 0, self._sensor)
+        self._vasoconstrictor_injection = vasoconstrictor_injection
+        self._vasodilator_injection = vasodilator_injection
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -107,7 +106,10 @@ class TestFrame(wx.Frame):
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Vasoactive Syringe Testing'), 1, wx.ALL | wx.EXPAND, border=1)
+        vasoconstrictor_injection = SyringeTimer('Phenylephrine', 'COM4', 9600, 0, 0, self.sensor)
+        vasodilator_injection = SyringeTimer('Epoprostenol', 'COM11', 9600, 0, 0, self.sensor)
+        self._syringes = [vasoconstrictor_injection, vasodilator_injection]
+        sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Vasoactive Syringe Testing', vasoconstrictor_injection, vasodilator_injection), 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -115,6 +117,8 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        for syringe in self._syringes:
+            syringe.syringe.close()
         self.sensor.stop()
         self.Destroy()
 
