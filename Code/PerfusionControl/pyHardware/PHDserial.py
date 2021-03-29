@@ -137,7 +137,7 @@ class PHDserial(USBSerial):
         hdr_str = f'{end_of_line.join(header)}{end_of_line}'
         return hdr_str
 
-    def start(self):
+    def start_stream(self):
         pass
 
     def target_infuse(self, infusion_volume, infusion_rate):
