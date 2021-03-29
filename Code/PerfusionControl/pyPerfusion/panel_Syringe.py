@@ -11,31 +11,24 @@ from serial import SerialException
 from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-COMM_LIST = [f'COM{num}' for num in range(1, 15)]
-BAUD_LIST = ['9600', '115200']
-
-
 class PanelSyringe(wx.Panel):
-    def __init__(self, parent, syringe, name='Syringe'):
+    def __init__(self, parent, syringe, name):
         self.parent = parent
         self._syringe = syringe
         self._name = name
         wx.Panel.__init__(self, parent, -1)
 
         LP_CFG.set_base()
-        self._avail_comm = COMM_LIST
-        self._avail_baud = BAUD_LIST
+        self._comm, self._baud = self.get_hardware_info()
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.label_comm = wx.StaticText(self, label='USB COMM')
-        self.choice_comm = wx.Choice(self, wx.ID_ANY, choices=self._avail_comm)
-        self.choice_comm.SetSelection(0)
+        self.label_comm = wx.StaticText(self, label='USB COMM:')
+        self.choice_comm = wx.StaticText(self, label=self._comm)
 
-        self.label_baud = wx.StaticText(self, label='Baud Rate')
-        self.choice_baud = wx.Choice(self, wx.ID_ANY, choices=self._avail_baud)
-        self.choice_baud.SetSelection(0)
+        self.label_baud = wx.StaticText(self, label='Baud Rate:')
+        self.choice_baud = wx.StaticText(self, label=self._baud)
 
         self.btn_open = wx.ToggleButton(self, label='Open')
 
@@ -70,6 +63,20 @@ class PanelSyringe(wx.Panel):
 
         self.__do_layout()
         self.__set_bindings()
+
+    def get_hardware_info(self):
+        COMs_bauds = LP_CFG.get_COMs_bauds()
+        for syringe, info in COMs_bauds.items():
+            if self._name.lower() == syringe:
+                comm = info[0]
+                baud = info[1]
+                return comm, baud
+
+    def load_info(self):
+        codes, volumes = LP_CFG.open_syringe_info()
+        self._syringe.manufacturers = codes
+        self._syringe.syringes = volumes
+        self.update_syringe_choices()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 2).Expand().Proportion(1)
@@ -157,10 +164,14 @@ class PanelSyringe(wx.Panel):
     def OnOpen(self, evt):
         state = self.btn_open.GetValue()
         if state:
-            comm = self.choice_comm.GetStringSelection()
-            baud = self.choice_baud.GetStringSelection()
+            comm = self.choice_comm.GetLabel()
+            baud = self.choice_baud.GetLabel()
             try:
                 self._syringe.open(comm, int(baud))
+                self._syringe.ResetSyringe()
+                self._syringe.syringe_configuration()
+                self._syringe.open_stream(LP_CFG.LP_PATH['stream'])
+                self._syringe.start_stream()
                 self.btn_open.SetLabel('Close', )
                 self.btn_dl_info.Enable(True)
             except SerialException:
@@ -171,12 +182,6 @@ class PanelSyringe(wx.Panel):
             self._syringe.close()
             self.btn_open.SetLabel('Open')
             self.btn_dl_info.Enable(False)
-
-    def load_info(self):
-        codes, volumes = LP_CFG.open_syringe_info()
-        self._syringe.manufacturers = codes
-        self._syringe.syringes = volumes
-        self.update_syringe_choices()
 
     def update_syringe_choices(self):
         self.choice_manu.Clear()
@@ -231,7 +236,7 @@ class PanelSyringe(wx.Panel):
         self._syringe.set_target_volume(target_volume, 'ml')
         infusion_rate = int(self._syringe.get_infusion_rate().split(' ')[0])
         wait_time = ((target_volume/infusion_rate) * 60) + 0.5
-        self._syringe.infuse()
+        self._syringe.target_infuse(target_volume, infusion_rate)
         time.sleep(wait_time)
         self._syringe.reset_infusion_volume()
         self._syringe.reset_target_volume()
@@ -244,8 +249,8 @@ class PanelSyringe(wx.Panel):
 
     def OnSaveConfig(self, evt):
         section = LP_CFG.get_hwcfg_section(self._name)
-        section['CommPort'] = self.choice_comm.GetStringSelection()
-        section['BaudRate'] = self.choice_baud.GetStringSelection()
+        section['CommPort'] = self.choice_comm.GetLabel()
+        section['BaudRate'] = self.choice_baud.GetLabel()
         section['ManuCode'] = self.choice_manu.GetStringSelection()
         section['Volume'] = self.choice_types.GetStringSelection()
         section['Rate'] = str(self.spin_rate.GetValue())
@@ -259,10 +264,10 @@ class PanelSyringe(wx.Panel):
             self._syringe.close()
             self.btn_open.SetLabel('Open')
             self.btn_dl_info.Enable(False)
-        self.choice_comm.SetStringSelection(section['CommPort'])
-        self.choice_baud.SetStringSelection(section['BaudRate'])
-        comm = self.choice_comm.GetStringSelection()
-        baud = self.choice_baud.GetStringSelection()
+        self.choice_comm.SetLabel(section['CommPort'])
+        self.choice_baud.SetLabel(section['BaudRate'])
+        comm = self.choice_comm.GetLabel()
+        baud = self.choice_baud.GetLabel()
         try:
             self._syringe.open(comm, int(baud))
             self.btn_open.SetLabel('Close', )
@@ -283,7 +288,7 @@ class PanelSyringe(wx.Panel):
 
         except SerialException:
             wx.MessageBox('Port Could Not be Opened; it is Already in Use by Another Syringe', 'Error',
-                        wx.OK | wx.ICON_ERROR)
+                          wx.OK | wx.ICON_ERROR)
             return
 
 class TestFrame(wx.Frame):
@@ -294,7 +299,7 @@ class TestFrame(wx.Frame):
                     'Glucagon (PV)': PHDserial('Glucagon'),
                     'Phenylephrine (HA)': PHDserial('Phenylephrine'),
                     'Epoprostenol (HA)': PHDserial('Epoprostenol'),
-                    'TPN/Bile Salts(PV)': PHDserial('TPN/Bile Salts'),
+                    'TPN/Bile Salts (PV)': PHDserial('TPN/Bile Salts'),
                     'Heparin/Methylprednisolone/Ampicillin-Sulbactam (PV)': PHDserial('Heparin/Methylprednisolone/Ampicillin-Sulbactam')
                     }
         sizer = wx.GridSizer(cols=3)
