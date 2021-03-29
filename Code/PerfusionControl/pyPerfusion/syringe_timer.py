@@ -5,6 +5,7 @@ General code for initiating syringe injections based on a specific system parame
 """
 from pyHardware.PHDserial import PHDserial
 from threading import Thread, Event
+import pyPerfusion.PerfusionConfig as LP_CFG
 
 class SyringeTimer:
     def __init__(self, name, COM, baud, threshold_value, tolerance, sensor):
@@ -14,7 +15,7 @@ class SyringeTimer:
         self.threshold_value = threshold_value
         self.tolerance = tolerance
         self.sensor = sensor
-        self.syringe = PHDserial()
+        self.syringe = PHDserial(self.name)
 
         self.__thread_timer_injection = None
         self.__evt_halt_injection = Event()
@@ -27,11 +28,13 @@ class SyringeTimer:
         self.syringe.open(self.COM, self.baud)
         self.syringe.ResetSyringe()
         self.syringe.syringe_configuration()
+        self.syringe.open_stream(LP_CFG.LP_PATH['stream'])
 
     def start_injection_timer(self):
         self.__evt_halt_injection.clear()
         self.__thread_timer_injection = Thread(target=self.OnTimer)
         self.__thread_timer_injection.start()
+        self.syringe.start_stream()
 
     def stop_injection_timer(self):
         if self.__thread_timer_injection and self.__thread_timer_injection.is_alive():
@@ -119,7 +122,8 @@ class SyringeTimer:
     def injection(self, syringe, name, parameter_name, parameter, volume, direction):
         print(f'{parameter_name} is {parameter:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
         syringe.set_target_volume(volume, 'ml')
-        syringe.infuse()
+        infusion_rate = syringe.get_infusion_rate()
+        syringe.target_infuse(volume, infusion_rate)
         syringe.reset = True
         syringe.cooldown = True
 
