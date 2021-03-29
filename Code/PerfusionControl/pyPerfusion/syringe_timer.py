@@ -29,12 +29,12 @@ class SyringeTimer:
         self.syringe.ResetSyringe()
         self.syringe.syringe_configuration()
         self.syringe.open_stream(LP_CFG.LP_PATH['stream'])
+        self.syringe.start_stream()
 
     def start_injection_timer(self):
         self.__evt_halt_injection.clear()
         self.__thread_timer_injection = Thread(target=self.OnTimer)
         self.__thread_timer_injection.start()
-        self.syringe.start_stream()
 
     def stop_injection_timer(self):
         if self.__thread_timer_injection and self.__thread_timer_injection.is_alive():
