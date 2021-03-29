@@ -56,7 +56,7 @@ class PHDserial(USBSerial):
         self._end_of_header = 0
         self._last_idx = 0
         self._datapoints_per_ts = 2
-        self._bytes_per_ts = 8
+        self._bytes_per_ts = 4
 
     @property
     def full_path(self):
@@ -163,9 +163,9 @@ class PHDserial(USBSerial):
         chunk = [1]
         data_time = []
         data = []
-        while chunk:
+        while chunk[0]:
             chunk, ts = self.__read_chunk(_fid)
-            if chunk and (cur_time - ts < last_ms or last_ms == 0):
+            if chunk.any() and (cur_time - ts < last_ms or last_ms == 0):
                 data.append(chunk)
                 data_time.append(ts / 1000.0)
         _fid.close()
@@ -180,7 +180,7 @@ class PHDserial(USBSerial):
         ts = 0
         data_buf = []
         ts_bytes = _fid.read(self._bytes_per_ts)
-        if len(ts_bytes) == 8:
+        if len(ts_bytes) == 4:
             ts, = struct.unpack('i', ts_bytes)
             data_buf = np.fromfile(_fid, dtype=np.float32, count=self._datapoints_per_ts)
         return data_buf, ts
