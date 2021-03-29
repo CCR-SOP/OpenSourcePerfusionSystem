@@ -17,6 +17,9 @@ class SyringeTimer:
         self.sensor = sensor
         self.syringe = PHDserial(self.name)
 
+        LP_CFG.set_base(basepath='~/Documents/LPTEST')
+        LP_CFG.update_stream_folder()
+
         self.__thread_timer_injection = None
         self.__evt_halt_injection = Event()
         self.__thread_timer_reset = None
@@ -122,7 +125,7 @@ class SyringeTimer:
     def injection(self, syringe, name, parameter_name, parameter, volume, direction):
         print(f'{parameter_name} is {parameter:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
         syringe.set_target_volume(volume, 'ml')
-        infusion_rate = syringe.get_infusion_rate()
+        infusion_rate = syringe.get_infusion_rate().split(' ')[0]
         syringe.target_infuse(volume, infusion_rate)
         syringe.reset = True
         syringe.cooldown = True
