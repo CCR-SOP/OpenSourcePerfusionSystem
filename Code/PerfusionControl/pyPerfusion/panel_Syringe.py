@@ -270,6 +270,10 @@ class PanelSyringe(wx.Panel):
         baud = self.choice_baud.GetLabel()
         try:
             self._syringe.open(comm, int(baud))
+            self._syringe.ResetSyringe()
+            self._syringe.syringe_configuration()
+            self._syringe.open_stream(LP_CFG.LP_PATH['stream'])
+            self._syringe.start_stream()
             self.btn_open.SetLabel('Close', )
             self.btn_dl_info.Enable(True)
 
