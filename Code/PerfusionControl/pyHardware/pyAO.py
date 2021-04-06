@@ -33,12 +33,14 @@ class AO:
         self._period_ms = period_ms
         self._bits = bits
         self._gen_cycle()
-        self.__thread = threading.Thread(target=self.run)
 
     def close(self):
         self.halt()
 
     def start(self):
+        if self.__thread:
+            self.halt()
+        self.__thread = threading.Thread(target=self.run)
         self.__thread.start()
 
     def _output_samples(self):
