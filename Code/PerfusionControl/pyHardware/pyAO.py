@@ -17,7 +17,7 @@ class AO:
         self._period_ms = None
         self._volts_p2p = 0
         self._volts_offset = 0
-        self._Hz = 0
+        self._Hz = 0.0
         self._bits = None
         self._fid = None
         self.__thread = None
@@ -45,7 +45,7 @@ class AO:
         self._buffer.tofile(self._fid)
 
     def _calc_timeout(self):
-        if self._Hz > 0:
+        if self._Hz > 0.0:
             timeout = 1.0 / self._Hz
         else:
             timeout = 0.1
@@ -80,7 +80,7 @@ class AO:
         self._gen_cycle()
 
     def _gen_cycle(self):
-        if self._Hz > 0:
+        if self._Hz > 0.0:
             t = np.arange(0, 1 / self._Hz, step=self._period_ms / 1000.0)
             with self._lock_buf:
                 self._buffer = self._volts_p2p / 2.0 * \
@@ -91,12 +91,12 @@ class AO:
             print(f"creating dc of {self._volts_offset}")
 
     def set_dc(self, volts):
-        self._Hz = 0
+        self._Hz = 0.0
         self._volts_offset = volts
         print(f"setting dc voltage to {self._volts_offset}")
 
     def set_ramp(self, start_volts, stop_volts, accel):
-        self._Hz = 0
+        self._Hz = 0.0
         with self._lock_buf:
             if not start_volts == stop_volts:
                 seconds = abs(start_volts - stop_volts) / accel

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from configparser import ConfigParser
 import wx
+import time
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -97,14 +98,12 @@ class PanelAO_Config(wx.Panel):
         sizer.Add(self.sizer_line)
         self.sizer.Add(sizer)
 
-        self.sizer.AddSpacer(5)
         self.sizer.Add(self.btn_open, flags)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_save_cfg, flags)
         sizer.AddSpacer(5)
         sizer.Add(self.btn_load_cfg, flags)
-        self.sizer.AddSpacer(5)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -125,9 +124,12 @@ class PanelAO_Config(wx.Panel):
             line = self.choice_line.GetStringSelection()
             print(f'dev is {dev}, line is {line}')
             self._ao.open(period_ms=10, dev=dev, line=line)
-            self.btn_open.SetLabel('Close',)
+            self._ao.set_dc(0)  # Some of the peristaltic pumps need to be set to run at 0 V to activate their analog control
+            self.btn_open.SetLabel('Close')
             self._ao.start()
         else:
+            self._ao.set_dc(0)  # Turn off voltage when closing the channel
+            time.sleep(0.1)  # Make sure thread updates voltage to 0 prior to closing channel
             self._ao.close()
             self.btn_open.SetLabel('Open')
 
@@ -157,9 +159,9 @@ class PanelAO_Settings(wx.Panel):
         self.btn_update = wx.Button(self, label='Update')
 
         self.check_sine = wx.CheckBox(self, label='Sine output')
-        self.spin_pk2pk = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
+        self.spin_pk2pk = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=0, inc=0.1)
         self.lbl_pk2pk = wx.StaticText(self, label='Pk-Pk Voltage')
-        self.spin_offset = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=2.5, inc=0.1)
+        self.spin_offset = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=0, inc=0.1)
         self.lbl_offset = wx.StaticText(self, label='Offset Voltage')
         self.spin_hz = wx.SpinCtrlDouble(self, min=0.0, max=1000.0, initial=1.0)
         self.lbl_hz = wx.StaticText(self, label='Hz')
@@ -177,7 +179,6 @@ class PanelAO_Settings(wx.Panel):
 
     def __do_layout(self):
         self.sizer.Add(self.check_sine)
-        self.sizer.AddSpacer(10)
         self.sizer_sine = wx.GridSizer(cols=3, hgap=5, vgap=2)
         flags = wx.SizerFlags(0).Expand()
         self.sizer_sine.Add(self.lbl_pk2pk, flags)
@@ -189,14 +190,12 @@ class PanelAO_Settings(wx.Panel):
 
         self.sizer.Add(self.sizer_sine, flags)
         flags = wx.SizerFlags(0)
-        self.sizer.AddSpacer(10)
         self.sizer.Add(self.btn_update, flags)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_save_cfg, flags)
         sizer.AddSpacer(5)
         sizer.Add(self.btn_load_cfg, flags)
-        self.sizer.AddSpacer(10)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)

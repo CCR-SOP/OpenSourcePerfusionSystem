@@ -47,7 +47,6 @@ def update_hwcfg_section(name, updated_info):
     with open(LP_FILE['hwcfg'], 'w') as file:
         config.write(file)
 
-
 def get_hwcfg_section(name):
     config = ConfigParser()
     config.optionxform = str
