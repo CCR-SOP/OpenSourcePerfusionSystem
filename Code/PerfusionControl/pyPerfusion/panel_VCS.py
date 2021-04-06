@@ -127,8 +127,8 @@ class PanelCoordination(wx.Panel):
             self.timer_read_values.Stop()  # Requested number of reads have now been taken
             for sensor in self._sensors:
                 sensor.hw.remove_channel(sensor._ch_id)  # Stop sensors in anticipation of a valve switch
-                latest = sensor.get_latest(self._readings)  # Get last (# of readings) from sensor
-                print(latest, sensor.name)
+             #   latest = sensor.get_latest(self._readings)  # Get last (# of readings) from sensor
+             #   print(latest, sensor.name)
             self.update_chemical_valves()  # Switch valve
             self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
 
@@ -149,18 +149,18 @@ class PanelCoordination(wx.Panel):
         if 'Hepatic Artery' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Portal Vein' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 60000  # Time for PV perfusate to reach all sensors once PV valve is opened
+            self._clearance_time_ms = 1000  # Time for PV perfusate to reach all sensors once PV valve is opened
         elif 'Portal Vein' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Inferior Vena Cava' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 60000  # Time for IVC perfusate to reach all sensors once IVC valve is opened
+            self._clearance_time_ms = 10000  # Time for IVC perfusate to reach all sensors once IVC valve is opened
         elif 'Inferior Vena Cava' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 60000  # Time for HA perfusate to reach all sensors once HA valve is opened
+            self._clearance_time_ms = 20000  # Time for HA perfusate to reach all sensors once HA valve is opened
         else:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
-            self._clearance_time_ms = 60000  # Time for HA perfusate to reach all sensors once HA valve is opened
+            self._clearance_time_ms = 20000  # Time for HA perfusate to reach all sensors once HA valve is opened
         chemical_valves[self._valve_to_open]._dio.activate()
         chemical_valves[self._valve_to_open].btn_activate.SetLabel('Deactivate')
         chemical_valves[self._valve_to_open].btn_activate.SetBackgroundColour('Green')
