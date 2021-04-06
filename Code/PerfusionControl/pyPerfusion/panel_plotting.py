@@ -99,7 +99,7 @@ class PanelPlotting(wx.Panel):
 
                 line.set_data(data_time, data)
                 if self._with_readout:
-                    self.__val_display[sensor.name].set_text(f'{readout:.0f}')
+                    self.__val_display[sensor.name].set_text(f'{readout:.2f}')
                     self.__val_display[sensor.name].set_color(color)
                 try:
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
