@@ -28,13 +28,13 @@ class PanelTestPressure(wx.Panel):
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.label_desired_output = wx.StaticText(self, label='Desired ' + self._name)
-        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=100, initial=50, inc=self._inc)
+        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=100, initial=65, inc=self._inc)
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (mmHg)')
         self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=2)
 
         self.label_increment = wx.StaticText(self, label='Voltage Increment')
-        self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0, inc=0.001)
+        self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0.05, inc=0.001)
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -107,7 +107,7 @@ class PanelTestPressure(wx.Panel):
             else:
                 new_val = self._ao._volts_offset - inc
             if "Hepatic Artery" in self._sensor.name:
-                self._ao.set_sine(new_val/4, new_val, Hz=1)
+                self._ao.set_sine(new_val/10, new_val, Hz=1)
             else:
                 self._ao.set_dc(new_val)
 class TestFrame(wx.Frame):
