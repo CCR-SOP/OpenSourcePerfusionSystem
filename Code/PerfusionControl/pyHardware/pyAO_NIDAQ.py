@@ -93,3 +93,4 @@ class NIDAQ_AO(pyAO.AO):
         self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
                                    self._buffer, PyDAQmx.byref(written), None)
         super().set_dc(volts)
+
