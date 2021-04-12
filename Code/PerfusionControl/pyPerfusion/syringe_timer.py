@@ -51,14 +51,14 @@ class SyringeTimer:
             self.__thread_timer_reset = None
 
     def OnTimer(self):
-        while not self.__evt_halt_injection.wait(10.0):
+        while not self.__evt_halt_injection.wait(60.0):
             if self.syringe.reset:
                 self.syringe.ResetSyringe()
                 self.syringe.reset = False
             self.check_for_injection()
 
     def OnResetTimer(self):
-        while not self.__evt_halt_reset.wait(30.0):
+        while not self.__evt_halt_reset.wait(150.0):
             self.syringe.cooldown = False
             self.__evt_halt_reset.set()
             self.__thread_timer_reset = None
@@ -126,7 +126,7 @@ class SyringeTimer:
         print(f'{parameter_name} is {parameter:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
         syringe.set_target_volume(volume, 'ml')
         infusion_rate = syringe.get_infusion_rate().split(' ')[0]
-        syringe.target_infuse(volume, infusion_rate)
+        syringe.infuse(volume, infusion_rate)
         syringe.reset = True
         syringe.cooldown = True
 
