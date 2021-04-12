@@ -6,9 +6,9 @@ import datetime
 import numpy as np
 import struct
 from time import perf_counter
-import pyPerfusion.PerfusionConfig as LP_CFG
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
+#  import pyPerfusion.PerfusionConfig as LP_CFG
+#  LP_CFG.set_base(basepath='~/Documents/LPTEST')
+#  LP_CFG.update_stream_folder()
 
 DATA_VERSION = 3
 
