@@ -52,3 +52,4 @@ Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format}
 After the header, data is immediately stored in described format.
 The assumption is that infusion volume and infusion rate data are acquired at the same time
 {Timestamp[1]}{InfusionVolume[1]}{InfusionRate[1]}{Timestamp[2]}{InfusionVolume[2]}{InfusionRate[2]}
+For targeted infusions (i.e. those which stop after a certain volume of fluid has been delivered), InfusionVolume will be non-zero; for non-targeted (i.e. continuous) infusions, InfusionVolume will be '888; for these continuous infusions, data will be recorded both when the infusion is started and stopped
