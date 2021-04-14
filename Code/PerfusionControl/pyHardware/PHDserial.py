@@ -139,12 +139,20 @@ class PHDserial(USBSerial):
     def start_stream(self):
         pass
 
-    def infuse(self, infusion_volume, infusion_rate):
+    def infuse(self, infusion_volume, infusion_rate, ml_volume=True, ml_min_rate=True):
         self.send('irun\r')
+        if not ml_volume:
+            infusion_volume = infusion_volume / 1000
+        if not ml_min_rate:
+            infusion_rate = infusion_rate / 1000
         self.record_infusion(infusion_volume, infusion_rate)
 
-    def stop(self, infusion_volume, infusion_rate):
+    def stop(self, infusion_volume, infusion_rate, ml_volume=True, ml_min_rate=True):
         self.send('stop\r')
+        if not ml_volume:
+            infusion_volume = infusion_volume / 1000
+        if not ml_min_rate:
+            infusion_rate = infusion_rate / 1000
         self.record_infusion(infusion_volume, infusion_rate)
 
     def record_infusion(self, infusion_volume, infusion_rate):
