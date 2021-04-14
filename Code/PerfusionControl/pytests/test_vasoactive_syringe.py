@@ -12,20 +12,33 @@ from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 class PanelTestVasoactiveSyringe(wx.Panel):
-    def __init__(self, parent, sensor, name, vasoconstrictor_injection, vasodilator_injection):
+    def __init__(self, parent, sensor, name, injection):
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._injection = injection
         self._inc = 1.0
 
         wx.Panel.__init__(self, parent, -1)
 
-        syringe_list = 'Phenylephrine, Epoprostenol'
-        self._vasoconstrictor_injection = vasoconstrictor_injection
-        self._vasodilator_injection = vasodilator_injection
+        syringe_list = '%s' % injection.name
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+
+        self.label_manu = wx.StaticText(self, label='Manufacturer')
+        self.choice_manu = wx.Choice(self, choices=[])
+
+        self.label_types = wx.StaticText(self, label='Syringe Type')
+        self.choice_types = wx.Choice(self, choices=[])
+
+        self.label_rate = wx.StaticText(self, label='Basal Infusion Rate')
+        self.spin_rate = wx.SpinCtrl(self, min=1, max=100000)
+        self.spin_rate.SetValue(1)
+        self.choice_rate = wx.Choice(self, choices=['ul/min', 'ml/min'])
+        self.choice_rate.SetSelection(1)
+        self.btn_update = wx.Button(self, label='Update')
+        self.btn_start = wx.Button(self, label='Start Infusion')
 
         self.label_min_flow = wx.StaticText(self, label='Minimum Flow: ')
         self.spin_min_flow = wx.SpinCtrlDouble(self, min=0, max=1000, initial=0.0, inc=self._inc)
@@ -37,13 +50,49 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
-        self.label_syringes = wx.StaticText(self, label='Syringes In Use: %s' % syringe_list)
+        self.label_syringes = wx.StaticText(self, label='Syringe In Use: %s' % syringe_list)
+
+        self.load_info()
 
         self.__do_layout()
         self.__set_bindings()
 
+    def load_info(self):
+        codes, volumes = LP_CFG.open_syringe_info()
+        self._injection.syringe.manufacturers = codes
+        self._injection.syringe.syringes = volumes
+        self.update_syringe_choices()
+
+    def update_syringe_choices(self):
+        self.choice_manu.Clear()
+        manu = self._injection.syringe.manufacturers
+        manu_str = [f'({code}) {desc}' for code, desc in manu.items()]
+        self.choice_manu.Append(manu_str)
+
     def __do_layout(self):
         flags = wx.SizerFlags().Expand()
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_manu, flags)
+        sizer.Add(self.choice_manu, flags)
+        self.sizer.Add(sizer)
+        self.sizer.AddSpacer(20)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_types, flags)
+        sizer.Add(self.choice_types, flags)
+        self.sizer.Add(sizer)
+        self.sizer.AddSpacer(20)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_rate, flags)
+        sizer.Add(self.spin_rate, flags)
+        sizer.Add(self.choice_rate, flags)
+        sizer.AddSpacer(20)
+        sizer.Add(self.btn_update)
+        sizer.Add(self.btn_start)
+        self.sizer.Add(sizer)
+        self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_syringes, flags)
@@ -80,21 +129,56 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
     def __set_bindings(self):
         self.btn_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
+        self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
+        self.choice_types.Bind(wx.EVT_CHOICE, self.OnTypes)
+        self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
+        self.btn_start.Bind(wx.EVT_BUTTON, self.OnStartStop)
+
+    def OnManu(self, evt):
+        code = self.get_selected_code()
+        self.update_syringe_types()
+
+    def get_selected_code(self):
+        sel = self.choice_manu.GetString(self.choice_manu.GetSelection())
+        code = sel[1:4]
+        return code
+
+    def update_syringe_types(self):
+        code = self.get_selected_code()
+        self.choice_types.Clear()
+        syringes = self._injection.syringe.syringes
+        types = syringes[code]
+        self.choice_types.Append(types)
+
+    def OnTypes(self, evt):
+        code = self.get_selected_code()
+        syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
+        self._injection.syringe.set_syringe_manufacturer_size(code, syr_size)
+
+    def OnUpdate(self, evt):
+        rate = self.spin_rate.GetValue()
+        unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
+        self._injection.syringe.set_infusion_rate(rate, unit)
 
     def OnStartStop(self, evt):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
             self.btn_stop.SetLabel('Stop')
-            self._vasoconstrictor_injection.threshold_value = self.spin_max_flow.GetValue()
-            self._vasoconstrictor_injection.tolerance = self.spin_tolerance.GetValue()
-            self._vasoconstrictor_injection.start_injection_timer()
-
-            self._vasodilator_injection.threshold_value = self.spin_min_flow.GetValue()
-            self._vasodilator_injection.tolerance = self.spin_tolerance.GetValue()
-            self._vasodilator_injection.start_injection_timer()
+            self.btn_update.Enable(False)
+            self.choice_manu.Enable(False)
+            self.choice_types.Enable(False)
+            self._injection.threshold_value = self.spin_max_flow.GetValue()
+            self._injection.tolerance = self.spin_tolerance.GetValue()
+            rate = self._injection.syringe.get_infusion_rate().split(' ')[0]
+            self._injection.syringe.infuse(2222, rate)
+            self._injection.start_injection_timer()
         else:
-            self._vasodilator_injection.stop_injection_timer()
-            self._vasoconstrictor_injection.stop_injection_timer()
+            self.btn_update.Enable(True)
+            self.choice_manu.Enable(True)
+            self.choice_types.Enable(True)
+            self._injection.stop_injection_timer()
+            rate = self._injection.syringe.get_infusion_rate().split(' ')[0]
+            self._injection.syringe.stop(1111, rate)
             self.btn_stop.SetLabel('Start')
 
 
@@ -109,7 +193,8 @@ class TestFrame(wx.Frame):
         vasoconstrictor_injection = SyringeTimer('Phenylephrine', 'COM4', 9600, 0, 0, self.sensor)
         vasodilator_injection = SyringeTimer('Epoprostenol', 'COM11', 9600, 0, 0, self.sensor)
         self._syringes = [vasoconstrictor_injection, vasodilator_injection]
-        sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Vasoactive Syringe Testing', vasoconstrictor_injection, vasodilator_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Vasoconstrictor Syringe Testing', vasoconstrictor_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Vasodilator Syringe Testing', vasodilator_injection), 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
