@@ -169,16 +169,16 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.choice_types.Enable(False)
             self._injection.threshold_value = self.spin_max_flow.GetValue()
             self._injection.tolerance = self.spin_tolerance.GetValue()
-            rate = self._injection.syringe.get_infusion_rate().split(' ')[0]
-            self._injection.syringe.infuse(2222, rate)
+            infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+            self._injection.syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
             self._injection.start_injection_timer()
         else:
             self.btn_update.Enable(True)
             self.choice_manu.Enable(True)
             self.choice_types.Enable(True)
             self._injection.stop_injection_timer()
-            rate = self._injection.syringe.get_infusion_rate().split(' ')[0]
-            self._injection.syringe.stop(1111, rate)
+            infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+            self._injection.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
             self.btn_stop.SetLabel('Start')
 
 
