@@ -136,7 +136,19 @@ class PHDserial(USBSerial):
     def start_stream(self):
         pass
 
-    def infuse(self, infusion_volume, infusion_rate, ml_volume=True, ml_min_rate=True):
+    def get_stream_info(self):
+        infuse_rate = self.get_infusion_rate().split(' ')[0]
+        infuse_unit = self.get_infusion_rate().split(' ')[1]
+        volume_unit = self.get_target_volume().split(' ')[1]
+        ml_min_rate = True
+        ml_volume = True
+        if 'ul' in infuse_unit:
+            ml_min_rate = False
+        if 'ul' in volume_unit:
+            ml_volume = False
+        return infuse_rate, ml_min_rate, ml_volume
+
+    def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('irun\r')
         if not ml_volume:
             infusion_volume = infusion_volume / 1000
@@ -144,7 +156,7 @@ class PHDserial(USBSerial):
             infusion_rate = infusion_rate / 1000
         self.record_infusion(infusion_volume, infusion_rate)
 
-    def stop(self, infusion_volume, infusion_rate, ml_volume=True, ml_min_rate=True):
+    def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('stop\r')
         if not ml_volume:
             infusion_volume = infusion_volume / 1000
@@ -233,7 +245,7 @@ class PHDserial(USBSerial):
 
     def get_target_volume(self):
         self.send('tvolume\r')
-        print(self._response)
+        return self._response
 
     def reset_target_volume(self):
         self.send('ctvolume\r')
