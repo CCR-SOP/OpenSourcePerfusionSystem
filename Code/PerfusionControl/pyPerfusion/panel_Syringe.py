@@ -16,6 +16,7 @@ class PanelSyringe(wx.Panel):
         self.parent = parent
         self._syringe = syringe
         self._name = name
+        self.wait = None
         wx.Panel.__init__(self, parent, -1)
 
         LP_CFG.set_base()
@@ -37,9 +38,6 @@ class PanelSyringe(wx.Panel):
 
         self.label_types = wx.StaticText(self, label='Syringe Type')
         self.choice_types = wx.Choice(self, choices=[])
-
-        self.btn_dl_info = wx.Button(self, label='Download Syringe Info')
-        self.btn_dl_info.Enable(False)
 
         self.label_rate = wx.StaticText(self, label='Infusion Rate')
         self.spin_rate = wx.SpinCtrl(self, min=1, max=100000)
@@ -112,8 +110,6 @@ class PanelSyringe(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_open, flags)
-        sizer.AddSpacer(10)
-        sizer.Add(self.btn_dl_info, flags)
         self.sizer.Add(sizer, flags)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -156,7 +152,6 @@ class PanelSyringe(wx.Panel):
         self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
         self.btn_infuse.Bind(wx.EVT_BUTTON, self.OnInfuse)
         self.btn_stop.Bind(wx.EVT_BUTTON, self.OnStop)
-        self.btn_dl_info.Bind(wx.EVT_BUTTON, self.OnDLInfo)
         self.btn_save.Bind(wx.EVT_BUTTON, self.OnSaveConfig)
         self.btn_load.Bind(wx.EVT_BUTTON, self.OnLoadConfig)
         self.btn_volume_infuse.Bind(wx.EVT_BUTTON, self.OnSetInfusion)
@@ -169,19 +164,17 @@ class PanelSyringe(wx.Panel):
             try:
                 self._syringe.open(comm, int(baud))
                 self._syringe.ResetSyringe()
-                self._syringe.syringe_configuration()
                 self._syringe.open_stream(LP_CFG.LP_PATH['stream'])
                 self._syringe.start_stream()
-                self.btn_open.SetLabel('Close', )
-                self.btn_dl_info.Enable(True)
+                self.btn_open.SetLabel('Close')
             except SerialException:
                 wx.MessageBox('Port Could Not be Opened; it is Already in Use by Another Syringe', 'Error',
                            wx.OK | wx.ICON_ERROR)
                 return
         else:
             self._syringe.close()
+            self._syringe.stop_stream()
             self.btn_open.SetLabel('Open')
-            self.btn_dl_info.Enable(False)
 
     def update_syringe_choices(self):
         self.choice_manu.Clear()
@@ -224,28 +217,31 @@ class PanelSyringe(wx.Panel):
         self._syringe.set_infusion_rate(rate, unit)
 
     def OnInfuse(self, evt):
-        self._syringe.infuse()
+        infuse_rate, ml_min_rate, ml_volume = self._syringe.get_stream_info()
+        self._syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
 
     def OnStop(self, evt):
-        self._syringe.stop()
+        infuse_rate, ml_min_rate, ml_volume = self._syringe.get_stream_info()
+        self._syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
 
     def OnSetInfusion(self, evt):
-        self._syringe.reset_infusion_volume()
-        self._syringe.reset_target_volume()
+        self._syringe.ResetSyringe()
         target_volume = self.spin_volume_infuse.GetValue()
         self._syringe.set_target_volume(target_volume, 'ml')
         infusion_rate = int(self._syringe.get_infusion_rate().split(' ')[0])
-        wait_time = ((target_volume/infusion_rate) * 60) + 0.5
-        self._syringe.target_infuse(target_volume, infusion_rate)
-        time.sleep(wait_time)
-        self._syringe.reset_infusion_volume()
-        self._syringe.reset_target_volume()
-
-    def OnDLInfo(self, evt):
-        self._syringe.update_syringe_manufacturers()
-        self._syringe.update_syringe_types()
-        self.update_syringe_choices()
-        LP_CFG.save_syringe_info(self._syringe.manufacturers, self._syringe.syringes)
+        infusion_rate_unit = int(self._syringe.get_infusion_rate().split(' ')[1])
+        if 'ul' in infusion_rate_unit:
+            ml_min_rate = False
+        else:
+            ml_min_rate = True
+        self._syringe.infuse(target_volume, infusion_rate, True, ml_min_rate)
+        self.wait = True
+        t = time.perf_counter()
+        while self.wait:
+            x = time.perf_counter()
+            if x - t > (target_volume / infusion_rate):
+                self.wait = False
+        self._syringe.ResetSyringe()
 
     def OnSaveConfig(self, evt):
         section = LP_CFG.get_hwcfg_section(self._name)
@@ -263,7 +259,6 @@ class PanelSyringe(wx.Panel):
         if state:
             self._syringe.close()
             self.btn_open.SetLabel('Open')
-            self.btn_dl_info.Enable(False)
         self.choice_comm.SetLabel(section['CommPort'])
         self.choice_baud.SetLabel(section['BaudRate'])
         comm = self.choice_comm.GetLabel()
@@ -271,11 +266,9 @@ class PanelSyringe(wx.Panel):
         try:
             self._syringe.open(comm, int(baud))
             self._syringe.ResetSyringe()
-            self._syringe.syringe_configuration()
             self._syringe.open_stream(LP_CFG.LP_PATH['stream'])
             self._syringe.start_stream()
-            self.btn_open.SetLabel('Close', )
-            self.btn_dl_info.Enable(True)
+            self.btn_open.SetLabel('Close')
 
             self.choice_manu.SetStringSelection(section['ManuCode'])
             self.update_syringe_types()
