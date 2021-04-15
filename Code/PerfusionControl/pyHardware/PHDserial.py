@@ -153,7 +153,7 @@ class PHDserial(USBSerial):
 
     def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('irun\r')
-        if not ml_volume:
+        if not ml_volume and infusion_volume != 1111 or 2222:
             infusion_volume = infusion_volume / 1000
         if not ml_min_rate:
             infusion_rate = infusion_rate / 1000
@@ -161,7 +161,7 @@ class PHDserial(USBSerial):
 
     def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('stop\r')
-        if not ml_volume:
+        if not ml_volume and infusion_volume != 1111 or 2222:
             infusion_volume = infusion_volume / 1000
         if not ml_min_rate:
             infusion_rate = infusion_rate / 1000
