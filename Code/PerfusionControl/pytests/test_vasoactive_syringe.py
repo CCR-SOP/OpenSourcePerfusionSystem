@@ -26,6 +26,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
+        self.btn_basal_infusion = wx.ToggleButton(self, label='Basal Infusion Active')
+
         self.label_manu = wx.StaticText(self, label='Manufacturer')
         self.choice_manu = wx.Choice(self, choices=[])
 
@@ -73,6 +75,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         flags = wx.SizerFlags().Expand()
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.btn_basal_infusion, flags)
+        sizer.AddSpacer(20)
         sizer.Add(self.label_manu, flags)
         sizer.Add(self.choice_manu, flags)
         self.sizer.Add(sizer)
@@ -128,14 +132,13 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
+        self.btn_basal_infusion.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasalInfusion)
         self.btn_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
         self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
-        self.choice_types.Bind(wx.EVT_CHOICE, self.OnTypes)
-        self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
-        self.btn_start.Bind(wx.EVT_BUTTON, self.OnStartStop)
 
     def OnManu(self, evt):
-        code = self.get_selected_code()
+        sel = self.choice_manu.GetString(self.choice_manu.GetSelection())
+        code = sel[1:4]
         self.update_syringe_types()
 
     def get_selected_code(self):
@@ -150,35 +153,51 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         types = syringes[code]
         self.choice_types.Append(types)
 
-    def OnTypes(self, evt):
-        code = self.get_selected_code()
-        syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
-        self._injection.syringe.set_syringe_manufacturer_size(code, syr_size)
-
-    def OnUpdate(self, evt):
-        rate = self.spin_rate.GetValue()
-        unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
-        self._injection.syringe.set_infusion_rate(rate, unit)
+    def OnBasalInfusion(self, evt):
+        state = self.btn_basal_infusion.GetLabel()
+        if state is 'Basal Infusion Active':
+            self.btn_basal_infusion.SetLabel('Basal Infusion Inactive')
+        elif state is 'Basal Infusion Inactive':
+            self.btn_basal_infusion.SetLabel('Basal Infusion Active')
 
     def OnStartStop(self, evt):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
             self.btn_stop.SetLabel('Stop')
+            self._injection.syringe.ResetSyringe()
+            code = self.get_selected_code()
+            syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
+            self._injection.syringe.set_syringe_manufacturer_size(code, syr_size)
+            rate = self.spin_rate.GetValue()
+            unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
+            self._injection.syringe.set_infusion_rate(rate, unit)
             self.btn_update.Enable(False)
             self.choice_manu.Enable(False)
             self.choice_types.Enable(False)
+            self.spin_rate.Enable(False)
+            self.choice_rate.Enable(False)
+            self.btn_basal_infusion.Enable(False)
+            if self.btn_basal_infusion.GetLabel is 'Basal Infusion Active':
+                infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+                self._injection.syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
+                self._injection.syringe.basal = True
+            else:
+                self._injection.syringe.basal = False
             self._injection.threshold_value = self.spin_max_flow.GetValue()
             self._injection.tolerance = self.spin_tolerance.GetValue()
-            infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
-            self._injection.syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
             self._injection.start_injection_timer()
         else:
+            self._injection.stop_injection_timer()
             self.btn_update.Enable(True)
             self.choice_manu.Enable(True)
             self.choice_types.Enable(True)
-            self._injection.stop_injection_timer()
-            infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
-            self._injection.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
+            self.spin_rate.Enable(True)
+            self.choice_rate.Enable(True)
+            self.btn_basal_infusion.Enable(True)
+            if self.btn_basal_infusion.GetLabel is 'Basal Infusion Active':
+                infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+                self._injection.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
+            self._injection.syringe.ResetSyringe()
             self.btn_stop.SetLabel('Start')
 
 
