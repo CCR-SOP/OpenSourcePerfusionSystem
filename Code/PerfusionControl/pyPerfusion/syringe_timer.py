@@ -5,6 +5,7 @@ General code for initiating syringe injections based on a specific system parame
 """
 from pyHardware.PHDserial import PHDserial
 from threading import Thread, Event
+import time
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 class SyringeTimer:
@@ -17,6 +18,7 @@ class SyringeTimer:
         self.sensor = sensor
         self.syringe = PHDserial(self.name)
         self.basal = None
+        self.wait = None
 
         LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
@@ -31,7 +33,6 @@ class SyringeTimer:
     def connect(self):
         self.syringe.open(self.COM, self.baud)
         self.syringe.ResetSyringe()
-        self.syringe.syringe_configuration()
         self.syringe.open_stream(LP_CFG.LP_PATH['stream'])
         self.syringe.start_stream()
 
@@ -77,7 +78,7 @@ class SyringeTimer:
             if glucose > (self.threshold_value + self.tolerance) and glucose != 5000:
                 if not self.syringe.cooldown:
                     diff = glucose - (self.threshold_value + self.tolerance)
-                    injection_volume = diff / 25
+                    injection_volume = diff / 100
                     self.injection(self.syringe, self.name, 'Glucose', glucose, injection_volume, direction='high')
                     self.__evt_halt_reset.clear()
                     self.__thread_timer_reset = Thread(target=self.OnResetTimer)
@@ -91,7 +92,7 @@ class SyringeTimer:
             if glucose < (self.threshold_value - self.tolerance) and glucose != 0:
                 if not self.syringe.cooldown:
                     diff = (self.threshold_value - self.tolerance) - glucose
-                    injection_volume = diff / 25
+                    injection_volume = diff / 100
                     self.injection(self.syringe, self.name, 'Glucose', glucose, injection_volume, direction='low')
                     self.__evt_halt_reset.clear()
                     self.__thread_timer_reset = Thread(target=self.OnResetTimer)
@@ -105,7 +106,7 @@ class SyringeTimer:
             if flow > (self.threshold_value + self.tolerance):
                 if not self.syringe.cooldown:
                     diff = flow - (self.threshold_value + self.tolerance)
-                    injection_volume = diff / 25
+                    injection_volume = diff / 100
                     self.injection(self.syringe, self.name, 'Flow', flow, injection_volume, direction='high')
                     self.__evt_halt_reset.clear()
                     self.__thread_timer_reset = Thread(target=self.OnResetTimer)
@@ -119,7 +120,7 @@ class SyringeTimer:
             if flow < (self.threshold_value - self.tolerance):
                 if not self.syringe.cooldown:
                     diff = (self.threshold_value - self.tolerance) - flow
-                    injection_volume = diff / 25
+                    injection_volume = diff / 100
                     self.injection(self.syringe, self.name, 'Flow', flow, injection_volume, direction='low')
                     self.__evt_halt_reset.clear()
                     self.__thread_timer_reset = Thread(target=self.OnResetTimer)
@@ -135,11 +136,16 @@ class SyringeTimer:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
         syringe.set_target_volume(volume, 'ml')
-        syringe.set_infusion_rate(30, 'ml/min')
+        syringe.set_infusion_rate(25, 'ml/min')
         infusion_rate = syringe.get_infusion_rate().split(' ')[0]
-        syringe.infuse(volume, infusion_rate)
-        # Wait for syringe to stop injecting
-        # Clear target volume
+        syringe.infuse(volume, infusion_rate, True, True)
+        self.wait = True
+        t = time.perf_counter()
+        while self.wait:
+            x = time.perf_counter()
+            if x - t > (volume / 25):
+                self.wait = False
+        syringe.reset_target_volume()
         if self.basal:
             if ml_min_rate:
                 unit = 'ml/min'
@@ -150,5 +156,4 @@ class SyringeTimer:
             syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
         syringe.reset = True
         syringe.cooldown = True
-
 
