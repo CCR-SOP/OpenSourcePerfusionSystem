@@ -188,6 +188,10 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.spin_rate.Enable(True)
             self.choice_rate.Enable(True)
             self.btn_basal_infusion.Enable(True)
+            if self._injection.wait is True:  # If injections were terminated in the middle of a bolus injection, the injection will not stop; thus, stop syringe, and clear target volume
+                infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
+                self._injection.syringe.stop(8888, infuse_rate, ml_volume, ml_min_rate)
+                self._injection.syringe.reset_target_volume()
             if self.btn_basal_infusion.GetLabel is 'Basal Infusion Active':
                 infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
                 self._injection.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
