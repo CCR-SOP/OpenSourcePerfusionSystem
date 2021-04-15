@@ -265,10 +265,6 @@ class PHDserial(USBSerial):
         self.reset_infusion_volume()
         self.reset_target_volume()
 
-    def syringe_configuration(self):
-        self.set_syringe_manufacturer_size('bdp', '60 ml')
-        self.set_infusion_rate(30, 'ml/min')
-
     def update_syringe_manufacturers(self):
         self.send('syrmanu ?\r')
         if self._response:
