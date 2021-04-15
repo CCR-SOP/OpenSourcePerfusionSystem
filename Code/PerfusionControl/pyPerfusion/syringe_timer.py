@@ -16,6 +16,7 @@ class SyringeTimer:
         self.tolerance = tolerance
         self.sensor = sensor
         self.syringe = PHDserial(self.name)
+        self.basal = None
 
         LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
@@ -53,8 +54,14 @@ class SyringeTimer:
     def OnTimer(self):
         while not self.__evt_halt_injection.wait(60.0):
             if self.syringe.reset:
+                if self.basal:
+                    infuse_rate, ml_min_rate, ml_volume = self.syringe.get_stream_info()
+                    self.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
                 self.syringe.ResetSyringe()
                 self.syringe.reset = False
+                if self.basal:
+                    infuse_rate, ml_min_rate, ml_volume = self.syringe.get_stream_info()
+                    self.syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
             self.check_for_injection()
 
     def OnResetTimer(self):
@@ -124,9 +131,23 @@ class SyringeTimer:
 
     def injection(self, syringe, name, parameter_name, parameter, volume, direction):
         print(f'{parameter_name} is {parameter:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
+        if self.basal:
+            infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
+            syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
         syringe.set_target_volume(volume, 'ml')
+        syringe.set_infusion_rate(30, 'ml/min')
         infusion_rate = syringe.get_infusion_rate().split(' ')[0]
         syringe.infuse(volume, infusion_rate)
+        # Wait for syringe to stop injecting
+        # Clear target volume
+        if self.basal:
+            if ml_min_rate:
+                unit = 'ml/min'
+            else:
+                unit = 'ul/min'
+            syringe.set_infusion_rate(infuse_rate, unit)
+            infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
+            syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
         syringe.reset = True
         syringe.cooldown = True
 
