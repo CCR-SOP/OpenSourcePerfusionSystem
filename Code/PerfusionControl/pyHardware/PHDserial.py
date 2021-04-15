@@ -6,9 +6,6 @@ import datetime
 import numpy as np
 import struct
 from time import perf_counter
-#  import pyPerfusion.PerfusionConfig as LP_CFG
-#  LP_CFG.set_base(basepath='~/Documents/LPTEST')
-#  LP_CFG.update_stream_folder()
 
 DATA_VERSION = 3
 
@@ -203,7 +200,6 @@ class PHDserial(USBSerial):
                 data.append(chunk)
                 data_time.append(ts / 1000.0)
         _fid.close()
-        print(data_time, data)
         return data_time, data
 
     def _open_read(self):
