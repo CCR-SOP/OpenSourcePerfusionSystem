@@ -153,3 +153,10 @@ class SensorStream:
         _fid.close()
 
         return val
+
+    def get_latest(self, readings):
+        _fid, data = self._open_read()
+        val = data[-readings:]
+        _fid.close()
+
+        return val
