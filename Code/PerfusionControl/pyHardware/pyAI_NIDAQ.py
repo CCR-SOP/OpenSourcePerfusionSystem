@@ -21,7 +21,7 @@ class NIDAQ_AI(pyAI.AI):
     def __init__(self, period_ms, volts_p2p, volts_offset):
         self._logger = logging.getLogger(__name__)
         self._logger.debug('opening nidaq_ai')
-        super().__init__(period_ms, buf_type=np.float32, read_period_ms=5000)
+        super().__init__(period_ms, buf_type=np.float32)
         self._dev = None
         self._line = None
         self.__timeout = 1.0
@@ -85,7 +85,6 @@ class NIDAQ_AI(pyAI.AI):
                 self.__task.WaitUntilTaskDone(2.0)
                 self._logger.info(f'Restarting NIDAQ task for {self._devname}')
                 self.__task.StartTask()
-
         except PyDAQmx.DAQException as e:
             if not self._exception_msg_ack:
                 self._logger.error('Exception attempting to read analog data')
