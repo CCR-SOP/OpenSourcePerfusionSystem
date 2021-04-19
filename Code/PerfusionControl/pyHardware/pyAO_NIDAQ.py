@@ -75,15 +75,18 @@ class NIDAQ_AO(pyAO.AO):
         self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
-        super().set_sine(volts_p2p, volts_offset, Hz)
-        written = ctypes.c_int32(0)
-        self.__clear_and_create_task()
-        hz = 1.0 / (self._period_ms / 1000.0)
-        if self.__task:
-            self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
-                                         len(self._buffer))
-            self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
-                                       self._buffer, PyDAQmx.byref(written), None)
+        if self.__hw_clk:
+            super().set_sine(volts_p2p, volts_offset, Hz)
+            written = ctypes.c_int32(0)
+            self.__clear_and_create_task()
+            hz = 1.0 / (self._period_ms / 1000.0)
+            if self.__task:
+                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
+                                            len(self._buffer))
+                self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
+                                            self._buffer, PyDAQmx.byref(written), None)
+        else:
+            self._logger.error(f'Attempted to setup up sine wave output which is unsupported on {self._devname}')
 
     def set_dc(self, volts):
         self.__clear_and_create_task()
