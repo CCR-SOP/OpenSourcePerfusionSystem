@@ -69,6 +69,18 @@ class NIDAQ_AI(pyAI.AI):
             if not self._exception_msg_ack:
                 self._logger.error(f'DAQ resource no longer available, possibly due to hibernation or USB disconnect')
                 self._exception_msg_ack = True
+        except PyDAQmx.SamplesNoLongerAvailableError:
+            # if not self._exception_msg_ack:
+            self._logger.error(f'DAQ {self._devname} could not keep up with HW acquisition. '
+                               f'Acquisition will resume when it can. This error could be caused by the laptop '
+                               f'entering sleep mode')
+            # self._exception_msg_ack = True
+            self._logger.info(f'Stopping NIDAQ task for {self._devname}')
+            self.__task.StopTask()
+            self.__task.WaitUntilTaskDone(2.0)
+            self._logger.info(f'Restarting NIDAQ task for {self._devname}')
+            self.__task.StartTask()
+
         except PyDAQmx.DAQException as e:
             if not self._exception_msg_ack:
                 self._logger.error('Exception attempting to read analog data')
