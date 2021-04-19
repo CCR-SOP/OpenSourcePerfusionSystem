@@ -6,6 +6,7 @@ Author: John Kakareka
 """
 
 import time
+from datetime import datetime
 import logging
 
 import numpy as np
@@ -20,7 +21,7 @@ class NIDAQ_AI(pyAI.AI):
     def __init__(self, period_ms, volts_p2p, volts_offset):
         self._logger = logging.getLogger(__name__)
         self._logger.debug('opening nidaq_ai')
-        super().__init__(period_ms, buf_type=np.float32)
+        super().__init__(period_ms, buf_type=np.float32, read_period_ms=5000)
         self._dev = None
         self._line = None
         self.__timeout = 1.0
@@ -28,6 +29,7 @@ class NIDAQ_AI(pyAI.AI):
         self._volts_p2p = volts_p2p
         self._volts_offset = volts_offset
         self._exception_msg_ack = False
+        self._last_acq = None
 
     @property
     def _devname(self):
@@ -50,8 +52,10 @@ class NIDAQ_AI(pyAI.AI):
         buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=np.float64)
         try:
             if self.__task:
+                # self._logger.debug(f'Attempting to read {self.samples_per_read} from {self._devname}')
                 self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
                                           len(buffer), PyDAQmx.byref(samples_read), None)
+                self._last_acq = datetime.now()
             if self._exception_msg_ack:
                 self._logger.info('Recovered from previous exception.')
                 self._exception_msg_ack = False
@@ -70,16 +74,17 @@ class NIDAQ_AI(pyAI.AI):
                 self._logger.error(f'DAQ resource no longer available, possibly due to hibernation or USB disconnect')
                 self._exception_msg_ack = True
         except PyDAQmx.SamplesNoLongerAvailableError:
-            # if not self._exception_msg_ack:
-            self._logger.error(f'DAQ {self._devname} could not keep up with HW acquisition. '
-                               f'Acquisition will resume when it can. This error could be caused by the laptop '
-                               f'entering sleep mode')
-            # self._exception_msg_ack = True
-            self._logger.info(f'Stopping NIDAQ task for {self._devname}')
-            self.__task.StopTask()
-            self.__task.WaitUntilTaskDone(2.0)
-            self._logger.info(f'Restarting NIDAQ task for {self._devname}')
-            self.__task.StartTask()
+            if not self._exception_msg_ack:
+                recovery = datetime.now()
+                self._logger.error(f'DAQ {self._devname} could not keep up with HW acquisition. '
+                                   f'This error could be caused by the laptop entering sleep mode. '
+                                   f'Last acq time was {self._last_acq}, recovery time is {recovery}')
+                self._exception_msg_ack = True
+                self._logger.info(f'Stopping NIDAQ task for {self._devname}')
+                self.__task.StopTask()
+                self.__task.WaitUntilTaskDone(2.0)
+                self._logger.info(f'Restarting NIDAQ task for {self._devname}')
+                self.__task.StartTask()
 
         except PyDAQmx.DAQException as e:
             if not self._exception_msg_ack:
@@ -96,6 +101,7 @@ class NIDAQ_AI(pyAI.AI):
             offset += self.samples_per_read
 
     def open(self, dev):
+        self._logger.debug(f'Opening device {self._devname}')
         super().open()
         self._dev = dev
         self.reopen()
@@ -106,6 +112,7 @@ class NIDAQ_AI(pyAI.AI):
                 self.close()
 
             if self._dev:
+                self._logger.debug(f'Creating new pyDAQmx AI Voltage Channel for {self._devname}')
                 self.__task = Task()
                 volt_min = self._volts_offset - 0.5 * self._volts_p2p
                 volt_max = self._volts_offset + 0.5 * self._volts_p2p
@@ -114,8 +121,8 @@ class NIDAQ_AI(pyAI.AI):
                 self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
                                              self.samples_per_read)
         except PyDAQmx.DAQError as e:
-            self._logger.error("Could not create AI Channel for {}".format(self._devname))
-            self._logger.error(f"{e}")
+            self._logger.error(f"Could not create AI Channel for {self._devname}")
+            self._logger.error(f"Full exception is: \n{e}")
             self.__task = None
 
     def close(self):
