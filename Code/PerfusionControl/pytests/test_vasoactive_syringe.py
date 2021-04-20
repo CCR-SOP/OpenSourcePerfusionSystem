@@ -39,17 +39,16 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.spin_rate.SetValue(1)
         self.choice_rate = wx.Choice(self, choices=['ul/min', 'ml/min'])
         self.choice_rate.SetSelection(1)
-        self.btn_update = wx.Button(self, label='Update')
 
-        self.label_min_flow = wx.StaticText(self, label='Minimum Flow: ')
-        self.spin_min_flow = wx.SpinCtrlDouble(self, min=0, max=1000, initial=0.0, inc=self._inc)
-        self.label_max_flow = wx.StaticText(self, label='Maximum Flow: ')
-        self.spin_max_flow = wx.SpinCtrlDouble(self, min=0, max=1000, initial=50, inc=self._inc)
+        self.label_flow = wx.StaticText(self, label='Inject When Flow is')
+        self.btn_direction = wx.ToggleButton(self, label='Greater Than')
+        self.spin_flow = wx.SpinCtrlDouble(self, min=0, max=1000, initial=0.0, inc=self._inc)
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (mL/min): ')
         self.spin_tolerance = wx.SpinCtrl(self, min=0, max=20, initial=0)
 
-        self.btn_start = wx.ToggleButton(self, label='Start')
+        self.btn_start_basal = wx.ToggleButton(self, label='Start Basal Infusion')
+        self.btn_start_timer = wx.ToggleButton(self, label='Start Bolus Injections')
 
         self.label_syringes = wx.StaticText(self, label='Syringe In Use: %s' % syringe_list)
 
@@ -75,24 +74,29 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_basal_infusion, flags)
-        sizer.AddSpacer(20)
+        self.sizer.Add(sizer)
+        self.sizer.AddSpacer(20)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_manu, flags)
+        sizer.AddSpacer(20)
         sizer.Add(self.choice_manu, flags)
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_types, flags)
+        sizer.AddSpacer(20)
         sizer.Add(self.choice_types, flags)
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_rate, flags)
-        sizer.Add(self.spin_rate, flags)
-        sizer.Add(self.choice_rate, flags)
         sizer.AddSpacer(20)
-        sizer.Add(self.btn_update)
+        sizer.Add(self.spin_rate, flags)
+        sizer.AddSpacer(20)
+        sizer.Add(self.choice_rate, flags)
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
 
@@ -102,14 +106,11 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label_min_flow, flags)
-        sizer.Add(self.spin_min_flow, flags)
-        self.sizer.Add(sizer)
-        self.sizer.AddSpacer(20)
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label_max_flow, flags)
-        sizer.Add(self.spin_max_flow, flags)
+        sizer.Add(self.label_flow, flags)
+        sizer.AddSpacer(20)
+        sizer.Add(self.btn_direction, flags)
+        sizer.AddSpacer(20)
+        sizer.Add(self.spin_flow, flags)
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
 
@@ -120,7 +121,9 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.btn_start, flags)
+        sizer.Add(self.btn_start_basal, flags)
+        sizer.AddSpacer(20)
+        sizer.Add(self.btn_start_timer)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -131,8 +134,17 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
     def __set_bindings(self):
         self.btn_basal_infusion.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasalInfusion)
-        self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
         self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
+        self.btn_direction.Bind(wx.EVT_TOGGLEBUTTON, self.OnDirection)
+        self.btn_start_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartBasal)
+        self.btn_start_timer.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartBolus)
+
+    def OnBasalInfusion(self, evt):
+        state = self.btn_basal_infusion.GetLabel()
+        if state == 'Basal Infusion Active':
+            self.btn_basal_infusion.SetLabel('Basal Infusion Inactive')
+        elif state == 'Basal Infusion Inactive':
+            self.btn_basal_infusion.SetLabel('Basal Infusion Active')
 
     def OnManu(self, evt):
         self.update_syringe_types()
@@ -149,17 +161,50 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         types = syringes[code]
         self.choice_types.Append(types)
 
-    def OnBasalInfusion(self, evt):
-        state = self.btn_basal_infusion.GetLabel()
-        if state is 'Basal Infusion Active':
-            self.btn_basal_infusion.SetLabel('Basal Infusion Inactive')
-        elif state is 'Basal Infusion Inactive':
-            self.btn_basal_infusion.SetLabel('Basal Infusion Active')
+    def OnDirection(self, evt):
+        state = self.btn_direction.GetLabel()
+        if state == 'Greater Than':
+            self.btn_direction.SetLabel('Less Than')
+        elif state == 'Less Than':
+            self.btn_direction.SetLabel('Greater Than')
 
-    def OnStartStop(self, evt):
-        state = self.btn_start.GetLabel()
+    def OnStartBasal(self, evt):
+        state = self.btn_start_basal.GetLabel()
+        if state == 'Start Basal Infusion':
+            if self.btn_basal_infusion.GetLabel() == 'Basal Infusion Active':
+                self._injection.syringe.ResetSyringe()
+                code = self.get_selected_code()
+                syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
+                self._injection.syringe.set_syringe_manufacturer_size(code, syr_size)
+                rate = self.spin_rate.GetValue()
+                unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
+                self._injection.syringe.set_infusion_rate(rate, unit)
+                self.choice_manu.Enable(False)
+                self.choice_types.Enable(False)
+                self.spin_rate.Enable(False)
+                self.choice_rate.Enable(False)
+                self.btn_basal_infusion.Enable(False)
+                self.btn_start_timer.Enable(False)
+                infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
+                self._injection.syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
+                self.btn_start_basal.SetLabel('Stop Basal Infusion')
+            elif self.btn_basal_infusion.GetLabel() == 'Basal Infusion Inactive':
+                pass
+        else:
+            infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
+            self._injection.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
+            self.choice_manu.Enable(True)
+            self.choice_types.Enable(True)
+            self.spin_rate.Enable(True)
+            self.choice_rate.Enable(True)
+            self.btn_basal_infusion.Enable(True)
+            self.btn_start_timer.Enable(True)
+            self.btn_start_basal.SetLabel('Start Basal Infusion')
+
+    def OnStartBolus(self, evt):
+        state = self.btn_start_timer.GetLabel()
         if state == 'Start':
-            self.btn_start.SetLabel('Stop')
+            self.btn_start_timer.SetLabel('Stop')
             self._injection.syringe.ResetSyringe()
             code = self.get_selected_code()
             syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
@@ -172,13 +217,13 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.spin_rate.Enable(False)
             self.choice_rate.Enable(False)
             self.btn_basal_infusion.Enable(False)
-            if self.btn_basal_infusion.GetLabel is 'Basal Infusion Active':
+            if self.btn_basal_infusion.GetLabel() == 'Basal Infusion Active':
                 infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
                 self._injection.syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
                 self._injection.basal = True
             else:
                 self._injection.basal = False
-            self._injection.threshold_value = self.spin_max_flow.GetValue()
+            self._injection.threshold_value = self.spin_flow.GetValue()
             self._injection.tolerance = self.spin_tolerance.GetValue()
             self._injection.start_injection_timer()
         else:
@@ -192,17 +237,17 @@ class PanelTestVasoactiveSyringe(wx.Panel):
                 infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
                 self._injection.syringe.stop(8888, infuse_rate, ml_volume, ml_min_rate)
                 self._injection.syringe.reset_target_volume()
-            if self.btn_basal_infusion.GetLabel is 'Basal Infusion Active':
+            if self.btn_basal_infusion.GetLabel() == 'Basal Infusion Active':
                 infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
                 self._injection.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
-            self.btn_start.SetLabel('Start')
+            self.btn_start_timer.SetLabel('Start')
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=2)
+        sizer = wx.GridSizer(cols=3)
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name), 1, wx.ALL | wx.EXPAND, border=1)
