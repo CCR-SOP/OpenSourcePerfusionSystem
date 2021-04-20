@@ -137,34 +137,47 @@ class PHDserial(USBSerial):
         infuse_rate = self.get_infusion_rate().split(' ')[0]
         infuse_unit = self.get_infusion_rate().split(' ')[1]
         volume_unit = self.get_target_volume().split(' ')[1]
+        print(volume_unit, 'volume unit')
         ml_min_rate = True
         ml_volume = True
         if 'ul' in infuse_unit:
             ml_min_rate = False
         if 'ul' in volume_unit:
             ml_volume = False
+        print(infuse_rate, ml_min_rate, ml_volume)
         return infuse_rate, ml_min_rate, ml_volume
 
     def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('irun\r')
-        if not ml_volume and infusion_volume != 1111 or 2222:
-            infusion_volume = infusion_volume / 1000
+        infusion_rate = int(infusion_rate)
+        if not ml_volume:
+            if infusion_volume == 2222:
+                pass
+            else:
+                infusion_volume = infusion_volume / 1000
         if not ml_min_rate:
             infusion_rate = infusion_rate / 1000
+        print(infusion_volume, infusion_rate)
         self.record_infusion(infusion_volume, infusion_rate)
 
     def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('stop\r')
-        if not ml_volume and infusion_volume != 1111 or 2222:
-            infusion_volume = infusion_volume / 1000
+        infusion_rate = int(infusion_rate)
+        if not ml_volume:
+            if infusion_volume == 1111:
+                pass
+            else:
+                infusion_volume = infusion_volume / 1000
         if not ml_min_rate:
             infusion_rate = infusion_rate / 1000
+        print(infusion_volume, infusion_rate)
         self.record_infusion(infusion_volume, infusion_rate)
 
     def record_infusion(self, infusion_volume, infusion_rate):
         volume_buffer = np.ones(1, dtype=np.float32) * np.float32(infusion_volume)
         rate_buffer = np.ones(1, dtype=np.float32) * np.float32(infusion_rate)
         t = perf_counter()
+        print(volume_buffer, rate_buffer, t)
         if volume_buffer is not None and rate_buffer is not None and self._fid_write is not None:
             buf_len = len(volume_buffer) + len(rate_buffer)
             self._write_to_file(volume_buffer, rate_buffer, t)
