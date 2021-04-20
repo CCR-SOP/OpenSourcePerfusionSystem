@@ -80,7 +80,7 @@ class PanelTestPressure(wx.Panel):
         if state == 'Start':
             self._ao.open(period_ms=100, dev=self._dev, line=self._line)
             self._ao.set_dc(0)
-            self.timer_pressure_adjust.Start(1000, wx.TIMER_CONTINUOUS)
+            self.timer_pressure_adjust.Start(3000, wx.TIMER_CONTINUOUS)
             self.btn_stop.SetLabel('Stop')
         else:
             self.timer_pressure_adjust.Stop()
@@ -104,12 +104,17 @@ class PanelTestPressure(wx.Panel):
         if dev > tol:
             if pressure < desired:
                 new_val = self._ao._volts_offset + inc
+                if new_val > 5:
+                    new_val = 5
             else:
                 new_val = self._ao._volts_offset - inc
+                if new_val < 0:
+                    new_val = 0
             if "Hepatic Artery" in self._sensor.name:
                 self._ao.set_sine(new_val/10, new_val, Hz=1)
             else:
                 self._ao.set_dc(new_val)
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
