@@ -1,6 +1,8 @@
 from threading import Thread, Lock, Event
 from time import perf_counter, sleep
 from queue import Queue, Empty
+import logging
+
 import numpy as np
 
 
@@ -21,6 +23,7 @@ class AI:
     """
 
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
+        self._logger = logging.getLogger(__name__)
         self.__thread = None
         self._event_halt = Event()
         self.__lock_buf = Lock()
@@ -71,7 +74,7 @@ class AI:
 
     def add_channel(self, channel_id):
         if channel_id in self._queue_buffer.keys():
-            print(f'{channel_id} already open')
+            self._logger.warning(f'{channel_id} already open')
         else:
             self.stop()
             with self.__lock_buf:
@@ -86,7 +89,6 @@ class AI:
             self.start()
 
     def remove_channel(self, channel_id):
-        print(f'keys are {self._queue_buffer.keys()}')
         if channel_id in self._queue_buffer.keys():
             self.stop()
             with self.__lock_buf:

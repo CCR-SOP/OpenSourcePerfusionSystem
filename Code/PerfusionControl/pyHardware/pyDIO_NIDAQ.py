@@ -6,6 +6,8 @@ and under the public domain.
 
 Author: John Kakareka
 """
+import logging
+
 import numpy as np
 import PyDAQmx
 from PyDAQmx import Task
@@ -16,6 +18,7 @@ import pyHardware.pyDIO as pyDIO
 
 class NIDAQ_DIO(pyDIO.DIO):
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         super().__init__()
         self.__dev = None
         self.__timeout = 1.0
@@ -39,8 +42,8 @@ class NIDAQ_DIO(pyDIO.DIO):
                 self.__task.CreateDOChan(self._devname, '', DAQmx_Val_ChanPerLine)
             self.__task.StartTask()
         except PyDAQmx.DAQError as e:
-            print("Could not create DI Channel for {}".format(self._devname))
-            print(f"{e}")
+            self._logger.error("Could not create DI Channel for {}".format(self._devname))
+            self._logger.error(f"{e}")
             self.__task = None
 
     def close(self):
@@ -52,13 +55,15 @@ class NIDAQ_DIO(pyDIO.DIO):
         data = np.array([self._active_state.ACTIVE], dtype=np.uint8)
         self.__task.WriteDigitalLines(1, True, self.__timeout, DAQmx_Val_GroupByChannel, data, None, None)
         super()._activate()
-        print("activated channel")
+        self._logger.debug(f"activated channel {self._devname}')
 
     def _deactivate(self):
         data = np.array([self._active_state.INACTIVE], dtype=np.uint8)
         self.__task.WriteDigitalLines(1, True, self.__timeout, DAQmx_Val_GroupByChannel, data, None, None)
         super()._deactivate()
+
         print("deactivated channel")
 
     def is_open(self):
         return self.__task
+

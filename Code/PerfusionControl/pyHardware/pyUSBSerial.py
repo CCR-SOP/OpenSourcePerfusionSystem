@@ -1,4 +1,6 @@
+import logging
 import serial
+
 
 
 class USBSerial:
@@ -27,6 +29,7 @@ class USBSerial:
     """
 
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         self._port_name = None
         self._baud = None
         self.__serial = serial.Serial()

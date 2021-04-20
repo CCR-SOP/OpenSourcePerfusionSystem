@@ -1,3 +1,5 @@
+import logging
+
 from pyHardware.pyUSBSerial import USBSerial
 
 class PHDserial(USBSerial):
@@ -21,6 +23,7 @@ class PHDserial(USBSerial):
         sets a syringe pump parameter (param) to (value)
     """
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         super().__init__()
         self.__addr = 0
         self._manufacturers = {}

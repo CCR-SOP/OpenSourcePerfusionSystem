@@ -7,13 +7,14 @@ and under the public domain.
 Author: John Kakareka
 """
 import threading
-from time import sleep
+import logging
 
 import numpy as np
 
 
 class AO:
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         self._period_ms = None
         self._volts_p2p = 0
         self._volts_offset = 0
@@ -69,7 +70,7 @@ class AO:
         if self._fid:
             self._fid.close()
             self._fid = None
-        print('halted pyAO')
+        self._logger.debug('halted pyAO')
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         self._volts_p2p = volts_p2p
@@ -78,7 +79,7 @@ class AO:
         self._set_sine()
 
     def _set_sine(self):
-        print(f'Creating sine {self._volts_p2p}*sine(2*pi*{self._Hz}) + {self._volts_offset}')
+        self._logger.info(f'Creating sine {self._volts_p2p}*sine(2*pi*{self._Hz}) + {self._volts_offset}')
         self._gen_cycle()
 
     def _gen_cycle(self):
@@ -90,12 +91,12 @@ class AO:
                                + self._volts_offset
         else:
             self._buffer = np.full(1, self._volts_offset)
-            print(f"creating dc of {self._volts_offset}")
+            self._logger.info(f"creating dc of {self._volts_offset}")
 
     def set_dc(self, volts):
         self._Hz = 0.0
         self._volts_offset = volts
-        print(f"setting dc voltage to {self._volts_offset}")
+        self._logger.info(f"setting dc voltage to {self._volts_offset}")
 
     def set_ramp(self, start_volts, stop_volts, accel):
         self._Hz = 0.0
@@ -106,7 +107,7 @@ class AO:
                 if calc_len == 0:
                     calc_len = 1
                 self._buffer = np.linspace(start_volts, stop_volts, num=calc_len)
-                print(f'setting ramp from {start_volts} to {stop_volts} over {seconds} seconds with {calc_len} samples')
+                self._logger.info(f'setting ramp from {start_volts} to {stop_volts} over {seconds} seconds with {calc_len} samples')
             else:
                 self._buffer = np.array([stop_volts], dtype=self._data_type)
-                print('no change, no ramp set')
+                self._logger.info('no change, no ramp set')

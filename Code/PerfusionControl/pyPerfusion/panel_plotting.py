@@ -5,8 +5,7 @@
 
 Panel class for plotting data
 """
-from enum import Enum
-import numpy as np
+import logging
 
 import wx
 import numpy as np
@@ -17,6 +16,8 @@ import matplotlib.transforms as mtransforms
 
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
+import pyPerfusion.utils as utils
+from pyPerfusion.PerfusionConfig import LP_CFG
 
 
 class PanelPlotting(wx.Panel):
@@ -170,5 +171,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_plotting')
     app = MyTestApp(0)
     app.MainLoop()

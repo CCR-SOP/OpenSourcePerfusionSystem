@@ -6,8 +6,7 @@ and under the public domain.
 
 Author: John Kakareka
 """
-
-import time
+import logging
 import threading
 from dataclasses import dataclass
 
@@ -30,6 +29,7 @@ class DIOActiveLowState(DIOState):
 
 class DIO:
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         self._port = None
         self._line = None
         self._active_high = True
@@ -57,7 +57,7 @@ class DIO:
 
     def _activate(self):
         self.__value = self._active_state.ACTIVE
-        print(f"{self.__value}")
+        self._logger.debug(f"Activating DIO with value of {self.__value}")
 
     def deactivate(self):
         if not self.__timer.is_alive() and not self._read_only:
@@ -65,7 +65,7 @@ class DIO:
 
     def _deactivate(self):
         self.__value = self._active_state.INACTIVE
-        print(f"{self.__value}")
+        self._logger.debug(f"Deactivating DIO with value of {self.__value}")
 
     def toggle(self):
         if not self.__timer.is_alive() and not self._read_only:

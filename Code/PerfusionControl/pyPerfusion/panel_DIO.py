@@ -5,7 +5,11 @@
 
 Panel class for testing and configuring DIO
 """
+import logging
+import pyPerfusion.utils as utils
+
 import wx
+
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 import pyPerfusion.PerfusionConfig as LP_CFG
 
@@ -139,7 +143,7 @@ class PanelDIO(wx.Panel):
 
     def OnPulse(self, evt):
         ms = self.spin_pulse.GetValue()
-        print(f'Pulsing for {ms} ms')
+        self._logger.info(f'Pulsing for {ms} ms')
         self._dio.pulse(ms)
 
     def OnSaveConfig(self, evt):
@@ -178,5 +182,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_DIO')
     app = MyTestApp(0)
     app.MainLoop()

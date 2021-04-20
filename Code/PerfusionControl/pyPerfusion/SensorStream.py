@@ -1,8 +1,7 @@
 import pathlib
 import datetime
 from threading import Thread, Event
-from os import SEEK_END
-import time
+import logging
 
 import numpy as np
 
@@ -11,6 +10,8 @@ DATA_VERSION = 1
 
 class SensorStream:
     def __init__(self, name, unit_str, hw, valid_range=None):
+        self._logger = logging.getLogger(__name__)
+        self._logger.info(f'Creating SensorStream object {name}')
         self.__thread = None
         self._unit_str = unit_str
         self._valid_range = valid_range
@@ -63,7 +64,7 @@ class SensorStream:
         return _fid, data
 
     def _open_write(self):
-        print(f'opening {self.full_path}')
+        self._logger.info(f'opening {self.full_path}')
         self._fid_write = open(self.full_path, 'w+b')
 
     def start(self):
@@ -119,7 +120,7 @@ class SensorStream:
     def print_stream_info(self):
         hdr_str = self._get_stream_info()
         filename = self.full_path.with_suffix('.txt')
-        print(f"printing stream info to {filename}")
+        self._logger.debug(f"printing stream info to {filename}")
         fid = open(filename, 'wt')
         fid.write(hdr_str)
         fid.close()
