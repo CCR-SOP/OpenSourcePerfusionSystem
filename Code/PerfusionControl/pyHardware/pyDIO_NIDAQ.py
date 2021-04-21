@@ -55,7 +55,7 @@ class NIDAQ_DIO(pyDIO.DIO):
         data = np.array([self._active_state.ACTIVE], dtype=np.uint8)
         self.__task.WriteDigitalLines(1, True, self.__timeout, DAQmx_Val_GroupByChannel, data, None, None)
         super()._activate()
-        self._logger.debug(f"activated channel {self._devname}')
+        self._logger.debug(f"activated channel {self._devname}")
 
     def _deactivate(self):
         data = np.array([self._active_state.INACTIVE], dtype=np.uint8)
