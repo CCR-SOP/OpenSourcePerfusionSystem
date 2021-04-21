@@ -126,9 +126,12 @@ class PanelAO_Config(wx.Panel):
             line = self.choice_line.GetStringSelection()
             self._logger.info(f'dev is {dev}, line is {line}')
             self._ao.open(period_ms=10, dev=dev, line=line)
-            self._ao.set_dc(0)  # Some of the peristaltic pumps need to be set to run at 0 V to activate their analog control
-            self.btn_open.SetLabel('Close')
-            self._ao.start()
+            if self._ao.is_open():
+                self._ao.set_dc(0)  # Some of the peristaltic pumps need to be set to run at 0 V to activate their analog control
+                self.btn_open.SetLabel('Close')
+                self._ao.start()
+            else:
+                self.btn_open.SetValue(0)
         else:
             self._ao.set_dc(0)  # Turn off voltage when closing the channel
             time.sleep(0.1)  # Make sure thread updates voltage to 0 prior to closing channel
