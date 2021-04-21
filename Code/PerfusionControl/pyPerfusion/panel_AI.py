@@ -163,9 +163,13 @@ class PanelAI_Config(wx.Panel):
             self._logger.debug(f'Opening device {dev}, {line}')
             self._sensor.hw.add_channel(line)
             self._sensor.set_ch_id(line)
-            self.btn_open.SetLabel('Close')
             self._sensor.hw.open(dev=dev)
-            self._sensor.hw.start()
+            if self._sensor.hw.is_open():
+                self.btn_open.SetLabel('Close')
+                self._sensor.hw.start()
+            else:
+                self._sensor.hw.remove_channel(line)
+                self.btn_open.SetValue(0)
         else:
             self._logger.debug(f'Closing device {dev}, {line}')
             self._sensor.hw.remove_channel(line)

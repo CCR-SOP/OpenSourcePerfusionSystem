@@ -37,6 +37,9 @@ class NIDAQ_AI(pyAI.AI):
         devstr = ','.join([f'{self._dev}/ai{line}' for line in lines])
         return devstr
 
+    def is_open(self):
+        return self.__task is not None
+
     def _convert_to_units(self, buffer, channel):
         data = super()._convert_to_units(buffer, channel)
         return self.data_type(data)
@@ -119,9 +122,9 @@ class NIDAQ_AI(pyAI.AI):
                 hz = 1.0 / (self._period_sampling_ms / 1000.0)
                 self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
                                              self.samples_per_read)
-        except PyDAQmx.DAQError as e:
-            self._logger.error(f"Could not create AI Channel for {self._devname}")
-            self._logger.error(f"Full exception is: \n{e}")
+        except PyDAQmx.DevCannotBeAccessedError as e:
+            self._logger.error(f'Could not access device {self._dev}. Please ensure device is'
+                               f'plugged in and assigned the correct device name')
             self.__task = None
 
     def close(self):
