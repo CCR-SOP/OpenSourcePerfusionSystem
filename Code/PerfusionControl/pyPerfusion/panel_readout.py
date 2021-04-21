@@ -11,7 +11,7 @@ import logging
 import wx
 
 import pyPerfusion.utils as utils
-from pyPerfusion.PerfusionConfig import LP_CFG
+import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.SensorStream import SensorStream
 from pyHardware.pyAI import AI
 
