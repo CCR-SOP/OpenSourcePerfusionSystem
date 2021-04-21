@@ -8,7 +8,7 @@ Panel class for general settings for Hepatic Artery branch
 import logging
 import pyPerfusion.utils as utils
 
-from pyPerfusion.PerfusionConfig import LP_CFG
+import pyPerfusion.PerfusionConfig as LP_CFG
 
 import wx
 

@@ -19,6 +19,7 @@ LINE_LIST = [f'line{line}' for line in range(0, 9)]
 
 class PanelDIO(wx.Panel):
     def __init__(self, parent, dio, name):
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._dio = dio
         self._name = name

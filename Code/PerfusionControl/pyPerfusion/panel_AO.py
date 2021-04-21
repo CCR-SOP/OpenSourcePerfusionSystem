@@ -21,7 +21,6 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 class PanelAO(wx.Panel):
     def __init__(self, parent, aio, name):
-        self._logger = logging.getLogger()
         self.parent = parent
         self._ao = aio
         self._name = name
@@ -60,6 +59,7 @@ class PanelAO(wx.Panel):
 
 class PanelAO_Config(wx.Panel):
     def __init__(self, parent, aio, name, sizer_name):
+        self._logger = logging.getLogger()
         self.parent = parent
         self._ao = aio
         self._name = name
