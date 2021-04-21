@@ -34,6 +34,9 @@ class NIDAQ_AO(pyAO.AO):
         # super()._output_samples()
         pass
 
+    def is_open(self):
+        return self.__task is not None
+
     def open(self, period_ms, bits=12, dev=None, line=None):
         self.__dev = dev
         self.__line = line
@@ -42,10 +45,15 @@ class NIDAQ_AO(pyAO.AO):
 
     def __check_hw_clk_support(self):
         task = PyDAQmx.Task()
-        task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
         try:
+            task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
             self.__hw_clk = True
             task.CfgSampClkTiming("", 1.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 10)
+        except PyDAQmx.DevCannotBeAccessedError as e:
+            self._logger.error(f'Could not access device {self.__dev}. Please ensure device is'
+                               f'plugged in and assigned the correct device name')
+        except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
+            self._logger.error(f'Channel {self.__line} does not exist on device {self.__dev}')
         except PyDAQmx.DAQmxFunctions.InvalidAttributeValueError:
             self.__hw_clk = False
 
@@ -72,7 +80,15 @@ class NIDAQ_AO(pyAO.AO):
             self.__task.StopTask()
             self.__task.ClearTask()
         self.__task = PyDAQmx.Task()
-        self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
+        try:
+            self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
+        except PyDAQmx.DevCannotBeAccessedError as e:
+            self._logger.error(f'Could not access device {self.__dev}. Please ensure device is'
+                               f'plugged in and assigned the correct device name')
+            self.__task = None
+        except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
+            self._logger.error(f'Channel {self.__line} does not exist on device {self.__dev}')
+            self.__task = None
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         if self.__hw_clk:
@@ -90,12 +106,10 @@ class NIDAQ_AO(pyAO.AO):
 
     def set_dc(self, volts):
         self.__clear_and_create_task()
-        super().set_ramp(self._volts_offset, volts, self.__max_accel)
-        hz = 1.0 / (self._period_ms / 1000.0)
-        written = ctypes.c_int32(0)
-        # if self.__hw_clk and len(self._buffer) > 1:
-            # self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_FiniteSamps, len(self._buffer))
-        self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
-                                   self._buffer, PyDAQmx.byref(written), None)
-        super().set_dc(volts)
+        if self.__task:
+            super().set_ramp(self._volts_offset, volts, self.__max_accel)
+            written = ctypes.c_int32(0)
+            self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
+                                       self._buffer, PyDAQmx.byref(written), None)
+            super().set_dc(volts)
 
