@@ -43,27 +43,42 @@ class NIDAQ_AO(pyAO.AO):
         super().open(period_ms, bits)
         self.__check_hw_clk_support()
 
-    def __check_hw_clk_support(self):
-        task = PyDAQmx.Task()
+    def _open_task(self, task):
         try:
             task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
             self.__hw_clk = True
-            task.CfgSampClkTiming("", 1.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 10)
         except PyDAQmx.DevCannotBeAccessedError as e:
-            self._logger.error(f'Could not access device {self.__dev}. Please ensure device is'
-                               f'plugged in and assigned the correct device name')
+            msg = f'Could not access device "{self.__dev}". Please ensure device is '\
+                  f'plugged in and assigned the correct device name'
+            self._logger.error(msg)
+            raise(pyAO.AODeviceException(msg))
         except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
-            self._logger.error(f'Channel {self.__line} does not exist on device {self.__dev}')
-        except PyDAQmx.DAQmxFunctions.InvalidAttributeValueError:
-            self.__hw_clk = False
+            msg = f'Channel "{self.__line}" does not exist on device {self.__dev}'
+            self._logger.error(msg)
+            raise(pyAO.AODeviceException(msg))
+        except PyDAQmx.DAQmxFunctions.InvalidDeviceIDError:
+            msg = f'Device "{self.__dev}" is not a valid device ID'
+            self._logger.error(msg)
+            raise(pyAO.AODeviceException(msg))
 
-        task.StopTask()
-        task.ClearTask()
-        if self.__hw_clk:
-            phrase = 'is'
+    def __check_hw_clk_support(self):
+        task = PyDAQmx.Task()
+        try:
+            self._open_task(task)
+        except pyAO.AODeviceException as e:
+            self.__hw_clk = False
+            raise
         else:
-            phrase = 'is not'
-        self._logger.info(f'Hardware clock {phrase} supported for {self._devname}')
+            try:
+                task.CfgSampClkTiming("", 1.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 10)
+                self.__hw_clk = True
+            except PyDAQmx.DAQmxFunctions.InvalidAttributeValueError:
+                self.__hw_clk = False
+
+            task.StopTask()
+            task.ClearTask()
+            phrase = 'is' if self.__hw_clk else 'is not'
+            self._logger.info(f'Hardware clock {phrase} supported for {self._devname}')
 
     def wait_for_task(self):
         if self.__task:
@@ -102,7 +117,9 @@ class NIDAQ_AO(pyAO.AO):
                 self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
                                             self._buffer, PyDAQmx.byref(written), None)
         else:
-            self._logger.error(f'Attempted to setup up sine wave output which is unsupported on {self._devname}')
+            msg = f'Attempted to setup up sine wave output which is unsupported on {self._devname}'
+            self._logger.error(msg)
+            raise pyAO.AODeviceException(msg)
 
     def set_dc(self, volts):
         self.__clear_and_create_task()

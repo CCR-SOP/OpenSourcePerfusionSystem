@@ -12,6 +12,10 @@ import logging
 import numpy as np
 
 
+class AODeviceException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
+
+
 class AO:
     def __init__(self):
         self._logger = logging.getLogger(__name__)

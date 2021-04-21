@@ -12,6 +12,7 @@ import wx
 import time
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
+import pyHardware.pyAO as pyAO
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 
@@ -125,7 +126,11 @@ class PanelAO_Config(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             self._logger.info(f'dev is {dev}, line is {line}')
-            self._ao.open(period_ms=10, dev=dev, line=line)
+            try:
+                self._ao.open(period_ms=10, dev=dev, line=line)
+            except pyAO.AODeviceException as e:
+                dlg = wx.MessageDialog(parent=self, message=str(e), caption='AO Device Error', style=wx.OK)
+                dlg.ShowModal()
             if self._ao.is_open():
                 self._ao.set_dc(0)  # Some of the peristaltic pumps need to be set to run at 0 V to activate their analog control
                 self.btn_open.SetLabel('Close')
@@ -223,7 +228,12 @@ class PanelAO_Settings(wx.Panel):
         want_sine = self.check_sine.IsChecked()
 
         if want_sine:
-            self._ao.set_sine(volts_p2p=volts, volts_offset=offset, Hz=hz)
+            try:
+                self._ao.set_sine(volts_p2p=volts, volts_offset=offset, Hz=hz)
+            except pyAO.AODeviceException as e:
+                dlg = wx.MessageDialog(parent=self, message=str(e), caption='AO Device Error', style=wx.OK)
+                dlg.ShowModal()
+                self.check_sine.SetValue(0)
         else:
             self._ao.set_dc(offset)
 
