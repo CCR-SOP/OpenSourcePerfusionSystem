@@ -103,7 +103,7 @@ class NIDAQ_AI(pyAI.AI):
             self._queue_buffer[ch].put((buf, buffer_t))
             offset += self.samples_per_read
 
-    def open(self, dev):
+    def open(self, dev=None):
         self._dev = dev
         self._logger.debug(f'Opening device {dev}')
         super().open()
