@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
-"""
+"""Panel class for testing and configuring AIO
 
-@author: John Kakareka
 
-Panel class for testing and configuring AIO
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
 """
 import logging
 
 import wx
 
+from pyHardware.pyAI import AIDeviceException
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_plotting import PanelPlotting
@@ -161,9 +165,13 @@ class PanelAI_Config(wx.Panel):
         line = self.choice_line.GetStringSelection()
         if state:
             self._logger.debug(f'Opening device {dev}, {line}')
-            self._sensor.hw.add_channel(line)
-            self._sensor.set_ch_id(line)
-            self._sensor.hw.open(dev=dev)
+            try:
+                self._sensor.hw.add_channel(line)
+                self._sensor.set_ch_id(line)
+                self._sensor.hw.open(dev=dev)
+            except AIDeviceException as e:
+                dlg = wx.MessageDialog(parent=self, message=str(e), caption='AI Device Error', style=wx.OK)
+                dlg.ShowModal()
             if self._sensor.hw.is_open():
                 self.btn_open.SetLabel('Close')
                 self._sensor.hw.start()
@@ -244,6 +252,7 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
-    utils.setup_default_logging(filename='panel_AI')
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
     app = MyTestApp(0)
     app.MainLoop()
