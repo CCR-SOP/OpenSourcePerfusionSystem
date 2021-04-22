@@ -116,14 +116,17 @@ class NIDAQ_AI(pyAI.AI):
 
         task = Task()
         try:
-            self._logger.debug(f'Creating new pyDAQmx AI Voltage Channel for {self._devname}')
+            if self._dev:
+                self._logger.debug(f'Creating new pyDAQmx AI Voltage Channel for {self._devname}')
 
-            volt_min = self._volts_offset - 0.5 * self._volts_p2p
-            volt_max = self._volts_offset + 0.5 * self._volts_p2p
-            task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
-            hz = 1.0 / (self._period_sampling_ms / 1000.0)
-            task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
-                                         self.samples_per_read)
+                volt_min = self._volts_offset - 0.5 * self._volts_p2p
+                volt_max = self._volts_offset + 0.5 * self._volts_p2p
+                task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
+                hz = 1.0 / (self._period_sampling_ms / 1000.0)
+                task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
+                                             self.samples_per_read)
+            else:
+                task = None
         except PyDAQmx.DevCannotBeAccessedError as e:
             msg = f'Could not access device "{self._dev}". Please ensure device is ' \
                   f'plugged in and assigned the correct device name'

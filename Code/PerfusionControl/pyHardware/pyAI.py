@@ -104,6 +104,14 @@ class AI:
                     pass
                 else:
                     self._calibration[channel_id] = []
+            try:
+                self.reopen()
+                if self.is_open():
+                    self.start()
+            except AIDeviceException as e:
+                self._logger.error(f'Failed to open hardware for channel {channel_id}. {str(e)}')
+                self.remove_channel(channel_id)
+                raise
 
     def remove_channel(self, channel_id):
         if channel_id in self._queue_buffer.keys():
