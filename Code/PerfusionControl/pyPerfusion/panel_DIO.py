@@ -27,6 +27,7 @@ class PanelDIO(wx.Panel):
         self._name = name
 
 
+
         self._avail_dev = DEV_LIST
         self._avail_ports = PORT_LIST
         self._avail_lines = LINE_LIST
