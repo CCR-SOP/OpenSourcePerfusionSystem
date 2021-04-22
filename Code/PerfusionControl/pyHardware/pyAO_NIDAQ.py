@@ -17,10 +17,10 @@ import pyHardware.pyAO as pyAO
 
 class NIDAQ_AO(pyAO.AO):
     def __init__(self):
-        self._logger = logging.getLogger(__name__)
         super().__init__()
-        self.__dev = None
-        self.__line = None
+        self._logger = logging.getLogger(__name__)
+        self._dev = None
+        self._line = None
         self.__timeout = 1.0
         self.__task = None
         self.__max_accel = 1  # Volts/second
@@ -28,7 +28,7 @@ class NIDAQ_AO(pyAO.AO):
 
     @property
     def _devname(self):
-        return f"/{self.__dev}/ao{self.__line}"
+        return f"/{self._dev}/ao{self._line}"
 
     def _output_samples(self):
         # super()._output_samples()
@@ -38,26 +38,27 @@ class NIDAQ_AO(pyAO.AO):
         return self.__task is not None
 
     def open(self, period_ms, bits=12, dev=None, line=None):
-        self.__dev = dev
-        self.__line = line
+        self._dev = dev
+        self._line = line
         super().open(period_ms, bits)
         self.__check_hw_clk_support()
+        self.__task = PyDAQmx.Task()
 
     def _open_task(self, task):
         try:
             task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
             self.__hw_clk = True
         except PyDAQmx.DevCannotBeAccessedError as e:
-            msg = f'Could not access device "{self.__dev}". Please ensure device is '\
+            msg = f'Could not access device "{self._dev}". Please ensure device is '\
                   f'plugged in and assigned the correct device name'
             self._logger.error(msg)
             raise(pyAO.AODeviceException(msg))
         except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
-            msg = f'Channel "{self.__line}" does not exist on device {self.__dev}'
+            msg = f'Channel "{self._line}" does not exist on device {self._dev}'
             self._logger.error(msg)
             raise(pyAO.AODeviceException(msg))
         except PyDAQmx.DAQmxFunctions.InvalidDeviceIDError:
-            msg = f'Device "{self.__dev}" is not a valid device ID'
+            msg = f'Device "{self._dev}" is not a valid device ID'
             self._logger.error(msg)
             raise(pyAO.AODeviceException(msg))
 
@@ -96,14 +97,11 @@ class NIDAQ_AO(pyAO.AO):
             self.__task.ClearTask()
         self.__task = PyDAQmx.Task()
         try:
-            self.__task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
-        except PyDAQmx.DevCannotBeAccessedError as e:
-            self._logger.error(f'Could not access device {self.__dev}. Please ensure device is'
-                               f'plugged in and assigned the correct device name')
+            self._open_task(self.__task)
+        except pyAO.AODeviceException as e:
             self.__task = None
-        except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
-            self._logger.error(f'Channel {self.__line} does not exist on device {self.__dev}')
-            self.__task = None
+            raise
+
 
     def set_sine(self, volts_p2p, volts_offset, Hz):
         if self.__hw_clk:
@@ -122,11 +120,15 @@ class NIDAQ_AO(pyAO.AO):
             raise pyAO.AODeviceException(msg)
 
     def set_dc(self, volts):
-        self.__clear_and_create_task()
-        if self.__task:
-            super().set_ramp(self._volts_offset, volts, self.__max_accel)
-            written = ctypes.c_int32(0)
-            self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
-                                       self._buffer, PyDAQmx.byref(written), None)
-            super().set_dc(volts)
+        try:
+            self.__clear_and_create_task()
+        except pyAO.AODeviceException as e:
+            raise
+        else:
+            if self.__task:
+                super().set_ramp(self._volts_offset, volts, self.__max_accel)
+                written = ctypes.c_int32(0)
+                self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
+                                           self._buffer, PyDAQmx.byref(written), None)
+                super().set_dc(volts)
 
