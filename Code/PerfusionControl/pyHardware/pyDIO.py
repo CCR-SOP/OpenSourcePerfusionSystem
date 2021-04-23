@@ -46,6 +46,10 @@ class DIO:
         self.__timer = threading.Timer(0, self.activate)
         # timer is still considered alive when the callback is called
 
+    @property
+    def devname(self):
+        return f"port{self._port}/line{self._line}"
+
     def is_open(self):
         return self._port is not None and self._line is not None
 

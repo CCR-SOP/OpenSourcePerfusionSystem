@@ -32,7 +32,7 @@ class NIDAQ_AI(pyAI.AI):
         self._last_acq = None
 
     @property
-    def _devname(self):
+    def devname(self):
         lines = self.get_ids()
         self._logger.debug(f'valid AI input lines are {lines}')
         devstr = ','.join([f'{self._dev}/ai{line}' for line in lines])
@@ -65,7 +65,7 @@ class NIDAQ_AI(pyAI.AI):
                 self._exception_msg_ack = False
         except PyDAQmx.ReadBufferTooSmallError:
             if not self._exception_msg_ack:
-                self._logger.error(f'ReadBufferTooSmallError when reading {self._devname}')
+                self._logger.error(f'ReadBufferTooSmallError when reading {self.devname}')
                 self._logger.error(f'Samples/read = {self.samples_per_read}, Buffer len = {len(buffer)}')
                 self._exception_msg_ack = True
         except PyDAQmx.DAQmxFunctions.ResourceNotInPool_RoutingError:
@@ -80,14 +80,14 @@ class NIDAQ_AI(pyAI.AI):
         except PyDAQmx.SamplesNoLongerAvailableError:
             if not self._exception_msg_ack:
                 recovery = datetime.now()
-                self._logger.error(f'DAQ {self._devname} could not keep up with HW acquisition. '
+                self._logger.error(f'DAQ {self.devname} could not keep up with HW acquisition. '
                                    f'This error could be caused by the laptop entering sleep mode. '
                                    f'Last acq time was {self._last_acq}, recovery time is {recovery}')
                 self._exception_msg_ack = True
-                self._logger.info(f'Stopping NIDAQ task for {self._devname}')
+                self._logger.info(f'Stopping NIDAQ task for {self.devname}')
                 self.__task.StopTask()
                 self.__task.WaitUntilTaskDone(2.0)
-                self._logger.info(f'Restarting NIDAQ task for {self._devname}')
+                self._logger.info(f'Restarting NIDAQ task for {self.devname}')
                 self.__task.StartTask()
         except PyDAQmx.DAQException as e:
             if not self._exception_msg_ack:
@@ -117,11 +117,11 @@ class NIDAQ_AI(pyAI.AI):
         task = Task()
         try:
             if self._dev:
-                self._logger.debug(f'Creating new pyDAQmx AI Voltage Channel for {self._devname}')
+                self._logger.debug(f'Creating new pyDAQmx AI Voltage Channel for {self.devname}')
 
                 volt_min = self._volts_offset - 0.5 * self._volts_p2p
                 volt_max = self._volts_offset + 0.5 * self._volts_p2p
-                task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
+                task.CreateAIVoltageChan(self.devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
                 hz = 1.0 / (self._period_sampling_ms / 1000.0)
                 task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
                                              self.samples_per_read)

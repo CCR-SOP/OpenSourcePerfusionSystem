@@ -34,6 +34,10 @@ class AO:
         self._event_halt = threading.Event()
         self._lock_buf = threading.Lock()
 
+    @property
+    def devname(self):
+        return 'ao'
+
     def open(self, period_ms, bits=12):
         self._period_ms = period_ms
         self._bits = bits

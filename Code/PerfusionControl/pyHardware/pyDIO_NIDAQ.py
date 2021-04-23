@@ -25,7 +25,7 @@ class NIDAQ_DIO(pyDIO.DIO):
         self.__task = None
 
     @property
-    def _devname(self):
+    def devname(self):
         return f"/{self._dev}/{self._port}/{self._line}"
 
     def open(self, port, line, active_high=True, read_only=True, dev=None):
@@ -36,9 +36,9 @@ class NIDAQ_DIO(pyDIO.DIO):
         try:
             task = Task()
             if self._read_only:
-                task.CreateDIChan(self._devname, '', DAQmx_Val_ChanPerLine)
+                task.CreateDIChan(self.devname, '', DAQmx_Val_ChanPerLine)
             else:
-                task.CreateDOChan(self._devname, '', DAQmx_Val_ChanPerLine)
+                task.CreateDOChan(self.devname, '', DAQmx_Val_ChanPerLine)
 
         except PyDAQmx.DevCannotBeAccessedError as e:
             msg = f'Could not access device "{self._dev}". Please ensure device is ' \

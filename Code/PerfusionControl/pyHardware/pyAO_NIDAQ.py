@@ -27,7 +27,7 @@ class NIDAQ_AO(pyAO.AO):
         self.__hw_clk = False
 
     @property
-    def _devname(self):
+    def devname(self):
         return f"/{self._dev}/ao{self._line}"
 
     def _output_samples(self):
@@ -46,7 +46,7 @@ class NIDAQ_AO(pyAO.AO):
 
     def _open_task(self, task):
         try:
-            task.CreateAOVoltageChan(self._devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
+            task.CreateAOVoltageChan(self.devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
             self.__hw_clk = True
         except PyDAQmx.DevCannotBeAccessedError as e:
             msg = f'Could not access device "{self._dev}". Please ensure device is '\
@@ -79,7 +79,7 @@ class NIDAQ_AO(pyAO.AO):
             task.StopTask()
             task.ClearTask()
             phrase = 'is' if self.__hw_clk else 'is not'
-            self._logger.info(f'Hardware clock {phrase} supported for {self._devname}')
+            self._logger.info(f'Hardware clock {phrase} supported for {self.devname}')
 
     def wait_for_task(self):
         if self.__task:
@@ -115,7 +115,7 @@ class NIDAQ_AO(pyAO.AO):
                 self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
                                             self._buffer, PyDAQmx.byref(written), None)
         else:
-            msg = f'Attempted to setup up sine wave output which is unsupported on {self._devname}'
+            msg = f'Attempted to setup up sine wave output which is unsupported on {self.devname}'
             self._logger.error(msg)
             raise pyAO.AODeviceException(msg)
 

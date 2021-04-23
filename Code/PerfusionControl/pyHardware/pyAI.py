@@ -57,6 +57,16 @@ class AI:
 
         self._calibration = {}
 
+
+    @property
+    def devname(self):
+        lines = self.get_ids()
+        if len(lines) == 0:
+            dev_str = 'ai'
+        else:
+            dev_str = ','.join([f'ai{line}' for line in lines])
+        return dev_str
+
     @property
     def period_sampling_ms(self):
         return self._period_sampling_ms

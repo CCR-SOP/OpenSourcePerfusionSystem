@@ -13,6 +13,7 @@ numpy = "*"
 pyserial = "*"
 configparser = "*"
 simple-pid = "*"
+pytest = "*"
 
 [requires]
 python_version = "3.8"
