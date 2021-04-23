@@ -18,9 +18,8 @@ import pyHardware.pyAI as pyAI
 
 class NIDAQ_AI(pyAI.AI):
     def __init__(self, period_ms, volts_p2p, volts_offset):
-        self._logger = logging.getLogger(__name__)
-        self._logger.debug('opening nidaq_ai')
         super().__init__(period_ms, buf_type=np.float32)
+        self._logger = logging.getLogger(__name__)
         self._dev = None
         self._line = None
         self.__timeout = 1.0
@@ -42,9 +41,11 @@ class NIDAQ_AI(pyAI.AI):
         super().set_calibration(ch, low_pt, low_read, high_pt, high_read)
 
     def _acq_samples(self):
-        sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         samples_read = PyDAQmx.int32()
         buffer_t = time.perf_counter()
+        # TODO, ids and buffer size should be fixed so no need to do this
+        # on every acq. If new channels add, or the sampling rate changed,
+        # the acq should be stopped, update the buffer size, and restart
         ch_ids = self.get_ids()
         buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=np.float64)
         try:
@@ -77,6 +78,7 @@ class NIDAQ_AI(pyAI.AI):
                 self.__task = Task()
                 volt_min = self._volts_offset - 0.5 * self._volts_p2p
                 volt_max = self._volts_offset + 0.5 * self._volts_p2p
+                self._logger.debug(f'opening {self._devname}')
                 self.__task.CreateAIVoltageChan(self._devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
                 hz = 1.0 / (self._period_sampling_ms / 1000.0)
                 self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,

@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
-"""
+"""Panel class for plotting data real-time
 
-@author: John Kakareka
+Based on wx.Panel, this plots data real-time using SensorStream
+and/or SensorPoint objects
 
-Panel class for plotting data
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
 """
 import logging
+from datetime import datetime
+import time
 
 import wx
 import numpy as np
@@ -22,10 +29,12 @@ import pyPerfusion.PerfusionConfig as LP_CFG
 
 class PanelPlotting(wx.Panel):
     def __init__(self, parent, with_readout=True):
+        wx.Panel.__init__(self, parent, -1)
+        self._lgr = logging.getLogger(__name__)
         self.__parent = parent
         self.__sensors = []
         self._with_readout = with_readout
-        wx.Panel.__init__(self, parent, -1)
+
         self.__plot_len = 200
         self._valid_range = None
         self._plot_frame_ms = 5_000
@@ -173,6 +182,7 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
-    utils.setup_default_logging(filename='panel_plotting')
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
     app = MyTestApp(0)
     app.MainLoop()
