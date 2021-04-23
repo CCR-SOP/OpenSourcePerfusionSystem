@@ -22,11 +22,11 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 class PanelAO(wx.Panel):
     def __init__(self, parent, aio, name):
+        wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._ao = aio
         self._name = name
-        wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
@@ -61,11 +61,12 @@ class PanelAO(wx.Panel):
 
 class PanelAO_Config(wx.Panel):
     def __init__(self, parent, aio, name, sizer_name):
+        wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._ao = aio
         self._name = name
-        wx.Panel.__init__(self, parent, -1)
+
 
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
@@ -158,11 +159,11 @@ class PanelAO_Config(wx.Panel):
 
 class PanelAO_Settings(wx.Panel):
     def __init__(self, parent, aio, name, sizer_name):
+        wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._ao = aio
         self._name = name
-        wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=sizer_name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
