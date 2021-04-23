@@ -41,9 +41,11 @@ class NIDAQ_AI(pyAI.AI):
         super().set_calibration(ch, low_pt, low_read, high_pt, high_read)
 
     def _acq_samples(self):
-        sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
         samples_read = PyDAQmx.int32()
         buffer_t = time.perf_counter()
+        # TODO, ids and buffer size should be fixed so no need to do this
+        # on every acq. If new channels add, or the sampling rate changed,
+        # the acq should be stopped, update the buffer size, and restart
         ch_ids = self.get_ids()
         buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=np.float64)
         try:

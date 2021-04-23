@@ -2,6 +2,7 @@ import pathlib
 import datetime
 from threading import Thread, Event
 import logging
+import time
 
 import numpy as np
 
@@ -47,14 +48,25 @@ class SensorStream:
         return self._valid_range
 
     def run(self):
-        # JWK, need better wait timeout
-        while not self.__evt_halt.wait(self.hw.period_sampling_ms / 1000.0 / 10.0):
-            data_buf, t = self.hw.get_data(self._ch_id)
-            if data_buf is not None and self._fid_write is not None:
-                buf_len = len(data_buf)
-                self._write_to_file(data_buf, t)
-                self._last_idx += buf_len
-                self._fid_write.flush()
+        next_t = time.time()
+        offset = 0
+        while not self.__evt_halt.is_set():
+            next_t += offset + self.hw.period_sampling_ms / 1000.0
+            delay = next_t - time.time()
+            if delay > 0:
+                time.sleep(delay)
+                offset = 0
+            else:
+                offset = -delay
+            self._get_data_and_write_to_file()
+
+    def _get_data_and_write_to_file(self):
+        data_buf, t = self.hw.get_data(self._ch_id)
+        if data_buf is not None and self._fid_write is not None:
+            buf_len = len(data_buf)
+            self._write_to_file(data_buf, t)
+            self._last_idx += buf_len
+            self._fid_write.flush()
 
     def _write_to_file(self, data_buf, t):
         data_buf.tofile(self._fid_write)
