@@ -1,7 +1,8 @@
 from threading import Thread, Lock, Event
-from time import perf_counter, sleep
+from time import perf_counter, sleep, time
 from queue import Queue, Empty
 import logging
+from datetime import datetime
 
 import numpy as np
 
@@ -115,6 +116,7 @@ class AI:
         self._event_halt.clear()
         self.__epoch = perf_counter()
         self.__thread = Thread(target=self.run)
+        self.__thread.name = f'pyAI {self._devname}'
         self.__thread.start()
 
     def stop(self):
@@ -124,9 +126,17 @@ class AI:
             self.__thread = None
 
     def run(self):
-        while not self._event_halt.wait(self._read_period_ms / 1000.0):
-            with self.__lock_buf:
-                self._acq_samples()
+        next_t = time()
+        offset = 0
+        while not self._event_halt.is_set():
+            next_t += offset + self._read_period_ms / 1000.0
+            delay = next_t - time()
+            if delay > 0:
+                sleep(delay)
+                offset = 0
+            else:
+                offset = -delay
+            self._acq_samples()
 
     def get_data(self, ch_id):
         buf = None
@@ -136,6 +146,7 @@ class AI:
                 try:
                     buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
                 except Empty:
+                    self._logger.debug('buffer empty')
                     pass
         return buf, t
 
