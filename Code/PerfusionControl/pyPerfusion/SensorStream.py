@@ -5,6 +5,7 @@ import logging
 
 import numpy as np
 
+
 DATA_VERSION = 1
 
 
@@ -95,6 +96,7 @@ class SensorStream:
 
         self.print_stream_info()
         self.__thread = Thread(target=self.run)
+        self.__thread.name = f'SensorStream ({self.name})'
 
     def stop(self):
         self.__evt_halt.set()

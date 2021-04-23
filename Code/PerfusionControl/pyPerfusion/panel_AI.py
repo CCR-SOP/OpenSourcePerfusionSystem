@@ -241,6 +241,7 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
-    utils.setup_default_logging(filename='panel_AI')
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
     app = MyTestApp(0)
     app.MainLoop()
