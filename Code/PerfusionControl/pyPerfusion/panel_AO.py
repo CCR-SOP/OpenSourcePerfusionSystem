@@ -12,6 +12,7 @@ import wx
 import time
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
+import pyHardware.pyAO as pyAO
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 
@@ -21,10 +22,14 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 class PanelAO(wx.Panel):
     def __init__(self, parent, aio, name):
+<<<<<<< HEAD
+=======
+        wx.Panel.__init__(self, parent, -1)
+        self._logger = logging.getLogger(__name__)
+>>>>>>> fixes/improved_error_detection
         self.parent = parent
         self._ao = aio
         self._name = name
-        wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
@@ -59,11 +64,12 @@ class PanelAO(wx.Panel):
 
 class PanelAO_Config(wx.Panel):
     def __init__(self, parent, aio, name, sizer_name):
-        self._logger = logging.getLogger()
+        wx.Panel.__init__(self, parent, -1)
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._ao = aio
         self._name = name
-        wx.Panel.__init__(self, parent, -1)
+
 
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
@@ -124,10 +130,17 @@ class PanelAO_Config(wx.Panel):
             dev = self.choice_dev.GetStringSelection()
             line = self.choice_line.GetStringSelection()
             self._logger.info(f'dev is {dev}, line is {line}')
-            self._ao.open(period_ms=10, dev=dev, line=line)
-            self._ao.set_dc(0)  # Some of the peristaltic pumps need to be set to run at 0 V to activate their analog control
-            self.btn_open.SetLabel('Close')
-            self._ao.start()
+            try:
+                self._ao.open(period_ms=10, dev=dev, line=line)
+            except pyAO.AODeviceException as e:
+                dlg = wx.MessageDialog(parent=self, message=str(e), caption='AO Device Error', style=wx.OK)
+                dlg.ShowModal()
+            if self._ao.is_open():
+                self._ao.set_dc(0)  # Some of the peristaltic pumps need to be set to run at 0 V to activate their analog control
+                self.btn_open.SetLabel('Close')
+                self._ao.start()
+            else:
+                self.btn_open.SetValue(0)
         else:
             self._ao.set_dc(0)  # Turn off voltage when closing the channel
             time.sleep(0.1)  # Make sure thread updates voltage to 0 prior to closing channel
@@ -149,10 +162,11 @@ class PanelAO_Config(wx.Panel):
 
 class PanelAO_Settings(wx.Panel):
     def __init__(self, parent, aio, name, sizer_name):
+        wx.Panel.__init__(self, parent, -1)
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._ao = aio
         self._name = name
-        wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=sizer_name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -218,7 +232,12 @@ class PanelAO_Settings(wx.Panel):
         want_sine = self.check_sine.IsChecked()
 
         if want_sine:
-            self._ao.set_sine(volts_p2p=volts, volts_offset=offset, Hz=hz)
+            try:
+                self._ao.set_sine(volts_p2p=volts, volts_offset=offset, Hz=hz)
+            except pyAO.AODeviceException as e:
+                dlg = wx.MessageDialog(parent=self, message=str(e), caption='AO Device Error', style=wx.OK)
+                dlg.ShowModal()
+                self.check_sine.SetValue(0)
         else:
             self._ao.set_dc(offset)
 
@@ -266,6 +285,7 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
-    utils.setup_default_logging(filename='panel_AO')
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
     app = MyTestApp(0)
     app.MainLoop()

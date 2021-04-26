@@ -10,6 +10,7 @@ import pyPerfusion.utils as utils
 
 import wx
 
+from pyHardware.pyDIO import DIODeviceException
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 import pyPerfusion.PerfusionConfig as LP_CFG
 
@@ -19,11 +20,11 @@ LINE_LIST = [f'line{line}' for line in range(0, 9)]
 
 class PanelDIO(wx.Panel):
     def __init__(self, parent, dio, name):
+        wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._dio = dio
         self._name = name
-        wx.Panel.__init__(self, parent, -1)
 
         self._avail_dev = DEV_LIST
         self._avail_ports = PORT_LIST
@@ -118,13 +119,14 @@ class PanelDIO(wx.Panel):
             read_only = self.check_read_only.GetValue()
             try:
                 self._dio.open(port, line, active_high, read_only, dev)
+            except DIODeviceException as e:
+                dlg = wx.MessageDialog(parent=self, message=str(e), caption='DIO Device Error', style=wx.OK)
+                dlg.ShowModal()
+            else:
                 self._dio.deactivate()  # Make sure lines are turned off upon opening; due to fact that sometimes when the DAQ is first powered on, all lines will be open
                 self.btn_open.SetLabel('Close')
                 self.btn_activate.Enable(True)
                 self.btn_load.Enable(False)
-            except AttributeError:
-                wx.MessageBox('Line Could Not be Opened; it is Already in Use', 'Error', wx.OK | wx.ICON_ERROR)
-                return
         else:
             self._dio.deactivate()
             self._dio.close()

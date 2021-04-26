@@ -12,6 +12,10 @@ import logging
 import numpy as np
 
 
+class AODeviceException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
+
+
 class AO:
     def __init__(self):
         self._logger = logging.getLogger(__name__)
@@ -29,6 +33,10 @@ class AO:
 
         self._event_halt = threading.Event()
         self._lock_buf = threading.Lock()
+
+    @property
+    def devname(self):
+        return 'ao'
 
     def open(self, period_ms, bits=12):
         self._period_ms = period_ms

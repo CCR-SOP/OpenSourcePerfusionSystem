@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""Base class for accessing analog inputs
+
+
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
+"""
 from threading import Thread, Lock, Event
 from time import perf_counter, sleep, time
 from queue import Queue, Empty
@@ -5,6 +15,10 @@ import logging
 from datetime import datetime
 
 import numpy as np
+
+
+class AIDeviceException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
 class AI:
@@ -44,6 +58,16 @@ class AI:
 
         self._calibration = {}
 
+
+    @property
+    def devname(self):
+        lines = self.get_ids()
+        if len(lines) == 0:
+            dev_str = 'ai'
+        else:
+            dev_str = ','.join([f'ai{line}' for line in lines])
+        return dev_str
+
     @property
     def period_sampling_ms(self):
         return self._period_sampling_ms
@@ -55,6 +79,10 @@ class AI:
     @property
     def buf_len(self):
         return self.samples_per_read
+
+    def is_open(self):
+        # TODO is there a better check, e.g. were any channels added?
+        return True
 
     def set_demo_properties(self, ch, demo_amp, demo_offset):
         self._demo_amp[ch] = demo_amp
@@ -79,6 +107,7 @@ class AI:
         else:
             self.stop()
             with self.__lock_buf:
+                self._logger.debug(f'Adding channel {channel_id}')
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
                 self._demo_amp[channel_id] = 0
                 self._demo_offset[channel_id] = 0
@@ -86,8 +115,14 @@ class AI:
                     pass
                 else:
                     self._calibration[channel_id] = []
-            self.reopen()
-            self.start()
+            try:
+                self.reopen()
+                if self.is_open():
+                    self.start()
+            except AIDeviceException as e:
+                self._logger.error(f'Failed to open hardware for channel {channel_id}. {str(e)}')
+                self.remove_channel(channel_id)
+                raise
 
     def remove_channel(self, channel_id):
         if channel_id in self._queue_buffer.keys():

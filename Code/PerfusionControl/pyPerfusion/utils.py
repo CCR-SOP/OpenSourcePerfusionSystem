@@ -35,7 +35,7 @@ def setup_file_logger(lgr, level, filename=None):
     lgr.setLevel(level)
     ch = logging.FileHandler(LP_PATH['logs'] / f'{filename}.log')
     ch.setLevel(level)
-    formatter = logging.Formatter('%(name) s - %(levelname) s - %(message) s')
+    formatter = logging.Formatter('%(asctime) s: %(name) s - %(levelname) s - %(message) s')
     ch.setFormatter(formatter)
     lgr.addHandler(ch)
 
