@@ -23,6 +23,7 @@ import matplotlib.transforms as mtransforms
 
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
+from pyHardware.PHDserial import PHDserial
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
