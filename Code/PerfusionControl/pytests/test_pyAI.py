@@ -59,5 +59,15 @@ def test_devname_2ch_nonconsecutive(ai):
     ai.add_channel('3')
     assert ai.devname == 'ai1,ai3'
 
+def test_is_not_open(ai):
+    assert not ai.is_open()
+
 def test_isopen(ai):
+    ai.add_channel('1')
     assert ai.is_open()
+
+def test_isopen_remove(ai):
+    ai.add_channel('1')
+    assert ai.is_open()
+    ai.remove_channel('1')
+    assert not ai.is_open()
