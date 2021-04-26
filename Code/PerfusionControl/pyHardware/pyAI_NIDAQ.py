@@ -8,6 +8,7 @@ Author: John Kakareka
 import time
 from datetime import datetime
 import logging
+import ctypes
 
 import numpy as np
 import PyDAQmx
@@ -34,13 +35,12 @@ class NIDAQ_AI(pyAI.AI):
 
     @property
     def devname(self):
-        lines = self.get_ids()
-        self._logger.debug(f'valid AI input lines are {lines}')
-        devstr = ','.join([f'{self._dev}/ai{line}' for line in lines])
-        return devstr
+        base = super().devname
+        return f'{self._dev}/{base}'
 
     def is_open(self):
-        return self.__task is not None
+        # lines should be added and there should be a valid device name
+        return self._dev and super().is_open()
 
     def _convert_to_units(self, buffer, channel):
         data = super()._convert_to_units(buffer, channel)
@@ -68,11 +68,31 @@ class NIDAQ_AI(pyAI.AI):
                 self._queue_buffer[ch].put((buf, buffer_t))
                 offset += self.samples_per_read
 
+    def _is_valid_device_name(self, device):
+        try:
+            bytes_needed = PyDAQmx.DAQmxGetSysDevNames(None, 0)
+        except PyDAQmx.DAQError as e:
+            self._logger.error('Error occurred trying to get valid NIDAQ device names')
+            self._logger.error(f'Error is {str(e)}')
+            return False
+        else:
+            dev_names = ctypes.create_string_buffer(bytes_needed)
+            PyDAQmx.DAQmxGetSysDevNames(dev_names, bytes_needed)
+            return device in str(ctypes.string_at(dev_names))
+
+
     def open(self, dev=None):
-        self._dev = dev
-        self._logger.debug(f'Opening device {dev}')
-        super().open()
-        self.reopen()
+        """ Open a pyAI_NIDAQ device
+            dev: the name of a valid NI device
+        """
+        if self._is_valid_device_name(dev):
+            self._logger.debug(f'Opening device {dev}')
+            self._dev = dev
+            super().open()
+        else:
+            msg = f'Device "{dev} is not a valid device name'
+            self._logger.error(msg)
+            raise pyAI.AIDeviceException(msg)
 
     def reopen(self):
         self._logger.debug(f'attempting to open NIDAQ device')
