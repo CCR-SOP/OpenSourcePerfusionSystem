@@ -81,8 +81,7 @@ class AI:
         return self.samples_per_read
 
     def is_open(self):
-        # TODO is there a better check, e.g. were any channels added?
-        return True
+        return len(self.get_ids()) > 0
 
     def set_demo_properties(self, ch, demo_amp, demo_offset):
         self._demo_amp[ch] = demo_amp
