@@ -29,6 +29,8 @@ class NIDAQ_AI(pyAI.AI):
         self._volts_offset = volts_offset
         self._exception_msg_ack = False
         self._last_acq = None
+        self._acq_buf = None
+        self._acq_type = np.float64
 
     @property
     def devname(self):
@@ -50,59 +52,21 @@ class NIDAQ_AI(pyAI.AI):
     def _acq_samples(self):
         samples_read = PyDAQmx.int32()
         buffer_t = time.perf_counter()
-        # TODO, ids and buffer size should be fixed so no need to do this
-        # on every acq. If new channels add, or the sampling rate changed,
-        # the acq should be stopped, update the buffer size, and restart
-        ch_ids = self.get_ids()
-        buffer = np.zeros(self.samples_per_read * len(ch_ids), dtype=np.float64)
         try:
             if self.__task:
-                # self._logger.debug(f'Attempting to read {self.samples_per_read} from {self._devname}')
-                self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel, buffer,
-                                          len(buffer), PyDAQmx.byref(samples_read), None)
-                self._last_acq = datetime.now()
-            if self._exception_msg_ack:
-                self._logger.info('Recovered from previous exception.')
-                self._exception_msg_ack = False
+                self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms, DAQmx_Val_GroupByChannel,
+                                          self._acq_buf, len(self._acq_buf), PyDAQmx.byref(samples_read), None)
         except PyDAQmx.ReadBufferTooSmallError:
-            if not self._exception_msg_ack:
-                self._logger.error(f'ReadBufferTooSmallError when reading {self.devname}')
-                self._logger.error(f'Samples/read = {self.samples_per_read}, Buffer len = {len(buffer)}')
-                self._exception_msg_ack = True
-        except PyDAQmx.DAQmxFunctions.ResourceNotInPool_RoutingError:
-            # the RuntimeAborted_RoutingError will probably got caught first
-            if not self._exception_msg_ack:
-                self._logger.error(f'DAQ resource no longer available, possibly due to hibernation or USB disconnect')
-                self._exception_msg_ack = True
-        except PyDAQmx.DAQmxFunctions.RuntimeAborted_RoutingError:
-            if not self._exception_msg_ack:
-                self._logger.error(f'DAQ resource no longer available, possibly due to hibernation or USB disconnect')
-                self._exception_msg_ack = True
-        except PyDAQmx.SamplesNoLongerAvailableError:
-            if not self._exception_msg_ack:
-                recovery = datetime.now()
-                self._logger.error(f'DAQ {self.devname} could not keep up with HW acquisition. '
-                                   f'This error could be caused by the laptop entering sleep mode. '
-                                   f'Last acq time was {self._last_acq}, recovery time is {recovery}')
-                self._exception_msg_ack = True
-                self._logger.info(f'Stopping NIDAQ task for {self.devname}')
-                self.__task.StopTask()
-                self.__task.WaitUntilTaskDone(2.0)
-                self._logger.info(f'Restarting NIDAQ task for {self.devname}')
-                self.__task.StartTask()
-        except PyDAQmx.DAQException as e:
-            if not self._exception_msg_ack:
-                self._logger.error('Exception attempting to read analog data')
-                self._logger.exception(e)
-                self._exception_msg_ack = True
-        offset = 0
-        for ch in ch_ids:
-            # buf = self.data_type(buffer[offset::len(ch_ids)])
-            buf = self.data_type(buffer[offset:offset+self.samples_per_read])
-            if len(self._calibration[ch]):  # If the ai channel has been calibrated:
-                buf = self._convert_to_units(buf, ch)
-            self._queue_buffer[ch].put((buf, buffer_t))
-            offset += self.samples_per_read
+            self._logger.error(f'ReadBufferTooSmallError when reading {self.devname}')
+            self._logger.error(f'Samples/read = {self.samples_per_read}, Buffer len = {len(self._acq_buf)}')
+        else:
+            offset = 0
+            for ch in self.get_ids():
+                buf = self.data_type(self._acq_buf[offset:offset+self.samples_per_read])
+                if len(self._calibration[ch]):  # If the ai channel has been calibrated:
+                    buf = self._convert_to_units(buf, ch)
+                self._queue_buffer[ch].put((buf, buffer_t))
+                offset += self.samples_per_read
 
     def open(self, dev=None):
         self._dev = dev
@@ -157,6 +121,8 @@ class NIDAQ_AI(pyAI.AI):
 
     def start(self):
         if self.__task:
+            ch_ids = self.get_ids()
+            self._acq_buf = np.zeros(self.samples_per_read * len(ch_ids), dtype=self._acq_type)
             self.__task.StartTask()
             super().start()
 

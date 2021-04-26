@@ -182,7 +182,6 @@ class AI:
                     buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
                 except Empty:
                     self._logger.debug('buffer empty')
-                    pass
         return buf, t
 
     def _acq_samples(self):
