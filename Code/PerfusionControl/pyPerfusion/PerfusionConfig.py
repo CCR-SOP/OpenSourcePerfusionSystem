@@ -24,6 +24,7 @@ LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
 LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
 LP_FILE['receivers'] = LP_PATH['config'] / 'receivers.ini'
 
+
 def set_base(basepath='~/Documents'):
     logging.getLogger(__name__).info(f'Setting configuration basepath to {basepath}')
     global LP_PATH
@@ -64,6 +65,13 @@ def get_hwcfg_section(name):
         section = {}
     return section
 
+def open_receiver_info():
+    config = ConfigParser()
+    config.read(LP_FILE['receivers'])
+    receiver_info = {}
+    for key, val in config['Dexcom Receivers'].items():
+        receiver_info[key] = val
+    return receiver_info
 
 def save_syringe_info(codes, volumes):
     config = ConfigParser()
