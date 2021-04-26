@@ -52,13 +52,14 @@ class NIDAQ_AI(pyAI.AI):
         except PyDAQmx.ReadBufferTooSmallError:
             self._logger.error(f'ReadBufferTooSmallError when reading {self._devname}')
             self._logger.error(f'Samples/read = {self.samples_per_read}, Buffer len = {len(self._acq_buf)}')
-        offset = 0
-        for ch in self.get_ids():
-            buf = self.data_type(self._acq_buf[offset:offset+self.samples_per_read])
-            if len(self._calibration[ch]):  # If the ai channel has been calibrated:
-                buf = self._convert_to_units(buf, ch)
-            self._queue_buffer[ch].put((buf, buffer_t))
-            offset += self.samples_per_read
+        else:
+            offset = 0
+            for ch in self.get_ids():
+                buf = self.data_type(self._acq_buf[offset:offset+self.samples_per_read])
+                if len(self._calibration[ch]):  # If the ai channel has been calibrated:
+                    buf = self._convert_to_units(buf, ch)
+                self._queue_buffer[ch].put((buf, buffer_t))
+                offset += self.samples_per_read
 
     def open(self, dev):
         super().open()
