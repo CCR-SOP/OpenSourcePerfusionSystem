@@ -228,8 +228,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
     def OnStartBolus(self, evt):
         state = self.btn_start_timer.GetLabel()
-        if state == 'Start':
-            self.btn_start_timer.SetLabel('Stop')
+        if state == 'Start Bolus Injections':
+            self.btn_start_timer.SetLabel('Stop Bolus Injections')
             self._injection.syringe.ResetSyringe()
             code = self.get_selected_code()
             syr_size = self.choice_types.GetString(self.choice_types.GetSelection())
@@ -242,6 +242,11 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.spin_rate.Enable(False)
             self.choice_rate.Enable(False)
             self.btn_basal_infusion.Enable(False)
+            self.btn_start_basal.Enable(False)
+            self.btn_start_timer.Enable(False)
+            self.btn_direction.Enable(False)
+            self.btn_start_1TB.Enable(False)
+            self.choice_1TB_unit.Enable(False)
             if self.btn_basal_infusion.GetLabel() == 'Basal Infusion Active':
                 infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
                 self._injection.syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
@@ -251,21 +256,28 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self._injection.threshold_value = self.spin_flow.GetValue()
             self._injection.tolerance = self.spin_tolerance.GetValue()
             self._injection.start_injection_timer()
-        else:
+        elif state == 'Stop Bolus Injections':  # Work on this
+            print('ok')
             self._injection.stop_injection_timer()
             self.choice_manu.Enable(True)
             self.choice_types.Enable(True)
             self.spin_rate.Enable(True)
             self.choice_rate.Enable(True)
             self.btn_basal_infusion.Enable(True)
+            self.btn_start_basal.Enable(True)
+            self.btn_start_timer.Enable(True)
+            self.btn_direction.Enable(True)
+            self.btn_start_1TB.Enable(True)
+            self.choice_1TB_unit.Enable(True)
             if self._injection.wait is True:  # If injections were terminated in the middle of a bolus injection, the injection will not stop; thus, stop syringe, and clear target volume
                 infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
                 self._injection.syringe.stop(8888, infuse_rate, ml_volume, ml_min_rate)
                 self._injection.syringe.reset_target_volume()
             if self.btn_basal_infusion.GetLabel() == 'Basal Infusion Active':
+                print('yes')
                 infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
                 self._injection.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
-            self.btn_start_timer.SetLabel('Start')
+            self.btn_start_timer.SetLabel('Start Bolus Injections')
 
     def OnOneTimeBolus(self, evt):
         self._injection.syringe.ResetSyringe()
