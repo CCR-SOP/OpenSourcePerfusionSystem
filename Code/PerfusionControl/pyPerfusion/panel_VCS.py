@@ -15,6 +15,7 @@ from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.panel_readout import PanelReadout
 
 chemical_valves = {}
 glucose_valves = {}
@@ -180,9 +181,9 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=3)
 
-        valves = {'Hepatic Artery (pH/CO2/O2)': NIDAQ_DIO(),
-                  'Portal Vein (pH/CO2/O2)': NIDAQ_DIO(),
-                  'Inferior Vena Cava (pH/CO2/O2)': NIDAQ_DIO(),
+        valves = {'Hepatic Artery (Chemical)': NIDAQ_DIO(),
+                  'Portal Vein (Chemical)': NIDAQ_DIO(),
+                  'Inferior Vena Cava (Chemical)': NIDAQ_DIO(),
                   'Hepatic Artery (Glucose)': NIDAQ_DIO(),
                   'Portal Vein (Glucose)': NIDAQ_DIO(),
                   'Inferior Vena Cava (Glucose)': NIDAQ_DIO()
@@ -201,6 +202,11 @@ class TestFrame(wx.Frame):
 
         self.ao = NIDAQ_AO()
         sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
+
+        self.sizer_readout = wx.GridSizer(cols=3)
+        for sensor in self._chemical_sensors:
+            self.sizer_readout.Add(PanelReadout(self, sensor), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(self.sizer_readout)
 
         self.SetSizer(sizer)
         self.Fit()
