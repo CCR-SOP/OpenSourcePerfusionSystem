@@ -10,12 +10,14 @@ import os
 from pathlib import Path
 from configparser import ConfigParser
 from datetime import datetime
+import logging
 
 
 LP_PATH = {}
 LP_PATH['base'] = Path(os.path.expanduser('~')) / 'Documents/LiverPerfusion'
 LP_PATH['config'] = LP_PATH['base'] / 'config'
 LP_PATH['data'] = LP_PATH['base'] / 'data'
+LP_PATH['logs'] = LP_PATH['base'] / 'logs'
 LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 LP_FILE = {}
 LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
@@ -23,18 +25,21 @@ LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
 
 
 def set_base(basepath='~/Documents'):
+    logging.getLogger(__name__).info(f'Setting configuration basepath to {basepath}')
     global LP_PATH
     base = Path(os.path.expanduser(basepath))
 
     LP_PATH['base'] = base / 'LiverPerfusion'
     LP_PATH['config'] = LP_PATH['base'] / 'config'
     LP_PATH['data'] = LP_PATH['base'] / 'data'
+    LP_PATH['logs'] = LP_PATH['base'] / 'logs'
     LP_PATH['tmp'] = LP_PATH['base'] / 'tmp'
 
     LP_FILE['hwcfg'] = LP_PATH['config'] / 'hardware.ini'
     LP_FILE['syringe'] = LP_PATH['config'] / 'syringe.ini'
 
     for key in LP_PATH.keys():
+        logging.getLogger(__name__).info('Creating configuration folder structure')
         LP_PATH[key].mkdir(parents=True, exist_ok=True)
 
 def update_hwcfg_section(name, updated_info):
@@ -46,7 +51,6 @@ def update_hwcfg_section(name, updated_info):
     config[name] = updated_info
     with open(LP_FILE['hwcfg'], 'w') as file:
         config.write(file)
-
 
 def get_hwcfg_section(name):
     config = ConfigParser()

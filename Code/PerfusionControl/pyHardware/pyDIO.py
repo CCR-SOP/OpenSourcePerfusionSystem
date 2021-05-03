@@ -6,8 +6,7 @@ and under the public domain.
 
 Author: John Kakareka
 """
-
-import time
+import logging
 import threading
 from dataclasses import dataclass
 
@@ -28,8 +27,13 @@ class DIOActiveLowState(DIOState):
     INACTIVE = DIOState.HIGH
 
 
+class DIODeviceException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
+
+
 class DIO:
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         self._port = None
         self._line = None
         self._active_high = True
@@ -41,6 +45,13 @@ class DIO:
         # create a dummy timer so is_alive function is always valid
         self.__timer = threading.Timer(0, self.activate)
         # timer is still considered alive when the callback is called
+
+    @property
+    def devname(self):
+        return f"port{self._port}/line{self._line}"
+
+    def is_open(self):
+        return self._port is not None and self._line is not None
 
     def open(self, port, line, active_high=True, read_only=True):
         self._port = port
@@ -57,7 +68,7 @@ class DIO:
 
     def _activate(self):
         self.__value = self._active_state.ACTIVE
-        print(f"{self.__value}")
+        self._logger.debug(f"Activating DIO with value of {self.__value}")
 
     def deactivate(self):
         if not self.__timer.is_alive() and not self._read_only:
@@ -65,7 +76,7 @@ class DIO:
 
     def _deactivate(self):
         self.__value = self._active_state.INACTIVE
-        print(f"{self.__value}")
+        self._logger.debug(f"Deactivating DIO with value of {self.__value}")
 
     def toggle(self):
         if not self.__timer.is_alive() and not self._read_only:
@@ -79,10 +90,11 @@ class DIO:
 
     def pulse(self, milliseconds):
         if not self._read_only:
-            # pulse starts immediately
-            self._toggle()
-            self.__timer = threading.Timer(milliseconds/1000.0, self._toggle)
-            self.__timer.start()
+            if self.is_open():
+                # pulse starts immediately
+                self._toggle()
+                self.__timer = threading.Timer(milliseconds/1000.0, self._toggle)
+                self.__timer.start()
 
     @property
     def value(self):

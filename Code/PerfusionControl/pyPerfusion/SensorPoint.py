@@ -1,14 +1,17 @@
-from pyPerfusion.SensorStream import SensorStream
-import numpy as np
-from os import SEEK_SET
+import logging
 from time import perf_counter
 import struct
+
+import numpy as np
+
+from pyPerfusion.SensorStream import SensorStream
 
 DATA_VERSION = 2
 
 
 class SensorPoint(SensorStream):
     def __init__(self, name, unit_str, hw):
+        self._logger = logging.getLogger(__name__)
         super().__init__(name, unit_str, hw)
         self._samples_per_ts = 1
         self._bytes_per_ts = 4

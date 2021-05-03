@@ -1,16 +1,19 @@
 import pathlib
 import datetime
 from threading import Thread, Event
-from os import SEEK_END
+import logging
 import time
 
 import numpy as np
+
 
 DATA_VERSION = 1
 
 
 class SensorStream:
     def __init__(self, name, unit_str, hw, valid_range=None):
+        self._logger = logging.getLogger(__name__)
+        self._logger.info(f'Creating SensorStream object {name}')
         self.__thread = None
         self._unit_str = unit_str
         self._valid_range = valid_range
@@ -45,14 +48,25 @@ class SensorStream:
         return self._valid_range
 
     def run(self):
-        # JWK, need better wait timeout
-        while not self.__evt_halt.wait(self.hw.period_sampling_ms / 1000.0 / 10.0):
-            data_buf, t = self.hw.get_data(self._ch_id)
-            if data_buf is not None and self._fid_write is not None:
-                buf_len = len(data_buf)
-                self._write_to_file(data_buf, t)
-                self._last_idx += buf_len
-                self._fid_write.flush()
+        next_t = time.time()
+        offset = 0
+        while not self.__evt_halt.is_set():
+            next_t += offset + self.hw.period_sampling_ms / 1000.0
+            delay = next_t - time.time()
+            if delay > 0:
+                time.sleep(delay)
+                offset = 0
+            else:
+                offset = -delay
+            self._get_data_and_write_to_file()
+
+    def _get_data_and_write_to_file(self):
+        data_buf, t = self.hw.get_data(self._ch_id)
+        if data_buf is not None and self._fid_write is not None:
+            buf_len = len(data_buf)
+            self._write_to_file(data_buf, t)
+            self._last_idx += buf_len
+            self._fid_write.flush()
 
     def _write_to_file(self, data_buf, t):
         data_buf.tofile(self._fid_write)
@@ -63,7 +77,7 @@ class SensorStream:
         return _fid, data
 
     def _open_write(self):
-        print(f'opening {self.full_path}')
+        self._logger.info(f'opening {self.full_path}')
         self._fid_write = open(self.full_path, 'w+b')
 
     def start(self):
@@ -94,6 +108,7 @@ class SensorStream:
 
         self.print_stream_info()
         self.__thread = Thread(target=self.run)
+        self.__thread.name = f'SensorStream ({self.name})'
 
     def stop(self):
         self.__evt_halt.set()
@@ -119,7 +134,7 @@ class SensorStream:
     def print_stream_info(self):
         hdr_str = self._get_stream_info()
         filename = self.full_path.with_suffix('.txt')
-        print(f"printing stream info to {filename}")
+        self._logger.debug(f"printing stream info to {filename}")
         fid = open(filename, 'wt')
         fid.write(hdr_str)
         fid.close()
@@ -149,6 +164,13 @@ class SensorStream:
     def get_current(self):
         _fid, data = self._open_read()
         val = data[-1]
+        _fid.close()
+
+        return val
+
+    def get_latest(self, readings):
+        _fid, data = self._open_read()
+        val = data[-readings:]
         _fid.close()
 
         return val

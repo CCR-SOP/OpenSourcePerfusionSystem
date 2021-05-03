@@ -1,7 +1,24 @@
+# -*- coding: utf-8 -*-
+"""Base class for accessing analog inputs
+
+
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
+"""
 from threading import Thread, Lock, Event
-from time import perf_counter, sleep
+from time import perf_counter, sleep, time
 from queue import Queue, Empty
+import logging
+from datetime import datetime
+
 import numpy as np
+
+
+class AIDeviceException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
 class AI:
@@ -21,6 +38,7 @@ class AI:
     """
 
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
+        self._logger = logging.getLogger(__name__)
         self.__thread = None
         self._event_halt = Event()
         self.__lock_buf = Lock()
@@ -40,6 +58,16 @@ class AI:
 
         self._calibration = {}
 
+
+    @property
+    def devname(self):
+        lines = self.get_ids()
+        if len(lines) == 0:
+            dev_str = 'ai'
+        else:
+            dev_str = ','.join([f'ai{line}' for line in lines])
+        return dev_str
+
     @property
     def period_sampling_ms(self):
         return self._period_sampling_ms
@@ -51,6 +79,10 @@ class AI:
     @property
     def buf_len(self):
         return self.samples_per_read
+
+    def is_open(self):
+        # TODO is there a better check, e.g. were any channels added?
+        return True
 
     def set_demo_properties(self, ch, demo_amp, demo_offset):
         self._demo_amp[ch] = demo_amp
@@ -71,10 +103,11 @@ class AI:
 
     def add_channel(self, channel_id):
         if channel_id in self._queue_buffer.keys():
-            print(f'{channel_id} already open')
+            self._logger.warning(f'{channel_id} already open')
         else:
             self.stop()
             with self.__lock_buf:
+                self._logger.debug(f'Adding channel {channel_id}')
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
                 self._demo_amp[channel_id] = 0
                 self._demo_offset[channel_id] = 0
@@ -82,23 +115,26 @@ class AI:
                     pass
                 else:
                     self._calibration[channel_id] = []
-            self.reopen()
-            self.start()
+            try:
+                self.reopen()
+                if self.is_open():
+                    self.start()
+            except AIDeviceException as e:
+                self._logger.error(f'Failed to open hardware for channel {channel_id}. {str(e)}')
+                self.remove_channel(channel_id)
+                raise
 
     def remove_channel(self, channel_id):
-        print(f'keys are {self._queue_buffer.keys()}')
         if channel_id in self._queue_buffer.keys():
             self.stop()
             with self.__lock_buf:
                 del self._queue_buffer[channel_id]
             print(f'keys after deletion are {self._queue_buffer.keys()}')
-            #    if len(self._queue_buffer.keys()):
-            #        self.reopen()
-            #        self.start()
-            #    else:
-            #        pass
-            self.reopen()
-            self.start()
+            if len(self._queue_buffer.keys()):
+                self.reopen()
+                self.start()
+            else:
+                pass
 
     def open(self):
         pass
@@ -115,6 +151,7 @@ class AI:
         self._event_halt.clear()
         self.__epoch = perf_counter()
         self.__thread = Thread(target=self.run)
+        self.__thread.name = f'pyAI {self.devname}'
         self.__thread.start()
 
     def stop(self):
@@ -124,9 +161,17 @@ class AI:
             self.__thread = None
 
     def run(self):
-        while not self._event_halt.wait(self._read_period_ms / 1000.0):
-            with self.__lock_buf:
-                self._acq_samples()
+        next_t = time()
+        offset = 0
+        while not self._event_halt.is_set():
+            next_t += offset + self._read_period_ms / 1000.0
+            delay = next_t - time()
+            if delay > 0:
+                sleep(delay)
+                offset = 0
+            else:
+                offset = -delay
+            self._acq_samples()
 
     def get_data(self, ch_id):
         buf = None
@@ -136,7 +181,7 @@ class AI:
                 try:
                     buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
                 except Empty:
-                    pass
+                    self._logger.debug('buffer empty')
         return buf, t
 
     def _acq_samples(self):

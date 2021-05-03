@@ -1,8 +1,13 @@
 from pathlib import Path
 from os import SEEK_END
-import time
+import logging
 
 import numpy as np
+
+from pyPerfusion.utils import setup_stream_logger
+
+logger = logging.getLogger('test_ai')
+setup_stream_logger(logger, logging.DEBUG)
 
 base_dir = Path('__data__')
 test_file = base_dir / Path('mmap_np_perf.dat')
@@ -12,7 +17,7 @@ LAST_NUM = 0
 
 
 def create_dummy_file():
-    print('Creating dummy file')
+    logger.debug('Creating dummy file')
     _fid = open(test_file, 'wb')
     write_data(_fid, 0)
     _fid.close()
@@ -53,10 +58,10 @@ if __name__ == '__main__':
     for i in range(1, 100):
         fid_read, mm = open_read()
         mm_len = get_file_size(fid_read)
-        print(f'file size is {mm_len}')
+        logger.debug(f'file size is {mm_len}')
         stride = int(mm_len / 1000)
         data = get_data(mm, stride)
-        print(f'max is {max(data)}')
+        logger.debug(f'max is {max(data)}')
         write_data(fid_write, LAST_NUM)
         fid_read.close()
 

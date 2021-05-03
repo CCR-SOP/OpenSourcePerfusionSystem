@@ -1,17 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
+"""Panel class for testing and configuring AIO
 
-@author: John Kakareka
 
-Panel class for testing and configuring AIO
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
 """
+import logging
+
 import wx
 
+from pyHardware.pyAI import AIDeviceException
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_plotting import PanelPlotting
 from pyPerfusion.SensorStream import SensorStream
-
+import pyPerfusion.utils as utils
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
@@ -19,6 +25,7 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 class PanelAI(wx.Panel):
     def __init__(self, parent, sensor, name):
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
@@ -62,6 +69,8 @@ class PanelAI(wx.Panel):
 
 class PanelAI_Config(wx.Panel):
     def __init__(self, parent, sensor, name, sizer_name, plot):
+        self._logger = logging.getLogger(__name__)
+        self._logger.debug(f'Creating PanelAI_Config for sensor {name}')
         self.parent = parent
         self._sensor = sensor
         self._name = name
@@ -155,12 +164,22 @@ class PanelAI_Config(wx.Panel):
         dev = self.choice_dev.GetStringSelection()
         line = self.choice_line.GetStringSelection()
         if state:
-            self._sensor.hw.add_channel(line)
-            self._sensor.set_ch_id(line)
-            self.btn_open.SetLabel('Close')
-            self._sensor.hw.open(dev=dev)
-            self._sensor.hw.start()
+            self._logger.debug(f'Opening device {dev}, {line}')
+            try:
+                self._sensor.hw.add_channel(line)
+                self._sensor.set_ch_id(line)
+                self._sensor.hw.open(dev=dev)
+            except AIDeviceException as e:
+                dlg = wx.MessageDialog(parent=self, message=str(e), caption='AI Device Error', style=wx.OK)
+                dlg.ShowModal()
+            if self._sensor.hw.is_open():
+                self.btn_open.SetLabel('Close')
+                self._sensor.hw.start()
+            else:
+                self._sensor.hw.remove_channel(line)
+                self.btn_open.SetValue(0)
         else:
+            self._logger.debug(f'Closing device {dev}, {line}')
             self._sensor.hw.remove_channel(line)
             self.btn_open.SetLabel('Open')
 
@@ -233,5 +252,7 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
     app = MyTestApp(0)
     app.MainLoop()

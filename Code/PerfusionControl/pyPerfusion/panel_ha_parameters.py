@@ -5,6 +5,11 @@
 
 Panel class for general settings for Hepatic Artery branch
 """
+import logging
+import pyPerfusion.utils as utils
+
+import pyPerfusion.PerfusionConfig as LP_CFG
+
 import wx
 
 
@@ -16,6 +21,7 @@ class DummyPerfusion:
 
 class PanelHAParameters(wx.Panel):
     def __init__(self, parent, perfusion):
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.perfusion = perfusion
         wx.Panel.__init__(self, parent, -1)
@@ -73,5 +79,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_AO')
     app = MyTestApp(0)
     app.MainLoop()
