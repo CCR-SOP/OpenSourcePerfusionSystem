@@ -34,10 +34,10 @@ class PanelReadout(wx.Panel):
     def __do_layout(self):
 
         font = self.label_name.GetFont()
-        font.SetPointSize(16)
+        font.SetPointSize(10)
         self.label_name.SetFont(font)
         font = self.label_value.GetFont()
-        font.SetPointSize(20)
+        font.SetPointSize(15)
         self.label_value.SetFont(font)
 
         self.sizer.Add(self.label_name, wx.SizerFlags().CenterHorizontal())
@@ -52,7 +52,7 @@ class PanelReadout(wx.Panel):
 
         self.timer_update = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
-        self.timer_update.Start(1000, wx.TIMER_CONTINUOUS)
+        self.timer_update.Start(3000, wx.TIMER_CONTINUOUS)
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_update.GetId():

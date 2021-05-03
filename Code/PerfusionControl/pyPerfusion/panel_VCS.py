@@ -192,11 +192,18 @@ class TestFrame(wx.Frame):
             sizer.Add(PanelVCS(self, valve, name=key), 1, wx.EXPAND, border=2)
 
         self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
-        self._chemical_sensors = [SensorStream('Oxygen', 'mmHg', self.acq),
-                                  SensorStream('Carbon Dioxide', 'mmHg', self.acq),
-                                  SensorStream('pH', '', self.acq)]
+        self._chemical_sensors = [SensorStream('O2 (HA)', 'mmHg', self.acq),
+                                  SensorStream('CO2 (HA)', 'mmHg', self.acq),
+                                  SensorStream('pH (HA)', '', self.acq),
+                                  SensorStream('O2 (PV)', 'mmHg', self.acq),
+                                  SensorStream('CO2 (PV)', 'mmHg', self.acq),
+                                  SensorStream('pH (PV)', '', self.acq),
+                                  SensorStream('O2 (IVC)', 'mmHg', self.acq),
+                                  SensorStream('CO2 Dioxide (IVC)', 'mmHg', self.acq),
+                                  SensorStream('pH (IVC)', '', self.acq)
+                                  ]
         for sensor in self._chemical_sensors:
-            sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
+            PanelAI(self, sensor, name=sensor.name)  # Call panel class to create sensors, but do not add graphs to the UI
 
         sizer.Add(PanelCoordination(self, self._chemical_sensors, name='Valve Coordination'), 1, wx.EXPAND, border=2)
 
