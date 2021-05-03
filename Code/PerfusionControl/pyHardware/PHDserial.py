@@ -44,7 +44,6 @@ class PHDserial(USBSerial):
         self._manufacturers = {}
         self._syringes = {}
         self._response = ''
-        self.reset = True
         self.cooldown = False
 
         self.name = name
