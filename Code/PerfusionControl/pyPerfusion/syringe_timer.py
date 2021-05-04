@@ -41,7 +41,7 @@ class SyringeTimer:
         self.__thread_timer_injection = Thread(target=self.OnTimer)
         self.__thread_timer_injection.start()
 
-    def stop_injection_timer(self):  # Work on this
+    def stop_injection_timer(self):
         if self.__thread_timer_injection and self.__thread_timer_injection.is_alive():
             self.__evt_halt_injection.set()
             self.__thread_timer_injection.join(2.0)
@@ -53,11 +53,11 @@ class SyringeTimer:
             self.__thread_timer_reset = None
 
     def OnTimer(self):
-        while not self.__evt_halt_injection.wait(30.0):
+        while not self.__evt_halt_injection.wait(15.0):
             self.check_for_injection()
 
     def OnResetTimer(self):
-        while not self.__evt_halt_reset.wait(70.0):
+        while not self.__evt_halt_reset.wait(40.0):
             self.syringe.cooldown = False
             self.__evt_halt_reset.set()
             self.__thread_timer_reset = None
@@ -133,7 +133,7 @@ class SyringeTimer:
         t = time.perf_counter()
         while self.wait:
             x = time.perf_counter()
-            if x - t > (volume / 25):
+            if ((x - t) - 4) > (volume / 25):
                 self.wait = False
         syringe.reset_target_volume()
         if self.basal:
