@@ -23,8 +23,11 @@ import matplotlib.transforms as mtransforms
 
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
+from pyHardware.PHDserial import PHDserial
+
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyHardware.PHDserial import PHDserial
 
 
 class PanelPlotting(wx.Panel):
@@ -115,7 +118,7 @@ class PanelPlotting(wx.Panel):
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
                 except ValueError:
                     pass
-            elif type(sensor) is SensorPoint:
+            elif type(sensor) is SensorPoint or PHDserial:
                 color = self.__colors[sensor.name]
                 del self.__line[sensor.name]
                 self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
@@ -126,7 +129,7 @@ class PanelPlotting(wx.Panel):
             self.plot()
 
     def add_sensor(self, sensor, color='r'):
-        assert isinstance(sensor, SensorStream)
+        assert isinstance(sensor, (SensorStream, PHDserial))
         self.__sensors.append(sensor)
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
@@ -141,7 +144,7 @@ class PanelPlotting(wx.Panel):
                 self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
                 self._valid_range = rng
             self._configure_plot(sensor)
-        elif type(sensor) is SensorPoint:
+        elif type(sensor) is SensorPoint or PHDserial:
             self.__line[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color=color, label=sensor.name)
             self.__colors[sensor.name] = color
 

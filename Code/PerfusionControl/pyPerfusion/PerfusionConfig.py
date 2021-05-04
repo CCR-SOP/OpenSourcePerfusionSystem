@@ -87,6 +87,15 @@ def open_syringe_info():
         volumes[key] = val.split(', ')
     return config['Codes'], volumes
 
+def get_COMs_bauds():
+    config = ConfigParser()
+    config.read(LP_FILE['syringe'])
+    COMs_bauds = {}
+    for key, val in config['Syringes'].items():
+        COMs_bauds[key] = val.split(', ')
+    return COMs_bauds
+
+
 def update_stream_folder(base=''):
     if not base:
         base = datetime.now().strftime('%Y-%m-%d')
