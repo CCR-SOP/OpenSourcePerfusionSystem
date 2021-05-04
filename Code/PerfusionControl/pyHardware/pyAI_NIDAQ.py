@@ -82,7 +82,7 @@ class NIDAQ_AI(pyAI.AI):
         task = Task()
         try:
             if self._dev:
-                self._logger.debug(f'Creating new pyDAQmx AI Voltage Channel for {self.devname}')
+                #self._logger.debug(f'Creating new pyDAQmx AI Voltage Channel for {self.devname}')
 
                 volt_min = self._volts_offset - 0.5 * self._volts_p2p
                 volt_max = self._volts_offset + 0.5 * self._volts_p2p
