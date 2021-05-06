@@ -106,7 +106,6 @@ class AI:
         else:
             self.stop()
             with self.__lock_buf:
-                self._logger.debug(f'Adding channel {channel_id}')
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
                 self._demo_amp[channel_id] = 0
                 self._demo_offset[channel_id] = 0
@@ -114,14 +113,6 @@ class AI:
                     pass
                 else:
                     self._calibration[channel_id] = []
-            try:
-                self.reopen()
-                if self.is_open():
-                    self.start()
-            except AIDeviceException as e:
-                self._logger.error(f'Failed to open hardware for channel {channel_id}. {str(e)}')
-                self.remove_channel(channel_id)
-                raise
 
     def remove_channel(self, channel_id):
         if channel_id in self._queue_buffer.keys():
@@ -129,15 +120,11 @@ class AI:
             with self.__lock_buf:
                 del self._queue_buffer[channel_id]
             if len(self._queue_buffer.keys()):
-                self.reopen()
                 self.start()
             else:
                 pass
 
     def open(self):
-        pass
-
-    def reopen(self):
         pass
 
     def close(self):
