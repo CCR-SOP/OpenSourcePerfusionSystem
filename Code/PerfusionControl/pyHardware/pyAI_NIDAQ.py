@@ -39,7 +39,7 @@ class NIDAQ_AI(pyAI.AI):
         # to be consistent with actual hardware naming convention
         lines = self.get_ids()
         if len(lines) == 0:
-            dev_str = 'ai'
+            dev_str = f'{self._dev}/ai'
         else:
             dev_str = ','.join([f'{self._dev}/ai{line}' for line in lines])
         return dev_str
@@ -98,7 +98,9 @@ class NIDAQ_AI(pyAI.AI):
             self.__task = Task()
             super().open()
         else:
-            msg = f'Device "{dev} is not a valid device name'
+            msg = f'Device "{dev}" is not a valid device name on this system. ' \
+                  f'Please check that the hardware had been plugged in and the correct' \
+                  f'device name has been used'
             self._logger.error(msg)
             raise pyAI.AIDeviceException(msg)
 
