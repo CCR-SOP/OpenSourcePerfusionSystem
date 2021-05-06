@@ -39,7 +39,9 @@ class NIDAQ_AI(pyAI.AI):
         return f'{self._dev}/{base}'
 
     def is_open(self):
-        # lines should be added and there should be a valid device name
+        # if channels were added and _dev is valid, then we have
+        # confirmed that the device is present and the configuration
+        # is valid
         return self._dev and super().is_open()
 
     def _convert_to_units(self, buffer, channel):
@@ -80,7 +82,6 @@ class NIDAQ_AI(pyAI.AI):
             PyDAQmx.DAQmxGetSysDevNames(dev_names, bytes_needed)
             return device in str(ctypes.string_at(dev_names))
 
-
     def open(self, dev=None):
         """ Open a pyAI_NIDAQ device
             dev: the name of a valid NI device
@@ -88,18 +89,21 @@ class NIDAQ_AI(pyAI.AI):
         if self._is_valid_device_name(dev):
             self._logger.debug(f'Opening device {dev}')
             self._dev = dev
+            self.__task = Task()
             super().open()
         else:
             msg = f'Device "{dev} is not a valid device name'
             self._logger.error(msg)
             raise pyAI.AIDeviceException(msg)
 
-    def reopen(self):
-        self._logger.debug(f'attempting to open NIDAQ device')
-        if self.__task:
-            self.close()
-
-        task = Task()
+    def add_channel(self, channel_id):
+        self._logger.debug(f'attempting to add channel {channel_id} to dev {self._dev}')
+        if channel_id in self.get_ids():
+            self._logger.warning(f'Channel {channel_id} already exists')
+            return
+        if not self.__task:
+            raise pyAI.AIDeviceException(f'Cannot add channel {channel_id}, device {self._dev} not yet opened')
+        cleanup = True
         try:
             if self._dev:
                 self._logger.debug(f'Creating new pyDAQmx AI Voltage Channel for {self.devname}')
@@ -130,11 +134,14 @@ class NIDAQ_AI(pyAI.AI):
             msg = f'Device "{self._dev}" is not a valid device ID'
             self._logger.error(msg)
             raise (pyAI.AIDeviceException(msg))
-        else:
-            self.__task = task
+        finally:
+            if cleanup:
+                self._logger.error(f'Could not create a hardware channel {channel_id} for device {self._dev}')
+                super().remove_channel(channel_id)
 
     def close(self):
         self.stop()
+        self.__task.ClearTask()
         self.__task = None
 
     def start(self):

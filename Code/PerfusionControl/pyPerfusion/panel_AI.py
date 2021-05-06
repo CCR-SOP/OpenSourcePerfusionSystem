@@ -166,9 +166,10 @@ class PanelAI_Config(wx.Panel):
         if state:
             self._logger.debug(f'Opening device {dev}, {line}')
             try:
+                self._sensor.hw.open(dev=dev)
                 self._sensor.hw.add_channel(line)
                 self._sensor.set_ch_id(line)
-                self._sensor.hw.open(dev=dev)
+
             except AIDeviceException as e:
                 dlg = wx.MessageDialog(parent=self, message=str(e), caption='AI Device Error', style=wx.OK)
                 dlg.ShowModal()
