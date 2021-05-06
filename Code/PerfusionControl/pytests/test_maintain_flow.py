@@ -10,6 +10,8 @@ import wx
 
 from simple_pid import PID
 
+from pyHardware.pyAI import AIDeviceException
+from pyHardware.pyAO import AODeviceException
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_plotting import PanelPlotting
@@ -28,13 +30,25 @@ class PanelTestMaintainFlow(wx.Panel):
         self.panel_pid = PanelPID(self)
         self.panel_pid.set_pid(self.pid)
 
-        self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
-        self._ai.add_channel(channel_id=3)
-        self._ai.open(dev='Dev1') # Hepatic Artery Flow Sensor
+        try:
+            self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
+            self._ai.open(dev='Dev1')  # Hepatic Artery Flow Sensor
+            self._ai.add_channel(channel_id=3)
+        except AIDeviceException as e:
+            dlg = wx.MessageDialog(parent=self, message=str(e), caption='AI Device Error', style=wx.OK)
+            dlg.ShowModal()
+            self._ai = None
+            raise e
 
-        self._ao = NIDAQ_AO()
-        self._ao.open(line=1, period_ms=100, dev='Dev3')  # Hepatic Artery BVP Pump
-        self._ao.set_dc(0)
+        try:
+            self._ao = NIDAQ_AO()
+            self._ao.open(line=1, period_ms=100, dev='Dev3')  # Hepatic Artery BVP Pump
+            self._ao.set_dc(0)
+        except AODeviceException as e:
+            dlg = wx.MessageDialog(parent=self, message=str(e), caption='AO Device Error', style=wx.OK)
+            dlg.ShowModal()
+            self._ao = None
+            raise e
 
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
         self.panel_plot = PanelPlotting(self)
@@ -126,10 +140,14 @@ class TestFrame(wx.Frame):
 
 class MyTestApp(wx.App):
     def OnInit(self):
-        frame = TestFrame(None, wx.ID_ANY, "")
-        self.SetTopWindow(frame)
-        frame.Show()
-        return True
+        try:
+            frame = TestFrame(None, wx.ID_ANY, "")
+        except (AIDeviceException, AODeviceException) as e:
+            return False
+        else:
+            self.SetTopWindow(frame)
+            frame.Show()
+            return True
 
 
 if __name__ == "__main__":
