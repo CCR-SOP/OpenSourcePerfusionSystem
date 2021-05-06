@@ -7,6 +7,7 @@ Panel class for testing and configuring Valve Control System and associated Chem
 """
 import wx
 import logging
+import datetime
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
@@ -104,6 +105,9 @@ class PanelReadoutVCS(PanelReadout):
     def update_value(self):
         val = float(self._sensor.get_current())
         self.label_value.SetLabel(f'{round(val, 1):3}')
+        ct = datetime.datetime.now()
+        time = "{0:0=2d}".format(ct.hour) + ':' + "{0:0=2d}".format(ct.minute) + ':' + "{0:0=2d}".format(ct.second)
+        self.label_name.SetLabel(self._name + ' (As of ' + time + ')')
 
 class PanelCoordination(wx.Panel):
     def __init__(self, parent, sensors, readout_dict, name):
@@ -212,21 +216,21 @@ class PanelCoordination(wx.Panel):
         if 'Hepatic Artery' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Portal Vein' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 5000 #150000  # Time for PV perfusate to reach all sensors once PV valve is opened
+            self._clearance_time_ms = 150000  # Time for PV perfusate to reach all sensors once PV valve is opened
             self._readout_list = [self._readout_dict['PV Oxygen'], self._readout_dict['PV CO2'], self._readout_dict['PV pH']]
         elif 'Portal Vein' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Inferior Vena Cava' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 5000 #150000  # Time for IVC perfusate to reach all sensors once IVC valve is opened
+            self._clearance_time_ms = 150000  # Time for IVC perfusate to reach all sensors once IVC valve is opened
             self._readout_list = [self._readout_dict['IVC Oxygen'], self._readout_dict['IVC CO2'], self._readout_dict['IVC pH']]
         elif 'Inferior Vena Cava' in self._last_valve:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = 5000 #150000  # Time for HA perfusate to reach all sensors once HA valve is opened
+            self._clearance_time_ms = 150000  # Time for HA perfusate to reach all sensors once HA valve is opened
             self._readout_list = [self._readout_dict['HA Oxygen'], self._readout_dict['HA CO2'], self._readout_dict['HA pH']]
         else:
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
-            self._clearance_time_ms = 5000 #150000  # Time for HA perfusate to reach all sensors once HA valve is opened
+            self._clearance_time_ms = 150000  # Time for HA perfusate to reach all sensors once HA valve is opened
             self._readout_list = [self._readout_dict['HA Oxygen'], self._readout_dict['HA CO2'], self._readout_dict['HA pH']]
         chemical_valves[self._valve_to_open]._dio.activate()
         chemical_valves[self._valve_to_open].btn_activate.SetLabel('Deactivate')
