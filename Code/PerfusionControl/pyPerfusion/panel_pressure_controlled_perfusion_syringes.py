@@ -163,6 +163,10 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        for syringe in self._syringes:
+            infuse_rate, ml_min_rate, ml_volume = syringe.syringe.get_stream_info()
+            syringe.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
+            syringe.syringe.stop_stream()
         for sensor in self.pressure_sensors.keys():
             sensor.stop()
         self._IVC_pressure.stop()
