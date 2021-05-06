@@ -120,6 +120,8 @@ class SyringeTimer:
                     print(f'Flow is {flow:.2f} , which is too low; however, epoprostenol injections are currently frozen')
             else:
                 print('Flow does not need to be modulated by epoprostenol')
+        else:
+            print('Perfusion-condition informed syringe injections are not supported for this syringe')
 
     def injection(self, syringe, name, parameter_name, parameter, volume, direction):
         print(f'{parameter_name} is {parameter:.2f} , which is too {direction}; injecting {volume:.2f} mL of {name}')
