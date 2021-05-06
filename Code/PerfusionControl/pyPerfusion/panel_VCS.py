@@ -109,6 +109,30 @@ class PanelReadoutVCS(PanelReadout):
         time = "{0:0=2d}".format(ct.hour) + ':' + "{0:0=2d}".format(ct.minute) + ':' + "{0:0=2d}".format(ct.second)
         self.label_name.SetLabel(self._name + ' (As of ' + time + ')')
 
+class PanelReadoutOxygenUtilization(PanelReadout):
+    def __init__(self, parent, sensors, name):
+        self._logger = logging.getLogger(__name__)
+        wx.Panel.__init__(self, parent, -1)
+        self._sensors = sensors
+        self._name = name
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_value = wx.BoxSizer(wx.HORIZONTAL)
+        self.label_name = wx.StaticText(self, label=self._name)
+        self.label_value = wx.StaticText(self, label='000')
+        self.label_units = wx.StaticText(self, label='%')
+
+        self._PanelReadout__do_layout()
+
+    def update_value(self):
+        if float(self._sensors[0].label_value.GetLabel()) != 0:
+            val = (float(self._sensors[0].label_value.GetLabel()) - float(self._sensors[1].label_value.GetLabel())) / float(
+                self._sensors[0].label_value.GetLabel())
+            val = val * 100
+            self.label_value.SetLabel(f'{round(val, 3):3}')
+        else:
+            return
+
 class PanelCoordination(wx.Panel):
     def __init__(self, parent, sensors, readout_dict, name):
         self.parent = parent
@@ -266,7 +290,7 @@ class TestFrame(wx.Frame):
         for sensor in self._chemical_sensors:
             sizer.Add(PanelAIVCS(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
 
-        self.sizer_readout = wx.GridSizer(cols=3)
+        self.sizer_readout = wx.GridSizer(cols=2)
         readout_dict = {'HA Oxygen': PanelReadoutVCS(self, self._chemical_sensors[0], 'HA Oxygen'),
                         'PV Oxygen': PanelReadoutVCS(self, self._chemical_sensors[0], 'PV Oxygen'),
                         'IVC Oxygen': PanelReadoutVCS(self, self._chemical_sensors[0], 'IVC Oxygen'),
@@ -280,6 +304,8 @@ class TestFrame(wx.Frame):
         for key, readout in readout_dict.items():
             readout.timer_update.Stop()
             self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
+        panel_O2_util = PanelReadoutOxygenUtilization(self, [readout_dict['HA Oxygen'], readout_dict['IVC Oxygen']], 'Oxygen Utilization')
+        self.sizer_readout.Add(panel_O2_util, 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(self.sizer_readout, 1, wx.EXPAND, border=2)
 
         sizer.Add(PanelCoordination(self, self._chemical_sensors, readout_dict, name='Valve Coordination'), 1, wx.EXPAND, border=2)
