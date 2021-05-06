@@ -32,7 +32,7 @@ class PanelTestPressure(wx.Panel):
         self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=200, initial=65, inc=0.1)
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (mmHg)')
-        self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=2, inc=0.01)
+        self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=2, inc=0.01)
 
         self.label_increment = wx.StaticText(self, label='Voltage Increment')
         self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0.05, inc=0.001)
