@@ -34,6 +34,7 @@ class PanelTestMaintainFlow(wx.Panel):
             self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
             self._ai.open(dev='Dev1')  # Hepatic Artery Flow Sensor
             self._ai.add_channel(channel_id=3)
+            self._ai.start()
         except AIDeviceException as e:
             dlg = wx.MessageDialog(parent=self, message=str(e), caption='AI Device Error', style=wx.OK)
             dlg.ShowModal()

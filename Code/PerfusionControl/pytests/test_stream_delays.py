@@ -23,7 +23,7 @@ from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-dev = 'Dev2'
+dev = 'Dev4'
 
 logger = logging.getLogger()
 LP_CFG.set_base(basepath='~/Documents/LPTEST')
@@ -37,9 +37,9 @@ acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 sensor = SensorStream('Analog Input 1', 'Volts', acq)
 logger.debug('opening sensor')
 sensor.open(LP_CFG.LP_PATH['stream'])
+acq.open(dev=dev)
 acq.add_channel('0')
 sensor.set_ch_id('0')
-acq.open(dev=dev)
 logger.debug('starting acquisition')
 sensor.start()
 acq.start()

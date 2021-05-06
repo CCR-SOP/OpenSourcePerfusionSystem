@@ -10,7 +10,10 @@ import pytest
 import os
 
 import pyHardware.pyAI_NIDAQ as pyAI
+from pyHardware.pyAI import AIDeviceException
 
+
+DEVICE_UNDER_TEST = 'Dev4'
 
 @pytest.fixture
 def delete_file(filename):
@@ -44,35 +47,48 @@ def test_default_devname(ai):
     assert ai.devname == 'None/ai'
 
 
+def test_devname(ai):
+    ai.open('Dev4')
+    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai'
+
+
 def test_devname_1ch(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
-    assert ai.devname == 'None/ai1'
+    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1'
 
 
 def test_devname_2ch_consecutive(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
     ai.add_channel('2')
-    assert ai.devname == 'None/ai1,ai2'
+    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1,{DEVICE_UNDER_TEST}/ai2'
+
 
 def test_devname_2ch_nonconsecutive(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
     ai.add_channel('3')
-    assert ai.devname == 'None/ai1,ai3'
+    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1,{DEVICE_UNDER_TEST}/ai3'
+
 
 def test_is_not_open(ai):
     assert not ai.is_open()
 
+
 def test_isopen_channel_no_call_to_open(ai):
-    ai.add_channel('1')
-    assert not ai.is_open()
+    with pytest.raises(AIDeviceException):
+        ai.add_channel('1')
+
 
 def test_isopen_call_to_open(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
-    ai.open('Dev2')
     assert ai.is_open()
 
+
 def test_isopen_remove(ai):
-    ai.open('Dev2')
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
     assert ai.is_open()
     ai.remove_channel('1')
