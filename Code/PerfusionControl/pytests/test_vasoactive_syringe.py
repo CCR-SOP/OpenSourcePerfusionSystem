@@ -50,7 +50,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.btn_start_basal = wx.ToggleButton(self, label='Start Basal Infusion')
         self.btn_start_timer = wx.ToggleButton(self, label='Start Bolus Injections')
 
-        self.label_1TB = wx.StaticText(self, label='Bolus Volume')
         self.spin_1TB_volume = wx.SpinCtrl(self, min=1, max=100000)
         self.spin_1TB_volume.SetValue(1)
         self.choice_1TB_unit = wx.Choice(self, choices=['ul', 'ml'])
@@ -100,9 +99,9 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_rate, flags)
-        sizer.AddSpacer(20)
+        sizer.AddSpacer(10)
         sizer.Add(self.spin_rate, flags)
-        sizer.AddSpacer(20)
+        sizer.AddSpacer(10)
         sizer.Add(self.choice_rate, flags)
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
@@ -114,9 +113,9 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_flow, flags)
-        sizer.AddSpacer(20)
+        sizer.AddSpacer(10)
         sizer.Add(self.btn_direction, flags)
-        sizer.AddSpacer(20)
+        sizer.AddSpacer(10)
         sizer.Add(self.spin_flow, flags)
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
@@ -135,8 +134,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label_1TB, flags)
-        sizer.AddSpacer(10)
         sizer.Add(self.spin_1TB_volume, flags)
         sizer.AddSpacer(10)
         sizer.Add(self.choice_1TB_unit, flags)
