@@ -22,26 +22,11 @@ class AIDeviceException(Exception):
 
 
 class AI:
-    """
-    Base class for streaming data from sensors and saving to file
-    ...
-    Attributes
-    ----------
-    _period_sampling_ms : int
-        sampling period, in milliseconds, for all sensors
-    Methods
-    -------
-    start()
-        starts the acquisition of sensor data
-    halt()
-        halts the acquisition of  sensor data
-    """
-
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
         self._logger = logging.getLogger(__name__)
         self.__thread = None
         self._event_halt = Event()
-        self.__lock_buf = Lock()
+        self._lock_buf = Lock()
         self._period_sampling_ms = period_sample_ms
         self._demo_amp = {}
         self._demo_offset = {}
@@ -98,31 +83,34 @@ class AI:
         return len(self._queue_buffer) > 0
 
     def get_ids(self):
-        return sorted(self._queue_buffer.keys())
+        with self._lock_buf:
+            buffer_keys = sorted(self._queue_buffer.keys())
+        # self._logger.debug(f'buffer keys are {buffer_keys}')
+        return buffer_keys
 
     def add_channel(self, channel_id):
-        if channel_id in self._queue_buffer.keys():
+        with self._lock_buf:
+            buffer_keys = self._queue_buffer.keys()
+
+        if channel_id in buffer_keys:
             self._logger.warning(f'{channel_id} already open')
         else:
+            self._logger.debug(f'adding channel {channel_id}')
             self.stop()
-            with self.__lock_buf:
+            with self._lock_buf:
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
                 self._demo_amp[channel_id] = 0
                 self._demo_offset[channel_id] = 0
-                if channel_id in self._calibration.keys():  # If a calibration has already been performed for this channel, retain it
-                    pass
-                else:
+                # If a calibration has already been performed for this channel, retain it
+                if channel_id not in self._calibration.keys():
                     self._calibration[channel_id] = []
 
     def remove_channel(self, channel_id):
-        if channel_id in self._queue_buffer.keys():
-            self.stop()
-            with self.__lock_buf:
+        with self._lock_buf:
+            if channel_id in self._queue_buffer.keys():
+                self._logger.debug(f'removing channel {channel_id}')
+                self.stop()
                 del self._queue_buffer[channel_id]
-            if len(self._queue_buffer.keys()):
-                self.start()
-            else:
-                pass
 
     def open(self):
         pass
@@ -166,17 +154,18 @@ class AI:
                 try:
                     buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
                 except Empty:
-                    self._logger.debug('buffer empty')
+                    self._logger.debug(f'buffer empty for channel {ch_id}')
         return buf, t
 
     def _acq_samples(self):
-        sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
-        sleep(sleep_time)
-        buffer_t = perf_counter()
-        for ch in self._queue_buffer.keys():
-            val = self.data_type(np.random.random_sample() * self._demo_amp[ch] + self._demo_offset[ch])
-            buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
-            self._queue_buffer[ch].put((buffer, buffer_t))
+        with self._lock_buf:
+            sleep_time = self._read_period_ms / self._period_sampling_ms / 1000.0
+            sleep(sleep_time)
+            buffer_t = perf_counter()
+            for ch in self._queue_buffer.keys():
+                val = self.data_type(np.random.random_sample() * self._demo_amp[ch] + self._demo_offset[ch])
+                buffer = np.ones(self.samples_per_read, dtype=self.data_type) * val
+                self._queue_buffer[ch].put((buffer, buffer_t))
 
     def _convert_to_units(self, buffer, channel):
         data = np.zeros_like(buffer)
