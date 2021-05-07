@@ -61,8 +61,6 @@ def get_hwcfg_section(name):
     config.read(LP_FILE['hwcfg'])
     if config.has_section(name):
         section = config[name]
-    else:
-        section = {}
     return section
 
 def open_receiver_info():
@@ -99,14 +97,13 @@ def open_syringe_info():
         volumes[key] = val.split(', ')
     return config['Codes'], volumes
 
-def open_receiver_info():
+def get_COMs_bauds():
     config = ConfigParser()
-    config.read(LP_FILE['receivers'])
-    receiver_info = {}
-    for key, val in config['Dexcom Receivers'].items():
-        receiver_info[key] = val
-    return receiver_info
-
+    config.read(LP_FILE['syringe'])
+    COMs_bauds = {}
+    for key, val in config['Syringes'].items():
+        COMs_bauds[key] = val.split(', ')
+    return COMs_bauds
 
 def update_stream_folder(base=''):
     if not base:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Allen Luna
-Test app for initiating syringe injections based on pressure/flow conditions
+Test app for adjusting pump speeds to maintain desired perfusion pressures
 """
 import wx
 
@@ -11,6 +11,8 @@ from pyPerfusion.panel_AI import PanelAI
 from pyPerfusion.panel_plotting import PanelPlotting
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pytests.test_vasoactive_syringe import PanelTestVasoactiveSyringe
+from pyPerfusion.syringe_timer import SyringeTimer
 
 class PanelTestPressure(wx.Panel):
     def __init__(self, parent, sensor, name, dev, line):
@@ -20,7 +22,6 @@ class PanelTestPressure(wx.Panel):
         self._dev = dev
         self._line = line
         self._ao = NIDAQ_AO()
-        self._inc = 0.025
 
         wx.Panel.__init__(self, parent, -1)
 
@@ -28,10 +29,10 @@ class PanelTestPressure(wx.Panel):
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.label_desired_output = wx.StaticText(self, label='Desired ' + self._name)
-        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=100, initial=65, inc=self._inc)
+        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=200, initial=65, inc=0.1)
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (mmHg)')
-        self.spin_tolerance = wx.SpinCtrl(self, min=0, max=100, initial=2)
+        self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=2, inc=0.01)
 
         self.label_increment = wx.StaticText(self, label='Voltage Increment')
         self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0.05, inc=0.001)
@@ -79,7 +80,7 @@ class PanelTestPressure(wx.Panel):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
             self._ao.open(period_ms=100, dev=self._dev, line=self._line)
-            self._ao.set_dc(0)
+            self._ao.set_dc(1)
             self.timer_pressure_adjust.Start(3000, wx.TIMER_CONTINUOUS)
             self.btn_stop.SetLabel('Stop')
         else:
@@ -99,8 +100,8 @@ class PanelTestPressure(wx.Panel):
         tol = float(self.spin_tolerance.GetValue())
         inc = float(self.spin_increment.GetValue())
         dev = abs(desired - pressure)
-        print(f'Pressure is {pressure:.3f}, desired is {desired:.3f}')
-        print(f'Deviation is {dev}, tol is {tol}')
+      #  print(f'Pressure is {pressure:.3f}, desired is {desired:.3f}')
+      #  print(f'Deviation is {dev}, tol is {tol}')
         if dev > tol:
             if pressure < desired:
                 new_val = self._ao._volts_offset + inc
@@ -111,7 +112,7 @@ class PanelTestPressure(wx.Panel):
                 if new_val < 0:
                     new_val = 0
             if "Hepatic Artery" in self._sensor.name:
-                self._ao.set_sine(new_val/10, new_val, Hz=1)
+                self._ao.set_sine(new_val/12, new_val, Hz=1)
             else:
                 self._ao.set_dc(new_val)
 
@@ -137,12 +138,35 @@ class TestFrame(wx.Frame):
 
         sizer.Add(PanelAI(self, self._IVC_pressure, name=self._IVC_pressure.name), 1, wx.ALL | wx.EXPAND, border=1)
 
+        heparin_methylprednisolone_injection = SyringeTimer('Heparin and Methylprednisolone', 'COM13', 9600, 0, 0, None)
+        tpn_bilesalts_injection = SyringeTimer('TPN and Bile Salts', 'COM10', 9600, 0, 0, None)
+        insulin_injection = SyringeTimer('Insulin', 'COM12', 9600, 0, 0, None)
+        unasyn_glucagon_injection = SyringeTimer('Unasyn (Glucagon)', 'COM6', 9600, 0, 0, None)
+        epoprostenol_injection = SyringeTimer('Epoprostenol', 'COM11', 9600, 0, 0, self.flow_sensors[1])
+        phenylephrine_injection = SyringeTimer('Phenylephrine', 'COM4', 9600, 0, 0, self.flow_sensors[1])
+
+        self._syringes = [heparin_methylprednisolone_injection, tpn_bilesalts_injection, insulin_injection, unasyn_glucagon_injection, epoprostenol_injection, phenylephrine_injection]
+        self.sizer_syringes = wx.GridSizer(cols=3)
+        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, None, 'Heparin and Methylprednisolone Syringe', heparin_methylprednisolone_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, None, 'TPN and Bile Salts Syringe', tpn_bilesalts_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, None, 'Insulin Syringe', insulin_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(self.sizer_syringes, 1, wx.EXPAND, border=2)
+        self.sizer_syringes = wx.GridSizer(cols=3)
+        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, None, 'Unasyn (Glucagon) Syringe', unasyn_glucagon_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, self.flow_sensors[1], 'Epoprostenol Syringe', epoprostenol_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, self.flow_sensors[1], 'Phenylephrine Syringe', phenylephrine_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(self.sizer_syringes, 1, wx.EXPAND, border=2)
+
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        for syringe in self._syringes:
+            infuse_rate, ml_min_rate, ml_volume = syringe.syringe.get_stream_info()
+            syringe.syringe.stop(1111, infuse_rate, ml_volume, ml_min_rate)
+            syringe.syringe.stop_stream()
         for sensor in self.pressure_sensors.keys():
             sensor.stop()
         self._IVC_pressure.stop()

@@ -151,7 +151,7 @@ class AI:
         self._event_halt.clear()
         self.__epoch = perf_counter()
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'pyAI {self._devname}'
+        self.__thread.name = f'pyAI {self.devname}'
         self.__thread.start()
 
     def stop(self):

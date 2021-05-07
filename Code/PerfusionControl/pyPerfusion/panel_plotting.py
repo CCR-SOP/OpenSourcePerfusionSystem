@@ -23,8 +23,10 @@ import matplotlib.transforms as mtransforms
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.DexcomPoint import DexcomPoint
 from pyPerfusion.SensorPoint import SensorPoint
+
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyHardware.PHDserial import PHDserial
 
 
 class PanelPlotting(wx.Panel):
@@ -34,6 +36,7 @@ class PanelPlotting(wx.Panel):
         self.__parent = parent
         self.__sensors = []
         self._with_readout = with_readout
+
         self.__plot_len = 200
         self._valid_range = None
         self._plot_frame_ms = 5_000
@@ -144,18 +147,17 @@ class PanelPlotting(wx.Panel):
                     if len(labels) >= 12:
                         self.axes.set_xlim(left=labels[-12].get_text(), right=data_time)
 
-            elif type(sensor) is SensorPoint:
-                    color = self.__colors[sensor.name]
-                    del self.__line[sensor.name]
-                    self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
-
+            elif type(sensor) is SensorPoint or PHDserial:
+                color = self.__colors[sensor.name]
+                del self.__line[sensor.name]
+                self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             self.plot()
 
     def add_sensor(self, sensor, color='r'):
-        assert isinstance(sensor, SensorStream)
+        assert isinstance(sensor, (SensorStream, PHDserial))
         self.__sensors.append(sensor)
         if type(sensor) is SensorStream or DexcomPoint:
             if type(sensor) is SensorStream:
@@ -173,7 +175,7 @@ class PanelPlotting(wx.Panel):
                 self._shaded['normal'] = self.axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
                 self._valid_range = rng
             self._configure_plot(sensor)
-        elif type(sensor) is SensorPoint:
+        elif type(sensor) is SensorPoint or PHDserial:
             self.__line[sensor.name] = self.axes.vlines(0, ymin=0, ymax=100, color=color, label=sensor.name)
             self.__colors[sensor.name] = color
 
