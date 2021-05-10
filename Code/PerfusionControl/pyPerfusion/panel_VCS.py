@@ -18,6 +18,7 @@ from pyPerfusion.panel_AI import PanelAI, PanelAI_Config
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_readout import PanelReadout
+import pyPerfusion.utils as utils
 
 chemical_valves = {}
 glucose_valves = {}
@@ -135,6 +136,7 @@ class PanelReadoutOxygenUtilization(PanelReadout):
 
 class PanelCoordination(wx.Panel):
     def __init__(self, parent, sensors, readout_dict, name):
+        self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensors = sensors
         self._name = name
@@ -190,18 +192,21 @@ class PanelCoordination(wx.Panel):
     def OnStartStop(self, evt):
         for sensor in self._sensors:  # Stop all sensors, as all valves are about to be closed
             sensor.hw.remove_channel(sensor._ch_id)
+            sensor.hw.start()
         self.close_all_chemical_valves()
         self._last_valve = ''
         state = self.btn_start_stop.GetLabel()
         if state == 'Start':
             self._readings = int(self.spin_readings_chemical.GetValue())
             self.update_chemical_valves()
+            self._lgr.debug('in OnStartStop, state=Start, starting timer_clear_valve')
             self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
             self.btn_start_stop.SetLabel('Stop')
         else:
             self.timer_read_values.Stop()
             self.timer_clear_valve.Stop()
             for sensor in self._sensors:
+                self._lgr.debug(f'in onstartstop, adding channel {sensor._ch_id}')
                 sensor.hw.add_channel(sensor._ch_id)
                 sensor.hw.start()
             for readout in self._readout_list:
@@ -213,46 +218,57 @@ class PanelCoordination(wx.Panel):
         if event.GetId() == self.timer_read_values.GetId():
             self.timer_read_values.Stop()  # Requested number of reads have now been taken
             for sensor in self._sensors:
-                sensor.hw.remove_channel(sensor._ch_id)  # Stop sensors in anticipation of a valve switch
+                # Stop sensors in anticipation of a valve switch
+                sensor.hw.remove_channel(sensor._ch_id)
+                sensor.hw.start()
              #   latest = sensor.get_latest(self._readings)  # Get last (# of readings) from sensor
              #   print(latest, sensor.name)
             for readout in self._readout_list:
                 readout.timer_update.Stop()
             self.update_chemical_valves()  # Switch valve
+            self._lgr.debug('starting clear valve timer')
             self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
 
     def OnClearValve(self, event):
+        self._lgr.debug('onclearvalve called')
         if event.GetId() == self.timer_clear_valve.GetId():
             self.timer_clear_valve.Stop()  # Fresh perfusate has now reached the sensors
             for sensor in self._sensors:
+                self._lgr.debug(f'in onclearvalve, adding channel {sensor._ch_id}')
                 sensor.hw.add_channel(sensor._ch_id)
+                sensor.set_ch_id(sensor._ch_id)
                 sensor.hw.start()
             for readout in self._readout_list:
-                readout.timer_update.Start(3000, wx.TIMER_CONTINUOUS)
+                readout.timer_update.Start(3, wx.TIMER_CONTINUOUS)
             self.timer_read_values.Start((self._readings + 1) * self._sampling_period_ms, wx.TIMER_CONTINUOUS)  # Have sensors read for (seconds/reading) x (# of readings), plus an extra three seconds to ensure that at least (# of readings) are recorded (as Python timers and chemical sensors aren't perfectly coordinated)
 
     def update_chemical_valves(self):
         valve_names = list(chemical_valves.keys())
+        self._lgr.debug(f'valve names are {valve_names}')
         for key, valve in chemical_valves.items():
             if valve._dio.value:
                 self._last_valve = key
                 break
         if 'Hepatic Artery' in self._last_valve:
+            self._lgr.debug('closing HA valve, opening PV valve')
             self._valve_to_open = [valve for valve in valve_names if 'Portal Vein' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
             self._clearance_time_ms = 150000  # Time for PV perfusate to reach all sensors once PV valve is opened
             self._readout_list = [self._readout_dict['PV Oxygen'], self._readout_dict['PV CO2'], self._readout_dict['PV pH']]
         elif 'Portal Vein' in self._last_valve:
+            self._lgr.debug('closing PV valve, opening VC valve')
             self._valve_to_open = [valve for valve in valve_names if 'Inferior Vena Cava' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
             self._clearance_time_ms = 150000  # Time for IVC perfusate to reach all sensors once IVC valve is opened
             self._readout_list = [self._readout_dict['IVC Oxygen'], self._readout_dict['IVC CO2'], self._readout_dict['IVC pH']]
         elif 'Inferior Vena Cava' in self._last_valve:
+            self._lgr.debug('closing VC valve, opening HA valve')
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
             self.close_chemical_valve(chemical_valves[self._last_valve])
             self._clearance_time_ms = 150000  # Time for HA perfusate to reach all sensors once HA valve is opened
             self._readout_list = [self._readout_dict['HA Oxygen'], self._readout_dict['HA CO2'], self._readout_dict['HA pH']]
         else:
+            self._lgr.debug('opening HA valve')
             self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
             self._clearance_time_ms = 150000  # Time for HA perfusate to reach all sensors once HA valve is opened
             self._readout_list = [self._readout_dict['HA Oxygen'], self._readout_dict['HA CO2'], self._readout_dict['HA pH']]
@@ -334,5 +350,9 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    utils.setup_stream_logger(logger, logging.DEBUG)
+    utils.configure_matplotlib_logging()
     app = MyTestApp(0)
     app.MainLoop()

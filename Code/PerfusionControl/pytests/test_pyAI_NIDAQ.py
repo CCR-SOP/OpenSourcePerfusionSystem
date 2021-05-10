@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Unit test for pyAI class
+"""Unit test for pyAI_NIDAQ class
 
 This work was created by an employee of the US Federal Gov
 and under the public domain.
@@ -9,8 +9,11 @@ Author: John Kakareka
 import pytest
 import os
 
-import pyHardware.pyAI as pyAI
+import pyHardware.pyAI_NIDAQ as pyAI
+from pyHardware.pyAI import AIDeviceException
 
+
+DEVICE_UNDER_TEST = 'Dev4'
 
 @pytest.fixture
 def delete_file(filename):
@@ -19,7 +22,7 @@ def delete_file(filename):
 
 @pytest.fixture
 def ai():
-    ai = pyAI.AI(period_sample_ms=10)
+    ai = pyAI.NIDAQ_AI(period_ms=10, volts_offset=2.5, volts_p2p=5)
     yield ai
     ai.stop()
 
@@ -41,32 +44,51 @@ def teardown_function(function):
 
 
 def test_default_devname(ai):
-    assert ai.devname == 'ai'
+    assert ai.devname == 'None/ai'
+
+
+def test_devname(ai):
+    ai.open('Dev4')
+    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai'
 
 
 def test_devname_1ch(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
-    assert ai.devname == 'ai1'
+    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1'
 
 
 def test_devname_2ch_consecutive(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
     ai.add_channel('2')
-    assert ai.devname == 'ai1,ai2'
+    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1,{DEVICE_UNDER_TEST}/ai2'
+
 
 def test_devname_2ch_nonconsecutive(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
     ai.add_channel('3')
-    assert ai.devname == 'ai1,ai3'
+    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1,{DEVICE_UNDER_TEST}/ai3'
+
 
 def test_is_not_open(ai):
     assert not ai.is_open()
 
-def test_isopen(ai):
+
+def test_isopen_channel_no_call_to_open(ai):
+    with pytest.raises(AIDeviceException):
+        ai.add_channel('1')
+
+
+def test_isopen_call_to_open(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
     assert ai.is_open()
 
+
 def test_isopen_remove(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
     assert ai.is_open()
     ai.remove_channel('1')
