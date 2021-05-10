@@ -57,9 +57,20 @@ class NIDAQ_DIO(pyDIO.DIO):
             msg = f'Need to specify specific lines/channels in addition to a port for {self._dev} and {self._port}'
             self._logger.error(msg)
             raise (pyDIO.DIODeviceException(msg))
+
+
         else:
             self.__task = task
-            self.__task.StartTask()
+            try:
+                self.__task.StartTask()
+            except PyDAQmx.DAQmxFunctions.DigitalOutputNotSupportedError:
+                msg = f'Channel {self.devname} is read (input) only'
+                self._logger.error(msg)
+                raise (pyDIO.DIODeviceException(msg))
+            except PyDAQmx.DAQmxFunctions.DigInputNotSupportedError:
+                msg = f'Channel {self.devname} is output only'
+                self._logger.error(msg)
+                raise (pyDIO.DIODeviceException(msg))
 
     def close(self):
         if self.__task:
