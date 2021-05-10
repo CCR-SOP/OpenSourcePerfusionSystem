@@ -92,14 +92,16 @@ class NIDAQ_AI(pyAI.AI):
         else:
             dev_names = ctypes.create_string_buffer(bytes_needed)
             PyDAQmx.DAQmxGetSysDevNames(dev_names, bytes_needed)
-            return device in str(ctypes.string_at(dev_names))
+            self._logger.debug(f'Device="{device}", devnames={str(ctypes.string_at(dev_names))}')
+            self._logger.debug(f'valid device: {device in str(ctypes.string_at(dev_names))}')
+            return device and device in str(ctypes.string_at(dev_names))
 
     def open(self, dev=None):
         """ Open a pyAI_NIDAQ device
             dev: the name of a valid NI device
         """
         if self._is_valid_device_name(dev):
-            self._logger.debug(f'Opening device {dev}')
+            self._logger.debug(f'Opening device "{dev}"')
             self._dev = dev
             self.__task = Task()
             super().open()
@@ -134,6 +136,8 @@ class NIDAQ_AI(pyAI.AI):
         self._update_task()
 
     def _update_task(self):
+        cleanup = True
+        msg = ''
         try:
             if self._dev and len(self.get_ids()) > 0:
                 if self.__task:
@@ -146,12 +150,13 @@ class NIDAQ_AI(pyAI.AI):
                 hz = 1.0 / (self._period_sampling_ms / 1000.0)
                 self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
                                              self.samples_per_read)
+            cleanup = False
         except PyDAQmx.DevCannotBeAccessedError as e:
             msg = f'Could not access device "{self._dev}". Please ensure device is ' \
                   f'plugged in and assigned the correct device name'
             self._logger.error(msg)
         except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
-            msg = f'in _update_task, Channel "{self.get_ids()}" does not exist on device {self._dev}'
+            msg = f'Channel "{self.get_ids()}" does not exist on device {self._dev}'
             self._logger.error(msg)
         except PyDAQmx.DAQmxFunctions.PhysicalChannelNotSpecifiedError:
             msg = f'A input channel/line must be specified.'
@@ -167,6 +172,9 @@ class NIDAQ_AI(pyAI.AI):
         except PyDAQmx.DAQmxFunctions.CanNotPerformOpWhenNoChansInTaskError:
             msg = f'No channels added for {self.devname}'
             self._logger.error(msg)
+        finally:
+            if cleanup:
+                raise pyAI.AIDeviceException(msg)
 
     def close(self):
         self.stop()
