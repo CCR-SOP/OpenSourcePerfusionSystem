@@ -18,13 +18,21 @@ class DIOState:
 
 
 class DIOActiveHighState(DIOState):
-    ACTIVE = DIOState.HIGH
-    INACTIVE = DIOState.LOW
+    def __init__(self):
+        self.ACTIVE = DIOState.HIGH
+        self.INACTIVE = DIOState.LOW
+
+    def __str__(self):
+        return "ActiveHigh"
 
 
 class DIOActiveLowState(DIOState):
-    ACTIVE = DIOState.LOW
-    INACTIVE = DIOState.HIGH
+    def __init__(self):
+        self.ACTIVE = DIOState.LOW
+        self.INACTIVE = DIOState.HIGH
+
+    def __str__(self):
+        return "ActiveLow"
 
 
 class DIODeviceException(Exception):
@@ -39,12 +47,20 @@ class DIO:
         self._active_high = True
         self._read_only = False
 
-        self._active_state = DIOActiveHighState if self._active_high else DIOActiveLowState
+        self._active_state = DIOActiveHighState() if self._active_high else DIOActiveLowState()
         self.__value = self._active_state.INACTIVE
 
         # create a dummy timer so is_alive function is always valid
         self.__timer = threading.Timer(0, self.activate)
         # timer is still considered alive when the callback is called
+
+    @property
+    def active_state(self):
+        return self._active_state
+
+    @property
+    def read_only(self):
+        return self._read_only
 
     @property
     def devname(self):
@@ -59,7 +75,7 @@ class DIO:
         self._active_high = active_high
         self._read_only = read_only
 
-        self._active_state = DIOActiveHighState if self._active_high else DIOActiveLowState
+        self._active_state = DIOActiveHighState() if self._active_high else DIOActiveLowState()
         self.__value = self._active_state.INACTIVE
 
     def activate(self):
