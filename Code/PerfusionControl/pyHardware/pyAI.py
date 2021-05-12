@@ -119,7 +119,7 @@ class AI:
         self.stop()
         self._queue_buffer.clear()
 
-    def start(self):
+    def start(self, samples=None):
         self.stop()
         self._event_halt.clear()
         self.__epoch = perf_counter()
