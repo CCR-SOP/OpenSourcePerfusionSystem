@@ -205,7 +205,7 @@ class PanelDIOControls(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
-        self._timer.Start(milliseconds=1000)
+        self._timer.Start(milliseconds=500)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 2).Center().CenterVertical().Proportion(0)
@@ -252,16 +252,21 @@ class PanelDIOControls(wx.Panel):
     def update_label(self):
         active_str = str(self._dio.active_state)
         read_str = 'Read Only' if self._dio.read_only else 'Write Only'
-        cfg_str = f'{self._dio.devname} {active_str} {read_str}'
+        cfg_str = f'{self._name}'
+        hw_details = f'{self._dio.devname} {active_str} {read_str}'
         self._label_cfg.SetLabel(cfg_str)
+        self._label_cfg.SetToolTip(wx.ToolTip(hw_details))
         self.Layout()
 
     def _update_active(self, evt):
-        color = wx.GREEN if self._dio.value else wx.RED
-        lbl = 'Active' if self._dio.value else 'Inactive'
-        self._label_active.SetLabel(lbl)
-        self._label_active.SetBackgroundColour(color)
-        self.Layout()
+        if self._dio.is_open:
+            # self._logger.debug(f'{self._name}: value = {self._dio.value}, active state is {self._dio.active_state.ACTIVE}')
+            active = self._dio.is_active
+            color = wx.GREEN if active else wx.RED
+            lbl = 'Active' if active else 'Inactive'
+            self._label_active.SetLabel(lbl)
+            self._label_active.SetBackgroundColour(color)
+            self.Layout()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
