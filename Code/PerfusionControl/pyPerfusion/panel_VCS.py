@@ -12,20 +12,23 @@ import datetime
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
-from pyPerfusion.panel_DIO import PanelDIO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI, PanelAI_Config
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_readout import PanelReadout
+from pyPerfusion.panel_DIO import PanelDIO, PanelDIOControls
 import pyPerfusion.utils as utils
+
 
 chemical_valves = {}
 glucose_valves = {}
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
-class PanelVCS(PanelDIO):
+class PanelVCS(PanelDIOControls):
+    def __init__(self, parent, dio, name):
+        super().__init__(parent, dio, name, display_config=True)
 
     def OnOpen(self, evt):
         super().OnOpen(evt)
