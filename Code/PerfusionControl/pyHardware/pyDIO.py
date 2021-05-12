@@ -66,8 +66,13 @@ class DIO:
     def devname(self):
         return f"port{self._port}/line{self._line}"
 
+    @property
     def is_open(self):
         return self._port is not None and self._line is not None
+
+    @property
+    def is_active(self):
+        return self.value == self.active_state.ACTIVE
 
     def open(self, port, line, active_high=True, read_only=True):
         self._port = port
