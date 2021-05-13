@@ -23,15 +23,15 @@ samples = 5
 period_ms = 1000
 
 logger.info(f'Creating AI_Finite_NIDAQ with period_ms of {period_ms}')
-ai = AI_Finite_NIDAQ(period_ms=period_ms, volts_p2p=5, volts_offset=2.5)
+ai = AI_Finite_NIDAQ(period_ms=period_ms, volts_p2p=5, volts_offset=2.5, samples_per_read=samples)
 logger.info(f'Opening {dev}')
 ai.open(dev)
 logger.info(f'Adding channel {line}')
 ai.add_channel(line)
 logger.info('starting acquisition')
-ai.start(samples)
+ai.start()
 done = False
-print('acquisition started')
+logger.info('acquisition started')
 while not done:
     logger.info(f'waiting for {samples} to be acquired')
     sleep(1.0)

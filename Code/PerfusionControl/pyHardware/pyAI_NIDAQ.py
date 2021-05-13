@@ -74,7 +74,6 @@ class NIDAQ_AI(pyAI.AI):
             self._logger.error(f'Attempt to acquire data from {self.devname} before channels were added')
         else:
             offset = 0
-
             for ch in self.get_ids():
                 buf = self.data_type(self._acq_buf[offset:offset+self.samples_per_read])
                 if len(self._calibration[ch]):  # If the ai channel has been calibrated:

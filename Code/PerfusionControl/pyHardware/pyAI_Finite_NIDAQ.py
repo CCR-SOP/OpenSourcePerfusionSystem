@@ -10,6 +10,9 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+from time import sleep
+import warnings
+import ctypes
 
 import PyDAQmx
 
@@ -17,23 +20,29 @@ from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 
 
 class AI_Finite_NIDAQ(NIDAQ_AI):
-    def __init__(self, period_ms, volts_p2p, volts_offset):
+    def __init__(self, period_ms, volts_p2p, volts_offset, samples_per_read=None):
         super().__init__(period_ms, volts_p2p, volts_offset)
         self._logger = logging.getLogger(__name__)
         self._sample_mode = PyDAQmx.DAQmxConstants.DAQmx_Val_FiniteSamps
+        self.samples_per_read = samples_per_read
+        self._acq_complete = False
 
-    def start(self, samples=None):
-        if samples:
-            self.samples_per_read = samples
-            self._read_period_ms = samples * len(self.get_ids()) * self._period_sampling_ms * 1.1
-            self._update_task()
-            self._task.StartTask()
+    def start(self):
+        self._read_period_ms = self.samples_per_read * len(self.get_ids()) * self._period_sampling_ms * 1.1
+        super().start()
+
+    def stop(self):
+        # catch and ignore StoppedBeforeDoneWarning
+        # since starting an acq automatically calls stop, the finite acq mode of NIDAQ issues a warning
+        # indicating that the specified number of samples was not acquired.
+        # this warning can safely be ignored
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            super().stop()
 
     def is_done(self):
-        done = False
-        try:
-            done = self._task.WaitUntilTaskDone(0) == 0
-        except PyDAQmx.DAQmxFunctions.WaitUntilDoneDoesNotIndicateDoneError:
-            done = False
+        return self._acq_complete
 
-        return done
+    def run(self):
+        self._acq_samples()
+        self._acq_complete = True

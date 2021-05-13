@@ -119,7 +119,7 @@ class AI:
         self.stop()
         self._queue_buffer.clear()
 
-    def start(self, samples=None):
+    def start(self):
         self.stop()
         self._event_halt.clear()
         self.__epoch = perf_counter()
@@ -154,7 +154,8 @@ class AI:
                 try:
                     buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
                 except Empty:
-                    self._logger.debug(f'buffer empty for channel {ch_id}')
+                    pass
+                    # self._logger.debug(f'buffer empty for channel {ch_id}')
         return buf, t
 
     def _acq_samples(self):
