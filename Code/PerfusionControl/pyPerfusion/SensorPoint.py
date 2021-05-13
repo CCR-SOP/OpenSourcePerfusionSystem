@@ -35,8 +35,6 @@ class SensorPoint(SensorStream):
         ts_bytes = struct.pack('i', int(t * 1000.0))
         self._fid_write.write(ts_bytes)
         data_buf.tofile(self._fid_write)
-        self._logger.debug(f'writing {ts_bytes} timestamp bytes, ts={t}')
-        self._logger.debug(f'writing {len(data_buf)} data bytes')
 
     def __read_chunk(self, _fid):
         ts = 0

@@ -25,11 +25,10 @@ LP_CFG.update_stream_folder()
 samples = 5
 filename = LP_CFG.LP_PATH['data'] / '2021-05-13/FiniteAcq.dat'
 logger.info(f'reading from {filename}')
-full_data = np.fromfile(filename, dtype=np.float32)
-logger.info(f'total samples: {len(full_data)}')
-for index in range(0, len(full_data), samples+1):
-    ts = full_data[index]
-    data = full_data[index+1:index+samples+1]
-    logger.info(f'Timestamp: {ts:.3f}, data: {data}')
+stream_type = np.dtype([('timestamp', np.int32), ('samples', np.float32, samples)])
+full_data = np.fromfile(filename, dtype=stream_type)
+logger.info(f'total time points: {len(full_data)}')
+for ts, data in full_data:
+    logger.info(f'Timestamp: {ts/1000.0:.3f}, data: {data}')
 
 
