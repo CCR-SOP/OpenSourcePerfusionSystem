@@ -51,10 +51,11 @@ class VCS:
             self._timer_clearance[set_name] = None
             wait_time = 0
             for sensor in self._sensors4cycled[set_name]:
-                sensor.start()
-                expected_time = sensor.expected_acq_time
+                sensor.hw.start()
+                expected_time = sensor.hw.expected_acq_time
                 if expected_time > wait_time:
                     wait_time = expected_time
+            self._lgr.debug(f'Expected wait time is {wait_time / 1000.0}')
             self._timer_acq = Timer(wait_time/1000.0, function=self._wait_for_data_collection, args=(set_name,))
             self._timer_acq.start()
             self._lgr.debug(f'waiting on sensor read')
@@ -64,6 +65,7 @@ class VCS:
     def _wait_for_data_collection(self, set_name):
         while not self._evt_halt.is_set():
             done = [sensor.hw.is_done() for sensor in self._sensors4cycled[set_name]]
+            self._lgr.debug(f'{done}')
             if all(done):
                 break
             else:
@@ -108,13 +110,14 @@ class VCS:
 
     def add_sensor_to_cycled_valves(self, set_name, sensor):
         # TODO check if sensor had already been added
-        self._sensors4cycled[set_name].update(sensor)
+        self._sensors4cycled[set_name].append(sensor)
 
     def add_sensor_to_independent_valves(self, valve_name, sensor):
         # TODO check if sensor had already been added
         self._sensors4cycled[valve_name].append(sensor)
 
     def open_independent_valve(self, valve_name):
+        self._lgr.debug(f'Opening independent valve {valve_name}')
         if valve_name in self._independent.keys():
             self._independent[valve_name].activate()
         else:
@@ -147,6 +150,7 @@ class VCS:
             self._lgr.warning(f'Attempt to close non-existent valve set {set_name}')
 
     def close_all_cycled_valves(self):
+        self._evt_halt.set()
         for set_name in self._cycled.keys():
             self.close_cycled_valves(set_name)
 

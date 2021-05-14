@@ -29,7 +29,7 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
 
     @property
     def expected_acq_time(self):
-        return self._sample_mode * self.period_sampling_ms
+        return self.samples_per_read * self.period_sampling_ms
 
     def start(self):
         self._acq_complete = False
