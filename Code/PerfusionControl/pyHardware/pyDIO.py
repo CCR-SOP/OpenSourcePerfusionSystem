@@ -40,8 +40,9 @@ class DIODeviceException(Exception):
 
 
 class DIO:
-    def __init__(self):
+    def __init__(self, name: str = None):
         self._logger = logging.getLogger(__name__)
+        self.name = name
         self._port = None
         self._line = None
         self._active_high = True
