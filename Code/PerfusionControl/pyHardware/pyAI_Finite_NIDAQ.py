@@ -10,9 +10,8 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from time import sleep
+from threading import Event
 import warnings
-import ctypes
 
 import PyDAQmx
 
@@ -26,6 +25,11 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
         self._sample_mode = PyDAQmx.DAQmxConstants.DAQmx_Val_FiniteSamps
         self.samples_per_read = samples_per_read
         self._acq_complete = False
+        self.semaphore = None
+
+    @property
+    def expected_acq_time(self):
+        return self._sample_mode * self.period_sampling_ms
 
     def start(self):
         self._acq_complete = False
@@ -45,5 +49,9 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
         return self._acq_complete
 
     def run(self):
+        if self.semaphore:
+            self.semaphore.acquire()
         self._acq_samples()
         self._acq_complete = True
+        if self.semaphore:
+            self.semaphore.release()
