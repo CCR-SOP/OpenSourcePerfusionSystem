@@ -17,8 +17,8 @@ import pyHardware.pyDIO as pyDIO
 
 
 class NIDAQ_DIO(pyDIO.DIO):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name: str = None):
+        super().__init__(name)
         self._logger = logging.getLogger(__name__)
         self._dev = None
         self.__timeout = 1.0
@@ -63,6 +63,7 @@ class NIDAQ_DIO(pyDIO.DIO):
                 raise (pyDIO.DIODeviceException(msg))
         self.__task = task
         cleanup = True
+        msg = ''
         try:
             self.__task.StartTask()
             cleanup = False
@@ -70,10 +71,8 @@ class NIDAQ_DIO(pyDIO.DIO):
             msg = f'Channel {self.devname} is read (input) only'
         except PyDAQmx.DAQmxFunctions.DigInputNotSupportedError:
             msg = f'Channel {self.devname} is output only'
-
         finally:
             if cleanup:
-                self.__task.ClearTask()
                 self.__task = None
                 self._logger.error(msg)
                 raise (pyDIO.DIODeviceException(msg))

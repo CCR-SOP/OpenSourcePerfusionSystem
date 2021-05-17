@@ -85,11 +85,11 @@ class VCS:
                 done = [sensor.hw.is_done() for sensor in self._sensors4cycled[set_name]]
                 self._lgr.debug(f'{done}')
                 if all(done):
+                    self._lgr.debug(f'read sensor data for {set_name}')
+                    self._cycle_next(set_name)
                     break
                 else:
                     sleep(0.1)
-            self._lgr.debug(f'read sensor data for {set_name}')
-            self._cycle_next(set_name)
 
     def _cycle_next(self, set_name):
         self._lgr.debug(f'cycling {set_name}')
@@ -114,6 +114,7 @@ class VCS:
             self.close_cycled_valves(set_name)
             self._cycled_it[set_name] = cycle(self._cycled[set_name])
             self._cycle_active[set_name] = True
+            self._cycle_next(set_name)
         else:
             self._lgr.error(f'Cannot start cycle on non-existent valve-set {set_name}')
 

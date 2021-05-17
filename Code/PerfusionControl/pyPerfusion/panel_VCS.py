@@ -14,13 +14,15 @@ from pyPerfusion.panel_AO import PanelAO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI, PanelAI_Config
-from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_readout import PanelReadout
 from pyPerfusion.panel_DIO import PanelDIO, PanelDIOControls
 from pyHardware.pyDIO import DIODeviceException
 import pyPerfusion.utils as utils
 from pyHardware.pyAI import AIDeviceException
+from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
+from pyHardware.pyVCS import VCS
 
 
 chemical_valves = {}
@@ -28,7 +30,8 @@ glucose_valves = {}
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
-DEFAULT_CLEARANCE_TIME_MS = 150_000
+DEFAULT_CLEARANCE_TIME_MS = 2_000 #150_000
+DEFAULT_SAMPLES_PER_READ = 3
 
 
 class PanelVCS(PanelDIOControls):
@@ -143,39 +146,31 @@ class PanelReadoutOxygenUtilization(PanelReadout):
             return
 
 class PanelCoordination(wx.Panel):
-    def __init__(self, parent, sensors, readout_dict, name):
+    def __init__(self, parent, vcs, readout_dict, name):
+        wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-        self._sensors = sensors
+        self._vcs = vcs
         self._name = name
         self._readout_dict = readout_dict
         self._readout_list = None
-
-        self._valve_to_open = None
-        self._last_valve = ''
 
         self._readings = None  # Readings taken before switching to next valve
         self._sampling_period_ms = 3000  # New readings (O2/CO2/pH) are collected every 3 seconds and are coordinated (occur @ the same time)
         self._clearance_time_ms = None
 
-        wx.Panel.__init__(self, parent, -1)
-
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self._name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.spin_readings_chemical = wx.SpinCtrlDouble(self, min=0, max=20, initial=0, inc=1)
+        self.spin_readings_chemical = wx.SpinCtrlDouble(self, min=0, max=20,
+                                                        initial=DEFAULT_SAMPLES_PER_READ,
+                                                        inc=1)
         self.lbl_readings_chemical = wx.StaticText(self, label='Sensor Readings per Switch')
 
         self.btn_start_stop = wx.ToggleButton(self, label='Start')
 
         self.__do_layout()
         self.__set_bindings()
-
-        self.timer_clear_valve = wx.Timer(self, id=0)
-        self.Bind(wx.EVT_TIMER, self.OnClearValve, id=0)
-
-        self.timer_read_values = wx.Timer(self, id=1)
-        self.Bind(wx.EVT_TIMER, self.OnReadValues, id=1)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Left().Proportion(0)
@@ -198,28 +193,18 @@ class PanelCoordination(wx.Panel):
         self.btn_start_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
 
     def OnStartStop(self, evt):
-        for sensor in self._sensors:  # Stop all sensors, as all valves are about to be closed
-            sensor.hw.remove_channel(sensor._ch_id)
-            sensor.hw.start()
-        self.close_all_chemical_valves()
-        self._last_valve = ''
         state = self.btn_start_stop.GetLabel()
         if state == 'Start':
             self._readings = int(self.spin_readings_chemical.GetValue())
-            self.update_chemical_valves()
-            self._lgr.debug('in OnStartStop, state=Start, starting timer_clear_valve')
-            self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
+            # TODO update samples_per_read for each sensor
+            self._vcs.start_cycle('Chemical')
             self.btn_start_stop.SetLabel('Stop')
         else:
-            self.timer_read_values.Stop()
-            self.timer_clear_valve.Stop()
-            for sensor in self._sensors:
-                self._lgr.debug(f'in onstartstop, adding channel {sensor._ch_id}')
-                sensor.hw.add_channel(sensor._ch_id)
-                sensor.hw.start()
-            for readout in self._readout_list:
-                readout.timer_update.Stop()
-            self._readout_list.clear()
+            self._vcs.stop_cycle('Chemical')
+            if self._readout_list:
+                for readout in self._readout_list:
+                    readout.timer_update.Stop()
+                self._readout_list.clear()
             self.btn_start_stop.SetLabel('Start')
 
     def OnReadValues(self, event):
@@ -237,66 +222,6 @@ class PanelCoordination(wx.Panel):
             self._lgr.debug('starting clear valve timer')
             self.timer_clear_valve.Start(self._clearance_time_ms, wx.TIMER_CONTINUOUS)
 
-    def OnClearValve(self, event):
-        self._lgr.debug('onclearvalve called')
-        if event.GetId() == self.timer_clear_valve.GetId():
-            self.timer_clear_valve.Stop()  # Fresh perfusate has now reached the sensors
-            for sensor in self._sensors:
-                try:
-                    self._lgr.debug(f'in onclearvalve, adding channel {sensor._ch_id}')
-                    sensor.hw.add_channel(sensor._ch_id)
-                    sensor.set_ch_id(sensor._ch_id)
-                    sensor.hw.start()
-                except AIDeviceException:
-                    pass
-            for readout in self._readout_list:
-                readout.timer_update.Start(3, wx.TIMER_CONTINUOUS)
-            self.timer_read_values.Start((self._readings + 1) * self._sampling_period_ms, wx.TIMER_CONTINUOUS)  # Have sensors read for (seconds/reading) x (# of readings), plus an extra three seconds to ensure that at least (# of readings) are recorded (as Python timers and chemical sensors aren't perfectly coordinated)
-
-    def update_chemical_valves(self):
-        valve_names = list(chemical_valves.keys())
-        self._lgr.debug(f'valve names are {valve_names}')
-        for key, valve in chemical_valves.items():
-            self._lgr.debug(f'valve {key} is {valve._dio.value}:{valve._dio.active_state}')
-            if valve._dio.is_active:
-                self._lgr.debug(f'last valve is {key}')
-                self._last_valve = key
-                break
-        if 'Hepatic Artery' in self._last_valve:
-            self._lgr.debug('closing HA valve, opening PV valve')
-            self._valve_to_open = [valve for valve in valve_names if 'Portal Vein' in valve][0]
-            self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = DEFAULT_CLEARANCE_TIME_MS  # Time for PV perfusate to reach all sensors once PV valve is opened
-            self._readout_list = [self._readout_dict['PV Oxygen'], self._readout_dict['PV CO2'], self._readout_dict['PV pH']]
-        elif 'Portal Vein' in self._last_valve:
-            self._lgr.debug('closing PV valve, opening VC valve')
-            self._valve_to_open = [valve for valve in valve_names if 'Inferior Vena Cava' in valve][0]
-            self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = DEFAULT_CLEARANCE_TIME_MS  # Time for IVC perfusate to reach all sensors once IVC valve is opened
-            self._readout_list = [self._readout_dict['IVC Oxygen'], self._readout_dict['IVC CO2'], self._readout_dict['IVC pH']]
-        elif 'Inferior Vena Cava' in self._last_valve:
-            self._lgr.debug('closing VC valve, opening HA valve')
-            self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
-            self.close_chemical_valve(chemical_valves[self._last_valve])
-            self._clearance_time_ms = DEFAULT_CLEARANCE_TIME_MS  # Time for HA perfusate to reach all sensors once HA valve is opened
-            self._readout_list = [self._readout_dict['HA Oxygen'], self._readout_dict['HA CO2'], self._readout_dict['HA pH']]
-        else:
-            self._lgr.debug('opening HA valve')
-            self._valve_to_open = [valve for valve in valve_names if 'Hepatic Artery' in valve][0]
-            self._clearance_time_ms = DEFAULT_CLEARANCE_TIME_MS  # Time for HA perfusate to reach all sensors once HA valve is opened
-            self._readout_list = [self._readout_dict['HA Oxygen'], self._readout_dict['HA CO2'], self._readout_dict['HA pH']]
-        chemical_valves[self._valve_to_open]._dio.activate()
-        chemical_valves[self._valve_to_open].btn_activate.SetLabel('Deactivate')
-        chemical_valves[self._valve_to_open].btn_activate.SetBackgroundColour('Green')
-
-    def close_all_chemical_valves(self):
-        for valve in chemical_valves.values():
-            self.close_chemical_valve(valve)
-
-    def close_chemical_valve(self, valve):
-        valve._dio.deactivate()
-        valve.btn_activate.SetLabel('Activate')
-        valve.btn_activate.SetBackgroundColour('red')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -305,17 +230,19 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.FlexGridSizer(cols=2)
 
-        valves = {'Hepatic Artery (Chemical)': NIDAQ_DIO(),
-                  'Portal Vein (Chemical)': NIDAQ_DIO(),
-                  'Inferior Vena Cava (Chemical)': NIDAQ_DIO(),
-                  'Hepatic Artery (Glucose)': NIDAQ_DIO(),
-                  'Portal Vein (Glucose)': NIDAQ_DIO(),
-                  'Inferior Vena Cava (Glucose)': NIDAQ_DIO()
-                  }
-        for key, valve in valves.items():
-            panel = PanelVCS(self, valve, name=key)
-            sizer.Add(panel, 1, wx.EXPAND, border=2)
+        valves = [NIDAQ_DIO('Hepatic Artery (Chemical)'),
+                  NIDAQ_DIO('Portal Vein (Chemical)'),
+                  NIDAQ_DIO('Inferior Vena Cava (Chemical)'),
+                  NIDAQ_DIO('Hepatic Artery (Glucose)'),
+                  NIDAQ_DIO('Portal Vein (Glucose)'),
+                  NIDAQ_DIO('Inferior Vena Cava (Glucose)')
+                  ]
+        self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS)
+        for valve in valves:
+            key = valve.name
             try:
+                panel = PanelDIOControls(self, valve, valve.name, display_config=True)
+                sizer.Add(panel, 1, wx.EXPAND, border=2)
                 self._lgr.debug(f'opening config section {key}')
                 section = LP_CFG.get_hwcfg_section(key)
                 dev = section['Device']
@@ -330,17 +257,26 @@ class TestFrame(wx.Frame):
                 continue
             try:
                 valve.open(port=port, line=line, active_high=active_high_state, read_only=read_only_state, dev=dev)
+                if 'Chemical' in key:
+                    self._vcs.add_cycled_input('Chemical', valve)
+                else:
+                    self._vcs.add_independent_input(valve)
                 panel.update_label()
-                chemical_valves.update({key: panel})
             except DIODeviceException as e:
                 dlg = wx.MessageDialog(parent=self, message=str(e), caption='Digital Output Device Error', style=wx.OK)
                 dlg.ShowModal()
                 continue
 
-        self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
-        self._chemical_sensors = [SensorStream('Oxygen', 'mmHg', self.acq), SensorStream('Carbon Dioxide', 'mmHg', self.acq), SensorStream('pH', '', self.acq)]
+        self.acq = AI_Finite_NIDAQ(period_ms=100, volts_p2p=5, volts_offset=2.5,
+                                   samples_per_read=DEFAULT_SAMPLES_PER_READ)
+        self._chemical_sensors = [SensorPoint('Oxygen', 'mmHg', self.acq),
+                                  SensorPoint('Carbon Dioxide', 'mmHg', self.acq),
+                                  SensorPoint('pH', '', self.acq)]
         for sensor in self._chemical_sensors:
             sizer.Add(PanelAIVCS(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
+            self._vcs.add_sensor_to_cycled_valves('Chemical', sensor)
+
+
 
         self.sizer_readout = wx.GridSizer(cols=2)
         readout_dict = {'HA Oxygen': PanelReadoutVCS(self, self._chemical_sensors[0], 'HA Oxygen'),
@@ -360,7 +296,7 @@ class TestFrame(wx.Frame):
         self.sizer_readout.Add(panel_O2_util, 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(self.sizer_readout, 1, wx.EXPAND, border=2)
 
-        sizer.Add(PanelCoordination(self, self._chemical_sensors, readout_dict, name='Valve Coordination'), 1, wx.EXPAND, border=2)
+        sizer.Add(PanelCoordination(self, self._vcs, readout_dict, name='Valve Coordination'), 1, wx.EXPAND, border=2)
 
         self.ao = NIDAQ_AO()
         sizer.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
