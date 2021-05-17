@@ -1,6 +1,7 @@
 import logging
 from time import perf_counter
 import struct
+from os import SEEK_END
 
 import numpy as np
 
@@ -59,3 +60,14 @@ class SensorPoint(SensorStream):
                 data_time.append(ts / 1000.0)
         _fid.close()
         return data_time, data
+
+    def get_last_data(self):
+        _fid, tmp = self._open_read()
+        dtype_size = self.hw.data_type(1).itemsize
+        bytes_per_chunk = self._bytes_per_ts + (self._samples_per_ts * dtype_size)
+        _fid.seek(-bytes_per_chunk, SEEK_END)
+        chunk, ts = self.__read_chunk(_fid)
+        self._logger.debug(f'ts is {ts}, chunk={chunk}')
+        _fid.close()
+        return ts, chunk
+
