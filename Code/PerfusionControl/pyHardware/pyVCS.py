@@ -30,9 +30,12 @@ class VCS:
         self._evt_halt = Event()
         self._sensors4cycled = {}
         self._sensors4independent = {}
-        self._cycled_semaphore = {}
+        self._cycle_active = {}
 
     def _start_clearance_timer(self, set_name):
+        if not self._cycle_active[set_name]:
+            self._lgr.debug(f'Attempted to start clearance timer for inactive cycle {set_name}')
+            return
         self._lgr.debug(f'starting clearance timer for {set_name} for {self._clearance_time_ms}')
         # set_name can also be an independent valve name
         if set_name in self._timer_clearance.keys():
@@ -47,6 +50,12 @@ class VCS:
 
     def _cleared_perfusate(self, set_name):
         try:
+            if not self._cycle_active[set_name]:
+                self._lgr.debug(f'Cycle {set_name} inactive in _cleared_perfusate')
+                return
+        except KeyError:
+            self._lgr.debug(f'No set name {set_name} in _cleared_perfusate')
+        try:
             self._lgr.debug(f'perfusate cleared for {set_name}')
             self._timer_clearance[set_name] = None
             wait_time = 0
@@ -56,43 +65,70 @@ class VCS:
                 if expected_time > wait_time:
                     wait_time = expected_time
             self._lgr.debug(f'Expected wait time is {wait_time / 1000.0}')
-            self._timer_acq = Timer(wait_time/1000.0, function=self._wait_for_data_collection, args=(set_name,))
-            self._timer_acq.start()
+            self._timer_acq[set_name] = Timer(wait_time/1000.0, function=self._wait_for_data_collection, args=(set_name,))
+            self._timer_acq[set_name].start()
             self._lgr.debug(f'waiting on sensor read')
         except KeyError:
             self._lgr.warning(f'No sensors were added for set {set_name}')
 
     def _wait_for_data_collection(self, set_name):
         while not self._evt_halt.is_set():
-            done = [sensor.hw.is_done() for sensor in self._sensors4cycled[set_name]]
-            self._lgr.debug(f'{done}')
-            if all(done):
-                break
+            try:
+                if not self._cycle_active[set_name]:
+                    self._lgr.debug(f'Cycle {set_name} inactive in _wait_for_data_collection, '
+                                    f'ending wait')
+                    break
+            except KeyError:
+                self._lgr.debug(f'No set name {set_name} in _wait_for_data_collection ')
             else:
-                sleep(0.1)
-        self._lgr.debug(f'read sensor data for {set_name}')
-        self._cycle_next(set_name)
+                self._timer_acq[set_name] = None
+                done = [sensor.hw.is_done() for sensor in self._sensors4cycled[set_name]]
+                self._lgr.debug(f'{done}')
+                if all(done):
+                    break
+                else:
+                    sleep(0.1)
+            self._lgr.debug(f'read sensor data for {set_name}')
+            self._cycle_next(set_name)
 
     def _cycle_next(self, set_name):
         self._lgr.debug(f'cycling {set_name}')
-        with self._cycled_valve_lock:
-            if self._active_valve[set_name]:
-                self._lgr.debug(f'Deactivating {self._active_valve[set_name].name} in {set_name}')
-                self._active_valve[set_name].deactivate()
-            self._active_valve[set_name] = next(self._cycled_it[set_name])
-            self._lgr.debug(f'Activating {self._active_valve[set_name].name} in {set_name}')
-            self._active_valve[set_name].activate()
-            self._start_clearance_timer(set_name)
+        try:
+            if not self._cycle_active[set_name]:
+                self._lgr.debug(f'Cycle {set_name} inactive in _cycle_next')
+        except KeyError:
+            self._lgr.debug(f'No set name {set_name} in _cycle_next ')
+        else:
+            with self._cycled_valve_lock:
+                if self._active_valve[set_name]:
+                    self._lgr.debug(f'Deactivating {self._active_valve[set_name].name} in {set_name}')
+                    self._active_valve[set_name].deactivate()
+                self._active_valve[set_name] = next(self._cycled_it[set_name])
+                self._lgr.debug(f'Activating {self._active_valve[set_name].name} in {set_name}')
+                self._active_valve[set_name].activate()
+                self._start_clearance_timer(set_name)
 
     def start_cycle(self, set_name):
         if set_name in self._cycled.keys():
+            self._evt_halt.clear()
             self.close_cycled_valves(set_name)
             self._cycled_it[set_name] = cycle(self._cycled[set_name])
-            self._cycle_next(set_name)
+            self._cycle_active[set_name] = True
         else:
             self._lgr.error(f'Cannot start cycle on non-existent valve-set {set_name}')
 
+    def stop_cycle(self, set_name):
+        self._evt_halt.set()
+        if set_name in self._cycled.keys():
+            self._cycle_active[set_name] = False
+        self.close_cycled_valves(set_name)
+
+    def stop(self):
+        self._evt_halt.set()
+        self.close_all_valves()
+
     def add_cycled_input(self, set_name: str, dio: DIO):
+        # TODO if cycle active, don't allow adding more inputs
         self.close_cycled_valves(set_name)
         if set_name not in self._cycled.keys():
             self._cycled[set_name] = []
