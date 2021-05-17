@@ -1,7 +1,8 @@
 import logging
-from time import perf_counter
+from time import perf_counter, sleep
 import struct
-from os import SEEK_END
+from os import SEEK_END, SEEK_CUR
+from collections import deque
 
 import numpy as np
 
@@ -71,3 +72,27 @@ class SensorPoint(SensorStream):
         _fid.close()
         return ts, chunk
 
+    def get_data_from_last_read(self, timestamp):
+        _fid, tmp = self._open_read()
+        dtype_size = self.hw.data_type(1).itemsize
+        bytes_per_chunk = self._bytes_per_ts + (self._samples_per_ts * dtype_size)
+        ts = timestamp + 1
+        data = deque()
+        data_t = deque()
+        _fid.seek(0, SEEK_END)
+        loops = 0
+        while ts > timestamp:
+            loops += 1
+            offset = bytes_per_chunk * loops
+            try:
+                _fid.seek(-offset, SEEK_END)
+            except OSError:
+                # attempt to read before beginning of file
+                break
+            else:
+                chunk, ts = self.__read_chunk(_fid)
+                if ts and ts > timestamp:
+                    data_t.extendleft([ts])
+                    data.extendleft(chunk)
+        _fid.close()
+        return data_t, data

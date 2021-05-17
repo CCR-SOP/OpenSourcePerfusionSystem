@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test getting the last time point of SensorPoint stream
+"""Test getting the data from the last acquired timestamp of SensorPoint stream
 
 
 @project: LiverPerfusion NIH
@@ -40,13 +40,16 @@ sensor.start()
 acq.start()
 
 STOP_PROGRAM = False
+last_acq = 0
 
 
 def get_last_sample():
     global sensor, last_acq
-    ts, samples = sensor.get_last_data()
-    logger.debug(f'Acquired ts = {ts}, samples={samples}')
-
+    ts, samples = sensor.get_data_from_last_read(last_acq)
+    logger.debug(f'Acquired {len(ts)} samples')
+    logger.debug(f'Acquired ts = {ts}')
+    if len(ts) > 0:
+        last_acq = ts[-1]
 
 def stop_program():
     global STOP_PROGRAM
