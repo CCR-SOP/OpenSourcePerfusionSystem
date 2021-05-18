@@ -9,6 +9,8 @@ import wx
 import logging
 import datetime
 
+import numpy as np
+
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
@@ -101,45 +103,33 @@ class PanelAIVCS(PanelAI):
 
 class PanelReadoutVCS(PanelReadout):
     def __init__(self, parent, sensor, name):
+        super().__init__(parent, sensor)
         self._logger = logging.getLogger(__name__)
-        wx.Panel.__init__(self, parent, -1)
-        self._sensor = sensor
-        self._name = name
-
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer_value = wx.BoxSizer(wx.HORIZONTAL)
-        self.label_name = wx.StaticText(self, label=self._name)
-        self.label_value = wx.StaticText(self, label='000')
-        self.label_units = wx.StaticText(self, label=sensor.unit_str)
-
-        self._PanelReadout__do_layout()
+        self.name = name
 
     def update_value(self):
-        val = float(self._sensor.get_current())
-        self.label_value.SetLabel(f'{round(val, 1):3}')
-        ct = datetime.datetime.now()
-        time = "{0:0=2d}".format(ct.hour) + ':' + "{0:0=2d}".format(ct.minute) + ':' + "{0:0=2d}".format(ct.second)
-        self.label_name.SetLabel(self._name + ' (As of ' + time + ')')
+        ts, data = self._sensor.get_current()
+        if data is not None:
+            avg = np.mean(data)
+            val = float(avg)
+            self.label_value.SetLabel(f'{round(val, 1):3}')
+            ct = datetime.datetime.now()
+            time = "{0:0=2d}".format(ct.hour) + ':' + "{0:0=2d}".format(ct.minute) + ':' + "{0:0=2d}".format(ct.second)
+            self.label_name.SetLabel(self.name + ' (As of ' + time + ')')
 
 class PanelReadoutOxygenUtilization(PanelReadout):
     def __init__(self, parent, sensors, name):
         self._logger = logging.getLogger(__name__)
-        wx.Panel.__init__(self, parent, -1)
-        self._sensors = sensors
-        self._name = name
-
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer_value = wx.BoxSizer(wx.HORIZONTAL)
-        self.label_name = wx.StaticText(self, label=self._name)
-        self.label_value = wx.StaticText(self, label='000')
-        self.label_units = wx.StaticText(self, label='%')
-
-        self._PanelReadout__do_layout()
+        self.sensors = sensors
+        old_name = sensors[0].name
+        sensors[0].name = name
+        super().__init__(parent, sensors[0])
+        sensors[0].name = old_name
 
     def update_value(self):
-        if float(self._sensors[0].label_value.GetLabel()) != 0:
-            val = (float(self._sensors[0].label_value.GetLabel()) - float(self._sensors[1].label_value.GetLabel())) / float(
-                self._sensors[0].label_value.GetLabel())
+        if float(self.sensors[0].get_current()[1]) != 0:
+            val = (float(self.sensors[0].get_current()) - float(self.sensors[1].get_current())) / float(
+                self.sensors[0].get_current())
             val = val * 100
             self.label_value.SetLabel(f'{round(val, 3):3}')
         else:
@@ -168,7 +158,9 @@ class PanelCoordination(wx.Panel):
         self.lbl_readings_chemical = wx.StaticText(self, label='Sensor Readings per Switch')
 
         self.btn_start_stop = wx.ToggleButton(self, label='Start')
-
+        self.timer_update = wx.Timer(self)
+        self.timer_update.Start(milliseconds=1000, oneShot=wx.TIMER_CONTINUOUS)
+        self.Bind(wx.EVT_TIMER, self.OnTimer)
         self.__do_layout()
         self.__set_bindings()
 
@@ -192,6 +184,11 @@ class PanelCoordination(wx.Panel):
     def __set_bindings(self):
         self.btn_start_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
 
+    def OnTimer(self, evt):
+        if self._readout_dict:
+            for readout in self._readout_dict.values():
+                readout.update_value()
+
     def OnStartStop(self, evt):
         state = self.btn_start_stop.GetLabel()
         if state == 'Start':
@@ -206,6 +203,7 @@ class PanelCoordination(wx.Panel):
                     readout.timer_update.Stop()
                 self._readout_list.clear()
             self.btn_start_stop.SetLabel('Start')
+            self.timer_update.Stop()
 
     def OnReadValues(self, event):
         if event.GetId() == self.timer_read_values.GetId():
@@ -292,7 +290,7 @@ class TestFrame(wx.Frame):
         for key, readout in readout_dict.items():
             readout.timer_update.Stop()
             self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
-        panel_O2_util = PanelReadoutOxygenUtilization(self, [readout_dict['HA Oxygen'], readout_dict['IVC Oxygen']], 'Oxygen Utilization')
+        panel_O2_util = PanelReadoutOxygenUtilization(self, [self._chemical_sensors[0], self._chemical_sensors[0]], 'Oxygen Utilization')
         self.sizer_readout.Add(panel_O2_util, 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(self.sizer_readout, 1, wx.EXPAND, border=2)
 

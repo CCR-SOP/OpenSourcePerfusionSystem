@@ -62,15 +62,27 @@ class SensorPoint(SensorStream):
         _fid.close()
         return data_time, data
 
-    def get_last_data(self):
+    def get_last_acq(self):
         _fid, tmp = self._open_read()
         dtype_size = self.hw.data_type(1).itemsize
         bytes_per_chunk = self._bytes_per_ts + (self._samples_per_ts * dtype_size)
-        _fid.seek(-bytes_per_chunk, SEEK_END)
-        chunk, ts = self.__read_chunk(_fid)
-        self._logger.debug(f'ts is {ts}, chunk={chunk}')
+        try:
+            _fid.seek(-bytes_per_chunk, SEEK_END)
+            chunk, ts = self.__read_chunk(_fid)
+        except OSError:
+            chunk = None
+            ts = None
+
         _fid.close()
         return ts, chunk
+
+    def get_current(self):
+        ts, chunk = self.get_last_acq()
+        if chunk is not None:
+            avg = np.mean(chunk)
+        else:
+            avg = None
+        return avg
 
     def get_data_from_last_read(self, timestamp):
         _fid, tmp = self._open_read()

@@ -74,7 +74,7 @@ class PanelAI_Config(wx.Panel):
         self.parent = parent
         self._sensor = sensor
         self._name = name
-        wx.Panel.__init__(self, parent, -1)
+        super().__init__(parent, -1)
         self._update_plot = plot
 
         self._avail_dev = DEV_LIST

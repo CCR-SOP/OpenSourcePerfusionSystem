@@ -17,9 +17,9 @@ from pyHardware.pyAI import AI
 
 
 class PanelReadout(wx.Panel):
-    def __init__(self, parent, sensor:SensorStream):
+    def __init__(self, parent, sensor: SensorStream):
         self._logger = logging.getLogger(__name__)
-        wx.Panel.__init__(self, parent, -1)
+        super().__init__(parent, -1)
         self._sensor = sensor
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
