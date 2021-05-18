@@ -310,6 +310,7 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         for sensor in self._chemical_sensors:
             sensor.stop()
+        self._vcs.stop()
         self.Destroy()
 
 class MyTestApp(wx.App):
