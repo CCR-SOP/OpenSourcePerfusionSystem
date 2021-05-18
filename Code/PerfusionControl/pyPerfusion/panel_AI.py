@@ -47,7 +47,7 @@ class PanelAI(wx.Panel):
         self._sensor.start()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand()
+        flags = wx.SizerFlags().Expand().Border(2)
 
         self.sizer.Add(self._panel_cfg, flags.Proportion(2))
         self.sizer.SetSizeHints(self.parent)

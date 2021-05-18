@@ -15,7 +15,7 @@ from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
-from pyPerfusion.panel_AI import PanelAI, PanelAI_Config
+from pyPerfusion.panel_AI import PanelAI, PanelAICalibration
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_readout import PanelReadout
@@ -70,36 +70,30 @@ class PanelVCS(PanelDIOControls):
         super().OnLoadConfig(evt)
         self.btn_activate.SetBackgroundColour('gray')
 
-class PanelAIVCS(PanelAI):
+class PanelAIVCS(wx.Panel):
     def __init__(self, parent, sensor, name):
+        super().__init__(parent)
         self._logger = logging.getLogger(__name__)
-        self.parent = parent
-        self._sensor = sensor
-        self._name = name
-        self._dev = None
-        wx.Panel.__init__(self, parent, -1)
 
-        self._avail_dev = DEV_LIST
-        self._avail_lines = LINE_LIST
+        dev = sensor.hw.devname.split('/')
+        hw_details = f'{dev[0]}/ai{sensor.ch_id}'
 
-        self._panel_cfg = PanelAI_Config(self, self._sensor, name, 'Configuration', plot=self)
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self._panel_cfg = PanelAICalibration(self, sensor, name)
+        self._label = wx.StaticText(self, label=name)
+        self._label.SetToolTip(wx.ToolTip(hw_details))
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         self.__do_layout()
 
-        self._sensor.start()
-
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand()
+        flags = wx.SizerFlags().Expand().Border()
 
+        self.sizer.Add(self._label)
         self.sizer.Add(self._panel_cfg, flags)
-
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
-        self.SetSizer(sizer)
+        self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
+
 
 class PanelReadoutVCS(PanelReadout):
     def __init__(self, parent, sensor, name):
@@ -273,10 +267,20 @@ class TestFrame(wx.Frame):
         self._chemical_sensors = [SensorPoint('Oxygen', 'mmHg', self.acq),
                                   SensorPoint('Carbon Dioxide', 'mmHg', self.acq),
                                   SensorPoint('pH', '', self.acq)]
+        sizer_sensors = wx.BoxSizer(wx.VERTICAL)
         for sensor in self._chemical_sensors:
-            sizer.Add(PanelAIVCS(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
+            section = LP_CFG.get_hwcfg_section(sensor.name)
+            dev = section['DevName']
+            line = section['LineName']
+            self.acq.open(dev)
+            self.acq.add_channel(line)
+            sensor.set_ch_id(line)
+            sizer_sensors.Add(PanelAIVCS(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
+            sensor.open(LP_CFG.LP_PATH['stream'])
+            sensor.start()
             self._vcs.add_sensor_to_cycled_valves('Chemical', sensor)
 
+        sizer.Add(sizer_sensors, 1, wx.ALL | wx.EXPAND)
 
 
         self.sizer_readout = wx.GridSizer(cols=2)
