@@ -108,7 +108,7 @@ class PanelReadoutVCS(PanelReadout):
         self.name = name
 
     def update_value(self):
-        ts, data = self._sensor.get_current()
+        data = self._sensor.get_current()
         if data is not None:
             avg = np.mean(data)
             val = float(avg)
@@ -127,13 +127,16 @@ class PanelReadoutOxygenUtilization(PanelReadout):
         sensors[0].name = old_name
 
     def update_value(self):
-        if float(self.sensors[0].get_current()[1]) != 0:
-            val = (float(self.sensors[0].get_current()) - float(self.sensors[1].get_current())) / float(
-                self.sensors[0].get_current())
+        val0 = self.sensors[0].get_current()
+        val1 = self.sensors[1].get_current()
+        # val1 can be 0, but val0 must be non-zero
+        if val0 is not None and val0 != 0 and val1 is not None:
+            val = (float(val0) - float(val1)) / float(val0)
             val = val * 100
             self.label_value.SetLabel(f'{round(val, 3):3}')
         else:
-            return
+            self.label_value.SetLabel('NA')
+
 
 class PanelCoordination(wx.Panel):
     def __init__(self, parent, vcs, readout_dict, name):
