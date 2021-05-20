@@ -90,7 +90,7 @@ class DIO:
 
     def _activate(self):
         self.__value = self._active_state.ACTIVE
-        self._logger.debug(f"Activating DIO with value of {self.__value}")
+        # self._logger.debug(f"Activating DIO with value of {self.__value}")
 
     def deactivate(self):
         if not self.__timer.is_alive() and not self._read_only:
@@ -98,7 +98,7 @@ class DIO:
 
     def _deactivate(self):
         self.__value = self._active_state.INACTIVE
-        self._logger.debug(f"Deactivating DIO with value of {self.__value}")
+        # self._logger.debug(f"Deactivating DIO with value of {self.__value}")
 
     def toggle(self):
         if not self.__timer.is_alive() and not self._read_only:

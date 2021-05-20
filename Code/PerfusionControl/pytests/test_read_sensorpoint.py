@@ -23,7 +23,7 @@ LP_CFG.set_base(basepath='~/Documents/LPTEST')
 LP_CFG.update_stream_folder()
 
 samples = 5
-filename = LP_CFG.LP_PATH['data'] / '2021-05-13/FiniteAcq.dat'
+filename = LP_CFG.LP_PATH['data'] / '2021-05-20/Oxygen.dat'
 logger.info(f'reading from {filename}')
 stream_type = np.dtype([('timestamp', np.int32), ('samples', np.float32, samples)])
 full_data = np.fromfile(filename, dtype=stream_type)

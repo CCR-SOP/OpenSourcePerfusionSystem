@@ -171,9 +171,10 @@ class AI:
     def _convert_to_units(self, buffer, channel):
         data = np.zeros_like(buffer)
         for i in range(len(buffer)):
+
             data[i] = (((buffer[i] - self._calibration[channel][1]) * (
                         self._calibration[channel][2] - self._calibration[channel][0]))
                        / (self._calibration[channel][3] - self._calibration[channel][1])) + self._calibration[channel][
                           0]
-        #    print(f'Convert {buffer[i]} to {data[i]}')
+            self._logger.debug(f'convert {buffer[i]} to {data[i]}')
         return data

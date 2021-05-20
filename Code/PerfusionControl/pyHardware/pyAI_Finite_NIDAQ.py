@@ -52,7 +52,8 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
     def run(self):
         self._acq_samples()
         self._acq_complete = True
+        self._logger.debug(f'completed acq')
         if self._notify:
-            self._logger.debug(f'notify is {self._notify}')
+            self._logger.debug(f'notifying {self._notify}')
             self._notify()
             self._notify = None

@@ -62,16 +62,13 @@ class VCS:
             wait_time = 0
             for sensor in self._sensors4cycled[set_name]:
                 key = f'{set_name}:{self._active_valve[set_name].name}:{sensor.name}'
-                notify = self._notify.get(key, None)
-                self._lgr.debug(f'notify key is {key}, notify is {notify}')
+                self._lgr.debug(f'starting sensor {sensor.name}: notify = {self._notify.get(key, None)}')
                 sensor.hw.start(notify=self._notify.get(key, None))
                 expected_time = sensor.hw.expected_acq_time
                 if expected_time > wait_time:
                     wait_time = expected_time
-            self._lgr.debug(f'Expected wait time is {wait_time / 1000.0}')
             self._timer_acq[set_name] = Timer(wait_time/1000.0, function=self._wait_for_data_collection, args=(set_name,))
             self._timer_acq[set_name].start()
-            self._lgr.debug(f'waiting on sensor read')
         except KeyError:
             self._lgr.warning(f'No sensors were added for set {set_name}')
 
@@ -88,7 +85,6 @@ class VCS:
                 self._timer_acq[set_name] = None
                 # TODO, this is a busy wait, replace with event/semaphore
                 done = [sensor.hw.is_done() for sensor in self._sensors4cycled[set_name]]
-                self._lgr.debug(f'{done}')
                 if all(done):
                     self._lgr.debug(f'read sensor data for {set_name}')
                     self._cycle_next(set_name)
@@ -202,5 +198,4 @@ class VCS:
 
     def add_notify(self, set_name, group_name, sensor_name, notify):
         key = f'{set_name}:{group_name}:{sensor_name}'
-        self._lgr.debug(f'for {key}  adding notify {notify}')
         self._notify.update({key: notify})
