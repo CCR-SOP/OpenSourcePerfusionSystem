@@ -137,11 +137,12 @@ class PanelReadoutVCS(PanelReadout):
         # panel will be manually updated
         self.timer_update.Stop()
 
-
     def update_value(self):
         self._logger.debug(f'Updating value for sensor {self.name}')
-        data = self._sensor.get_current()
+        ts, data = self._sensor.get_last_acq()
+        # data = self._sensor.get_current()
         if data is not None:
+            self._logger.debug(f'acquired data is {data}')
             avg = np.mean(data)
             val = float(avg)
             self.label_value.SetLabel(f'{round(val, 1):3}')
@@ -296,7 +297,6 @@ class TestFrame(wx.Frame):
                                       self._chemical_sensors[2])]
         self.sizer_readout = wx.BoxSizer(wx.VERTICAL)
         for panel in readouts:
-            self._lgr.debug(f'adding panel {panel.name}')
             self.sizer_readout.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.sizer_sensors = wx.BoxSizer(wx.VERTICAL)
@@ -316,6 +316,7 @@ class TestFrame(wx.Frame):
         self._vcs.add_sensor_to_cycled_valves('Chemical', self._chemical_sensors[1])
         self._vcs.add_sensor_to_cycled_valves('Chemical', self._chemical_sensors[2])
 
+        self._lgr.debug(f'oxy readout is {readouts[0].readout_o2.update_value}')
         self._vcs.add_notify('Chemical', valves[0].name, self._chemical_sensors[0].name, readouts[0].readout_o2.update_value)
         self._vcs.add_notify('Chemical', valves[0].name, self._chemical_sensors[1].name, readouts[0].readout_co2.update_value)
         self._vcs.add_notify('Chemical', valves[0].name, self._chemical_sensors[2].name, readouts[0].readout_ph.update_value)
