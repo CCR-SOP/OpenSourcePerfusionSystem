@@ -59,14 +59,11 @@ class VCS:
         try:
             self._lgr.debug(f'perfusate cleared for {set_name}')
             self._timer_clearance[set_name] = None
-            wait_time = 0
-            for sensor in self._sensors4cycled[set_name]:
-                key = f'{set_name}:{self._active_valve[set_name].name}:{sensor.name}'
-                self._lgr.debug(f'starting sensor {sensor.name}: notify = {self._notify.get(key, None)}')
-                sensor.hw.start(notify=self._notify.get(key, None))
-                expected_time = sensor.hw.expected_acq_time
-                if expected_time > wait_time:
-                    wait_time = expected_time
+            key = f'{set_name}:{self._active_valve[set_name].name}'
+            sensor = self._sensors4cycled[set_name][0]
+            self._lgr.debug(f'setting to notify = {self._notify.get(key, None)}')
+            sensor.hw.start(notify=self._notify.get(key, None))
+            wait_time = sensor.hw.expected_acq_time
             self._timer_acq[set_name] = Timer(wait_time/1000.0, function=self._wait_for_data_collection, args=(set_name,))
             self._timer_acq[set_name].start()
         except KeyError:
@@ -84,8 +81,8 @@ class VCS:
             else:
                 self._timer_acq[set_name] = None
                 # TODO, this is a busy wait, replace with event/semaphore
-                done = [sensor.hw.is_done() for sensor in self._sensors4cycled[set_name]]
-                if all(done):
+                done = self._sensors4cycled[set_name][0].hw.is_done()
+                if done:
                     self._lgr.debug(f'read sensor data for {set_name}')
                     self._cycle_next(set_name)
                     break
@@ -196,6 +193,6 @@ class VCS:
         self.close_all_cycled_valves()
         self.close_all_independent_valves()
 
-    def add_notify(self, set_name, group_name, sensor_name, notify):
-        key = f'{set_name}:{group_name}:{sensor_name}'
+    def add_notify(self, set_name, group_name, notify):
+        key = f'{set_name}:{group_name}'
         self._notify.update({key: notify})

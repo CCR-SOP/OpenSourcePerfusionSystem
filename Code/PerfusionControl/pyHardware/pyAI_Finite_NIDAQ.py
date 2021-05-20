@@ -33,7 +33,7 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
 
     def start(self, notify=None):
         self._acq_complete = False
-        self._read_period_ms = self.samples_per_read * len(self.get_ids()) * self._period_sampling_ms * 1.1
+        self._read_period_ms = self.samples_per_read * len(self.get_ids()) * self._period_sampling_ms
         self._notify = notify
         super().start()
 

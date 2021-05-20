@@ -126,6 +126,13 @@ class PanelReadoutGroup(wx.Panel):
         time_str = "{0:0=2d}".format(ct.hour) + ':' + "{0:0=2d}".format(ct.minute) + ':' + "{0:0=2d}".format(ct.second)
         self.static_box.SetLabel(f'{self.name} as of {time_str}')
 
+    def update_value(self):
+        ct = datetime.datetime.now()
+        self.update_label(ct)
+        self.readout_co2.update_value()
+        self.readout_o2.update_value()
+        self.readout_ph.update_value()
+
 
 class PanelReadoutVCS(PanelReadout):
     def __init__(self, parent, sensor, name):
@@ -146,9 +153,7 @@ class PanelReadoutVCS(PanelReadout):
             avg = np.mean(data)
             val = float(avg)
             self.label_value.SetLabel(f'{round(val, 1):3}')
-            ct = datetime.datetime.now()
-            self._parent.update_label(ct)
-            self.label_name.SetLabel(f'{self.name}')
+
 
 class PanelReadoutOxygenUtilization(PanelReadout):
     def __init__(self, parent, sensors, name):
@@ -317,17 +322,10 @@ class TestFrame(wx.Frame):
         self._vcs.add_sensor_to_cycled_valves('Chemical', self._chemical_sensors[2])
 
         self._lgr.debug(f'oxy readout is {readouts[0].readout_o2.update_value}')
-        self._vcs.add_notify('Chemical', valves[0].name, self._chemical_sensors[0].name, readouts[0].readout_o2.update_value)
-        self._vcs.add_notify('Chemical', valves[0].name, self._chemical_sensors[1].name, readouts[0].readout_co2.update_value)
-        self._vcs.add_notify('Chemical', valves[0].name, self._chemical_sensors[2].name, readouts[0].readout_ph.update_value)
+        self._vcs.add_notify('Chemical', valves[0].name, readouts[0].update_value)
+        self._vcs.add_notify('Chemical', valves[1].name, readouts[1].update_value)
+        self._vcs.add_notify('Chemical', valves[2].name, readouts[2].update_value)
 
-        self._vcs.add_notify('Chemical', valves[1].name, self._chemical_sensors[0].name, readouts[1].readout_o2.update_value)
-        self._vcs.add_notify('Chemical', valves[1].name, self._chemical_sensors[1].name, readouts[1].readout_co2.update_value)
-        self._vcs.add_notify('Chemical', valves[1].name, self._chemical_sensors[2].name, readouts[1].readout_ph.update_value)
-
-        self._vcs.add_notify('Chemical', valves[2].name, self._chemical_sensors[0].name, readouts[2].readout_o2.update_value)
-        self._vcs.add_notify('Chemical', valves[2].name, self._chemical_sensors[1].name, readouts[2].readout_co2.update_value)
-        self._vcs.add_notify('Chemical', valves[2].name, self._chemical_sensors[2].name, readouts[2].readout_ph.update_value)
 
         panel_O2_util = PanelReadoutOxygenUtilization(self, [self._chemical_sensors[0], self._chemical_sensors[0]], 'Oxygen Utilization')
         self.sizer_readout.Add(panel_O2_util, 1, wx.EXPAND)

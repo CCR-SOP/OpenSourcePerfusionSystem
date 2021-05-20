@@ -63,7 +63,7 @@ class NIDAQ_AI(pyAI.AI):
         buffer_t = time.perf_counter()
         try:
             if self._task and len(self.get_ids()) > 0:
-                self._task.ReadAnalogF64(self.samples_per_read, self._read_period_ms / 1000.0, DAQmx_Val_GroupByChannel,
+                self._task.ReadAnalogF64(self.samples_per_read, 1.05 * self._read_period_ms / 1000.0, DAQmx_Val_GroupByChannel,
                                          self._acq_buf, len(self._acq_buf), PyDAQmx.byref(samples_read), None)
         except PyDAQmx.ReadBufferTooSmallError:
             self._logger.error(f'ReadBufferTooSmallError when reading {self.devname}')
