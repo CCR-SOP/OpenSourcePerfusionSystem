@@ -53,5 +53,6 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
         self._acq_samples()
         self._acq_complete = True
         if self._notify:
+            self._logger.debug(f'notify is {self._notify}')
             self._notify()
             self._notify = None

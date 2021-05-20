@@ -61,9 +61,10 @@ class VCS:
             self._timer_clearance[set_name] = None
             wait_time = 0
             for sensor in self._sensors4cycled[set_name]:
-                key = f'{set_name}{self._active_valve[set_name].name}{sensor.name}'
-                self._lgr.debug(f'notify key is {key}')
-                sensor.hw.start(notify=self._notify.get(key, 'None'))
+                key = f'{set_name}:{self._active_valve[set_name].name}:{sensor.name}'
+                notify = self._notify.get(key, None)
+                self._lgr.debug(f'notify key is {key}, notify is {notify}')
+                sensor.hw.start(notify=self._notify.get(key, None))
                 expected_time = sensor.hw.expected_acq_time
                 if expected_time > wait_time:
                     wait_time = expected_time
@@ -201,4 +202,5 @@ class VCS:
 
     def add_notify(self, set_name, group_name, sensor_name, notify):
         key = f'{set_name}:{group_name}:{sensor_name}'
+        self._lgr.debug(f'for {key}  adding notify {notify}')
         self._notify.update({key: notify})

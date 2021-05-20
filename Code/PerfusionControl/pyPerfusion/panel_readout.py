@@ -21,6 +21,7 @@ class PanelReadout(wx.Panel):
         self._logger = logging.getLogger(__name__)
         super().__init__(parent, -1)
         self._sensor = sensor
+        self._parent = parent
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.sizer_value = wx.BoxSizer(wx.HORIZONTAL)
