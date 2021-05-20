@@ -25,7 +25,6 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
         self._sample_mode = PyDAQmx.DAQmxConstants.DAQmx_Val_FiniteSamps
         self.samples_per_read = samples_per_read
         self._acq_complete = False
-        self.semaphore = None
 
     @property
     def expected_acq_time(self):
@@ -49,9 +48,5 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
         return self._acq_complete
 
     def run(self):
-        if self.semaphore:
-            self.semaphore.acquire()
         self._acq_samples()
         self._acq_complete = True
-        if self.semaphore:
-            self.semaphore.release()
