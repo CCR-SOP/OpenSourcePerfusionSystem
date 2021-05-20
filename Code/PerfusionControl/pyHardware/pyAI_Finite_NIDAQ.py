@@ -25,14 +25,16 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
         self._sample_mode = PyDAQmx.DAQmxConstants.DAQmx_Val_FiniteSamps
         self.samples_per_read = samples_per_read
         self._acq_complete = False
+        self._notify = None
 
     @property
     def expected_acq_time(self):
         return self.samples_per_read * self.period_sampling_ms
 
-    def start(self):
+    def start(self, notify=None):
         self._acq_complete = False
         self._read_period_ms = self.samples_per_read * len(self.get_ids()) * self._period_sampling_ms * 1.1
+        self._notify = notify
         super().start()
 
     def stop(self):
@@ -50,3 +52,6 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
     def run(self):
         self._acq_samples()
         self._acq_complete = True
+        if self._notify:
+            self._notify()
+            self._notify = None

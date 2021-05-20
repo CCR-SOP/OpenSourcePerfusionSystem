@@ -31,6 +31,7 @@ class VCS:
         self._sensors4cycled = {}
         self._sensors4independent = {}
         self._cycle_active = {}
+        self._notify = {}
 
     def _start_clearance_timer(self, set_name):
         if not self._cycle_active[set_name]:
@@ -60,7 +61,9 @@ class VCS:
             self._timer_clearance[set_name] = None
             wait_time = 0
             for sensor in self._sensors4cycled[set_name]:
-                sensor.hw.start()
+                key = f'{set_name}{self._active_valve[set_name].name}{sensor.name}'
+                self._lgr.debug(f'notify key is {key}')
+                sensor.hw.start(notify=self._notify.get(key, 'None'))
                 expected_time = sensor.hw.expected_acq_time
                 if expected_time > wait_time:
                     wait_time = expected_time
@@ -82,6 +85,7 @@ class VCS:
                 self._lgr.debug(f'No set name {set_name} in _wait_for_data_collection ')
             else:
                 self._timer_acq[set_name] = None
+                # TODO, this is a busy wait, replace with event/semaphore
                 done = [sensor.hw.is_done() for sensor in self._sensors4cycled[set_name]]
                 self._lgr.debug(f'{done}')
                 if all(done):
@@ -194,3 +198,7 @@ class VCS:
     def close_all_valves(self):
         self.close_all_cycled_valves()
         self.close_all_independent_valves()
+
+    def add_notify(self, set_name, group_name, sensor_name, notify):
+        key = f'{set_name}:{group_name}:{sensor_name}'
+        self._notify.update({key: notify})
