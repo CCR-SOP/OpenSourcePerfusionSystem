@@ -12,9 +12,7 @@ import datetime
 import numpy as np
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
-from pyPerfusion.panel_AO import PanelAO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
-from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI, PanelAICalibration
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -22,13 +20,10 @@ from pyPerfusion.panel_readout import PanelReadout
 from pyPerfusion.panel_DIO import PanelDIO, PanelDIOControls, PanelDIOIndicator
 from pyHardware.pyDIO import DIODeviceException
 import pyPerfusion.utils as utils
-from pyHardware.pyAI import AIDeviceException
 from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
-from pyHardware.pyVCS import VCS
+from pyHardware.pyVCS import VCS, VCSPump
 
 
-chemical_valves = {}
-glucose_valves = {}
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
@@ -200,13 +195,57 @@ class PanelCoordination(wx.Panel):
             self.btn_start_stop.SetLabel('Start')
 
 
+class PanelPump(wx.Panel):
+    def __init__(self, parent, pump):
+        super().__init__(parent)
+        self._logger = logging.getLogger(__name__)
+        self._parent = parent
+        self._pump = pump
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.slider_speed = wx.Slider(self, value=25, minValue=0, maxValue=100,
+                                      style=wx.SL_HORIZONTAL | wx.SL_LABELS)
+        self.label_speed = wx.StaticText(self, label='VCS Pump Speed (%)')
+
+        self.__do_layout()
+        self.__set_bindings()
+
+    def __set_bindings(self):
+        self.slider_speed.Bind(wx.EVT_SLIDER, self.OnSpeedChange)
+
+    def __do_layout(self):
+        flags = wx.SizerFlags().Expand().Border()
+        self.sizer.Add(self.label_speed, flags)
+        self.sizer.Add(self.slider_speed, flags)
+
+        self.SetSizer(self.sizer)
+        self.Layout()
+        self.Fit()
+
+    def OnSpeedChange(self, evt):
+        val = self.slider_speed.GetValue()
+        self._pump.set_speed(val)
+
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         self._lgr = logging.getLogger(__name__)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.ao = NIDAQ_AO()
+        self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS)
+
+        self.ao = NIDAQ_AO('VCS Pump')
+        section = LP_CFG.get_hwcfg_section(self.ao.name)
+        self._lgr.debug(f'Reading config for {self.ao.name}')
+        dev = section['DevName']
+        line = section['LineName']
+        self.ao.open(period_ms=1000, dev=dev, line=line)
+        self.pump = VCSPump(self.ao)
+        self.pump.set_speed(3)
+        self.panel_pump = PanelPump(self, self.pump)
+        self._vcs.set_pump(self.pump)
+
         valves = [NIDAQ_DIO('Hepatic Artery (Chemical)'),
                   NIDAQ_DIO('Portal Vein (Chemical)'),
                   NIDAQ_DIO('Inferior Vena Cava (Chemical)'),
@@ -214,7 +253,6 @@ class TestFrame(wx.Frame):
                   NIDAQ_DIO('Portal Vein (Glucose)'),
                   NIDAQ_DIO('Inferior Vena Cava (Glucose)')
                   ]
-        self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS)
         flags = wx.SizerFlags().Expand().Border()
 
         self.sizer_dio = wx.GridSizer(cols=2)
@@ -291,13 +329,12 @@ class TestFrame(wx.Frame):
         self._vcs.add_notify('Chemical', valves[1].name, readouts[1].update_value)
         self._vcs.add_notify('Chemical', valves[2].name, readouts[2].update_value)
 
-
         panel_O2_util = PanelReadoutOxygenUtilization(self, [self._chemical_sensors[0], self._chemical_sensors[0]], 'Oxygen Utilization')
         self.sizer_readout.Add(panel_O2_util, flags)
 
         sizerv = wx.BoxSizer(wx.VERTICAL)
         sizerv.Add(PanelCoordination(self, self._vcs, name='Valve Coordination'), flags)
-        sizerv.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), flags)
+        sizerv.Add(self.panel_pump, flags)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         sizer_indicators = wx.BoxSizer(wx.VERTICAL)
@@ -320,6 +357,7 @@ class TestFrame(wx.Frame):
         for sensor in self._chemical_sensors:
             sensor.stop()
         self._vcs.stop()
+        self.ao.close()
         self.Destroy()
 
 class MyTestApp(wx.App):

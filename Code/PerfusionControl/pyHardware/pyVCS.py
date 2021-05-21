@@ -10,10 +10,26 @@ and under the public domain.
 """
 import logging
 from itertools import cycle
-from threading import Timer, Lock, Event, Semaphore
+from threading import Timer, Lock, Event
 from time import sleep
 
 from pyHardware.pyDIO import DIO
+from pyHardware.pyAO import AO
+
+
+class VCSPump:
+    def __init__(self, ao: AO):
+        self._ao = ao
+        self._speed = 0
+
+    def set_speed(self, speed: int):
+        self._speed = speed
+
+    def start(self):
+        self._ao.set_dc(self._speed)
+
+    def stop(self):
+        self._ao.set_dc(0)
 
 
 class VCS:
@@ -32,6 +48,7 @@ class VCS:
         self._sensors4independent = {}
         self._cycle_active = {}
         self._notify = {}
+        self._pump = None
 
     def _start_clearance_timer(self, set_name):
         if not self._cycle_active[set_name]:
@@ -47,6 +64,8 @@ class VCS:
         self._timer_clearance[set_name] = Timer(self._clearance_time_ms / 1000.0,
                                                 function=self._cleared_perfusate,
                                                 kwargs={'set_name': set_name})
+        if self._pump:
+            self._pump.start()
         self._timer_clearance[set_name].start()
 
     def _cleared_perfusate(self, set_name):
@@ -57,6 +76,7 @@ class VCS:
         except KeyError:
             self._lgr.debug(f'No set name {set_name} in _cleared_perfusate')
         try:
+            self._pump.stop()
             self._lgr.debug(f'perfusate cleared for {set_name}')
             self._timer_clearance[set_name] = None
             key = f'{set_name}:{self._active_valve[set_name].name}'
@@ -118,11 +138,14 @@ class VCS:
 
     def stop_cycle(self, set_name):
         self._evt_halt.set()
+        self._pump.stop()
         if set_name in self._cycled.keys():
             self._cycle_active[set_name] = False
         self.close_cycled_valves(set_name)
 
     def stop(self):
+        if self._pump:
+            self._pump.stop()
         self._evt_halt.set()
         self.close_all_valves()
 
@@ -196,3 +219,7 @@ class VCS:
     def add_notify(self, set_name, group_name, notify):
         key = f'{set_name}:{group_name}'
         self._notify.update({key: notify})
+
+    def set_pump(self, pump: VCSPump):
+        self._pump = pump
+        self._pump.stop()
