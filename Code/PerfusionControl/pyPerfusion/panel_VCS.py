@@ -205,13 +205,17 @@ class PanelPump(wx.Panel):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.slider_speed = wx.Slider(self, value=25, minValue=0, maxValue=100,
                                       style=wx.SL_HORIZONTAL | wx.SL_LABELS)
-        self.label_speed = wx.StaticText(self, label='VCS Pump Speed (%)')
+        self._default_label = 'VCS Pump Speed (%)'
+        self.label_speed = wx.StaticText(self, label=self._default_label)
 
+        self.timer_update = wx.Timer(self)
         self.__do_layout()
         self.__set_bindings()
+        self.timer_update.Start(200, wx.TIMER_CONTINUOUS)
 
     def __set_bindings(self):
         self.slider_speed.Bind(wx.EVT_SLIDER, self.OnSpeedChange)
+        self.Bind(wx.EVT_TIMER, self.OnUpdate)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand().Border()
@@ -225,6 +229,12 @@ class PanelPump(wx.Panel):
     def OnSpeedChange(self, evt):
         val = self.slider_speed.GetValue()
         self._pump.set_speed(val)
+
+    def OnUpdate(self, evt):
+        # color = wx.GREEN if self._pump.active else wx.RED
+        lbl = 'Active' if self._pump.active else 'Inactive'
+        self.label_speed.SetLabel(f'{self._default_label}: {lbl}')
+        # self.label_speed.SetBackgroundColour(color)
 
 
 class TestFrame(wx.Frame):

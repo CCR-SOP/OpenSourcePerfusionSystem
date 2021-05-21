@@ -21,15 +21,23 @@ class VCSPump:
     def __init__(self, ao: AO):
         self._ao = ao
         self._speed = 0
+        self._active = False
+
+    @property
+    def active(self):
+        return self._active
 
     def set_speed(self, speed: int):
         self._speed = speed
 
     def start(self):
-        self._ao.set_dc(self._speed)
+        volts = self._speed / 100.0 * 5
+        self._ao.set_dc(volts)
+        self._active = True
 
     def stop(self):
         self._ao.set_dc(0)
+        self._active = False
 
 
 class VCS:
