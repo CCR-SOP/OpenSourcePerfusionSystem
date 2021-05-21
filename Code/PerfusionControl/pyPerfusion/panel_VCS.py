@@ -301,7 +301,7 @@ class TestFrame(wx.Frame):
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.sizer_dio, flags)
+        sizer.Add(self.sizer_dio)
         sizer.Add(self.sizer_readout, flags)
         sizer.Add(sizerv, flags)
         self.sizer.Add(sizer, flags)

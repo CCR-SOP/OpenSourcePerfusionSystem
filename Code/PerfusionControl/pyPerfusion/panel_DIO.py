@@ -262,12 +262,13 @@ class PanelDIOIndicator(wx.Panel):
         self._timer.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Proportion(1)
+        flags = wx.SizerFlags().Expand()
 
         self.sizer.Add(self._label_active, flags)
-        # self.sizer.AddSpacer(5)
+        self.sizer.AddSpacer(5)
         self.sizer.Add(self._label_cfg, flags)
 
+        self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
@@ -285,8 +286,8 @@ class PanelDIOIndicator(wx.Panel):
     def _update_active(self, evt):
         active = self._dio.is_active
         color = wx.GREEN if active else wx.RED
-        # use two spaces after Active so size of text label does not change
-        lbl = 'Active  ' if active else 'Inactive'
+        # use extra two spaces after Active so size of text label does not change
+        lbl = ' Active   ' if active else ' Inactive '
         self._label_active.SetLabel(lbl)
         self._label_active.SetBackgroundColour(color)
 
