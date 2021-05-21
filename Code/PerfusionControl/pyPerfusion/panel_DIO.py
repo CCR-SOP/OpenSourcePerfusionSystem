@@ -187,28 +187,21 @@ class PanelDIOControls(wx.Panel):
         self._dio = dio
         self._name = name
         self._display_config = display_config
-        self._timer = wx.Timer()
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-
-        self._label_cfg = wx.StaticText(self, label='')
-        self._label_cfg.Show(self._display_config)
-        self._label_active = wx.StaticText(self, label='')
-        self._label_active.Show(self._display_config)
-
         self.btn_activate = wx.ToggleButton(self, label='Activate')
-
         self.btn_pulse = wx.Button(self, label='Pulse')
         self.spin_pulse = wx.SpinCtrl(self, min=1, max=20000, initial=10)
         self.lbl_pulse = wx.StaticText(self, label='ms')
+        self.panel_indicator = PanelDIOIndicator(self, self._dio, self._name)
+        self.panel_indicator.Show(self._display_config)
+        self.panel_indicator.Show(True)
 
         self.__do_layout()
         self.__set_bindings()
 
-        self._timer.Start(milliseconds=500)
-
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 2).Center().CenterVertical().Proportion(0)
+        flags = wx.SizerFlags().Proportion(1)
 
         sizer_pulse = wx.BoxSizer(wx.HORIZONTAL)
         sizer_pulse.Add(self.spin_pulse, flags)
@@ -219,12 +212,8 @@ class PanelDIOControls(wx.Panel):
         sizer_test.Add(self.btn_pulse, flags)
         sizer_test.Add(sizer_pulse, flags)
 
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self._label_active, flags)
-        sizer.AddSpacer(5)
-        sizer.Add(self._label_cfg, flags)
-        self.sizer.Add(sizer)
-        self.sizer.Add(sizer_test)
+        self.sizer.Add(self.panel_indicator, flags)
+        self.sizer.Add(sizer_test, flags)
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -233,7 +222,6 @@ class PanelDIOControls(wx.Panel):
     def __set_bindings(self):
         self.btn_activate.Bind(wx.EVT_TOGGLEBUTTON, self.OnActivate)
         self.btn_pulse.Bind(wx.EVT_BUTTON, self.OnPulse)
-        self._timer.Bind(wx.EVT_TIMER, self._update_active)
 
     def OnActivate(self, evt):
         state = self.btn_activate.GetLabel()
@@ -250,30 +238,66 @@ class PanelDIOControls(wx.Panel):
         self._dio.pulse(ms)
 
     def update_label(self):
+        self.panel_indicator.update_label()
+
+
+class PanelDIOIndicator(wx.Panel):
+    def __init__(self, parent, dio, name):
+        wx.Panel.__init__(self, parent, -1)
+        self._logger = logging.getLogger(__name__)
+        self.parent = parent
+        self._dio = dio
+        self._name = name
+        self._timer = wx.Timer(self)
+
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self._label_cfg = wx.StaticText(self, label='Unknown Device')
+        self._label_active = wx.StaticText(self, label='Inactive')
+
+        self.__do_layout()
+        self.__set_bindings()
+
+        self.update_label()
+        self._update_active(wx.EVT_TIMER)
+        self._timer.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
+
+    def __do_layout(self):
+        flags = wx.SizerFlags().Expand().Proportion(1)
+
+        self.sizer.Add(self._label_active, flags)
+        # self.sizer.AddSpacer(5)
+        self.sizer.Add(self._label_cfg, flags)
+
+        self.Layout()
+        self.Fit()
+
+    def __set_bindings(self):
+        self.Bind(wx.EVT_TIMER, self._update_active)
+
+    def update_label(self):
+        self._label_cfg.SetLabel(f'{self._name}')
+
         active_str = str(self._dio.active_state)
         read_str = 'Read Only' if self._dio.read_only else 'Write Only'
-        cfg_str = f'{self._name}'
         hw_details = f'{self._dio.devname} {active_str} {read_str}'
-        self._label_cfg.SetLabel(cfg_str)
         self._label_cfg.SetToolTip(wx.ToolTip(hw_details))
-        self.Layout()
 
     def _update_active(self, evt):
-        if self._dio.is_open:
-            # self._logger.debug(f'{self._name}: value = {self._dio.value}, active state is {self._dio.active_state.ACTIVE}')
-            active = self._dio.is_active
-            color = wx.GREEN if active else wx.RED
-            lbl = 'Active' if active else 'Inactive'
-            self._label_active.SetLabel(lbl)
-            self._label_active.SetBackgroundColour(color)
-            self.Layout()
+        active = self._dio.is_active
+        color = wx.GREEN if active else wx.RED
+        # use two spaces after Active so size of text label does not change
+        lbl = 'Active  ' if active else 'Inactive'
+        self._label_active.SetLabel(lbl)
+        self._label_active.SetBackgroundColour(color)
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.dio = NIDAQ_DIO()
-        self.panel = PanelDIO(self, self.dio, 'DIO')
+        # self.panel = PanelDIO(self, self.dio, 'DIO')
+        self.panel = PanelDIOIndicator(self, self.dio, 'DIO')
 
 
 class MyTestApp(wx.App):

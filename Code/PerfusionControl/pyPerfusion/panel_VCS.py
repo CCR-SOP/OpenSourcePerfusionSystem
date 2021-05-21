@@ -19,7 +19,7 @@ from pyPerfusion.panel_AI import PanelAI, PanelAICalibration
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_readout import PanelReadout
-from pyPerfusion.panel_DIO import PanelDIO, PanelDIOControls
+from pyPerfusion.panel_DIO import PanelDIO, PanelDIOControls, PanelDIOIndicator
 from pyHardware.pyDIO import DIODeviceException
 import pyPerfusion.utils as utils
 from pyHardware.pyAI import AIDeviceException
@@ -35,40 +35,6 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 DEFAULT_CLEARANCE_TIME_MS = 2_000 #150_000
 DEFAULT_SAMPLES_PER_READ = 3
 
-
-class PanelVCS(PanelDIOControls):
-    def __init__(self, parent, dio, name):
-        super().__init__(parent, dio, name, display_config=True)
-
-    def OnOpen(self, evt):
-        super().OnOpen(evt)
-        state = self.btn_open.GetLabel()
-        if state == 'Close':  # If channel was just opened
-            self.btn_activate.SetBackgroundColour('red')
-            if 'Chemical' in self._name:
-               chemical_valves.update({self._name: self})
-            elif 'Glucose' in self._name:
-               glucose_valves.update({self._name: self})
-        else:  # If channel was just closed
-            self.btn_activate.SetBackgroundColour('gray')
-
-    def OnActivate(self, evt):
-        super().OnActivate(evt)
-        state = self.btn_activate.GetLabel()
-        if state == 'Activate':  # If valve was just deactivated
-            self.btn_activate.SetBackgroundColour('red')
-        else:  # If valve was just activated
-             self.btn_activate.SetBackgroundColour('green')
-             if 'Chemical' in self._name:
-                 for key, chem in chemical_valves.items():  # For all chemical valves
-                     if chem._dio.value and (key != self._name):  # If the valve is open AND the valve is not the one just opened;
-                         chem._dio.deactivate()
-                         chem.btn_activate.SetLabel('Activate')
-                         chem.btn_activate.SetBackgroundColour('red')
-
-    def OnLoadConfig(self, evt):
-        super().OnLoadConfig(evt)
-        self.btn_activate.SetBackgroundColour('gray')
 
 class PanelAIVCS(wx.Panel):
     def __init__(self, parent, sensor, name):
@@ -145,11 +111,9 @@ class PanelReadoutVCS(PanelReadout):
         self.timer_update.Stop()
 
     def update_value(self):
-        self._logger.debug(f'Updating value for sensor {self.name}')
         ts, data = self._sensor.get_last_acq()
         # data = self._sensor.get_current()
         if data is not None:
-            self._logger.debug(f'acquired data is {data}')
             avg = np.mean(data)
             val = float(avg)
             self.label_value.SetLabel(f'{round(val, 1):3}')
@@ -251,13 +215,14 @@ class TestFrame(wx.Frame):
                   NIDAQ_DIO('Inferior Vena Cava (Glucose)')
                   ]
         self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS)
+        flags = wx.SizerFlags().Expand().Border()
 
         self.sizer_dio = wx.GridSizer(cols=2)
         for valve in valves:
             key = valve.name
             try:
-                panel = PanelDIOControls(self, valve, valve.name, display_config=True)
-                self.sizer_dio.Add(panel, 1, wx.EXPAND, border=2)
+                panel = PanelDIOIndicator(self, valve, valve.name)
+                self.sizer_dio.Add(panel, flags)
                 self._lgr.debug(f'opening config section {key}')
                 section = LP_CFG.get_hwcfg_section(key)
                 dev = section['Device']
@@ -302,9 +267,9 @@ class TestFrame(wx.Frame):
                                       self._chemical_sensors[2])]
         self.sizer_readout = wx.BoxSizer(wx.VERTICAL)
         for panel in readouts:
-            self.sizer_readout.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+            self.sizer_readout.Add(panel, flags.Border())
 
-        self.sizer_sensors = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_sensors = wx.GridSizer(cols=2)
         for sensor in self._chemical_sensors:
             section = LP_CFG.get_hwcfg_section(sensor.name)
             self._lgr.debug(f'Reading config for {sensor.name}')
@@ -313,7 +278,7 @@ class TestFrame(wx.Frame):
             self.acq.open(dev)
             self.acq.add_channel(line)
             sensor.set_ch_id(line)
-            self.sizer_sensors.Add(PanelAIVCS(self, sensor, name=sensor.name), 1, wx.EXPAND, border=2)
+            self.sizer_sensors.Add(PanelAIVCS(self, sensor, name=sensor.name), flags.Border())
             sensor.open(LP_CFG.LP_PATH['stream'])
             sensor.start()
 
@@ -328,23 +293,20 @@ class TestFrame(wx.Frame):
 
 
         panel_O2_util = PanelReadoutOxygenUtilization(self, [self._chemical_sensors[0], self._chemical_sensors[0]], 'Oxygen Utilization')
-        self.sizer_readout.Add(panel_O2_util, 1, wx.EXPAND)
+        self.sizer_readout.Add(panel_O2_util, flags)
 
+        sizerv = wx.BoxSizer(wx.VERTICAL)
+        sizerv.Add(PanelCoordination(self, self._vcs, name='Valve Coordination'), flags)
+        sizerv.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), flags)
 
-        flags = wx.SizerFlags().Expand().Proportion(1).Border()
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.sizer_dio, flags)
         sizer.Add(self.sizer_readout, flags)
-        self.sizer.Add(sizer, flags)
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.sizer_sensors, flags)
-        sizerv = wx.BoxSizer(wx.VERTICAL)
-        sizerv.Add(PanelCoordination(self, self._vcs, name='Valve Coordination'), 1, wx.EXPAND, border=2)
-        sizerv.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), 1, wx.EXPAND, border=2)
         sizer.Add(sizerv, flags)
         self.sizer.Add(sizer, flags)
+
+        self.sizer.Add(self.sizer_sensors, flags)
 
         self.SetSizer(self.sizer)
         self.Fit()
