@@ -300,9 +300,12 @@ class TestFrame(wx.Frame):
         sizerv.Add(PanelAO(self, self.ao, name='VCS Peristaltic Pump (AO)'), flags)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer_indicators = wx.BoxSizer(wx.VERTICAL)
+        sizer_indicators.Add(self.sizer_dio)
+        sizer_indicators.Add(self.sizer_readout, flags)
+
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.sizer_dio)
-        sizer.Add(self.sizer_readout, flags)
+        sizer.Add(sizer_indicators, flags)
         sizer.Add(sizerv, flags)
         self.sizer.Add(sizer, flags)
 
