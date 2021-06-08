@@ -148,4 +148,3 @@ class SyringeTimer:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
         syringe.cooldown = True
-
