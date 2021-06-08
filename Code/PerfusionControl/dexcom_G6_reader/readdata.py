@@ -66,13 +66,12 @@ class Dexcom(object):
 
     self.buf_len = 1
     self.data_type = np.float32
-    self.period_sampling_ms = 1000
+    self.period_sampling_ms = 300000
     self.samples_per_read = 1
 
     self.read_data = False
     self._buffer = None
     self._time = None
-    self._index = 1
 
   def Connect(self):
     if self._port is None:
@@ -399,8 +398,7 @@ class Dexcom(object):
     self._time = None
     if self.read_data is True:
       CGM_records = self.ReadRecords('EGV_DATA')
-      latest_read_split = str(CGM_records[self._index]).split(': ')
-      self._index += 1
+      latest_read_split = str(CGM_records[-1]).split(': ')
       self._time = latest_read_split[0][5:16]
       latest_value_raw = latest_read_split[1]
       if latest_value_raw[0:3] == 'CGM':
