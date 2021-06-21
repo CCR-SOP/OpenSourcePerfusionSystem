@@ -191,8 +191,7 @@ class PanelCoordination(wx.Panel):
 
     def OnStartStop(self, evt):
         for sensor in self._sensors:  # Stop all sensors, as all valves are about to be closed
-            sensor.hw.remove_channel(sensor._ch_id)
-            sensor.hw.start()
+            sensor.hw.stop()
         self.close_all_chemical_valves()
         self._last_valve = ''
         state = self.btn_start_stop.GetLabel()
@@ -206,8 +205,6 @@ class PanelCoordination(wx.Panel):
             self.timer_read_values.Stop()
             self.timer_clear_valve.Stop()
             for sensor in self._sensors:
-                self._lgr.debug(f'in onstartstop, adding channel {sensor._ch_id}')
-                sensor.hw.add_channel(sensor._ch_id)
                 sensor.hw.start()
             for readout in self._readout_list:
                 readout.timer_update.Stop()
@@ -218,9 +215,7 @@ class PanelCoordination(wx.Panel):
         if event.GetId() == self.timer_read_values.GetId():
             self.timer_read_values.Stop()  # Requested number of reads have now been taken
             for sensor in self._sensors:
-                # Stop sensors in anticipation of a valve switch
-                sensor.hw.remove_channel(sensor._ch_id)
-                sensor.hw.start()
+                sensor.hw.stop()  # Stop sensors in anticipation of a valve switch
              #   latest = sensor.get_latest(self._readings)  # Get last (# of readings) from sensor
              #   print(latest, sensor.name)
             for readout in self._readout_list:
@@ -234,9 +229,6 @@ class PanelCoordination(wx.Panel):
         if event.GetId() == self.timer_clear_valve.GetId():
             self.timer_clear_valve.Stop()  # Fresh perfusate has now reached the sensors
             for sensor in self._sensors:
-                self._lgr.debug(f'in onclearvalve, adding channel {sensor._ch_id}')
-                sensor.hw.add_channel(sensor._ch_id)
-                sensor.set_ch_id(sensor._ch_id)
                 sensor.hw.start()
             for readout in self._readout_list:
                 readout.timer_update.Start(3, wx.TIMER_CONTINUOUS)

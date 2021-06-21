@@ -53,11 +53,11 @@ class SyringeTimer:
             self.__thread_timer_reset = None
 
     def OnTimer(self):
-        while not self.__evt_halt_injection.wait(60.0):
+        while not self.__evt_halt_injection.wait(150.0):
             self.check_for_injection()
 
     def OnResetTimer(self):
-        while not self.__evt_halt_reset.wait(300.0):
+        while not self.__evt_halt_reset.wait(1200.0):
             self.syringe.cooldown = False
             self.__evt_halt_reset.set()
             self.__thread_timer_reset = None
@@ -97,7 +97,7 @@ class SyringeTimer:
             if flow > (self.threshold_value + self.tolerance):
                 if not self.syringe.cooldown:
                     diff = flow - (self.threshold_value + self.tolerance)
-                    injection_volume = diff / 100
+                    injection_volume = 0.25
                     self.injection(self.syringe, self.name, 'Flow', flow, injection_volume, direction='high')
                     self.__evt_halt_reset.clear()
                     self.__thread_timer_reset = Thread(target=self.OnResetTimer)
@@ -111,7 +111,7 @@ class SyringeTimer:
             if flow < (self.threshold_value - self.tolerance):
                 if not self.syringe.cooldown:
                     diff = (self.threshold_value - self.tolerance) - flow
-                    injection_volume = diff / 100
+                    injection_volume = .02
                     self.injection(self.syringe, self.name, 'Flow', flow, injection_volume, direction='low')
                     self.__evt_halt_reset.clear()
                     self.__thread_timer_reset = Thread(target=self.OnResetTimer)
@@ -136,7 +136,7 @@ class SyringeTimer:
         t = time.perf_counter()
         while self.wait:
             x = time.perf_counter()
-            if ((x - t) - 4) > (volume / 25):
+            if ((x - t) - 6) > (volume / 25):
                 self.wait = False
         syringe.reset_target_volume()
         if self.basal:
@@ -148,4 +148,3 @@ class SyringeTimer:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.infuse(2222, infuse_rate, ml_volume, ml_min_rate)
         syringe.cooldown = True
-

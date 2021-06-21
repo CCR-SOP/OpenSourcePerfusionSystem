@@ -281,7 +281,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             unit = False
         self._injection.syringe.infuse(volume, 25, unit, True)
 
-
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE

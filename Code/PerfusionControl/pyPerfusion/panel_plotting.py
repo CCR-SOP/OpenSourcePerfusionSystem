@@ -15,15 +15,14 @@ from datetime import datetime
 import time
 
 import wx
-import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 import matplotlib.transforms as mtransforms
 # from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 
 from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.DexcomPoint import DexcomPoint
 from pyPerfusion.SensorPoint import SensorPoint
-from pyHardware.PHDserial import PHDserial
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -118,11 +117,40 @@ class PanelPlotting(wx.Panel):
                     self.axes.collections.remove(self.__line_invalid[sensor.name])
                 except ValueError:
                     pass
+            elif type(sensor) is DexcomPoint and data_time is not None:  # DexcomPoint.get_data returns 'None' for data_time if DexcomPoint thread is not running
+                readout = float(readout[-1])
+                if readout == 5000:  # Signifies end of run
+                    self.timer_plot.Stop()
+                    self.axes.set_xlabel('End of Sensor Run: Replace Sensor Now!')
+                    text = 'End'
+                    color = 'red'
+                elif readout == 0.10000000149011612:  # Due to storage of data in file, 0.1 becomes this value after extraction and conversion to float
+                    self.axes.plot_date(data_time, readout, color='white', marker='o', xdate=True)
+                    text = 'N/A'
+                    color = 'black'
+                elif readout > self._valid_range[1]:
+                    self.axes.plot_date(data_time, readout, color='red', marker='o', xdate=True)
+                    text = f'{readout:.0f}'
+                    color = 'red'
+                elif readout < self._valid_range[0]:
+                    self.axes.plot_date(data_time, readout, color='orange', marker='o', xdate=True)
+                    text = f'{readout:.0f}'
+                    color = 'orange'
+                else:
+                    self.axes.plot_date(data_time, readout, color='black', marker='o', xdate=True)
+                    text = f'{readout:.0f}'
+                    color = 'black'
+                if type(self) is not PanelPlotLT:
+                    self.__val_display[sensor.name].set_text(text)
+                    self.__val_display[sensor.name].set_color(color)
+                    labels = self.axes.get_xticklabels()
+                    if len(labels) >= 12:
+                        self.axes.set_xlim(left=labels[-12].get_text(), right=data_time)
+
             elif type(sensor) is SensorPoint or PHDserial:
                 color = self.__colors[sensor.name]
                 del self.__line[sensor.name]
                 self.__line[sensor.name] = self.axes.vlines(data_time, ymin=0, ymax=100, color=color)
-
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
@@ -131,8 +159,11 @@ class PanelPlotting(wx.Panel):
     def add_sensor(self, sensor, color='r'):
         assert isinstance(sensor, (SensorStream, PHDserial))
         self.__sensors.append(sensor)
-        if type(sensor) is SensorStream:
-            self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
+        if type(sensor) is SensorStream or DexcomPoint:
+            if type(sensor) is SensorStream:
+                self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
+            elif type(sensor) is DexcomPoint:
+                self.__line[sensor.name] = None
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])
             if self._with_readout:
                 self.__val_display[sensor.name] = self.axes.text(1.06, 0.5, '0',
