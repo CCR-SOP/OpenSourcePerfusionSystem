@@ -8,7 +8,7 @@ import pyPerfusion.utils as utils
 
 logger = logging.getLogger()
 utils.setup_stream_logger(logger, logging.DEBUG)
-dev = 'Dev4'
+dev = 'Dev1'
 acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 
 sensor0 = SensorStream('test0', 'ml/min', acq)

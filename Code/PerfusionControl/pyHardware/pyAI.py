@@ -176,5 +176,5 @@ class AI:
                         self._calibration[channel][2] - self._calibration[channel][0]))
                        / (self._calibration[channel][3] - self._calibration[channel][1])) + self._calibration[channel][
                           0]
-            self._logger.debug(f'convert {buffer[i]} to {data[i]}')
+         #   self._logger.debug(f'convert {buffer[i]} to {data[i]}')
         return data

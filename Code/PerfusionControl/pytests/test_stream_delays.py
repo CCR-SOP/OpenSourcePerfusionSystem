@@ -23,7 +23,7 @@ from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-dev = 'Dev4'
+dev = 'Dev1'
 
 logger = logging.getLogger()
 LP_CFG.set_base(basepath='~/Documents/LPTEST')
