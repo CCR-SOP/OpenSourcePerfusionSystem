@@ -106,13 +106,13 @@ class PHDserial(USBSerial):
         self.print_stream_info()
 
     def _open_write(self):
-        print(f'opening {self.full_path}')
+        self._logger.debug(f'opening {self.full_path}')
         self._fid_write = open(self.full_path, 'w+b')
 
     def print_stream_info(self):
         hdr_str = self._get_stream_info()
         filename = self.full_path.with_suffix('.txt')
-        print(f"printing stream info to {filename}")
+        self._logger.debug(f"printing stream info to {filename}")
         fid = open(filename, 'wt')
         fid.write(hdr_str)
         fid.close()
@@ -259,7 +259,7 @@ class PHDserial(USBSerial):
 
     def get_syringe_info(self):
         self.send('syrm\r')
-        print(self._response)
+        self._logger.info(self._response)
 
     def get_infusion_rate(self):
         self.send('irate\r')
@@ -291,7 +291,7 @@ class PHDserial(USBSerial):
 
     def print_available_syringes(self):
         for code, name in self._manufacturers.items():
-            print(f'{name} ({code})')
+            self._logger.info(f'{name} ({code})')
             syringes = self._syringes[code]
             for syringe in syringes:
-                print(f'\t {syringe}')
+                self._logger.info(f'\t {syringe}')
