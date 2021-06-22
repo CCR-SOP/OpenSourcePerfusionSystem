@@ -238,8 +238,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             elif self.btn_basal_infusion.GetLabel() == 'Basal Infusion Inactive':
                 pass
         else:
-            infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
-            self._injection.syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
+            infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+            self._injection.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             self.choice_manu.Enable(True)
             self.choice_types.Enable(True)
             self.spin_rate.Enable(True)
@@ -274,7 +274,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.choice_1TB_unit.Enable(False)
             if self.btn_basal_infusion.GetLabel() == 'Basal Infusion Active':
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
-                self._injection.syringe.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
+                self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
                 self._injection.basal = True
             else:
                 self._injection.basal = False
@@ -296,8 +296,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.btn_start_1TB.Enable(True)
             self.choice_1TB_unit.Enable(True)
             if self.btn_basal_infusion.GetLabel() == 'Basal Infusion Active':
-                infuse_rate, ml_min_rate, ml_volume = self._injection.syringe.get_stream_info()
-                self._injection.syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
+                infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+                self._injection.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             self.btn_start_timer.SetLabel('Start Bolus Injections')
 
     def OnOneTimeBolus(self, evt):
@@ -311,7 +311,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self._injection.set_target_volume(volume, unit)
         if 'ul' in unit:
             unit = False
-        self._injection.syringe.infuse(volume, 25, unit, True)
+        self._injection.infuse(volume, 25, unit, True)
 
     def OnUpdateInjectionVolume(self, evt):
         self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
