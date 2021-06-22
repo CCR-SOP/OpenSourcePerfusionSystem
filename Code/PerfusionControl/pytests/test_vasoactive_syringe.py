@@ -18,7 +18,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self._sensor = sensor
         self._name = name
         self._injection = injection
-        self._syringe_timer = SyringeTimer(self._injection.name, 0, 0, self._sensor)
+        self._syringe_timer = SyringeTimer(self._injection.name, 0, 0, 0, 0, self._sensor, self._injection)
         self._inc = 0.1
 
         wx.Panel.__init__(self, parent, -1)
@@ -48,6 +48,14 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (mL/min): ')
         self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=0, inc=self._inc)
+
+        self.label_injection_volume = wx.StaticText(self, label='Bolus Injection Volume (uL): ')
+        self.spin_injection_volume = wx.SpinCtrlDouble(self, min=0, max=10000, initial=0, inc=1)
+        self.btn_update_injection_volume = wx.Button(self, label='Update Volume')
+
+        self.label_time_between_checks = wx.StaticText(self, label='Time Between Checks (s): ')
+        self.spin_time_between_checks = wx.SpinCtrlDouble(self, min=0, max=10000, initial=0, inc=1)
+        self.btn_update_time_between_checks = wx.Button(self, label='Update Time')
 
         self.btn_start_basal = wx.ToggleButton(self, label='Start Basal Infusion')
         self.btn_start_timer = wx.ToggleButton(self, label='Start Bolus Injections')
@@ -129,6 +137,20 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_injection_volume, flags)
+        sizer.Add(self.spin_injection_volume, flags)
+        sizer.Add(self.btn_update_injection_volume, flags)
+        self.sizer.Add(sizer)
+        self.sizer.AddSpacer(20)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_time_between_checks, flags)
+        sizer.Add(self.spin_time_between_checks, flags)
+        sizer.Add(self.btn_update_time_between_checks, flags)
+        self.sizer.Add(sizer)
+        self.sizer.AddSpacer(20)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_start_basal, flags)
         sizer.AddSpacer(20)
         sizer.Add(self.btn_start_timer)
@@ -156,6 +178,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.btn_start_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartBasal)
         self.btn_start_timer.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartBolus)
         self.btn_start_1TB.Bind(wx.EVT_TOGGLEBUTTON, self.OnOneTimeBolus)
+        self.btn_update_injection_volume.Bind(wx.EVT_BUTTON, self.OnUpdateInjectionVolume)
+        self.btn_update_time_between_checks.Bind(wx.EVT_BUTTON, self.OnUpdateTimeBetweenChecks)
 
     def OnBasalInfusion(self, evt):
         state = self.btn_basal_infusion.GetLabel()
@@ -206,6 +230,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
                 self.btn_direction.Enable(False)
                 self.btn_start_1TB.Enable(False)
                 self.choice_1TB_unit.Enable(False)
+                self.btn_update_injection_volume.Enable(False)
+                self.btn_update_time_between_checks.Enable(False)
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
                 self.btn_start_basal.SetLabel('Stop Basal Infusion')
@@ -223,6 +249,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.btn_direction.Enable(True)
             self.btn_start_1TB.Enable(True)
             self.choice_1TB_unit.Enable(True)
+            self.btn_update_injection_volume.Enable(True)
+            self.btn_update_time_between_checks.Enable(True)
             self.btn_start_basal.SetLabel('Start Basal Infusion')
 
     def OnStartBolus(self, evt):
@@ -250,12 +278,14 @@ class PanelTestVasoactiveSyringe(wx.Panel):
                 self._injection.basal = True
             else:
                 self._injection.basal = False
-            self._injection.threshold_value = self.spin_flow.GetValue()
-            self._injection.tolerance = self.spin_tolerance.GetValue()
-            self._syringe_timer.start_injection_timer()
+            self._syringe_timer.threshold_value = self.spin_flow.GetValue()
+            self._syringe_timer.tolerance = self.spin_tolerance.GetValue()
+            self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
+            self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
+            self._syringe_timer.start_bolus_injections()
             self.btn_start_timer.SetLabel('Stop Bolus Injections')
         elif state == 'Stop Bolus Injections':
-            self._syringe_timer.stop_injection_timer()
+            self._syringe_timer.stop_bolus_injections()
             self.choice_manu.Enable(True)
             self.choice_types.Enable(True)
             self.spin_rate.Enable(True)
@@ -282,6 +312,12 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         if 'ul' in unit:
             unit = False
         self._injection.syringe.infuse(volume, 25, unit, True)
+
+    def OnUpdateInjectionVolume(self, evt):
+        self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
+
+    def OnUpdateTimeBetweenChecks(self, evt):
+        self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
