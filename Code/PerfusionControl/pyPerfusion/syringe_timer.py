@@ -20,9 +20,6 @@ class SyringeTimer:
         self.basal = None
         self.wait = None
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
-
         self.__thread_timer_injection = None
         self.__evt_halt_injection = Event()
         self.__thread_timer_reset = None
