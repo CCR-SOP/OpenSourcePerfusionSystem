@@ -149,7 +149,7 @@ class PHDserial(USBSerial):
 
     def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('irun\r')
-        infusion_rate = int(infusion_rate)
+        infusion_rate = float(infusion_rate)
         if not ml_volume:
             if infusion_volume == 2222:
                 pass
@@ -161,7 +161,7 @@ class PHDserial(USBSerial):
 
     def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('stop\r')
-        infusion_rate = int(infusion_rate)
+        infusion_rate = float(infusion_rate)
         if not ml_volume:
             if infusion_volume == 1111:
                 pass
@@ -268,7 +268,7 @@ class PHDserial(USBSerial):
 
     def get_infused_volume(self):
         self.send('ivolume\r')
-        print(self._response)
+ #       print(self._response)
         return self._response
 
     def ResetSyringe(self):
