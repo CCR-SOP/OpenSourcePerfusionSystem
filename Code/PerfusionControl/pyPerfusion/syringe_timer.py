@@ -61,20 +61,20 @@ class SyringeTimer:
             return
         if self.name == 'Insulin' or 'Phenylephrine':
             if value > (self.threshold_value + self.tolerance) and value != -5000:
-                if not self.syringe.cooldown:
+                if self.syringe.cooldown:
+                    self._logger.info(f'A {self.name} infusion is needed, but is currently frozen')
+                else:
                     injection = True
                     direction = 'high'
-                else:
-                    self._logger.info(f'A {self.name} infusion is needed, but is currently frozen')
             else:
                 self._logger.info(f'No {self.name} infusion is needed')
         elif self.name == 'Glucagon' or 'Epoprostenol':
             if value < (self.threshold_value - self.tolerance) and value != -10000:
-                if not self.syringe.cooldown:
-                    injection = True
-                    direction = 'low'
-                else:
+                if self.syringe.cooldown:
                     self._logger.info(f'A {self.name} infusion is needed, but is currently frozen')
+                else:
+                    injection = True
+                    direction = 'high'
             else:
                 self._logger.info(f'No {self.name} infusion is needed')
         if injection:
