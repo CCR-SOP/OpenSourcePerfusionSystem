@@ -289,9 +289,9 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             if self.btn_basal_infusion.GetLabel() == 'Basal Infusion Active':
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
-                self._injection.basal = True
+                self._syringe_timer.basal = True
             else:
-                self._injection.basal = False
+                self._syringe_timer.basal = False
             self._syringe_timer.threshold_value = self.spin_flow.GetValue()
             self._syringe_timer.tolerance = self.spin_tolerance.GetValue()
             self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
