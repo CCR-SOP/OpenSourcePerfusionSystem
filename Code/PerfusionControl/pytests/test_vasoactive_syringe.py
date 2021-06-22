@@ -18,7 +18,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self._sensor = sensor
         self._name = name
         self._injection = injection
-        self._syringe_timer = SyringeTimer(self._injection.name, 0, 0, 0, 0, self._sensor, self._injection)
+        self._syringe_timer = SyringeTimer(self._injection.name, 0, 0, 0, 0, 0, self._sensor, self._injection)
         self._inc = 0.1
 
         wx.Panel.__init__(self, parent, -1)
@@ -55,7 +55,11 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         self.label_time_between_checks = wx.StaticText(self, label='Time Between Checks (s): ')
         self.spin_time_between_checks = wx.SpinCtrlDouble(self, min=0, max=10000, initial=0, inc=1)
-        self.btn_update_time_between_checks = wx.Button(self, label='Update Time')
+        self.btn_update_time_between_checks = wx.Button(self, label='Update Check Time')
+
+        self.label_cooldown_time = wx.StaticText(self, label='Cooldown Time (s): ')
+        self.spin_cooldown_time = wx.SpinCtrlDouble(self, min=0, max=10000, initial=0, inc=1)
+        self.btn_update_cooldown_time = wx.Button(self, label='Update Cooldown Time')
 
         self.btn_start_basal = wx.ToggleButton(self, label='Start Basal Infusion')
         self.btn_start_timer = wx.ToggleButton(self, label='Start Bolus Injections')
@@ -151,6 +155,13 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_cooldown_time, flags)
+        sizer.Add(self.spin_cooldown_time, flags)
+        sizer.Add(self.btn_update_cooldown_time, flags)
+        self.sizer.Add(sizer)
+        self.sizer.AddSpacer(20)
+
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_start_basal, flags)
         sizer.AddSpacer(20)
         sizer.Add(self.btn_start_timer)
@@ -180,6 +191,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.btn_start_1TB.Bind(wx.EVT_TOGGLEBUTTON, self.OnOneTimeBolus)
         self.btn_update_injection_volume.Bind(wx.EVT_BUTTON, self.OnUpdateInjectionVolume)
         self.btn_update_time_between_checks.Bind(wx.EVT_BUTTON, self.OnUpdateTimeBetweenChecks)
+        self.btn_update_cooldown_time.Bind(wx.EVT_BUTTON, self.OnUpdateCooldownTime)
 
     def OnBasalInfusion(self, evt):
         state = self.btn_basal_infusion.GetLabel()
@@ -232,6 +244,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
                 self.choice_1TB_unit.Enable(False)
                 self.btn_update_injection_volume.Enable(False)
                 self.btn_update_time_between_checks.Enable(False)
+                self.btn_update_cooldown_time.Enable(False)
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
                 self.btn_start_basal.SetLabel('Stop Basal Infusion')
@@ -251,6 +264,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self.choice_1TB_unit.Enable(True)
             self.btn_update_injection_volume.Enable(True)
             self.btn_update_time_between_checks.Enable(True)
+            self.btn_update_cooldown_time.Enable(True)
             self.btn_start_basal.SetLabel('Start Basal Infusion')
 
     def OnStartBolus(self, evt):
@@ -282,6 +296,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
             self._syringe_timer.tolerance = self.spin_tolerance.GetValue()
             self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
             self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
+            self._syringe_timer.cooldown_time = self.spin_cooldown_time.GetValue()
             self._syringe_timer.start_bolus_injections()
             self.btn_start_timer.SetLabel('Stop Bolus Injections')
         elif state == 'Stop Bolus Injections':
@@ -318,6 +333,9 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
     def OnUpdateTimeBetweenChecks(self, evt):
         self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
+
+    def OnUpdateCooldownTime(self, evt):
+        self._syringe_timer.cooldown_time = self.spin_cooldown_time.GetValue()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
