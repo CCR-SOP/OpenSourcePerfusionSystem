@@ -21,7 +21,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self._sensor = sensor
         self._name = name
         self._injection = injection
-        self._syringe_timer = SyringeTimer(self._injection.name, 0, 0, 0, 0, 0, self._sensor, self._injection)
+        self._syringe_timer = SyringeTimer(self._injection.name, self._sensor, self._injection)
         self._inc = 0.1
 
         wx.Panel.__init__(self, parent, -1)
