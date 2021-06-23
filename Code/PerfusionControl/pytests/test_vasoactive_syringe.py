@@ -45,7 +45,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.choice_rate = wx.Choice(self, choices=['ul/min', 'ml/min'])
         self.choice_rate.SetSelection(1)
 
-        self.label_flow = wx.StaticText(self, label='Inject When Flow is')
+        self.label_flow = wx.StaticText(self, label='Inject When')
         self.btn_direction = wx.ToggleButton(self, label='Greater Than')
         self.spin_flow = wx.SpinCtrlDouble(self, min=0, max=1000, initial=0, inc=self._inc)
 
