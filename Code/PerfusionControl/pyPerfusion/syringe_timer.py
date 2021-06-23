@@ -93,11 +93,10 @@ class SyringeTimer:
         syringe.set_infusion_rate(25, 'ml/min')
         syringe.infuse(volume, 25, True, True)
         self.wait = True
-        time.sleep(volume/25)
+        time.sleep(60*volume/25)
         while self.wait:
             response = float(self.syringe.get_infused_volume().split(' ')[0])
             unit = self.syringe.get_infused_volume().split(' ')[1]
-            print(response)
             if 'ul' in unit:
                 response = response / 1000
             if response >= volume:
