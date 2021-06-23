@@ -6,11 +6,12 @@
 Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair, and for initiating glucose controlled insulin/glucagon infusions
 """
 import wx
+import logging
+import pyPerfusion.utils as utils
 
 from dexcom_G6_reader.readdata import Dexcom
 from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.DexcomPoint import DexcomPoint
-from pyPerfusion.syringe_timer import SyringeTimer
 
 import pyPerfusion.PerfusionConfig as LP_CFG
 
@@ -19,6 +20,7 @@ sensors = []
 
 class PanelDexcom(wx.Panel):
     def __init__(self, parent, receiver_class, name):
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._receiver_class = receiver_class
         self._name = name
@@ -168,5 +170,6 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_Dexcom')
     app = MyTestApp(0)
     app.MainLoop()

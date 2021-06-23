@@ -106,13 +106,13 @@ class PHDserial(USBSerial):
         self.print_stream_info()
 
     def _open_write(self):
-        print(f'opening {self.full_path}')
+        self._logger.debug(f'opening {self.full_path}')
         self._fid_write = open(self.full_path, 'w+b')
 
     def print_stream_info(self):
         hdr_str = self._get_stream_info()
         filename = self.full_path.with_suffix('.txt')
-        print(f"printing stream info to {filename}")
+        self._logger.debug(f"printing stream info to {filename}")
         fid = open(filename, 'wt')
         fid.write(hdr_str)
         fid.close()
@@ -149,9 +149,9 @@ class PHDserial(USBSerial):
 
     def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('irun\r')
-        infusion_rate = int(infusion_rate)
+        infusion_rate = float(infusion_rate)
         if not ml_volume:
-            if infusion_volume == 2222:
+            if infusion_volume == -2:
                 pass
             else:
                 infusion_volume = infusion_volume / 1000
@@ -161,9 +161,9 @@ class PHDserial(USBSerial):
 
     def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('stop\r')
-        infusion_rate = int(infusion_rate)
+        infusion_rate = float(infusion_rate)
         if not ml_volume:
-            if infusion_volume == 1111:
+            if infusion_volume == -1:
                 pass
             else:
                 infusion_volume = infusion_volume / 1000
@@ -259,7 +259,7 @@ class PHDserial(USBSerial):
 
     def get_syringe_info(self):
         self.send('syrm\r')
-        print(self._response)
+        self._logger.info(self._response)
 
     def get_infusion_rate(self):
         self.send('irate\r')
@@ -268,7 +268,7 @@ class PHDserial(USBSerial):
 
     def get_infused_volume(self):
         self.send('ivolume\r')
-        print(self._response)
+ #       print(self._response)
         return self._response
 
     def ResetSyringe(self):
@@ -291,7 +291,7 @@ class PHDserial(USBSerial):
 
     def print_available_syringes(self):
         for code, name in self._manufacturers.items():
-            print(f'{name} ({code})')
+            self._logger.info(f'{name} ({code})')
             syringes = self._syringes[code]
             for syringe in syringes:
-                print(f'\t {syringe}')
+                self._logger.info(f'\t {syringe}')
