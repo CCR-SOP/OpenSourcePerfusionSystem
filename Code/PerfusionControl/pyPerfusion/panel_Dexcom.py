@@ -125,14 +125,13 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        devices =  {'Receiver #1 - Portal Vein': Dexcom,
-                    'Receiver #2 - Inferior Vena Cava': Dexcom}
-        sizer = wx.FlexGridSizer(cols=3)
-        for key, device in devices.items():
-            panel = PanelDexcom(self, device, key)
-            sizer.Add(panel, 1, wx.EXPAND, border=2)
 
-        self.sensor = panel.sensor  # Glucose measurements which inform syringe injections are from the IVC; this is the panel being referenced here
+        panel_PV = PanelDexcom(self, Dexcom, 'Receiver #1 - Portal Vein')
+        panel_IVC = PanelDexcom(self, Dexcom, 'Receiver #2 - Inferior Vena Cava')
+
+        graph_sizer = wx.GridSizer(cols=1)
+        graph_sizer.Add(panel_PV, 1, wx.EXPAND, border=2)
+        graph_sizer.Add(panel_IVC, 1, wx.EXPAND, border=2)
 
         insulin_injection = PHDserial('Insulin')
         insulin_injection.open('COM12', 9600)
@@ -146,12 +145,16 @@ class TestFrame(wx.Frame):
         glucagon_unasyn_injection.open_stream(LP_CFG.LP_PATH['stream'])
         glucagon_unasyn_injection.start_stream()
 
+        self.sensor = panel_PV.sensor  # Glucose measurements which inform syringe injections are from the IVC; this is the panel being referenced here
         self._syringes = [insulin_injection, glucagon_unasyn_injection]
-        self.sizer_syringes = wx.FlexGridSizer(cols=2)
-        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Insulin Syringe', insulin_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Glucagon (Unasyn) Syringe', glucagon_unasyn_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(self.sizer_syringes, 1, wx.EXPAND, border=2)
 
+        syringe_sizer = wx.GridSizer(cols=2)
+        syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Insulin Syringe', insulin_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Glucagon (Unasyn) Syringe', glucagon_unasyn_injection), 1, wx.ALL | wx.EXPAND, border=1)
+
+        sizer = wx.GridSizer(cols=2)
+        sizer.Add(graph_sizer, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(syringe_sizer, 1, wx.ALL | wx.EXPAND, border=1)
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
