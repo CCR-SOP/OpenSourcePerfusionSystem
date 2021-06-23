@@ -5,18 +5,19 @@ General code for initiating syringe injections based on a specific system parame
 """
 from threading import Thread, Event
 import logging
+import time
 
 class SyringeTimer:
-    def __init__(self, name, threshold_value, tolerance, injection_volume, time_between_checks, cooldown_time, sensor, syringe):
+    def __init__(self, name, sensor=None, syringe=None):
         self._logger = logging.getLogger(__name__)
         self.name = name
-        self.threshold_value = threshold_value
-        self.tolerance = tolerance
-        self.injection_volume = injection_volume
-        self.time_between_checks = time_between_checks
-        self.cooldown_time = cooldown_time
         self.sensor = sensor
         self.syringe = syringe
+        self.threshold_value = None
+        self.tolerance = None
+        self.injection_volume = None
+        self.time_between_checks = None
+        self.cooldown_time = None
         self.basal = None
         self.wait = None
 
@@ -45,12 +46,11 @@ class SyringeTimer:
         while not self.__evt_halt_boluses.wait(self.time_between_checks):
             self.check_for_injection()
 
-    def OnCooldownLoop(self):
-        while not self.__evt_halt_cooldown.wait(self.cooldown_time):
-            self.syringe.cooldown = False
-            self.__evt_halt_cooldown.set()
-            self.__thread_cooldown = None
-            return
+    def OnCooldown(self):
+        self.__evt_halt_cooldown.wait(self.cooldown_time)
+        self.syringe.cooldown = False
+        self.__evt_halt_cooldown.set()
+        self.__thread_cooldown = None
 
     def check_for_injection(self):
         injection = False
@@ -80,7 +80,7 @@ class SyringeTimer:
         if injection:
             self.injection(self.syringe, self.name, self.sensor.name, value, self.injection_volume/1000, direction)
             self.__evt_halt_cooldown.clear()
-            self.__thread_cooldown = Thread(target=self.OnCooldownLoop)
+            self.__thread_cooldown = Thread(target=self.OnCooldown)
             self.__thread_cooldown.start()
 
     def injection(self, syringe, name, parameter_name, parameter, volume, direction):
@@ -93,9 +93,11 @@ class SyringeTimer:
         syringe.set_infusion_rate(25, 'ml/min')
         syringe.infuse(volume, 25, True, True)
         self.wait = True
+        time.sleep(volume/25)
         while self.wait:
             response = float(self.syringe.get_infused_volume().split(' ')[0])
             unit = self.syringe.get_infused_volume().split(' ')[1]
+            print(response)
             if 'ul' in unit:
                 response = response / 1000
             if response >= volume:
