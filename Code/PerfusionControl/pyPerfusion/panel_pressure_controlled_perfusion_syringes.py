@@ -122,7 +122,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=3)
+        sizer = wx.FlexGridSizer(cols=3)
         self.acq =  NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.pressure_sensors = {
             SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq): ['Dev3', 1],
