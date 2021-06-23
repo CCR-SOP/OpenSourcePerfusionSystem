@@ -4,6 +4,8 @@
 Test app for initiating syringe injections based on pressure/flow conditions
 """
 import wx
+import pyPerfusion.utils as utils
+import logging
 
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI
@@ -14,6 +16,7 @@ from pyHardware.PHDserial import PHDserial
 
 class PanelTestVasoactiveSyringe(wx.Panel):
     def __init__(self, parent, sensor, name, injection):
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
@@ -369,5 +372,6 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='test_vasoactive_syringe')
     app = MyTestApp(0)
     app.MainLoop()
