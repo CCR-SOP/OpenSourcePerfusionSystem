@@ -41,7 +41,7 @@ dio5.open('port1', 'line1')
 samples = 2
 period_ms = 1000
 ai = AI_Finite_NIDAQ(period_ms=period_ms, volts_p2p=5, volts_offset=2.5, samples_per_read=samples)
-ai.open('Dev4')
+ai.open('Dev1')
 ai.add_channel('0')
 ai.add_channel('1')
 sensor1 = SensorPoint('FiniteAcq1', 'counts', ai)

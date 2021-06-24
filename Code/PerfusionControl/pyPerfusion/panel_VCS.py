@@ -27,7 +27,7 @@ from pyHardware.pyVCS import VCS, VCSPump
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
-DEFAULT_CLEARANCE_TIME_MS = 2_000  # 150_000
+DEFAULT_CLEARANCE_TIME_MS = 20_000  # 150_000
 DEFAULT_SAMPLES_PER_READ = 3
 
 
