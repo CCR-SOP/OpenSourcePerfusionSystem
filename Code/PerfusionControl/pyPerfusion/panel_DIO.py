@@ -53,6 +53,7 @@ class PanelDIO(wx.Panel):
 
     def OnOpen(self, evt):
         self._panel_cfg.OnOpen(evt)
+        self._panel_controls.btn_activate.SetLabel('Activate')
         self._panel_controls.update_label()
         self._logger.debug(f'is_open is {self._dio.is_open} readonly = {self._dio.read_only}')
         self._panel_controls.Enable(self._dio.is_open and not self._dio.read_only)
@@ -297,8 +298,8 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.dio = NIDAQ_DIO()
-        # self.panel = PanelDIO(self, self.dio, 'DIO')
-        self.panel = PanelDIOIndicator(self, self.dio, 'DIO')
+        self.panel = PanelDIO(self, self.dio, 'DIO')
+        # self.panel = PanelDIOIndicator(self, self.dio, 'DIO')
 
 
 class MyTestApp(wx.App):
