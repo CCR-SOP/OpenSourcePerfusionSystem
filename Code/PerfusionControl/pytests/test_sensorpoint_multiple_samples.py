@@ -18,7 +18,7 @@ from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-dev = 'Dev4'
+dev = 'Dev1'
 
 logger = logging.getLogger()
 LP_CFG.set_base(basepath='~/Documents/LPTEST')
@@ -44,7 +44,7 @@ STOP_PROGRAM = False
 
 def get_last_sample():
     global sensor, last_acq
-    ts, samples = sensor.get_last_data()
+    ts, samples = sensor.get_last_acq()
     logger.debug(f'Acquired ts = {ts}, samples={samples}')
 
 
