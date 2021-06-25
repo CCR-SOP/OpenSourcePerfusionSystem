@@ -115,17 +115,18 @@ class PanelReadoutVCS(PanelReadout):
 
 
 class PanelReadoutOxygenUtilization(PanelReadout):
-    def __init__(self, parent, sensors, name):
+    def __init__(self, parent, sensors, readout, name):
         self._logger = logging.getLogger(__name__)
         self.sensors = sensors
+        self.readout = readout
         old_name = sensors[0].name
         sensors[0].name = name
         super().__init__(parent, sensors[0])
         sensors[0].name = old_name
 
     def update_value(self):
-        val0 = self.sensors[0].get_current()
-        val1 = self.sensors[1].get_current()
+        val0 = float(self.readout[0].readout_o2.label_value.GetLabel())
+        val1 = float(self.readout[2].readout_o2.label_value.GetLabel())
         # val1 can be 0, but val0 must be non-zero
         if val0 is not None and val0 != 0 and val1 is not None:
             val = (float(val0) - float(val1)) / float(val0)
@@ -354,7 +355,7 @@ class TestFrame(wx.Frame):
         self._vcs.add_notify('Chemical', valves[1].name, readouts[1].update_value)
         self._vcs.add_notify('Chemical', valves[2].name, readouts[2].update_value)
 
-        panel_O2_util = PanelReadoutOxygenUtilization(self, [self._chemical_sensors[0], self._chemical_sensors[0]], 'Oxygen Utilization')
+        panel_O2_util = PanelReadoutOxygenUtilization(self, [self._chemical_sensors[0], self._chemical_sensors[0]], readouts, 'Oxygen Utilization')
         self.sizer_readout.Add(panel_O2_util, flags)
 
         sizerv = wx.BoxSizer(wx.VERTICAL)
