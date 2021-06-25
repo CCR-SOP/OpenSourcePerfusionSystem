@@ -156,6 +156,9 @@ class PanelCoordination(wx.Panel):
         self.lbl_readings_chemical = wx.StaticText(self, label='Sensor Readings per Switch')
 
         self.btn_start_stop = wx.ToggleButton(self, label='Start')
+
+        self.btn_glucose_start_stop = wx.ToggleButton(self, label='Open Glucose Valves')
+
         self.__do_layout()
         self.__set_bindings()
 
@@ -169,6 +172,7 @@ class PanelCoordination(wx.Panel):
         self.sizer.Add(self.sizer_chemical)
         self.sizer.AddSpacer(5)
         self.sizer.Add(self.btn_start_stop)
+        self.sizer.Add(self.btn_glucose_start_stop)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
@@ -178,6 +182,7 @@ class PanelCoordination(wx.Panel):
 
     def __set_bindings(self):
         self.btn_start_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
+        self.btn_glucose_start_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnGlucoseStartStop)
 
     def OnStartStop(self, evt):
         state = self.btn_start_stop.GetLabel()
@@ -194,6 +199,16 @@ class PanelCoordination(wx.Panel):
                 self._readout_list.clear()
             self.btn_start_stop.SetLabel('Start')
 
+    def OnGlucoseStartStop(self, evt):  # For the moment, we are not using the Hepatic Artery Glucose Valve
+        state = self.btn_glucose_start_stop.GetLabel()
+        if state == 'Open Glucose Valves':
+            self._vcs.open_independent_valve('Portal Vein (Glucose)')
+            self._vcs.open_independent_valve('Inferior Vena Cava (Glucose)')
+            self.btn_glucose_start_stop.SetLabel('Close Glucose Valves')
+        else:
+            self._vcs.close_independent_valve('Portal Vein (Glucose)')
+            self._vcs.close_independent_valve('Inferior Vena Cava (Glucose)')
+            self.btn_glucose_start_stop.SetLabel('Open Glucose Valves')
 
 class PanelPump(wx.Panel):
     def __init__(self, parent, pump):
