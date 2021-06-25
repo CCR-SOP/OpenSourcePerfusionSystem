@@ -172,6 +172,7 @@ class VCS:
             self._lgr.warning(f'Valve {dio.name} already exists.'
                               f'Valve data will be overwritten.')
         self._independent[dio.name] = dio
+        dio.deactivate()
         self._sensors4independent[dio.name] = []
 
     def add_sensor_to_cycled_valves(self, set_name, sensor):
