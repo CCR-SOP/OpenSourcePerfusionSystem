@@ -75,7 +75,7 @@ class TestFrame(wx.Frame):
         self.sensor = SensorStream('HA Flow', 'bpm', AI(100))
         self.panel = PanelReadout(self, self.sensor)
         self.sensor.start()
-        self.sensor.open(Path('./__data__'), Path('2020-09-14'))
+        self.sensor.open(Path('./__data__')) #, Path('2020-09-14'))
 
 
 class MyTestApp(wx.App):
