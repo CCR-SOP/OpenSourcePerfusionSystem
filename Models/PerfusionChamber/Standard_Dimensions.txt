@@ -10,3 +10,14 @@
 "PlateHoleSide"= 1.55
 "PlateHoleSpacing"= 3.1
 "PlateThickness"=1.55
+"ReservoirBottom"=12.5
+"ReservoirSupportWidth"=12
+"ReservoirSupportHeight"=15.1
+"ReservoirSupportPlacementHeight"=50
+"ReservoirHoleDiameter"=12.7
+"ReservoirHoleRight"= 25
+"ReservoirHoleTop" = "ReservoirSupportPlacementHeight"
+"ReservoirHeight"=90
+"ReservoirPortBottom"=4
+"ReservoirPortTop" = 10
+"ReservoirPortWidth"=101
