@@ -1,8 +1,10 @@
-﻿"Length" = 283
-"Width" = 225
-"WallThickness" = 12.5
-"UpperWaterJacketThickness" = 28
-"SpacerHeight" = 80.2
+﻿"TubingShort"=110
+"TubingLong"=175
+"Length"= 283
+"Width"= 225
+"WallThickness"= 12.5
+"UpperWaterJacketThickness"= 28
+"SpacerHeight"= 80.2
 "PlateLength"=252
 "PlateWidth"=190
 "PlateHoleDiameter"=5.9
@@ -16,8 +18,8 @@
 "ReservoirSupportPlacementHeight"=50
 "ReservoirHoleDiameter"=12.7
 "ReservoirHoleRight"= 25
-"ReservoirHoleTop" = "ReservoirSupportPlacementHeight"
+"ReservoirHoleTop"= "ReservoirSupportPlacementHeight"
 "ReservoirHeight"=90
 "ReservoirPortBottom"=4
-"ReservoirPortTop" = 10
+"ReservoirPortTop"= 10
 "ReservoirPortWidth"=101
