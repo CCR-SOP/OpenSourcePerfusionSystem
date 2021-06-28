@@ -1,0 +1,5 @@
+"Length" = 283
+"Width" = 225
+"WallThickness" = 12.5
+"UpperWaterJacketThickness" = 28
+"SpacerHeight" = 80.2
