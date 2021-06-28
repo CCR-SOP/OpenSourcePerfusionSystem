@@ -1,5 +1,12 @@
-"Length" = 283
-"Width" = 225
-"WallThickness" = 12.5
-"UpperWaterJacketThickness" = 28
-"SpacerHeight" = 80.2
+﻿"Length" = 283
+"Width" = 225
+"WallThickness" = 12.5
+"UpperWaterJacketThickness" = 28
+"SpacerHeight" = 80.2
+"PlateLength"=252
+"PlateWidth"=190
+"PlateHoleDiameter"=5.9
+"PlateHoleBottom"= 2
+"PlateHoleSide"= 1.55
+"PlateHoleSpacing"= 3.1
+"PlateThickness"=1.55
