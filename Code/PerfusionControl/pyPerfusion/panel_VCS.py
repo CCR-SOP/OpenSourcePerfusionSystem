@@ -163,6 +163,10 @@ class PanelCoordination(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
+    @property
+    def acq_period_ms(self):
+        return self._sampling_period_ms
+
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Left().Proportion(0)
 
@@ -260,6 +264,7 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
 
         self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS)
+        self._panel_coord = PanelCoordination(self, self._vcs, name='Valve Coordination')
 
         self.ao = NIDAQ_AO('VCS Pump')
         section = LP_CFG.get_hwcfg_section(self.ao.name)
@@ -312,7 +317,7 @@ class TestFrame(wx.Frame):
                 dlg.ShowModal()
                 continue
 
-        self.acq = AI_Finite_NIDAQ(period_ms=100, volts_p2p=5, volts_offset=2.5,
+        self.acq = AI_Finite_NIDAQ(period_ms=self._panel_coord.acq_period_ms, volts_p2p=5, volts_offset=2.5,
                                    samples_per_read=DEFAULT_SAMPLES_PER_READ)
         self._chemical_sensors = [SensorPoint('Oxygen', 'mmHg', self.acq),
                                   SensorPoint('Carbon Dioxide', 'mmHg', self.acq),
@@ -359,7 +364,7 @@ class TestFrame(wx.Frame):
         self.sizer_readout.Add(panel_O2_util, flags)
 
         sizerv = wx.BoxSizer(wx.VERTICAL)
-        sizerv.Add(PanelCoordination(self, self._vcs, name='Valve Coordination'), flags)
+        sizerv.Add(self._panel_coord, flags)
         sizerv.Add(self.panel_pump, flags)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
