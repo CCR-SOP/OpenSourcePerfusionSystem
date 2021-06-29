@@ -65,6 +65,10 @@ class AI:
     def buf_len(self):
         return self.samples_per_read
 
+    @property
+    def is_acquiring(self):
+        return self.__thread and self.__thread.is_alive()
+
     def is_open(self):
         return len(self.get_ids()) > 0
 
@@ -109,7 +113,6 @@ class AI:
         with self._lock_buf:
             if channel_id in self._queue_buffer.keys():
                 self._logger.debug(f'removing channel {channel_id}')
-                self.stop()
                 del self._queue_buffer[channel_id]
 
     def open(self):

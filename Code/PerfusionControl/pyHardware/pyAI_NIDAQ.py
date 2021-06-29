@@ -132,8 +132,12 @@ class NIDAQ_AI(pyAI.AI):
             return
         if not self._task:
             raise pyAI.AIDeviceException(f'Cannot remove channel {channel_id}, device {self._dev} not yet opened')
+        acquiring = self.is_acquiring
+        self.stop()
         super().remove_channel(channel_id)
         self._update_task()
+        if acquiring:
+            self.start()
 
     def _update_task(self):
         cleanup = True
