@@ -1,6 +1,4 @@
-﻿"TubingShort"=110
-"TubingLong"=175
-"Length"= 283
+﻿"Length"= 283
 "Width"= 225
 "WallThickness"= 12.5
 "UpperWaterJacketThickness"= 28
@@ -23,3 +21,5 @@
 "ReservoirPortBottom"=4
 "ReservoirPortTop"= 10
 "ReservoirPortWidth"=101
+"LowerWaterJacketHeight"= 50
+"LowerWaterJacketBottomThickness"= "WallThickness"
