@@ -47,6 +47,10 @@ class SensorStream:
     def valid_range(self):
         return self._valid_range
 
+    @property
+    def ch_id(self):
+        return self._ch_id
+
     def run(self):
         next_t = time.time()
         offset = 0
