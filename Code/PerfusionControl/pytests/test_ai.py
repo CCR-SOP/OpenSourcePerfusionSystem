@@ -10,19 +10,19 @@ setup_stream_logger(logger, logging.DEBUG)
 setup_stream_logger(logging.getLogger('pyHardware'), logging.DEBUG)
 
 
-dev = 'Dev2'
+dev = 'Dev1'
 
 # test single channel, non-HW pyAI
 ai = AI(period_sample_ms=100)
+logger.debug('Opening AI')
+ai.open()
 logger.debug('Adding channel 0')
 ai.add_channel('0')
 logger.debug('Removing channel 1')
 ai.remove_channel('0')
-
 logger.debug('Adding channel 0')
 ai.add_channel('0')
-logger.debug('Opening AI')
-ai.open()
+
 logger.debug('Starting AI')
 ai.start()
 sleep(2.0)
@@ -37,6 +37,8 @@ ai.close()
 # test single channel, HW pyAI
 logger.debug('----Test NIDAQ_AI')
 ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
+logger.debug('Opening AI')
+ai.open(dev)
 logger.debug('Adding channel 0')
 ai.add_channel('0')
 logger.debug('Removing channel 1')
@@ -44,8 +46,7 @@ ai.remove_channel('0')
 
 logger.debug('Adding channel 0')
 ai.add_channel('0')
-logger.debug('Opening AI')
-ai.open(dev)
+
 logger.debug('Starting AI')
 ai.start()
 sleep(2.0)
