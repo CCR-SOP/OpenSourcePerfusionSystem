@@ -16,9 +16,10 @@ import pyHardware.pyAO as pyAO
 
 
 class NIDAQ_AO(pyAO.AO):
-    def __init__(self):
+    def __init__(self, name=''):
         super().__init__()
         self._logger = logging.getLogger(__name__)
+        self.name = name
         self._dev = None
         self._line = None
         self.__timeout = 1.0
