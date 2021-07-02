@@ -28,6 +28,10 @@ class ProcessingStrategy:
                          'Window Len': window_len}
 
     @property
+    def name(self):
+        return self._name
+
+    @property
     def params(self):
         return self._params
 
@@ -73,7 +77,7 @@ class SaveStreamToFile(ProcessingStrategy):
 
     def _open_write(self):
         self._logger.info(f'opening for write: {self.fqpn}')
-        self._fid = open(self.fqpn, 'a+b')
+        self._fid = open(self.fqpn, 'w+b')
 
     def _write_to_file(self, data_buf):
         buf_len = len(data_buf)

@@ -24,10 +24,13 @@ acq = AI(period_sample_ms=100)
 sensor0 = SensorStream('test0', 'ml/min', acq)
 sensor1 = SensorStream('test1', 'ml/min', acq)
 
+raw = SaveStreamToFile('StreamRaw', None, acq.buf_len)
+raw.open('./__data__/test', f'{sensor0.name}_raw', {})
 rms = RMSStrategy('RMS', 5, acq.buf_len)
 save_rms = SaveStreamToFile('StreamRMS', None, acq.buf_len)
 save_rms.open('./__data__/test', f'{sensor0.name}_rms', rms.params)
 
+sensor0.add_strategy(raw)
 sensor0.add_strategy(rms)
 sensor0.add_strategy(save_rms)
 
