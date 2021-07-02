@@ -39,6 +39,9 @@ class ProcessingStrategy:
     def reset(self):
         self._processed_buffer = np.zeros_like(self._window_buffer)
 
+    def close(self):
+        pass
+
 
 class SaveStreamToFile(ProcessingStrategy):
     def __init__(self, name, window_len, expected_buffer_len):
@@ -77,7 +80,9 @@ class SaveStreamToFile(ProcessingStrategy):
 
     def _print_stream_info(self):
         hdr_str = self._get_stream_info()
-        fid = open(self.fqpn, 'wt')
+        # print header info in a separate txt file to simply
+        # reads using memory-mapped files
+        fid = open(self.fqpn.with_suffix('').with_suffix('.txt'), 'wt')
         fid.write(hdr_str)
         fid.close()
 

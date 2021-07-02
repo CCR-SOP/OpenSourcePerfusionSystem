@@ -66,17 +66,15 @@ def test_rms_strategy():
 def test_streamtofile_strategy(tmpdir):
     strategy = SaveStreamToFile('StreamToFile', 1, 10)
     strategy.open(tmpdir, {'Param1': 'test', 'Param2': 1})
-    test_file = tmpdir.join('StreamToFile.dat')
+    test_file = tmpdir.join('StreamToFile.txt')
     expected = f'File Format: 1\nAlgorithm: StreamToFile\nWindow Length: 1\nParam1: test\nParam2: 1\n'
-    fid = open(test_file, 'rt')
-    fid.seek(0)
-    file_contents = fid.read()
+    file_contents = test_file.read()
     assert file_contents == expected
     data = np.array([1]*10 + [2]*10)
     buf1 = strategy.process_buffer(data[0:10])
     buf2 = strategy.process_buffer(data[10:20])
     results = np.append(buf1, buf2)
-    data = np.fromfile(fid, dtype=np.int32)
-    fid.close()
+    test_file = tmpdir.join('StreamToFile.dat')
+    data = np.fromfile(test_file, dtype=np.int32)
     assert len(data) == len(results)
     assert np.array_equal(data, results)
