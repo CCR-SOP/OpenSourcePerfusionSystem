@@ -62,11 +62,14 @@ class SensorStream:
                 offset = 0
             else:
                 offset = -delay
-            self._get_data_and_write_to_file()
+            data_buf, t = self.hw.get_data(self._ch_id)
+            if data_buf is not None and self._fid_write is not None:
+                self._write_raw_to_file(data_buf, t)
+                if self._process:
+                    proc_buffer = self._process.process_buffer(data_buf)
 
-    def _get_data_and_write_to_file(self):
-        data_buf, t = self.hw.get_data(self._ch_id)
-        if data_buf is not None and self._fid_write is not None:
+
+    def _write_raw_to_file(self, data_buf, t):
             buf_len = len(data_buf)
             self._write_to_file(data_buf, t)
             self._last_idx += buf_len
