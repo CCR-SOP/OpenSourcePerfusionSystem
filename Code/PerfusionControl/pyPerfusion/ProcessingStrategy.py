@@ -24,6 +24,12 @@ class ProcessingStrategy:
         self._win_len = window_len
         self._window_buffer = np.zeros(self._win_len, dtype=self._data_type)
         self._processed_buffer = np.zeros(expected_buffer_len, dtype=np.float32)
+        self._params = { 'Algorithm': 'PassThrough',
+                         'Window Len': window_len}
+
+    @property
+    def params(self):
+        return self._params
 
     def process_buffer(self, buffer):
         idx = 0
@@ -39,6 +45,9 @@ class ProcessingStrategy:
     def reset(self):
         self._processed_buffer = np.zeros_like(self._window_buffer)
 
+    def open(self):
+        pass
+
     def close(self):
         pass
 
@@ -51,12 +60,12 @@ class SaveStreamToFile(ProcessingStrategy):
         self._timestamp = None
         self._last_idx = 0
         self._fid = None
-        self._params = {}
+        self._sensor_params = {}
         self._base_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self._name}')
-        self._header = {'File Format': f'{self._version}',
-                        'Algorithm': 'SaveStreamToFile',
-                        'Window Length': f'{self._win_len}'}
+        # don't update Algorithm param as we want to pass through
+        # whatever any previous algorithm named used
+        self._params['File Format'] = f'{self._version}'
 
     @property
     def fqpn(self):
@@ -74,7 +83,7 @@ class SaveStreamToFile(ProcessingStrategy):
             self._last_idx += buf_len
 
     def _get_stream_info(self):
-        all_params = {**self._header, **self._params}
+        all_params = {**self._params, **self._sensor_params}
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)
 
@@ -86,8 +95,9 @@ class SaveStreamToFile(ProcessingStrategy):
         fid.write(hdr_str)
         fid.close()
 
-    def open(self, base_path, sensor_params):
-        self._params = sensor_params
+    def open(self, base_path=None, filename=None, sensor_params=None):
+        self._filename = pathlib.Path(filename)
+        self._sensor_params = sensor_params
         if not isinstance(base_path, pathlib.Path):
             base_path = pathlib.Path(base_path)
         self._base_path = base_path
@@ -111,7 +121,8 @@ class SaveStreamToFile(ProcessingStrategy):
 
 class RMSStrategy(ProcessingStrategy):
     def __init__(self, name, window_len, expected_buffer_len):
-        super().__init__(name,window_len, expected_buffer_len)
+        super().__init__(name, window_len, expected_buffer_len)
+        self._params['Algorithm'] = 'RMS'
         self._sum = 0
 
     def process_buffer(self, buffer):

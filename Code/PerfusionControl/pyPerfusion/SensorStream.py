@@ -67,8 +67,11 @@ class SensorStream:
             data_buf, t = self.hw.get_data(self._ch_id)
             if data_buf is not None:
                 buf = data_buf
+                print(buf)
                 for strategy in self._strategies:
                     buf = strategy.process_buffer(buf)
+                    print(buf)
+                print('end of strategy')
 
     def _open_read(self):
         # Assumes first strategy is the raw data strategy
@@ -84,10 +87,10 @@ class SensorStream:
         self._ch_id = ch_id
 
     def open(self, full_path):
-        strategy = SaveStreamToFile(f'{self.name}_raw', None, self.hw.buf_len)
+        strategy = SaveStreamToFile('Raw', None, self.hw.buf_len)
         self._timestamp = datetime.datetime.now()
         self._params['Start of Acquisition'] = self._timestamp.strftime('%Y-%m-%d_%H:%M')
-        strategy.open(full_path, self._params)
+        strategy.open(full_path, f'{self.name}_raw', self._params)
         self.add_strategy(strategy)
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'SensorStream ({self.name})'
