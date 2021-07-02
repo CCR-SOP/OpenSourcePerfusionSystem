@@ -55,7 +55,7 @@ class SaveStreamToFile(ProcessingStrategy):
         self._base_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self._name}')
         self._header = {'File Format': f'{self._version}',
-                        'Algorithm': f'{self._name}',
+                        'Algorithm': 'SaveStreamToFile',
                         'Window Length': f'{self._win_len}'}
 
     @property
