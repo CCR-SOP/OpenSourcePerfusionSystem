@@ -10,7 +10,7 @@ import pytest
 
 import numpy as np
 
-from pyPerfusion.ProcessingStrategy import ProcessingStrategy, RMSStrategy, SaveStreamToFile
+from pyPerfusion.ProcessingStrategy import ProcessingStrategy, RMSStrategy
 
 @pytest.fixture
 def ai():
@@ -61,20 +61,3 @@ def test_rms_strategy():
     results = np.append(buf1, buf2)
     assert len(results) == 20
     assert np.isclose(expected_results, results).all()
-
-
-def test_streamtofile_strategy(tmpdir):
-    strategy = SaveStreamToFile('StreamToFile', 1, 10)
-    strategy.open(tmpdir, {'Param1': 'test', 'Param2': 1})
-    test_file = tmpdir.join('StreamToFile.txt')
-    expected = f'File Format: 1\nAlgorithm: StreamToFile\nWindow Length: 1\nParam1: test\nParam2: 1\n'
-    file_contents = test_file.read()
-    assert file_contents == expected
-    data = np.array([1]*10 + [2]*10)
-    buf1 = strategy.process_buffer(data[0:10])
-    buf2 = strategy.process_buffer(data[10:20])
-    results = np.append(buf1, buf2)
-    test_file = tmpdir.join('StreamToFile.dat')
-    data = np.fromfile(test_file, dtype=np.int32)
-    assert len(data) == len(results)
-    assert np.array_equal(data, results)
