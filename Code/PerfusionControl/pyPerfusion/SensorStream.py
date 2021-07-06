@@ -6,7 +6,8 @@ import time
 
 import numpy as np
 
-from pyPerfusion.ProcessingStrategy import ProcessingStrategy, SaveStreamToFile
+from pyPerfusion.ProcessingStrategy import ProcessingStrategy
+from pyPerfusion.FileStrategy import StreamToFile
 
 
 DATA_VERSION = 1

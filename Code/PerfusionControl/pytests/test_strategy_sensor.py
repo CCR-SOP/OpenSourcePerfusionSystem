@@ -7,11 +7,21 @@ and under the public domain.
 Author: John Kakareka
 """
 import pytest
+from time import sleep
+import os.path
 
 import numpy as np
 
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.SensorStream import SensorStream
+import pyHardware.pyAI as pyAI
+
+
+@pytest.fixture
+def ai():
+    ai = pyAI.AI(period_sample_ms=10)
+    yield ai
+    ai.stop()
 
 
 def setup_module(module):
@@ -54,3 +64,56 @@ def test_readfromfile(tmpdir):
     buf1 = strategy.process_buffer(data)
     t, full_buf = strategy.retrieve_buffer(-1, 20)
     assert np.array_equal(full_buf, buf1)
+
+def test_sensorstream_to_file_no_strategy(tmpdir, ai):
+    sensor = SensorStream('test', 'units/time', ai)
+    sensor.open(tmpdir)
+    sensor.set_ch_id('0')
+    ai.open()
+    ai.add_channel('0')
+    ai.start()
+    sensor.start()
+    sleep(2)
+    sensor.stop()
+    ai.stop()
+    assert not os.path.exists(tmpdir.join('test.dat'))
+    assert not os.path.exists(tmpdir.join('test.txt'))
+
+def test_sensorstream_to_file_not_added(tmpdir, ai):
+    strategy = StreamToFile('StreamToFileRaw', 1, 10)
+    strategy.open(tmpdir, 'test',
+                  {'Sampling Period (ms)': 100, 'Data Format': 'int32'})
+
+    sensor = SensorStream('test', 'units/time', ai)
+    sensor.open(tmpdir)
+    sensor.set_ch_id('0')
+    ai.open()
+    ai.add_channel('0')
+    ai.start()
+    sensor.start()
+    sleep(1)
+    sensor.stop()
+    ai.stop()
+    assert os.path.exists(tmpdir.join('test.dat'))
+    assert os.path.exists(tmpdir.join('test.txt'))
+
+def test_sensorstream_to_file(tmpdir, ai):
+    strategy = StreamToFile('StreamToFileRaw', 1, 10)
+    strategy.open(tmpdir, 'test',
+                  {'Sampling Period (ms)': 100, 'Data Format': 'float32'})
+
+    sensor = SensorStream('test', 'units/time', ai)
+    sensor.open(tmpdir)
+    sensor.add_strategy(strategy)
+    ai.add_channel('0')
+    ai.open()
+    ai.set_demo_properties('0', 2, 1)
+    ai.start()
+    sensor.set_ch_id('0')
+    sensor.start()
+    sleep(1)
+    sensor.stop()
+    ai.stop()
+
+    t, full_buf = strategy.retrieve_buffer(-1, 100)
+    assert len(full_buf) == 100
