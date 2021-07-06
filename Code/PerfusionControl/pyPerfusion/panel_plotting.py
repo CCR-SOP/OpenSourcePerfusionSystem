@@ -58,6 +58,7 @@ class PanelPlotting(wx.Panel):
         self.__line_invalid = {}
         self.__colors = {}
         self.__val_display = {}
+        self._file_strategy = {}
 
         self.timer_plot = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
@@ -91,7 +92,7 @@ class PanelPlotting(wx.Panel):
 
     def _plot(self, line, sensor):
         color = 'black'
-        data_time, data = sensor.get_data(self._plot_frame_ms, self.__plot_len)
+        data_time, data = self._file_strategy[sensor.name].retrieve_buffer(self._plot_frame_ms, self.__plot_len)
         if data is not None and len(data) > 0:
             readout = data[-1]
             if type(sensor) is SensorStream:
@@ -128,9 +129,10 @@ class PanelPlotting(wx.Panel):
         if event.GetId() == self.timer_plot.GetId():
             self.plot()
 
-    def add_sensor(self, sensor, color='r'):
+    def add_sensor(self, sensor, file_strategy, color='r'):
         assert isinstance(sensor, (SensorStream, PHDserial))
         self.__sensors.append(sensor)
+        self._file_strategy[sensor.name] = file_strategy
         if type(sensor) is SensorStream:
             self.__line[sensor.name], = self.axes.plot([0] * self.__plot_len)
             self.__line_invalid[sensor.name] = self.axes.fill_between([0, 1], [0, 0], [0, 0])

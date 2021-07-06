@@ -43,7 +43,11 @@ class StreamToFile(ProcessingStrategy):
     def _open_read(self):
         _fid = open(self.fqpn, 'rb')
         data_type = np.dtype(self._sensor_params['Data Format'])
-        data = np.memmap(_fid, dtype=data_type, mode='r')
+        try:
+            data = np.memmap(_fid, dtype=data_type, mode='r')
+        except ValueError:
+            # cannot mmap an empty file
+            data = []
         return _fid, data
 
     def _write_to_file(self, data_buf):
@@ -91,6 +95,8 @@ class StreamToFile(ProcessingStrategy):
 
     def retrieve_buffer(self, last_ms, samples_needed):
         _fid, data = self._open_read()
+        if not data:
+            return [], []
         file_size = len(data)
         period = self._sensor_params['Sampling Period (ms)']
         data_type = self._sensor_params['Data Format']

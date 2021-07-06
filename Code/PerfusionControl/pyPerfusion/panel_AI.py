@@ -18,6 +18,8 @@ import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_plotting import PanelPlotting
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
+from pyPerfusion.ProcessingStrategy import RMSStrategy
+from pyPerfusion.FileStrategy import StreamToFile
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
@@ -43,7 +45,7 @@ class PanelAI(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
-        self._panel_plot.add_sensor(self._sensor)
+        self._panel_plot.add_sensor(self._sensor, self._sensor.get_file_strategy())
         self._sensor.start()
 
     def __do_layout(self):
@@ -97,8 +99,6 @@ class PanelAI_Config(wx.Panel):
 
         self.__do_layout()
         self.__set_bindings()
-
-        self._sensor.open(LP_CFG.LP_PATH['stream'])
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -271,9 +271,13 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         ai_name = 'Analog Input'
-        self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
+        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Analog Input 1', 'Volts', self.acq)
+        self.raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
+        self.raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        self.sensor.add_strategy(self.raw)
         self.panel = PanelAI(self, self.sensor, name=ai_name)
+
         # self.panel = PanelAI_Config(self, self.sensor, 'test', 'test', None)
         # self.panel = PanelAICalibration(self, self.sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)

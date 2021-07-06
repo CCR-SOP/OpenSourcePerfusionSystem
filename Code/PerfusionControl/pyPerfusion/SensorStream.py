@@ -36,6 +36,10 @@ class SensorStream:
                         }
 
     @property
+    def params(self):
+        return self._params
+
+    @property
     def buf_len(self):
         return self.hw.buf_len
 
@@ -54,6 +58,18 @@ class SensorStream:
     def add_strategy(self, strategy: ProcessingStrategy):
         self._strategies.append(strategy)
 
+    def get_file_strategy(self, name=None):
+        strategy = None
+        if name is None:
+            file_strategies = [strategy for strategy in self._strategies if isinstance(strategy, StreamToFile)]
+            if len(file_strategies) > 0:
+                strategy = file_strategies[-1]
+        else:
+            strategy = [strategy for strategy in self._strategies if strategy.name == name]
+            if len(strategy) > 0:
+                strategy = strategy[0]
+        return strategy
+
     def run(self):
         next_t = time.time()
         offset = 0
@@ -71,12 +87,6 @@ class SensorStream:
 
                 for strategy in self._strategies:
                     buf = strategy.process_buffer(buf)
-
-    def _open_read(self):
-        # Assumes first strategy is the raw data strategy
-        _fid = open(self._strategies[0].fqpn, 'rb')
-        data = np.memmap(_fid, dtype=self.hw.data_type, mode='r')
-        return _fid, data
 
     def start(self):
         if self.__thread:
@@ -98,39 +108,3 @@ class SensorStream:
             self.__thread.join(2.0)
         for strategy in self._strategies:
             strategy.close()
-
-    def get_data(self, last_ms, samples_needed):
-        _fid, data = self._open_read()
-        file_size = len(data)
-        if last_ms > 0:
-            data_size = int(last_ms / self.hw.period_sampling_ms)
-            if samples_needed > data_size:
-                samples_needed = data_size
-            start_idx = file_size - data_size
-            if start_idx < 0:
-                start_idx = 0
-        else:
-            start_idx = 0
-        idx = np.linspace(start_idx, file_size-1, samples_needed, dtype=np.int)
-        data = data[idx]
-
-        start_t = start_idx * self.hw.period_sampling_ms / 1000.0
-        stop_t = file_size * self.hw.period_sampling_ms / 1000.0
-        data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.float32)
-        _fid.close()
-
-        return data_time, data
-
-    def get_current(self):
-        _fid, data = self._open_read()
-        val = data[-1]
-        _fid.close()
-
-        return val
-
-    def get_latest(self, readings):
-        _fid, data = self._open_read()
-        val = data[-readings:]
-        _fid.close()
-
-        return val
