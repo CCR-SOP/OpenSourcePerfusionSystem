@@ -23,7 +23,7 @@ class ProcessingStrategy:
         self._data_type = np.float32
         self._win_len = window_len
         self._window_buffer = np.zeros(self._win_len, dtype=self._data_type)
-        self._processed_buffer = np.zeros(expected_buffer_len, dtype=np.float32)
+        self._processed_buffer = np.zeros(expected_buffer_len, dtype=self._data_type)
         self._params = {'Algorithm': 'Raw',
                         'Window Length': window_len}
 
@@ -64,6 +64,7 @@ class RMSStrategy(ProcessingStrategy):
     def __init__(self, name, window_len, expected_buffer_len):
         super().__init__(name, window_len, expected_buffer_len)
         self._params['Algorithm'] = 'RMS'
+        self._params['Data Format'] = str(np.dtype(np.float32))
         self._sum = 0
 
     def process_buffer(self, buffer):

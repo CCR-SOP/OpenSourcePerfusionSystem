@@ -17,6 +17,7 @@ from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.ProcessingStrategy import RMSStrategy
 import pyPerfusion.utils as utils
 
 
@@ -38,14 +39,26 @@ class TestFrame(wx.Frame):
         sensor.set_ch_id(0)
         sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
 
-        strategy = StreamToFile('StreamToFileRaw', 1, 10)
-        strategy.open(LP_CFG.LP_PATH['stream'], 'test',
-                      {'Sampling Period (ms)': acq.period_sampling_ms, 'Data Format': 'float32'})
+        strategy = StreamToFile('Raw', 1, 10)
+        strategy.open(LP_CFG.LP_PATH['stream'], 'test', sensor.params)
         sensor.add_strategy(strategy)
+
+        rms = RMSStrategy('RMS', 10, acq.buf_len)
+        save_rms = StreamToFile('StreamRMS', None, acq.buf_len)
+        save_rms.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_rms', {**sensor.params, **rms.params})
+        sensor.add_strategy(rms)
+        sensor.add_strategy(save_rms)
         self.panel = PanelPlotting(self)
-        self.plot = SensorPlot(sensor, self.panel.axes, frame_ms=2_000)
-        self.plot.set_strategy(strategy)
-        self.panel.add_plot(self.plot)
+        self.panel.plot_frame_ms = 10_000
+        self.plotraw = SensorPlot(sensor, self.panel.axes)
+        self.plotrms = SensorPlot(sensor, self.panel.axes)
+
+        self.plotraw.set_strategy(sensor.get_file_strategy('Raw'))
+        self.plotrms.set_strategy(sensor.get_file_strategy('StreamRMS'))
+
+        self.panel.add_plot(self.plotraw)
+        self.panel.add_plot(self.plotrms)
+
 
         sensor.open(LP_CFG.LP_PATH['stream'])
 
@@ -72,4 +85,5 @@ app = MyTestApp(0)
 app.MainLoop()
 time.sleep(100)
 sensor.stop()
+acq.stop()
 

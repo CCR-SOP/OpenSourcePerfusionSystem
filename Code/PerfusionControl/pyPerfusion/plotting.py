@@ -28,7 +28,7 @@ import pyPerfusion.PerfusionConfig as LP_CFG
 from pyHardware.PHDserial import PHDserial
 
 class SensorPlot:
-    def __init__(self, sensor, axes, frame_ms=200, plot_len=200):
+    def __init__(self, sensor, axes):
         self._lgr = logging.getLogger(__name__)
         self._sensor = sensor
         self._strategy = None
@@ -37,12 +37,16 @@ class SensorPlot:
         self._invalid = None
         self._display = None
         self._shaded = None
-        self._frame_ms = frame_ms
-        self._plot_len = plot_len
 
-    def plot(self):
+    @property
+    def name(self):
+        return self._strategy.name
+
+    def plot(self, frame_ms, plot_len):
         color = 'black'
-        data_time, data = self._strategy.retrieve_buffer(self._frame_ms, self._plot_len)
+        if not self._strategy:
+            return
+        data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
         if data is None or len(data) == 0:
             return
         if self._sensor.valid_range is not None:
@@ -52,7 +56,11 @@ class SensorPlot:
                                                  where=data > self._sensor.valid_range[1], color='r')
             self._invalid = [low_range, high_range]
 
-        self._line.set_data(data_time, data)
+        if self._line is None:
+            self._line, = self._axes.plot(data_time, data)
+            self._line.set_label(self._strategy.name)
+        else:
+            self._line.set_data(data_time, data)
         try:
             self._axes.collections.remove(self._invalid)
         except ValueError:
@@ -60,7 +68,7 @@ class SensorPlot:
 
     def set_strategy(self, strategy, color='r'):
         self._strategy = strategy
-        self._line, = self._axes.plot([0] * self._plot_len)
+        self._line = None
         if self._sensor.valid_range is not None:
             rng = self._sensor.valid_range
             self._shaded['normal'] = self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
@@ -113,6 +121,7 @@ class PanelPlotting(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.canvas, 10, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(self.list_strategy, 1, wx.ALL)
+        self.list_strategy.Hide()
 
         self.SetSizer(sizer)
         self.Fit()
@@ -123,8 +132,9 @@ class PanelPlotting(wx.Panel):
 
     def plot(self):
         for plot in self._plots:
-            plot.plot()
+            plot.plot(self._plot_frame_ms, self.__plot_len)
 
+        self.show_legend()
         self._axes.relim()
         self._axes.autoscale_view()
         self.canvas.draw()
@@ -135,7 +145,7 @@ class PanelPlotting(wx.Panel):
 
     def show_legend(self):
         self._axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=2, mode="expand",
-                         borderaxespad=0, framealpha=0.0, fontsize='x-small')
+                          borderaxespad=0, framealpha=0.0, fontsize='x-small')
 
     def add_plot(self, plot):
         self._plots.append(plot)

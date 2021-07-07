@@ -58,10 +58,14 @@ class SensorStream:
     def add_strategy(self, strategy: ProcessingStrategy):
         self._strategies.append(strategy)
 
+    def get_all_file_strategies(self):
+        file_strategies = [strategy for strategy in self._strategies if isinstance(strategy, StreamToFile)]
+        return file_strategies
+
     def get_file_strategy(self, name=None):
         strategy = None
         if name is None:
-            file_strategies = [strategy for strategy in self._strategies if isinstance(strategy, StreamToFile)]
+            file_strategies = self.get_all_file_strategies()
             if len(file_strategies) > 0:
                 strategy = file_strategies[-1]
         else:

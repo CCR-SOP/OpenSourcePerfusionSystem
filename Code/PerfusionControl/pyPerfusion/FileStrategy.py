@@ -9,6 +9,7 @@ and under the public domain.
 """
 import pathlib
 import datetime
+import logging
 
 import numpy as np
 
@@ -18,6 +19,7 @@ from pyPerfusion.ProcessingStrategy import ProcessingStrategy
 class StreamToFile(ProcessingStrategy):
     def __init__(self, name, window_len, expected_buffer_len):
         super().__init__(name, window_len, expected_buffer_len)
+        self._lgr = logging.getLogger(__name__)
         self._version = 1
         self._ext = '.dat'
         self._ext_hdr = '.txt'
@@ -95,9 +97,10 @@ class StreamToFile(ProcessingStrategy):
 
     def retrieve_buffer(self, last_ms, samples_needed):
         _fid, data = self._open_read()
-        if not _fid:
-            return [], []
         file_size = len(data)
+        if not _fid or file_size == 0:
+            return [], []
+
         period = self._sensor_params['Sampling Period (ms)']
         data_type = self._sensor_params['Data Format']
         if last_ms == 0:
