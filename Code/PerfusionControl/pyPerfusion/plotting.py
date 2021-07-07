@@ -15,13 +15,14 @@ import logging
 import wx
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
+import matplotlib.transforms as mtransforms
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 
 class SensorPlot:
-    def __init__(self, sensor, axes):
+    def __init__(self, sensor, axes, readout=False):
         self._lgr = logging.getLogger(__name__)
         self._sensor = sensor
         self._strategy = None
@@ -30,17 +31,21 @@ class SensorPlot:
         self._invalid = None
         self._display = None
         self._color = None
+        self._with_readout = readout
 
     @property
     def name(self):
         return self._strategy.name
 
     def plot(self, frame_ms, plot_len):
+        readout_color = 'black'
         if not self._strategy:
             return
         data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
         if data is None or len(data) == 0:
             return
+
+        readout = data[-1]
         if self._sensor.valid_range is not None:
             low_range = self._axes.fill_between(data_time, data, self._sensor.valid_range[0],
                                                 where=data < self._sensor.valid_range[0], color='r')
@@ -48,11 +53,26 @@ class SensorPlot:
                                                  where=data > self._sensor.valid_range[1], color='r')
             self._invalid = [low_range, high_range]
 
+            if self._with_readout:
+                if readout < self._sensor.valid_range[0]:
+                    readout_color = 'orange'
+                elif readout > self._sensor.valid_range[1]:
+                    readout_color = 'red'
+
         if self._line is None:
             self._line, = self._axes.plot(data_time, data, color=self._color)
             self._line.set_label(self._strategy.name)
         else:
             self._line.set_data(data_time, data)
+
+        if self._with_readout:
+            self._line.set_label(f'{self._strategy.name}: {readout:.2f} {self._sensor.unit_str}')
+            leg = self._axes.get_legend()
+            leg_texts = leg.get_texts()
+            for txt in leg_texts:
+                txt.set_color(readout_color)
+                # self._display.set_color(readout_color)
+
         try:
             self._axes.collections.remove(self._invalid)
         except ValueError:
@@ -124,10 +144,11 @@ class PanelPlotting(wx.Panel):
         pass
 
     def plot(self):
+        self.show_legend()
         for plot in self._plots:
             plot.plot(self._plot_frame_ms, self.__plot_len)
 
-        self.show_legend()
+
         self._axes.relim()
         self._axes.autoscale_view()
         self.canvas.draw()
