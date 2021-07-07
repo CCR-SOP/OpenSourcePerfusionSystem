@@ -24,7 +24,7 @@ class ProcessingStrategy:
         self._win_len = window_len
         self._window_buffer = np.zeros(self._win_len, dtype=self._data_type)
         self._processed_buffer = np.zeros(expected_buffer_len, dtype=np.float32)
-        self._params = {'Algorithm': 'PassThrough',
+        self._params = {'Algorithm': 'Raw',
                         'Window Length': window_len}
 
     @property
