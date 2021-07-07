@@ -13,19 +13,12 @@ and under the public domain.
 import logging
 
 import wx
-import numpy as np
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
-import matplotlib.transforms as mtransforms
-# from matplotlib.backends.backend_wx import NavigationToolbar2Wx
-
-from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.SensorPoint import SensorPoint
-from pyHardware.PHDserial import PHDserial
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pyHardware.PHDserial import PHDserial
+
 
 class SensorPlot:
     def __init__(self, sensor, axes):
@@ -37,13 +30,13 @@ class SensorPlot:
         self._invalid = None
         self._display = None
         self._shaded = None
+        self._color = None
 
     @property
     def name(self):
         return self._strategy.name
 
     def plot(self, frame_ms, plot_len):
-        color = 'black'
         if not self._strategy:
             return
         data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
@@ -57,7 +50,7 @@ class SensorPlot:
             self._invalid = [low_range, high_range]
 
         if self._line is None:
-            self._line, = self._axes.plot(data_time, data)
+            self._line, = self._axes.plot(data_time, data, color=self._color)
             self._line.set_label(self._strategy.name)
         else:
             self._line.set_data(data_time, data)
@@ -66,9 +59,10 @@ class SensorPlot:
         except ValueError:
             pass
 
-    def set_strategy(self, strategy, color='r'):
+    def set_strategy(self, strategy, color=None):
         self._strategy = strategy
         self._line = None
+        self._color = color
         if self._sensor.valid_range is not None:
             rng = self._sensor.valid_range
             self._shaded['normal'] = self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)

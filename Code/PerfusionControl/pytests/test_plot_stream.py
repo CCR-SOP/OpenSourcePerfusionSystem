@@ -54,7 +54,7 @@ class TestFrame(wx.Frame):
         self.plotrms = SensorPlot(sensor, self.panel.axes)
 
         self.plotraw.set_strategy(sensor.get_file_strategy('Raw'))
-        self.plotrms.set_strategy(sensor.get_file_strategy('StreamRMS'))
+        self.plotrms.set_strategy(sensor.get_file_strategy('StreamRMS'), color='r')
 
         self.panel.add_plot(self.plotraw)
         self.panel.add_plot(self.plotrms)
