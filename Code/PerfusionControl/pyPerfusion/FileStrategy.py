@@ -95,7 +95,7 @@ class StreamToFile(ProcessingStrategy):
 
     def retrieve_buffer(self, last_ms, samples_needed):
         _fid, data = self._open_read()
-        if not data:
+        if not _fid:
             return [], []
         file_size = len(data)
         period = self._sensor_params['Sampling Period (ms)']
