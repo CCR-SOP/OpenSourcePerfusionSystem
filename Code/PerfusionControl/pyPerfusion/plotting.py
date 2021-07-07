@@ -29,7 +29,6 @@ class SensorPlot:
         self._line = None
         self._invalid = None
         self._display = None
-        self._shaded = None
         self._color = None
 
     @property
@@ -65,7 +64,7 @@ class SensorPlot:
         self._color = color
         if self._sensor.valid_range is not None:
             rng = self._sensor.valid_range
-            self._shaded['normal'] = self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+            self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
         self._axes.set_title(self._sensor.name)
         self._axes.set_ylabel(self._sensor.unit_str)
 

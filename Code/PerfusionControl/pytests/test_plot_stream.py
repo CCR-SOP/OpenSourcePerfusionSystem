@@ -25,7 +25,7 @@ utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 acq = AI(100)
-sensor = SensorStream('test', 'ml/min', acq)
+sensor = SensorStream('test', 'ml/min', acq, valid_range = [15, 20])
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -54,11 +54,10 @@ class TestFrame(wx.Frame):
         self.plotrms = SensorPlot(sensor, self.panel.axes)
 
         self.plotraw.set_strategy(sensor.get_file_strategy('Raw'))
-        self.plotrms.set_strategy(sensor.get_file_strategy('StreamRMS'), color='r')
+        self.plotrms.set_strategy(sensor.get_file_strategy('StreamRMS'), color='y')
 
         self.panel.add_plot(self.plotraw)
         self.panel.add_plot(self.plotrms)
-
 
         sensor.open(LP_CFG.LP_PATH['stream'])
 
