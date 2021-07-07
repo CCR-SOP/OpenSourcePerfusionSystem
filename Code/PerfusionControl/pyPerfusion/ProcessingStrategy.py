@@ -35,7 +35,7 @@ class ProcessingStrategy:
     def params(self):
         return self._params
 
-    def process_buffer(self, buffer):
+    def process_buffer(self, buffer, t=None):
         idx = 0
         for sample in buffer:
             front = self._window_buffer[0]
@@ -67,7 +67,7 @@ class RMSStrategy(ProcessingStrategy):
         self._params['Data Format'] = str(np.dtype(np.float32))
         self._sum = 0
 
-    def process_buffer(self, buffer):
+    def process_buffer(self, buffer, t=None):
         idx = 0
         for sample in buffer:
             sqr = sample * sample

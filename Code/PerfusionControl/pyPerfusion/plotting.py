@@ -90,6 +90,21 @@ class SensorPlot:
         self._axes.set_ylabel(self._sensor.unit_str)
 
 
+class EventPlot(SensorPlot):
+    def __init__(self, sensor, axes, readout=False):
+        super().__init__(sensor, axes, readout)
+
+    def plot(self, frame_ms, plot_len):
+        if not self._strategy:
+            return
+        data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
+        if data is None or len(data) == 0:
+            return
+
+        del self._line
+        self._line = self._axes.vlines(data_time, ymin=0, ymax=100, color=self._color)
+
+
 class PanelPlotting(wx.Panel):
     def __init__(self, parent, with_readout=True):
         wx.Panel.__init__(self, parent, -1)

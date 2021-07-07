@@ -39,6 +39,7 @@ class AI:
         self._read_period_ms = read_period_ms
         self.data_type = data_type
         self.buf_type = buf_type
+        print(f'read period = {self._read_period_ms}, sampliing = {self._period_sampling_ms}')
         self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
 
         self._calibration = {}

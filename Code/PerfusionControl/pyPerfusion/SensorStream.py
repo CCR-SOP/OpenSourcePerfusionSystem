@@ -90,7 +90,7 @@ class SensorStream:
                 buf = data_buf
 
                 for strategy in self._strategies:
-                    buf = strategy.process_buffer(buf)
+                    buf = strategy.process_buffer(buf, t)
 
     def start(self):
         if self.__thread:
