@@ -71,6 +71,7 @@ class SensorPlot:
             leg_texts = leg.get_texts()
             for txt in leg_texts:
                 txt.set_color(readout_color)
+                txt.set_fontsize('large')
                 # self._display.set_color(readout_color)
 
         try:
