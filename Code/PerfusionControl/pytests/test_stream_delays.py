@@ -25,7 +25,7 @@ import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 
-dev = 'Dev1'
+dev = 'Dev2'
 
 logger = logging.getLogger()
 LP_CFG.set_base(basepath='~/Documents/LPTEST')
@@ -56,7 +56,7 @@ STOP_PROGRAM = False
 
 def get_last_sample():
     global strategy, last_acq
-    sample = strategy.retrieve_buffer(0, 1)
+    t, sample = strategy.retrieve_buffer(0, 1)
     logger.debug(f'Acquired {sample}')
 
 
