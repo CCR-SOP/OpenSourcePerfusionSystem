@@ -19,7 +19,7 @@ import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import PointsToFile
 
-dev = 'Dev1'
+dev = 'Dev2'
 
 logger = logging.getLogger()
 LP_CFG.set_base(basepath='~/Documents/LPTEST')
@@ -33,7 +33,8 @@ acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 sensor = SensorPoint('Analog Input 1', 'Volts', acq)
 strategy = PointsToFile('StreamToFileRaw', 1, 10)
 strategy.open(LP_CFG.LP_PATH['stream'], 'Analog Input 1',
-              {'Sampling Period (ms)': 100, 'Data Format': 'float32'})
+              {'Sampling Period (ms)': 100, 'Data Format': 'float32',
+               'Samples Per Timestamp': 2})
 
 sensor.open()
 sensor.add_strategy(strategy)

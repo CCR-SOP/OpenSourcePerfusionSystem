@@ -23,7 +23,6 @@ from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
-from pyPerfusion.ProcessingStrategy import RMSStrategy
 
 dev = 'Dev2'
 

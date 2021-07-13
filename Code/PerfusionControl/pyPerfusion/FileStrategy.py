@@ -96,6 +96,7 @@ class StreamToFile(ProcessingStrategy):
         self._fid.close()
 
     def process_buffer(self, buffer, t=None):
+        self._lgr.debug(f'writing buffer={buffer}, t={t}')
         self._write_to_file(buffer, t)
         return buffer
 
@@ -108,6 +109,7 @@ class StreamToFile(ProcessingStrategy):
         period = self._sensor_params['Sampling Period (ms)']
         data_type = self._sensor_params['Data Format']
         if last_ms == 0:
+            # if last x samples requested, no timestamps are returned
             data = data[-samples_needed:]
             data_time = None
         else:
@@ -159,13 +161,14 @@ class PointsToFile(StreamToFile):
 
     def __read_chunk(self, _fid):
         ts = 0
-        data_buf = []
+        data_buf = None
         ts_bytes = _fid.read(self._bytes_per_ts)
         data_type = self._sensor_params['Data Format']
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
         if len(ts_bytes) == 4:
             ts, = struct.unpack('i', ts_bytes)
             data_buf = np.fromfile(_fid, dtype=data_type, count=samples_per_ts)
+            self._lgr.debug(f'ts = {ts}, data_buf = {data_buf}')
         return data_buf, ts
 
     def retrieve_buffer(self, last_ms, samples_needed):
@@ -175,9 +178,9 @@ class PointsToFile(StreamToFile):
         chunk = [1]
         data_time = []
         data = []
-        while chunk:
+        while chunk is not None:
             chunk, ts = self.__read_chunk(_fid)
-            if chunk and (cur_time - ts < last_ms or last_ms == 0):
+            if chunk is not None and (cur_time - ts < last_ms or last_ms == 0):
                 data.append(chunk)
                 data_time.append(ts / 1000.0)
         _fid.close()
@@ -211,11 +214,13 @@ class PointsToFile(StreamToFile):
         # dtype_size = self.hw.data_type(1).itemsize
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
         bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
+        self._lgr.debug(f'samples/ts = {samples_per_ts}, bytes/chunk = {bytes_per_chunk}')
         ts = timestamp + 1
         data = deque()
         data_t = deque()
         _fid.seek(0, SEEK_END)
         loops = 0
+        self._lgr.debug(f'timestamp = {timestamp}')
         while ts > timestamp:
             loops += 1
             offset = bytes_per_chunk * loops
@@ -223,9 +228,11 @@ class PointsToFile(StreamToFile):
                 _fid.seek(-offset, SEEK_END)
             except OSError:
                 # attempt to read before beginning of file
+                self._lgr.warning(f'Attempted to read from before beginning of file with offset {offset}')
                 break
             else:
                 chunk, ts = self.__read_chunk(_fid)
+                self._lgr.debug(f'ts = {ts}, time diff is {ts - timestamp}')
                 if ts and ts > timestamp:
                     data_t.extendleft([ts])
                     data.extendleft(chunk)

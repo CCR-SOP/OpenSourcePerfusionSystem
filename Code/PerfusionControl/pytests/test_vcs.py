@@ -11,13 +11,16 @@ and under the public domain.
 import logging
 from time import sleep
 
-from pyHardware.pyVCS import VCS
+from pyHardware.pyVCS import VCS, VCSPump
 from pyHardware.pyDIO import DIO
 from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
+from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.SensorPoint import SensorPoint
+from pyPerfusion.FileStrategy import StreamToFile
 
+device = 'Dev2'
 
 logger = logging.getLogger()
 utils.setup_stream_logger(logger, logging.DEBUG)
@@ -41,19 +44,35 @@ dio5.open('port1', 'line1')
 samples = 2
 period_ms = 1000
 ai = AI_Finite_NIDAQ(period_ms=period_ms, volts_p2p=5, volts_offset=2.5, samples_per_read=samples)
-ai.open('Dev1')
+ai.open(device)
 ai.add_channel('0')
 ai.add_channel('1')
 sensor1 = SensorPoint('FiniteAcq1', 'counts', ai)
 sensor1.set_ch_id('0')
 sensor2 = SensorPoint('FiniteAcq2', 'counts', ai)
 sensor2.set_ch_id('1')
-sensor1.open(LP_CFG.LP_PATH['stream'])
-sensor2.open(LP_CFG.LP_PATH['stream'])
+
+strategy = StreamToFile('Raw', 1, 10)
+strategy.open(LP_CFG.LP_PATH['stream'], sensor1.name, sensor1.params)
+sensor1.add_strategy(strategy)
+
+strategy = StreamToFile('Raw', 1, 10)
+strategy.open(LP_CFG.LP_PATH['stream'], sensor2.name, sensor2.params)
+sensor2.add_strategy(strategy)
+
+
+sensor1.open()
+sensor2.open()
 sensor1.start()
 sensor2.start()
 
+ao = NIDAQ_AO('VCS Pump')
+ao.open(period_ms=1000, dev=device, line='1')
+pump = VCSPump(ao)
+pump.set_speed(3)
+
 vcs = VCS(clearance_time_ms=2_000)
+vcs.set_pump(pump)
 vcs.add_cycled_input('chemical', dio1)
 vcs.add_cycled_input('chemical', dio2)
 vcs.add_cycled_input('chemical', dio3)
