@@ -44,7 +44,7 @@ def test_streamtofile_strategy(tmpdir):
     strategy = StreamToFile('StreamToFile', 1, 10)
     strategy.open(tmpdir, 'StreamToFile', {'Sampling Period (ms)': 100, 'Data Format': 'int32'})
     test_file = tmpdir.join('StreamToFile.txt')
-    expected = f'Algorithm: PassThrough\nWindow Length: 1\nFile Format: 1\nSampling Period (ms): 100\nData Format: int32\n'
+    expected = f'Algorithm: Raw\nWindow Length: 1\nFile Format: 1\nSampling Period (ms): 100\nData Format: int32\n'
     file_contents = test_file.read()
     assert file_contents == expected
     data = np.array([1]*10 + [2]*10, dtype=np.int32)
@@ -67,7 +67,7 @@ def test_readfromfile(tmpdir):
 
 def test_sensorstream_to_file_no_strategy(tmpdir, ai):
     sensor = SensorStream('test', 'units/time', ai)
-    sensor.open(tmpdir)
+    sensor.open()
     sensor.set_ch_id('0')
     ai.open()
     ai.add_channel('0')
@@ -85,7 +85,7 @@ def test_sensorstream_to_file_not_added(tmpdir, ai):
                   {'Sampling Period (ms)': 100, 'Data Format': 'int32'})
 
     sensor = SensorStream('test', 'units/time', ai)
-    sensor.open(tmpdir)
+    sensor.open()
     sensor.set_ch_id('0')
     ai.open()
     ai.add_channel('0')
@@ -103,7 +103,7 @@ def test_sensorstream_to_file(tmpdir, ai):
                   {'Sampling Period (ms)': 100, 'Data Format': 'float32'})
 
     sensor = SensorStream('test', 'units/time', ai)
-    sensor.open(tmpdir)
+    sensor.open()
     sensor.add_strategy(strategy)
     ai.add_channel('0')
     ai.open()

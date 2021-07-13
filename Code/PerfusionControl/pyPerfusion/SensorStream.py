@@ -92,23 +92,28 @@ class SensorStream:
                 for strategy in self._strategies:
                     buf = strategy.process_buffer(buf, t)
 
-    def start(self):
-        if self.__thread:
-            self.__thread.start()
-
     def set_ch_id(self, ch_id):
         self._ch_id = ch_id
 
-    def open(self, full_path):
+    def open(self):
+        pass
+
+    def close(self):
+        self.stop()
+        for strategy in self._strategies:
+            strategy.close()
+
+    def start(self):
+        if self.__thread:
+            self.stop()
         self._timestamp = datetime.datetime.now()
         self._params['Start of Acquisition'] = self._timestamp.strftime('%Y-%m-%d_%H:%M')
-        # TODO, how to handle start of acq?
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'SensorStream ({self.name})'
+        self.__thread.start()
 
     def stop(self):
         self.__evt_halt.set()
         if self.__thread:
             self.__thread.join(2.0)
-        for strategy in self._strategies:
-            strategy.close()
+

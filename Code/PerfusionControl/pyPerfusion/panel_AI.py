@@ -15,7 +15,7 @@ import wx
 from pyHardware.pyAI import AIDeviceException
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.plotting import PanelPlotting, SensorPlot
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
 from pyPerfusion.ProcessingStrategy import RMSStrategy
@@ -44,8 +44,9 @@ class PanelAI(wx.Panel):
 
         self.__do_layout()
         self.__set_bindings()
-
-        self._panel_plot.add_sensor(self._sensor, self._sensor.get_file_strategy())
+        self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes)
+        self._panel_plot.add_plot(self._sensorplot)
+        self._sensorplot.set_strategy(self._sensor.get_file_strategy('Raw'))
         self._sensor.start()
 
     def __do_layout(self):
@@ -273,7 +274,7 @@ class TestFrame(wx.Frame):
         ai_name = 'Analog Input'
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Analog Input 1', 'Volts', self.acq)
-        self.raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
+        self.raw = StreamToFile('Raw', None, self.acq.buf_len)
         self.raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(self.raw)
         self.rms = RMSStrategy('RMS', 15, self.acq.buf_len)

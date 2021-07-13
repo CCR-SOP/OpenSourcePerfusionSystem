@@ -22,6 +22,8 @@ from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.ProcessingStrategy import RMSStrategy
 
 dev = 'Dev1'
 
@@ -36,7 +38,12 @@ logger.debug('creating NIDAQ_AI')
 acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 sensor = SensorStream('Analog Input 1', 'Volts', acq)
 logger.debug('opening sensor')
-sensor.open(LP_CFG.LP_PATH['stream'])
+
+strategy = StreamToFile('Raw', 1, 10)
+strategy.open(LP_CFG.LP_PATH['stream'], 'test', sensor.params)
+sensor.add_strategy(strategy)
+
+sensor.open()
 acq.open(dev=dev)
 acq.add_channel('0')
 sensor.set_ch_id('0')
@@ -48,8 +55,8 @@ STOP_PROGRAM = False
 
 
 def get_last_sample():
-    global sensor, last_acq
-    sample = sensor.get_current()
+    global strategy, last_acq
+    sample = strategy.retrieve_buffer(0, 1)
     logger.debug(f'Acquired {sample}')
 
 
