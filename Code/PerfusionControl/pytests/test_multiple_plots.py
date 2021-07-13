@@ -8,9 +8,10 @@ test real-time plotting
 import wx
 import time
 
-from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.plotting import PanelPlotting, SensorPlot
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.FileStrategy import StreamToFile
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 
@@ -29,8 +30,11 @@ class TestFrame(wx.Frame):
             SensorStream('HA Flow', 'ml/min', self.hw),
             SensorStream('PV Flow', 'ml/min', self.hw)
         ]
-
-        [sensor.open(LP_CFG.LP_PATH['stream']) for sensor in self.sensors]
+        for sensor in self.sensors:
+            strategy = StreamToFile('Raw', 1, 10)
+            strategy.open(LP_CFG.LP_PATH['stream'], sensor.name, sensor.params)
+            sensor.add_strategy(strategy)
+            sensor.open()
 
         sizer_plots = wx.GridSizer(cols=2)
         for idx, sensor in enumerate(self.sensors):
@@ -38,8 +42,10 @@ class TestFrame(wx.Frame):
             self._plots.append(panel)
             sensor.hw.add_channel(idx)
             sensor.set_ch_id(idx)
-            panel.add_sensor(sensor)
+            plot = SensorPlot(sensor, panel.axes, readout=True)
+            plot.set_strategy(sensor.get_file_strategy('Raw'))
             sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+            panel.add_plot(plot)
             sensor.start()
 
         self.sensors[0].hw.set_demo_properties(0, demo_amp=80, demo_offset=0)

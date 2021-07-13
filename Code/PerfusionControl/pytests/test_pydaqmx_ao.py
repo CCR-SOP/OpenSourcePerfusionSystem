@@ -29,7 +29,7 @@ t = np.arange(0, 1.0, step=0.01)
 buffer = 1.0 * np.sin(2 * np.pi * 5 * t, dtype=np.float64) + 1.75
 
 task = PyDAQmx.Task()
-task.CreateAOVoltageChan("Dev3/ao0", None, -10, 10, PyDAQmx.DAQmx_Val_Volts, None)
+task.CreateAOVoltageChan("Dev4/ao0", None, -10, 10, PyDAQmx.DAQmx_Val_Volts, None)
 task.CfgSampClkTiming("", 100.0, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps, 1000)
 task.WriteAnalogF64(100, 1, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel,
                     buffer, PyDAQmx.byref(samples_per_channel_written), None)

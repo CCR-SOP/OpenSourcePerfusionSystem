@@ -11,7 +11,6 @@ import wx
 import time
 import logging
 
-from pyPerfusion.plotting import PanelPlotting
 from pyPerfusion.plotting import SensorPlot, PanelPlotting
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
@@ -25,7 +24,8 @@ utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 acq = AI(100)
-sensor = SensorStream('test', 'ml/min', acq, valid_range = [15, 20])
+sensor = SensorStream('test', 'ml/min', acq, valid_range=[15, 20])
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -59,7 +59,7 @@ class TestFrame(wx.Frame):
         self.panel.add_plot(self.plotraw)
         self.panel.add_plot(self.plotrms)
 
-        sensor.open(LP_CFG.LP_PATH['stream'])
+        sensor.open()
 
         sensor.hw.open()
         sensor.hw.start()

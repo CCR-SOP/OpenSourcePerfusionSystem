@@ -60,8 +60,8 @@ class TestFrame(wx.Frame):
         self.panel.add_plot(self.plotevt)
         self.panel.add_plot(self.plotraw)
 
-        sensor.open(LP_CFG.LP_PATH['stream'])
-        evt.open(LP_CFG.LP_PATH['stream'])
+        sensor.open()
+        evt.open()
 
         sensor.hw.open()
         evt.hw.open()

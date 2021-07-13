@@ -17,7 +17,7 @@ import pyPerfusion.utils as utils
 logger = logging.getLogger()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
-dev = 'Dev1'
+dev = 'Dev2'
 line = '0'
 samples = 5
 period_ms = 1000

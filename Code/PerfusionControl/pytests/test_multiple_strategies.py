@@ -14,7 +14,8 @@ import logging
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
-from pyPerfusion.ProcessingStrategy import RMSStrategy, SaveStreamToFile
+from pyPerfusion.ProcessingStrategy import RMSStrategy
+from pyPerfusion.FileStrategy import StreamToFile
 
 
 logger = logging.getLogger()
@@ -24,18 +25,18 @@ acq = AI(period_sample_ms=100)
 sensor0 = SensorStream('test0', 'ml/min', acq)
 sensor1 = SensorStream('test1', 'ml/min', acq)
 
-raw = SaveStreamToFile('StreamRaw', None, acq.buf_len)
+raw = StreamToFile('StreamRaw', None, acq.buf_len)
 raw.open('./__data__/test', f'{sensor0.name}_raw', {})
 rms = RMSStrategy('RMS', 5, acq.buf_len)
-save_rms = SaveStreamToFile('StreamRMS', None, acq.buf_len)
+save_rms = StreamToFile('StreamRMS', None, acq.buf_len)
 save_rms.open('./__data__/test', f'{sensor0.name}_rms', rms.params)
 
 sensor0.add_strategy(raw)
 sensor0.add_strategy(rms)
 sensor0.add_strategy(save_rms)
 
-sensor0.open(Path('./__data__/test'))
-sensor1.open(Path('./__data__/test'))
+sensor0.open()
+sensor1.open()
 sensor0.set_ch_id('0')
 sensor1.set_ch_id('1')
 

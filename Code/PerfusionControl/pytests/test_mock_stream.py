@@ -21,7 +21,7 @@ acq = AI(period_sample_ms=100)
 
 sensor0 = SensorStream('test0', 'ml/min', acq)
 
-sensor0.open(Path('./__data__/test'))
+sensor0.open()
 sensor0.set_ch_id('0')
 
 acq.open()
