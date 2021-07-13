@@ -96,7 +96,6 @@ class StreamToFile(ProcessingStrategy):
         self._fid.close()
 
     def process_buffer(self, buffer, t=None):
-        self._lgr.debug(f'writing buffer={buffer}, t={t}')
         self._write_to_file(buffer, t)
         return buffer
 
@@ -168,7 +167,6 @@ class PointsToFile(StreamToFile):
         if len(ts_bytes) == 4:
             ts, = struct.unpack('i', ts_bytes)
             data_buf = np.fromfile(_fid, dtype=data_type, count=samples_per_ts)
-            self._lgr.debug(f'ts = {ts}, data_buf = {data_buf}')
         return data_buf, ts
 
     def retrieve_buffer(self, last_ms, samples_needed):
@@ -214,13 +212,11 @@ class PointsToFile(StreamToFile):
         # dtype_size = self.hw.data_type(1).itemsize
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
         bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
-        self._lgr.debug(f'samples/ts = {samples_per_ts}, bytes/chunk = {bytes_per_chunk}')
         ts = timestamp + 1
         data = deque()
         data_t = deque()
         _fid.seek(0, SEEK_END)
         loops = 0
-        self._lgr.debug(f'timestamp = {timestamp}')
         while ts > timestamp:
             loops += 1
             offset = bytes_per_chunk * loops
@@ -232,7 +228,6 @@ class PointsToFile(StreamToFile):
                 break
             else:
                 chunk, ts = self.__read_chunk(_fid)
-                self._lgr.debug(f'ts = {ts}, time diff is {ts - timestamp}')
                 if ts and ts > timestamp:
                     data_t.extendleft([ts])
                     data.extendleft(chunk)

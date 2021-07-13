@@ -22,7 +22,7 @@ class SensorStream:
         self._valid_range = valid_range
         self.hw = hw
         self._ch_id = None
-        self.__evt_halt = Event()
+        self._evt_halt = Event()
         self.data = None
         self.name = name
         self._timestamp = None
@@ -77,7 +77,7 @@ class SensorStream:
     def run(self):
         next_t = time.time()
         offset = 0
-        while not self.__evt_halt.is_set():
+        while not self._evt_halt.is_set():
             next_t += offset + self.hw.period_sampling_ms / 1000.0
             delay = next_t - time.time()
             if delay > 0:
@@ -88,7 +88,6 @@ class SensorStream:
             data_buf, t = self.hw.get_data(self._ch_id)
             if data_buf is not None:
                 buf = data_buf
-
                 for strategy in self._strategies:
                     buf = strategy.process_buffer(buf, t)
 
@@ -113,7 +112,7 @@ class SensorStream:
         self.__thread.start()
 
     def stop(self):
-        self.__evt_halt.set()
+        self._evt_halt.set()
         if self.__thread:
             self.__thread.join(2.0)
 

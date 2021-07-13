@@ -20,3 +20,10 @@ class SensorPoint(SensorStream):
                         'Start of Acquisition': 0
                         }
 
+    def run(self):
+        while not self._evt_halt.is_set():
+            data_buf, t = self.hw.get_data(self._ch_id)
+            if data_buf is not None:
+                buf = data_buf
+                for strategy in self._strategies:
+                    buf = strategy.process_buffer(buf, t)
