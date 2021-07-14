@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-"""
+"""Panel class for showing a single value
 
-@author: John Kakareka
 
-Panel class for showing single number readout
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
 """
 from pathlib import Path
 import logging
@@ -14,6 +17,7 @@ import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.SensorStream import SensorStream
 from pyHardware.pyAI import AI
+from pyPerfusion.FileStrategy import StreamToFile
 
 
 class PanelReadout(wx.Panel):
@@ -60,11 +64,13 @@ class PanelReadout(wx.Panel):
             self.update_value()
 
     def update_value(self):
-        val = int(self._sensor.get_current())
-        self.label_value.SetLabel(f'{val:3}')
+        t, val = self._sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+        if val is not []:
+            val = val[0]
+            self.label_value.SetLabel(f'{val:0.3}')
 
-    # def __set_bindings(self):
-        # add bindings, if needed
+    def __set_bindings(self):
+        pass
 
 
 class TestFrame(wx.Frame):
@@ -72,10 +78,20 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.sensor = SensorStream('HA Flow', 'bpm', AI(100))
+        self.acq = AI(100)
+        self.acq.open()
+        self.acq.add_channel('0')
+        self.acq.set_demo_properties('0', demo_amp=10, demo_offset=5)
+        self.sensor = SensorStream('HA Flow', 'bpm', self.acq)
+        self.sensor.set_ch_id('0')
         self.panel = PanelReadout(self, self.sensor)
+        self.raw = StreamToFile('Raw', None, self.acq.buf_len)
+        self.raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        self.sensor.add_strategy(self.raw)
+        self.sensor.open()
         self.sensor.start()
-        self.sensor.open(Path('./__data__')) #, Path('2020-09-14'))
+        self.acq.start()
+
 
 
 class MyTestApp(wx.App):
@@ -89,6 +105,6 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
-    utils.setup_default_logging(filename='panel_readout')
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     app = MyTestApp(0)
     app.MainLoop()
