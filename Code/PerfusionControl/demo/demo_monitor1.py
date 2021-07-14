@@ -31,6 +31,7 @@ class PlotFrame(Enum):
 
 demo_properties = [(80, 0), (40, 20), (100, 0), (10, 0), (3, 0)]
 
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -45,7 +46,6 @@ class TestFrame(wx.Frame):
 
         self.hw_stream = AI(period_sample_ms=100)
         self.hw_events = AI(period_sample_ms=1000, read_period_ms=3000)
-
 
         self.sensors = [
             SensorStream('HA Flow', 'ml/min', self.hw_stream, valid_range=[20, 60]),
@@ -99,26 +99,33 @@ class TestFrame(wx.Frame):
         for plot in self._plots_main:
             evt = self.events[0]
             plotevt = EventPlot(evt, plot.axes)
-            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='orange')
+            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='orange',
+                                 keep_old_title=True)
             plot.add_plot(plotevt)
 
             evt = self.events[1]
             plotevt = EventPlot(evt, plot.axes)
-            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='blue')
+            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='blue',
+                                 keep_old_title=True)
             plot.add_plot(plotevt)
 
         for plot in self._plots_lt:
             evt = self.events[0]
             plotevt = EventPlot(evt, plot.axes)
-            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='orange')
+            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='orange',
+                                 keep_old_title=True)
             plot.add_plot(plotevt)
 
             evt = self.events[1]
             plotevt = EventPlot(evt, plot.axes)
-            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='blue')
+            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='blue',
+                                 keep_old_title=True)
             plot.add_plot(plotevt)
 
         for plot in self._plots_main:
+            plot.show_legend()
+
+        for plot in self._plots_lt:
             plot.show_legend()
 
         self.sizer_readout = wx.GridSizer(cols=1)

@@ -79,15 +79,16 @@ class SensorPlot:
         except ValueError:
             pass
 
-    def set_strategy(self, strategy, color=None):
+    def set_strategy(self, strategy, color=None, keep_old_title=False):
         self._strategy = strategy
         self._line = None
         self._color = color
         if self._sensor.valid_range is not None:
             rng = self._sensor.valid_range
             self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
-        self._axes.set_title(self._sensor.name)
-        self._axes.set_ylabel(self._sensor.unit_str)
+        if not keep_old_title:
+            self._axes.set_title(self._sensor.name)
+            self._axes.set_ylabel(self._sensor.unit_str)
 
 
 class EventPlot(SensorPlot):
