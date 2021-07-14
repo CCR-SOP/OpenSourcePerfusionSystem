@@ -16,6 +16,7 @@ import wx
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 import matplotlib.transforms as mtransforms
+import numpy as np
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -35,7 +36,11 @@ class SensorPlot:
 
     @property
     def name(self):
-        return self._strategy.name
+        return self._strategy.name if self._strategy else ''
+
+    @property
+    def full_name(self):
+        return f'{self._sensor.name}: {self._strategy.name}'
 
     def plot(self, frame_ms, plot_len):
         readout_color = 'black'
@@ -68,11 +73,12 @@ class SensorPlot:
         if self._with_readout:
             self._line.set_label(f'{self._strategy.name}: {readout:.2f} {self._sensor.unit_str}')
             leg = self._axes.get_legend()
-            leg_texts = leg.get_texts()
-            for txt in leg_texts:
-                txt.set_color(readout_color)
-                txt.set_fontsize('large')
-                # self._display.set_color(readout_color)
+            if leg is not None:
+                leg_texts = leg.get_texts()
+                for txt in leg_texts:
+                    txt.set_color(readout_color)
+                    txt.set_fontsize('large')
+                    # self._display.set_color(readout_color)
 
         try:
             self._axes.collections.remove(self._invalid)
@@ -87,13 +93,15 @@ class SensorPlot:
             rng = self._sensor.valid_range
             self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
         if not keep_old_title:
-            self._axes.set_title(self._sensor.name)
+            self._axes.set_title(f'{self._sensor.name}\n')
             self._axes.set_ylabel(self._sensor.unit_str)
 
 
 class EventPlot(SensorPlot):
     def __init__(self, sensor, axes, readout=False):
         super().__init__(sensor, axes, readout)
+        self._line = self._axes.vlines([], ymin=0, ymax=100, color=self._color)
+        self._line.set_label(self.name)
 
     def plot(self, frame_ms, plot_len):
         if not self._strategy:
@@ -102,8 +110,13 @@ class EventPlot(SensorPlot):
         if data is None or len(data) == 0:
             return
 
-        del self._line
-        self._line = self._axes.vlines(data_time, ymin=0, ymax=100, color=self._color)
+        # del self._line
+        if not self._line:
+            self._line = self._axes.vlines(data_time, ymin=0, ymax=100, color=self._color)
+            self._line.set_label(self._sensor.name)
+        else:
+            seg_new = [np.array([[t, 0], [t, 100]]) for t in data_time]
+            self._line.set_segments(seg_new)
 
 
 class PanelPlotting(wx.Panel):
@@ -120,9 +133,10 @@ class PanelPlotting(wx.Panel):
 
         self.fig = mpl.figure.Figure()
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
-        self._axes = self.fig.add_subplot(111)
+        # self._axes = self.fig.add_subplot(111)
+        self._axes = self.fig.add_axes([0.05, 0.05, 0.9, 0.85])
         self._plots = []
-
+        self._leg = []
         self.list_strategy = wx.ListBox(self, wx.ID_ANY)
 
         self.__do_layout()
@@ -161,25 +175,28 @@ class PanelPlotting(wx.Panel):
         pass
 
     def plot(self):
-        self.show_legend()
         for plot in self._plots:
             plot.plot(self._plot_frame_ms, self.__plot_len)
-
 
         self._axes.relim()
         self._axes.autoscale_view()
         self.canvas.draw()
+        self.show_legend()
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
             self.plot()
 
     def show_legend(self):
-        self._axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=2, mode="expand",
+        total_plots = len(self._plots)
+        ncols = total_plots if total_plots % 2 == 0 else total_plots + 1
+        self._axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
                           borderaxespad=0, framealpha=0.0, fontsize='x-small')
 
     def add_plot(self, plot):
         self._plots.append(plot)
+        self.Fit()
+        self.__parent.Fit()
 
 class PanelPlotLT(PanelPlotting):
     def __init__(self, parent):

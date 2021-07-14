@@ -142,9 +142,6 @@ class TestFrame(wx.Frame):
         for plot in self._plots_main:
             plot.show_legend()
 
-        for plot in self._plots_lt:
-            plot.show_legend()
-
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def get_sensor(self, sensor_name):
@@ -180,6 +177,7 @@ class TestFrame(wx.Frame):
         self.sizer_readout.Add(self.sizer_config, 1, wx.ALL)
         self.sizer_main.Add(self.sizer_readout)
         self.SetSizer(self.sizer_main)
+
         self.Fit()
         self.Layout()
         self.Maximize(True)
@@ -197,25 +195,25 @@ class TestFrame(wx.Frame):
 
         panel = PanelPlotting(self)
         self._plots_main.append(panel)
-        plotraw = SensorPlot(sensor, panel.axes, readout=True)
+        plotraw = SensorPlot(sensor, panel.axes)
         plotraw.set_strategy(sensor.get_file_strategy('Raw'))
         panel.add_plot(plotraw)
-        sizer.Add(panel, 6, wx.ALL | wx.EXPAND, border=0)
+        sizer.Add(panel, 10, wx.ALL | wx.EXPAND, border=0)
 
         panel = PanelPlotLT(self)
         self._plots_lt.append(panel)
         panel.plot_frame_ms = -1
 
-        plotraw = SensorPlot(sensor, panel.axes, readout=True)
+        plotraw = SensorPlot(sensor, panel.axes)
         plotraw.set_strategy(sensor.get_file_strategy('Raw'))
         panel.add_plot(plotraw)
-        sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=0)
+        sizer.Add(panel, 2, wx.ALL | wx.EXPAND, border=0)
 
         return sizer
 
     def _add_plot(self, sensor):
         panel = PanelPlotting(self)
-        plotraw = SensorPlot(sensor, panel.axes, readout=True)
+        plotraw = SensorPlot(sensor, panel.axes)
         plotraw.set_strategy(sensor.get_file_strategy('Raw'))
         panel.add_plot(plotraw)
         return panel
@@ -226,7 +224,8 @@ class TestFrame(wx.Frame):
         for sensor in self.events:
             sensor.stop()
         self.hw_stream.close()
-        self.hw_events.close()
+        for evt in self.hw_events:
+            evt.close()
         for plot in self._plots_main:
             plot.Destroy()
         for plot in self._plots_lt:
