@@ -59,8 +59,8 @@ class SyringeTimer:
         else:
             self._logger.error('Perfusion-condition informed syringe injections are not supported for this syringe')
             return
-        if self.name == 'Insulin' or 'Phenylephrine':
-            if value > (self.threshold_value + self.tolerance) and value != -5000:
+        if self.name in ['Insulin', 'Phenylephrine']:
+            if value > (self.threshold_value + self.tolerance) and value != 0.10000000149011612 and value != 5000:
                 if self.syringe.cooldown:
                     self._logger.info(f'A {self.name} infusion is needed, but is currently frozen')
                 else:
@@ -68,13 +68,13 @@ class SyringeTimer:
                     direction = 'high'
             else:
                 self._logger.info(f'No {self.name} infusion is needed')
-        elif self.name == 'Glucagon' or 'Epoprostenol':
-            if value < (self.threshold_value - self.tolerance) and value != -10000:
+        elif self.name in ['Glucagon (Unasyn)', 'Epoprostenol']:
+            if value < (self.threshold_value - self.tolerance) and value != 0.10000000149011612 and value != 5000:
                 if self.syringe.cooldown:
                     self._logger.info(f'A {self.name} infusion is needed, but is currently frozen')
                 else:
                     injection = True
-                    direction = 'high'
+                    direction = 'low'
             else:
                 self._logger.info(f'No {self.name} infusion is needed')
         if injection:
