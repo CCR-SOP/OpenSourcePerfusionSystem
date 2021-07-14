@@ -45,7 +45,8 @@ class TestFrame(wx.Frame):
         utils.configure_matplotlib_logging()
 
         self.hw_stream = AI(period_sample_ms=100)
-        self.hw_events = AI(period_sample_ms=1000, read_period_ms=3000)
+        self.hw_events = [AI(period_sample_ms=1000, read_period_ms=3000),
+                          AI(period_sample_ms=1000, read_period_ms=1500)]
 
         self.sensors = [
             SensorStream('HA Flow', 'ml/min', self.hw_stream, valid_range=[20, 60]),
@@ -56,7 +57,8 @@ class TestFrame(wx.Frame):
             ]
 
         self.hw_stream.open()
-        self.hw_events.open()
+        for evt in self.hw_events:
+            evt.open()
         for ch, sensor in enumerate(self.sensors):
             sensor.hw.add_channel(ch)
             sensor.set_ch_id(ch)
@@ -69,8 +71,8 @@ class TestFrame(wx.Frame):
             sensor.add_strategy(raw)
 
         self.events = []
-        self.events = [SensorPoint('Vasodilator', '2 ml', self.hw_events),
-                       SensorPoint('Vasoconstrictor', '2 ml', self.hw_events)
+        self.events = [SensorPoint('Vasodilator', '2 ml', self.hw_events[0]),
+                       SensorPoint('Vasoconstrictor', '2 ml', self.hw_events[1])
                        ]
         for ch, sensor in enumerate(self.events):
             sensor.hw.add_channel(ch)
@@ -79,9 +81,9 @@ class TestFrame(wx.Frame):
             sensor.hw.set_demo_properties(ch=ch, demo_amp=prop[0], demo_offset=prop[1])
 
         self.events[0].hw.set_read_period_ms(2250)
-        self.events[1].hw.set_read_period_ms(3725)
+        self.events[1].hw.set_read_period_ms(3000)
         for evt in self.events:
-            raw = PointsToFile('Raw', None, self.hw_events.buf_len)
+            raw = PointsToFile('Raw', None, evt.hw.buf_len)
             raw.open(LP_CFG.LP_PATH['stream'], f'{evt.name}_raw', evt.params)
             evt.add_strategy(raw)
 
@@ -122,12 +124,6 @@ class TestFrame(wx.Frame):
                                  keep_old_title=True)
             plot.add_plot(plotevt)
 
-        for plot in self._plots_main:
-            plot.show_legend()
-
-        for plot in self._plots_lt:
-            plot.show_legend()
-
         self.sizer_readout = wx.GridSizer(cols=1)
         self.sizer_config = wx.BoxSizer(wx.VERTICAL)
         self.choice_time = self._create_choice_time()
@@ -140,8 +136,14 @@ class TestFrame(wx.Frame):
         [sensor.start() for sensor in self.sensors]
         [evt.open() for evt in self.events]
         [evt.start() for evt in self.events]
-        self.hw_events.start()
+        [evt.start() for evt in self.hw_events]
         self.hw_stream.start()
+
+        for plot in self._plots_main:
+            plot.show_legend()
+
+        for plot in self._plots_lt:
+            plot.show_legend()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
