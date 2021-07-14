@@ -110,7 +110,7 @@ class StreamToFile(ProcessingStrategy):
         if last_ms == 0:
             # if last x samples requested, no timestamps are returned
             data = data[-samples_needed:]
-            data_time = None
+            start_idx = file_size - len(data)
         else:
             if last_ms > 0:
                 data_size = int(last_ms / period)
@@ -125,10 +125,10 @@ class StreamToFile(ProcessingStrategy):
                               dtype=np.int32)
             data = data[idx]
 
-            start_t = start_idx * period / 1000.0
-            stop_t = file_size * period / 1000.0
-            data_time = np.linspace(start_t, stop_t, samples_needed,
-                                    dtype=data_type)
+        start_t = start_idx * period / 1000.0
+        stop_t = file_size * period / 1000.0
+        data_time = np.linspace(start_t, stop_t, samples_needed,
+                                dtype=data_type)
         _fid.close()
 
         return data_time, data
@@ -178,7 +178,7 @@ class PointsToFile(StreamToFile):
         data = []
         while chunk is not None:
             chunk, ts = self.__read_chunk(_fid)
-            if chunk is not None and (cur_time - ts < last_ms or last_ms == 0):
+            if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
                 data.append(chunk)
                 data_time.append(ts / 1000.0)
         _fid.close()
