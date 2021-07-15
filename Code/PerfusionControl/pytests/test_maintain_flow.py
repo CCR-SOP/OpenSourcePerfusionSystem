@@ -14,10 +14,11 @@ from pyHardware.pyAI import AIDeviceException
 from pyHardware.pyAO import AODeviceException
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
-from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.plotting import PanelPlotting, SensorPlot
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.panel_PID import PanelPID
+from pyPerfusion.FileStrategy import StreamToFile
 
 class PanelTestMaintainFlow(wx.Panel):
     def __init__(self, parent):
@@ -30,9 +31,12 @@ class PanelTestMaintainFlow(wx.Panel):
         self.panel_pid = PanelPID(self)
         self.panel_pid.set_pid(self.pid)
 
+        LP_CFG.set_base(basepath='~/Documents/LPTEST')
+        LP_CFG.update_stream_folder()
+
         try:
             self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
-            self._ai.open(dev='Dev1')  # Hepatic Artery Flow Sensor
+            self._ai.open(dev='Dev2')  # Hepatic Artery Flow Sensor
             self._ai.add_channel(channel_id=3)
             self._ai.start()
         except AIDeviceException as e:
@@ -43,7 +47,7 @@ class PanelTestMaintainFlow(wx.Panel):
 
         try:
             self._ao = NIDAQ_AO()
-            self._ao.open(line=1, period_ms=100, dev='Dev3')  # Hepatic Artery BVP Pump
+            self._ao.open(line=1, period_ms=100, dev='Dev4')  # Hepatic Artery BVP Pump
             self._ao.set_dc(0)
         except AODeviceException as e:
             dlg = wx.MessageDialog(parent=self, message=str(e), caption='AO Device Error', style=wx.OK)
@@ -52,14 +56,20 @@ class PanelTestMaintainFlow(wx.Panel):
             raise e
 
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
+        self.raw = StreamToFile('Raw', None, self._ai.buf_len)
+        self.raw.open(LP_CFG.LP_PATH['stream'], f'{self._sensor.name}_raw', self._sensor.params)
+        self._sensor.add_strategy(self.raw)
+
         self.panel_plot = PanelPlotting(self)
         LP_CFG.update_stream_folder()
-        self._sensor.open(LP_CFG.LP_PATH['stream'])
-        self.panel_plot.add_sensor(self._sensor)
-        self._sensor.start()
+        self._sensor.open()
+        self._sensorplot = SensorPlot(self._sensor, self.panel_plot.axes)
+        self._sensorplot.set_strategy(self._sensor.get_file_strategy('Raw'))
+        self.panel_plot.add_plot(self._sensorplot)
 
-        self.label_ai = wx.StaticText(self, label=f'Using Analog Input Dev1/ai3')
-        self.label_ao = wx.StaticText(self, label=f'Using Analog Output Dev3/ao1')
+
+        self.label_ai = wx.StaticText(self, label=f'Using Analog Input Dev2/ai3')
+        self.label_ao = wx.StaticText(self, label=f'Using Analog Output Dev4/ao1')
         self.label_output = wx.StaticText(self, label='Analog Output is xxx')
 
         self.label_desired_output = wx.StaticText(self, label='Desired Output')
@@ -109,7 +119,7 @@ class PanelTestMaintainFlow(wx.Panel):
     def OnStartStop(self, evt):
         if self.btn_stop.GetValue():
             self._sensor.set_ch_id(3)
-            self._sensor.hw.start()
+            self._sensor.start()
             self._ao.start()
             self.btn_stop.SetLabel('Stop')
             self.update_output()
@@ -126,11 +136,14 @@ class PanelTestMaintainFlow(wx.Panel):
             self.update_output()
 
     def update_output(self):
-        flow = self._sensor.get_current()
-        self.pid.setpoint = self.spin_desired_output.GetValue()
-        new_val = self.pid(flow)
-        self._ao.set_dc(new_val)
-        self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
+        t, flow = self._sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+        if not flow == []:
+            print(f'flow is {flow}, t is {t}')
+            flow = flow[0]
+            self.pid.setpoint = self.spin_desired_output.GetValue()
+            new_val = self.pid(flow)
+            self._ao.set_dc(new_val)
+            self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
