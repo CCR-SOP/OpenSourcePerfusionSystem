@@ -7,15 +7,19 @@ Demonstration of screen with chemical substances
 """
 from enum import Enum
 import time
+import logging
 
 import wx
 
-from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
+from pyPerfusion.plotting import PanelPlotting, PanelPlotLT, SensorPlot, EventPlot
 from pyPerfusion.panel_readout import PanelReadout
 from pyHardware.pyAI import AI
+from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
+import pyPerfusion.utils as utils
 
 
 class PlotFrame(Enum):
@@ -24,6 +28,8 @@ class PlotFrame(Enum):
     LAST_5_SECONDS = 5_000
     LAST_MINUTE = 60_000
 
+demo_properties = [(80, 0), (40, 20), (100, 0), (10, 0), (3, 0), (5, 2)]
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -31,8 +37,15 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.__plot_frame = PlotFrame.LAST_5_SECONDS
 
+        LP_CFG.set_base(basepath='~/Documents/LPTEST')
+        LP_CFG.update_stream_folder()
+        self._lgr = logging.getLogger(__name__)
+        utils.setup_stream_logger(self._lgr, logging.DEBUG)
+        utils.configure_matplotlib_logging()
+
         self.hw_stream = AI(period_sample_ms=100)
-        self.hw_events = AI(period_sample_ms=1000)
+        self.hw_events = [AI(period_sample_ms=1000, read_period_ms=3000),
+                          AI(period_sample_ms=1000, read_period_ms=1500)]
         self.sensors = [
             SensorStream('PV Oxygen', '%', self.hw_stream, valid_range=[20, 60]),
             SensorStream('HA Oxygen', '%', self.hw_stream, valid_range=[25, 35]),
@@ -41,23 +54,39 @@ class TestFrame(wx.Frame):
             SensorStream('CO2', '%', self.hw_stream, valid_range=[0, 2]),
             SensorStream('Glucose', 'ml', self.hw_stream, valid_range=[10, 90]),
             ]
-        self.sensors[0].hw.set_demo_properties(0, demo_amp=80, demo_offset=0)
-        self.sensors[1].hw.set_demo_properties(1, demo_amp=40, demo_offset=20)
-        self.sensors[2].hw.set_demo_properties(2, demo_amp=100, demo_offset=0)
-        self.sensors[3].hw.set_demo_properties(3, demo_amp=10, demo_offset=0)
-        self.sensors[4].hw.set_demo_properties(4, demo_amp=3, demo_offset=0)
-        self.sensors[5].hw.set_demo_properties(5, demo_amp=50, demo_offset=25)
+        self.hw_stream.open()
+
         for ch, sensor in enumerate(self.sensors):
             sensor.hw.add_channel(ch)
             sensor.set_ch_id(ch)
-        self.hw_events.open()
-        self.hw_stream.open()
+            prop = demo_properties[ch]
+            sensor.hw.set_demo_properties(ch=ch, demo_amp=prop[0], demo_offset=prop[1])
 
-        self.events = [SensorPoint('Insulin', '2 ml', self.hw_events),
-                       SensorPoint('Glucagen', '2 ml', self.hw_events)
+        for sensor in self.sensors:
+            raw = StreamToFile('Raw', None, self.hw_stream.buf_len)
+            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            sensor.add_strategy(raw)
+
+
+        self.events = [SensorPoint('Insulin', '2 ml', self.hw_events[0]),
+                       SensorPoint('Glucagen', '2 ml', self.hw_events[1])
                        ]
+
+        for evt in self.hw_events:
+            evt.open()
+
+        for ch, sensor in enumerate(self.events):
+            sensor.hw.add_channel(ch)
+            sensor.set_ch_id(ch)
+            prop = demo_properties[ch]
+            sensor.hw.set_demo_properties(ch=ch, demo_amp=prop[0], demo_offset=prop[1])
+
         self.events[0].hw.set_read_period_ms(2250)
         self.events[1].hw.set_read_period_ms(3725)
+        for evt in self.events:
+            raw = PointsToFile('Raw', None, evt.hw.buf_len)
+            raw.open(LP_CFG.LP_PATH['stream'], f'{evt.name}_raw', evt.params)
+            evt.add_strategy(raw)
         self.sizer_main = wx.BoxSizer(wx.HORIZONTAL)
 
         self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)
@@ -70,12 +99,30 @@ class TestFrame(wx.Frame):
             self.sizer_plots.append(self._add_lt(self.get_sensor(sensor_name)))
 
         for plot in self._plots_main:
-            plot.add_sensor(self.get_event('Glucagen'), color='orange')
-            plot.add_sensor(self.get_event('Insulin'), color='blue')
+            evt = self.events[0]
+            plotevt = EventPlot(evt, plot.axes)
+            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='orange',
+                                 keep_old_title=True)
+            plot.add_plot(plotevt)
+
+            evt = self.events[1]
+            plotevt = EventPlot(evt, plot.axes)
+            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='blue',
+                                 keep_old_title=True)
+            plot.add_plot(plotevt)
 
         for plot in self._plots_lt:
-            plot.add_sensor(self.get_event('Glucagen'), color='orange')
-            plot.add_sensor(self.get_event('Insulin'), color='blue')
+            evt = self.events[0]
+            plotevt = EventPlot(evt, plot.axes)
+            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='orange',
+                                 keep_old_title=True)
+            plot.add_plot(plotevt)
+
+            evt = self.events[1]
+            plotevt = EventPlot(evt, plot.axes)
+            plotevt.set_strategy(evt.get_file_strategy('Raw'), color='blue',
+                                 keep_old_title=True)
+            plot.add_plot(plotevt)
 
         for plot in self._plots_main:
             plot.show_legend()
@@ -91,12 +138,12 @@ class TestFrame(wx.Frame):
         self.__do_layout()
         self.__set_bindings()
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
-        [sensor.open(LP_CFG.LP_PATH['stream']) for sensor in self.sensors]
+        [sensor.open() for sensor in self.sensors]
         [sensor.start() for sensor in self.sensors]
-        [evt.open(LP_CFG.LP_PATH['stream']) for evt in self.events]
+        [evt.open() for evt in self.events]
         [evt.start() for evt in self.events]
+        [evt.start() for evt in self.hw_events]
+        self.hw_stream.start()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -148,21 +195,31 @@ class TestFrame(wx.Frame):
 
     def _add_lt(self, sensor):
         sizer = wx.BoxSizer(wx.VERTICAL)
+
         panel = PanelPlotting(self)
-        panel.add_sensor(sensor)
-        sizer.Add(panel, 6, wx.ALL | wx.EXPAND, border=0)
         self._plots_main.append(panel)
+        plotraw = SensorPlot(sensor, panel.axes)
+        plotraw.set_strategy(sensor.get_file_strategy('Raw'))
+        panel.add_plot(plotraw)
+        sizer.Add(panel, 10, wx.ALL | wx.EXPAND, border=0)
+
         panel = PanelPlotLT(self)
-        panel.plot_frame_ms = 0
-        panel.add_sensor(sensor)
-        sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=0)
         self._plots_lt.append(panel)
+        panel.plot_frame_ms = -1
+
+        plotraw = SensorPlot(sensor, panel.axes)
+        plotraw.set_strategy(sensor.get_file_strategy('Raw'))
+        panel.add_plot(plotraw)
+        sizer.Add(panel, 2, wx.ALL | wx.EXPAND, border=0)
+
         return sizer
 
     def _add_plot(self, sensor):
         panel = PanelPlotting(self)
-        panel.add_sensor(sensor)
-        return
+        plotraw = SensorPlot(sensor, panel.axes)
+        plotraw.set_strategy(sensor.get_file_strategy('Raw'))
+        panel.add_plot(plotraw)
+        return panel
 
     def OnClose(self, evt):
         for sensor in self.sensors:
@@ -170,7 +227,8 @@ class TestFrame(wx.Frame):
         for sensor in self.events:
             sensor.stop()
         self.hw_stream.close()
-        self.hw_events.close()
+        for evt in self.hw_events:
+            evt.close()
         for plot in self._plots_main:
             plot.Destroy()
         for plot in self._plots_lt:
@@ -185,5 +243,6 @@ class MyTestApp(wx.App):
         return True
 
 
-app = MyTestApp(0)
-app.MainLoop()
+if __name__ == '__main__':
+    app = MyTestApp(0)
+    app.MainLoop()
