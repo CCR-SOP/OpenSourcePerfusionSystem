@@ -41,7 +41,7 @@ def setup_file_logger(lgr, level, filename=None):
 
 
 def filter_legend_messages(record):
-    print(record.module)
+    # print(record.module)
     if record.module == 'matplotlib.legend':
         return False
     return True
