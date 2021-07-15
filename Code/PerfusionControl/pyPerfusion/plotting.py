@@ -190,8 +190,9 @@ class PanelPlotting(wx.Panel):
     def show_legend(self):
         total_plots = len(self._plots)
         ncols = total_plots if total_plots % 2 == 0 else total_plots + 1
-        self._axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
-                          borderaxespad=0, framealpha=0.0, fontsize='x-small')
+        if self._axes.lines:
+            self._axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
+                              borderaxespad=0, framealpha=0.0, fontsize='x-small')
 
     def add_plot(self, plot):
         self._plots.append(plot)
