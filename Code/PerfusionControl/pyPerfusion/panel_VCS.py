@@ -22,6 +22,7 @@ from pyHardware.pyDIO import DIODeviceException
 import pyPerfusion.utils as utils
 from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
 from pyHardware.pyVCS import VCS, VCSPump
+from pyPerfusion.FileStrategy import PointsToFile
 
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
@@ -106,7 +107,7 @@ class PanelReadoutVCS(PanelReadout):
         self.timer_update.Stop()
 
     def update_value(self):
-        ts, data = self._sensor.get_last_acq()
+        ts, data = self._sensor.get_file_strategy('Raw').get_last_acq()
         # data = self._sensor.get_current()
         if data is not None:
             avg = np.mean(data)
@@ -317,6 +318,7 @@ class TestFrame(wx.Frame):
         self._chemical_sensors = [SensorPoint('Oxygen', 'mmHg', self.acq),
                                   SensorPoint('Carbon Dioxide', 'mmHg', self.acq),
                                   SensorPoint('pH', '', self.acq)]
+
         readouts = [PanelReadoutGroup(self, 'HA',
                                       self._chemical_sensors[0],
                                       self._chemical_sensors[1],
@@ -342,8 +344,11 @@ class TestFrame(wx.Frame):
             self.acq.open(dev)
             self.acq.add_channel(line)
             sensor.set_ch_id(line)
+            raw = PointsToFile('Raw', None, self.acq.buf_len)
+            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            sensor.add_strategy(raw)
             self.sizer_sensors.Add(PanelAIVCS(self, sensor, name=sensor.name), flags.Border())
-            sensor.open(LP_CFG.LP_PATH['stream'])
+            sensor.open()
             sensor.start()
 
         self._vcs.add_sensor_to_cycled_valves('Chemical', self._chemical_sensors[0])

@@ -8,11 +8,12 @@ import wx
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI
-from pyPerfusion.panel_plotting import PanelPlotting
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pytests.test_vasoactive_syringe import PanelTestVasoactiveSyringe
 from pyPerfusion.syringe_timer import SyringeTimer
+from pyPerfusion.FileStrategy import StreamToFile
+
 
 class PanelTestPressure(wx.Panel):
     def __init__(self, parent, sensor, name, dev, line):
@@ -126,8 +127,20 @@ class TestFrame(wx.Frame):
             SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq): ['Dev3', 1],
             SensorStream('Portal Vein Pressure', 'mmHg', self.acq): ['Dev3', 0]
         }
+        for sensor in self.pressure_sensors:
+            raw = StreamToFile('Raw', None, self.acq.buf_len)
+            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            sensor.add_strategy(raw)
 
-        self.flow_sensors = [SensorStream('Portal Vein Flow', 'L/min', self.acq), SensorStream('Hepatic Artery Flow', 'ml/min', self.acq)]
+
+
+        self.flow_sensors = [SensorStream('Portal Vein Flow', 'L/min', self.acq),
+                             SensorStream('Hepatic Artery Flow', 'ml/min', self.acq)]
+
+        for sensor in self.flow_sensors:
+            raw = StreamToFile('Raw', None, self.acq.buf_len)
+            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            sensor.add_strategy(raw)
 
         for sensor, pump in self.pressure_sensors.items():
             sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.ALL | wx.EXPAND, border=1)
