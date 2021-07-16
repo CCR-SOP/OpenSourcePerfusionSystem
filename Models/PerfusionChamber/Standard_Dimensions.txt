@@ -1,8 +1,4 @@
-﻿"Length" = 283mm
-"Width" = 225mm
-"WallThickness" = 12.5mm
-"UpperWaterJacketThickness" = 28mm
-"SpacerHeight" = 80.2mm
+﻿"TubingShort"= 110mm"TubingLong"= 175mm"Length"= 283mm"Width"= 225mm"WallThickness"= 12.5mm"UpperWaterJacketThickness"= 28mm"SpacerHeight"= 80.2mm"PlateLength"= 252mm"PlateWidth"= 190mm"PlateHoleDiameter"= 5.9mm"PlateHoleBottom"= 2mm"PlateHoleSide"= 1.55mm"PlateHoleSpacing"= 3.1mm"PlateThickness"= 1.55mm"ReservoirBottom"= 12.5mm"ReservoirSupportWidth"= 12mm"ReservoirSupportHeight"= 15.1mm"ReservoirSupportPlacementHeight"= 50mm"ReservoirHoleDiameter"= 12.7mm"ReservoirHoleRight"= 25mm"ReservoirHoleTop"= "ReservoirSupportPlacementHeight""ReservoirHeight"= 90mm"ReservoirPortBottom"= 4mm"ReservoirPortTop"= 10mm"ReservoirPortWidth"= 101mm
 "SpacerCornerWidth"=10mm
 "SpacerCornerHeight"=60.16mm
 "SpacerPegDiameter"=10mm
