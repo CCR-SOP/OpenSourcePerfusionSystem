@@ -2,9 +2,6 @@
 "Width"= 225mm
 "WallThickness"= 12.5mm
 "UpperWaterJacketThickness"= 28mm
-"UpperWaterJacketPegDiameter"=20
-"UpperWaterJacketPegDistance"=2.5
-"UpperWaterJacketPegHeight"=6.5
 "SpacerHeight"= 80.2mm
 "SpacerCornerWidth"= 10mm
 "SpacerCornerHeight"= 60.16mm
@@ -34,8 +31,11 @@
 "CustomSpacerHeight" = 5in
 "CustomSpacerRodHoleHeight" = .75in
 "CustomSpacerRodHoleDiameter" = .3125in
-"ScrewBlockSide"= .5in
+"ScrewBlockSide"= 12mm
 "ScrewBlockUpperHeight" = 16mm
 "ScrewBlockLowerHeight" = 16mm
 "InternalLength" = "Length" - ( 2 * "WallThickness" )
 "InternalWidth"= "Width" - ( 2 * "WallThickness" )
+"CustomSpacerPegHeight" = 1in
+"CustomSpacerScrewBore"=3mm
+"CustomSpacerScrewDepth"=10mm
