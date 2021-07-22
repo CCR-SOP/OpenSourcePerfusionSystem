@@ -27,6 +27,7 @@
 "ReservoirPortBottom"= 4mm
 "ReservoirPortTop"= 10mm
 "ReservoirPortWidth"= 101mm
+"CustomSpacerWallThickness"= 0.375in
 "CustomSpacerHeight"= 5in
 "CustomSpacerRodHoleHeight"= .75in
 "CustomSpacerRodHoleDiameter"= .3125in
