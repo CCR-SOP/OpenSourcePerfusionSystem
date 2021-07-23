@@ -52,7 +52,7 @@ class TestFrame(wx.Frame):
         Dialysate_panel._panel_cfg.choice_line.SetStringSelection('1')
         Dialysate_panel._panel_cfg.choice_line.Enable(False)
         Dialysate_panel._panel_settings.lbl_offset.SetLabel('Desired Flow (ml/min)')
-        Perfusate_panel._panel_settings.spin_offset.SetMax(100)
+        Dialysate_panel._panel_settings.spin_offset.SetMax(100)
         sizer.Add(Dialysate_panel, 1, wx.ALL | wx.EXPAND, border=1)
         self._panel.append(Dialysate_panel)
 
