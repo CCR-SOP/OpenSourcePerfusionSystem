@@ -39,7 +39,7 @@ class PanelPressureFlowControl(wx.Panel):
             desired = 0
         self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=500, initial=desired, inc=0.1)
 
-        self.label_tolerance = wx.StaticText(self, label='Tolerance' + self._sensor._unit_str)
+        self.label_tolerance = wx.StaticText(self, label='Tolerance (' + self._sensor._unit_str + ')')
         self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=0, inc=0.01)
 
         self.label_increment = wx.StaticText(self, label='Voltage Increment')
@@ -132,19 +132,49 @@ class TestFrame(wx.Frame):
         self.acq =  NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 
         self.pressure_sensors = [SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq), SensorStream('Portal Vein Pressure', 'mmHg', self.acq)]
-        self.flow_sensors = [SensorStream('Hepatic Artery Flow', 'ml/min', self.acq), SensorStream('Portal Vein Flow', 'L/min', self.acq)]
+        self.flow_sensors = [SensorStream('Hepatic Artery Flow', 'ml/min', self.acq), SensorStream('Portal Vein Flow', 'mL/min', self.acq)]
 
-        sizer.Add(PanelAI(self, self.pressure_sensors[0], name=self.pressure_sensors[0].name), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelAI(self, self.flow_sensors[0], name=self.flow_sensors[0].name), 1, wx.ALL | wx.EXPAND, border=1)
+        HA_pressure = PanelAI(self, self.pressure_sensors[0], name=self.pressure_sensors[0].name)
+        HA_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        HA_pressure._panel_cfg.choice_line.SetSelection(0)
+        HA_pressure._panel_cfg.choice_dev.Enable(False)
+        HA_pressure._panel_cfg.choice_line.Enable(False)
+        HA_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(HA_pressure, 1, wx.ALL | wx.EXPAND, border=1)
+        HA_flow = PanelAI(self, self.flow_sensors[0], name=self.flow_sensors[0].name)
+        HA_flow._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        HA_flow._panel_cfg.choice_line.SetSelection(3)
+        HA_flow._panel_cfg.choice_dev.Enable(False)
+        HA_flow._panel_cfg.choice_line.Enable(False)
+        HA_flow._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(HA_flow, 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(PanelPressureFlowControl(self, self.pressure_sensors[0], name=self.pressure_sensors[0].name, dev='Dev3', line=1), 1, wx.ALL | wx.EXPAND, border=1)
 
-        sizer.Add(PanelAI(self, self.pressure_sensors[1], name=self.pressure_sensors[1].name), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelAI(self, self.flow_sensors[1], name=self.flow_sensors[1].name), 1, wx.ALL | wx.EXPAND, border=1)
+        PV_pressure = PanelAI(self, self.pressure_sensors[1], name=self.pressure_sensors[1].name)
+        PV_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        PV_pressure._panel_cfg.choice_line.SetSelection(1)
+        PV_pressure._panel_cfg.choice_dev.Enable(False)
+        PV_pressure._panel_cfg.choice_line.Enable(False)
+        PV_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(PV_pressure, 1, wx.ALL | wx.EXPAND, border=1)
+        PV_flow = PanelAI(self, self.flow_sensors[1], name=self.flow_sensors[1].name)
+        PV_flow._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        PV_flow._panel_cfg.choice_line.SetSelection(4)
+        PV_flow._panel_cfg.choice_dev.Enable(False)
+        PV_flow._panel_cfg.choice_line.Enable(False)
+        PV_flow._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(PV_flow, 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(PanelPressureFlowControl(self, self.flow_sensors[1], name=self.flow_sensors[1].name, dev='Dev3', line=0), 1, wx.ALL | wx.EXPAND, border=1)
 
         self._IVC_pressure = SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq)
 
-        sizer.Add(PanelAI(self, self._IVC_pressure, name=self._IVC_pressure.name), 1, wx.ALL | wx.EXPAND, border=1)
+        IVC_pressure = PanelAI(self, self._IVC_pressure, name=self._IVC_pressure.name)
+        IVC_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        IVC_pressure._panel_cfg.choice_line.SetSelection(2)
+        IVC_pressure._panel_cfg.choice_dev.Enable(False)
+        IVC_pressure._panel_cfg.choice_line.Enable(False)
+        IVC_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(IVC_pressure, 1, wx.ALL | wx.EXPAND, border=1)
 
         heparin_methylprednisolone_injection = PHDserial('Heparin and Methylprednisolone')
         heparin_methylprednisolone_injection.open('COM13', 9600)
