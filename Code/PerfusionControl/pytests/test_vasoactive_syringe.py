@@ -10,6 +10,7 @@ from pyPerfusion.panel_AI import PanelAI
 from pyPerfusion.syringe_timer import SyringeTimer
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.FileStrategy import StreamToFile
 
 class PanelTestVasoactiveSyringe(wx.Panel):
     def __init__(self, parent, sensor, name, injection):
@@ -289,6 +290,9 @@ class TestFrame(wx.Frame):
         sizer = wx.GridSizer(cols=3)
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
+        raw = StreamToFile('Raw', None, self.acq.buf_len)
+        raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        self.sensor.add_strategy(raw)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name), 1, wx.ALL | wx.EXPAND, border=1)
         vasoconstrictor_injection = SyringeTimer('Phenylephrine', 'COM4', 9600, 0, 0, self.sensor)
         vasodilator_injection = SyringeTimer('Epoprostenol', 'COM11', 9600, 0, 0, self.sensor)
