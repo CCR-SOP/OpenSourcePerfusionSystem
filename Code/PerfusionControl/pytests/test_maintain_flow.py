@@ -36,7 +36,7 @@ class PanelTestMaintainFlow(wx.Panel):
 
         try:
             self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
-            self._ai.open(dev='Dev2')  # Hepatic Artery Flow Sensor
+            self._ai.open(dev='Dev1')  # Hepatic Artery Flow Sensor
             self._ai.add_channel(channel_id=3)
             self._ai.start()
         except AIDeviceException as e:
@@ -47,7 +47,7 @@ class PanelTestMaintainFlow(wx.Panel):
 
         try:
             self._ao = NIDAQ_AO()
-            self._ao.open(line=1, period_ms=100, dev='Dev4')  # Hepatic Artery BVP Pump
+            self._ao.open(line=1, period_ms=100, dev='Dev3')  # Hepatic Artery BVP Pump
             self._ao.set_dc(0)
         except AODeviceException as e:
             dlg = wx.MessageDialog(parent=self, message=str(e), caption='AO Device Error', style=wx.OK)
