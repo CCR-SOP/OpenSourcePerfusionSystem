@@ -53,22 +53,20 @@ class SyringeTimer:
             self.__thread_timer_reset = None
 
     def OnTimer(self):
-        while not self.__evt_halt_injection.wait(60.0):
+        while not self.__evt_halt_injection.wait(5.0):
             self.check_for_injection()
 
     def OnResetTimer(self):
-        while not self.__evt_halt_reset.wait(300.0):
+        while not self.__evt_halt_reset.wait(15.0):
             self.syringe.cooldown = False
             self.__evt_halt_reset.set()
             self.__thread_timer_reset = None
             return
 
     def check_for_injection(self):
-        strategy = self.sensor.get_file_strategies('Raw')
-        t, val = strategy.retrieve_buffer(0, 1)
-        sensor_val = float(val)
         if self.name == 'Insulin':
-            glucose = sensor_val
+            t, glucose = self.sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+            glucose = float(glucose)
             if glucose > (self.threshold_value + self.tolerance) and glucose != 5000:
                 if not self.syringe.cooldown:
                     diff = glucose - (self.threshold_value + self.tolerance)
@@ -82,7 +80,8 @@ class SyringeTimer:
             else:
                 print('Glucose does not need to be modulated by insulin')
         elif self.name == 'Glucagon':
-            glucose = sensor_val
+            t, glucose = self.sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+            glucose = float(glucose)
             if glucose < (self.threshold_value - self.tolerance) and glucose != 0:
                 if not self.syringe.cooldown:
                     diff = (self.threshold_value - self.tolerance) - glucose
@@ -96,7 +95,8 @@ class SyringeTimer:
             else:
                 print('Glucose does not need to be modulated by glucagon')
         elif self.name == 'Phenylephrine':
-            flow = sensor_val
+            t, flow = self.sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+            flow = float(flow)
             if flow > (self.threshold_value + self.tolerance):
                 if not self.syringe.cooldown:
                     diff = flow - (self.threshold_value + self.tolerance)
@@ -110,7 +110,8 @@ class SyringeTimer:
             else:
                 print('Flow does not need to be modulated by phenylephrine')
         elif self.name == 'Epoprostenol':
-            flow = sensor_val
+            t, flow = self.sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+            flow = float(flow)
             if flow < (self.threshold_value - self.tolerance):
                 if not self.syringe.cooldown:
                     diff = (self.threshold_value - self.tolerance) - flow
