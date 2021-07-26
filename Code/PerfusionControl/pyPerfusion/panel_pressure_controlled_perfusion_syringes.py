@@ -97,8 +97,6 @@ class PanelTestPressure(wx.Panel):
 
     def update_output(self):
         t, pressure = self._sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
-        print(pressure)
-        print(type(pressure))
         desired = float(self.spin_desired_output.GetValue())
         tol = float(self.spin_tolerance.GetValue())
         inc = float(self.spin_increment.GetValue())
