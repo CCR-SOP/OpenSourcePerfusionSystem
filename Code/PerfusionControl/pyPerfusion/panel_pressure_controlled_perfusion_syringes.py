@@ -96,7 +96,9 @@ class PanelTestPressure(wx.Panel):
             self.update_output()
 
     def update_output(self):
-        pressure = float(self._sensor.get_current())
+        t, pressure = self._sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+        print(pressure)
+        print(type(pressure))
         desired = float(self.spin_desired_output.GetValue())
         tol = float(self.spin_tolerance.GetValue())
         inc = float(self.spin_increment.GetValue())
@@ -148,6 +150,9 @@ class TestFrame(wx.Frame):
             sizer.Add(PanelTestPressure(self, sensor, name=sensor.name, dev=pump[0], line=pump[1]), 1, wx.ALL | wx.EXPAND, border=1)
 
         self._IVC_pressure = SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq)
+        raw = StreamToFile('Raw', None, self.acq.buf_len)
+        raw.open(LP_CFG.LP_PATH['stream'], f'{self._IVC_pressure.name}_raw', self._IVC_pressure.params)
+        self._IVC_pressure.add_strategy(raw)
 
         sizer.Add(PanelAI(self, self._IVC_pressure, name=self._IVC_pressure.name), 1, wx.ALL | wx.EXPAND, border=1)
 
