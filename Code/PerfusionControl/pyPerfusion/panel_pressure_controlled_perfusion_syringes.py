@@ -15,7 +15,7 @@ from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pytests.test_vasoactive_syringe import PanelTestVasoactiveSyringe
 
-class PanelTestPressure(wx.Panel):
+class PanelPressureFlowControl(wx.Panel):
     def __init__(self, parent, sensor, name, dev, line):
         self._logger = logging.getLogger(__name__)
         self.parent = parent
@@ -31,10 +31,16 @@ class PanelTestPressure(wx.Panel):
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.label_desired_output = wx.StaticText(self, label='Desired ' + self._name)
-        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=200, initial=65, inc=0.1)
+        if 'Pressure' in self._name:
+            desired = 65
+        elif 'Flow' in self._name:
+            desired = 200
+        else:
+            desired = 0
+        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=500, initial=desired, inc=0.1)
 
-        self.label_tolerance = wx.StaticText(self, label='Tolerance (mmHg)')
-        self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=2, inc=0.01)
+        self.label_tolerance = wx.StaticText(self, label='Tolerance (' + self._sensor._unit_str + ')')
+        self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=0, inc=0.01)
 
         self.label_increment = wx.StaticText(self, label='Voltage Increment')
         self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0.05, inc=0.001)
@@ -44,7 +50,7 @@ class PanelTestPressure(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
-        self.timer_pressure_adjust = wx.Timer(self)
+        self.timer_adjust = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.OnTimer)
 
     def __do_layout(self):
@@ -83,29 +89,29 @@ class PanelTestPressure(wx.Panel):
         if state == 'Start':
             self._ao.open(period_ms=100, dev=self._dev, line=self._line)
             self._ao.set_dc(1)
-            self.timer_pressure_adjust.Start(3000, wx.TIMER_CONTINUOUS)
+            self.timer_adjust.Start(3000, wx.TIMER_CONTINUOUS)
             self.btn_stop.SetLabel('Stop')
         else:
-            self.timer_pressure_adjust.Stop()
+            self.timer_adjust.Stop()
             self._ao.set_dc(0)
             self._ao.close()
             self._ao.halt()
             self.btn_stop.SetLabel('Start')
 
     def OnTimer(self, event):
-        if event.GetId() == self.timer_pressure_adjust.GetId():
+        if event.GetId() == self.timer_adjust.GetId():
             self.update_output()
 
     def update_output(self):
-        pressure = float(self._sensor.get_current())
+        value = float(self._sensor.get_current())
         desired = float(self.spin_desired_output.GetValue())
         tol = float(self.spin_tolerance.GetValue())
         inc = float(self.spin_increment.GetValue())
-        dev = abs(desired - pressure)
+        dev = abs(desired - value)
       #  print(f'Pressure is {pressure:.3f}, desired is {desired:.3f}')
       #  print(f'Deviation is {dev}, tol is {tol}')
         if dev > tol:
-            if pressure < desired:
+            if value < desired:
                 new_val = self._ao._volts_offset + inc
                 if new_val > 5:
                     new_val = 5
@@ -124,21 +130,51 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.FlexGridSizer(cols=3)
         self.acq =  NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
-        self.pressure_sensors = {
-            SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq): ['Dev3', 1],
-            SensorStream('Portal Vein Pressure', 'mmHg', self.acq): ['Dev3', 0]
-        }
 
-        self.flow_sensors = [SensorStream('Portal Vein Flow', 'L/min', self.acq), SensorStream('Hepatic Artery Flow', 'ml/min', self.acq)]
+        self.pressure_sensors = [SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq), SensorStream('Portal Vein Pressure', 'mmHg', self.acq)]
+        self.flow_sensors = [SensorStream('Hepatic Artery Flow', 'ml/min', self.acq), SensorStream('Portal Vein Flow', 'mL/min', self.acq)]
 
-        for sensor, pump in self.pressure_sensors.items():
-            sizer.Add(PanelAI(self, sensor, name=sensor.name), 1, wx.ALL | wx.EXPAND, border=1)
-            sizer.Add(PanelAI(self, self.flow_sensors[pump[1]], name=self.flow_sensors[pump[1]].name), 1, wx.ALL | wx.EXPAND, border=1)
-            sizer.Add(PanelTestPressure(self, sensor, name=sensor.name, dev=pump[0], line=pump[1]), 1, wx.ALL | wx.EXPAND, border=1)
+        HA_pressure = PanelAI(self, self.pressure_sensors[0], name=self.pressure_sensors[0].name)
+        HA_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        HA_pressure._panel_cfg.choice_line.SetSelection(0)
+        HA_pressure._panel_cfg.choice_dev.Enable(False)
+        HA_pressure._panel_cfg.choice_line.Enable(False)
+        HA_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(HA_pressure, 1, wx.ALL | wx.EXPAND, border=1)
+        HA_flow = PanelAI(self, self.flow_sensors[0], name=self.flow_sensors[0].name)
+        HA_flow._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        HA_flow._panel_cfg.choice_line.SetSelection(3)
+        HA_flow._panel_cfg.choice_dev.Enable(False)
+        HA_flow._panel_cfg.choice_line.Enable(False)
+        HA_flow._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(HA_flow, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelPressureFlowControl(self, self.pressure_sensors[0], name=self.pressure_sensors[0].name, dev='Dev3', line=1), 1, wx.ALL | wx.EXPAND, border=1)
+
+        PV_pressure = PanelAI(self, self.pressure_sensors[1], name=self.pressure_sensors[1].name)
+        PV_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        PV_pressure._panel_cfg.choice_line.SetSelection(1)
+        PV_pressure._panel_cfg.choice_dev.Enable(False)
+        PV_pressure._panel_cfg.choice_line.Enable(False)
+        PV_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(PV_pressure, 1, wx.ALL | wx.EXPAND, border=1)
+        PV_flow = PanelAI(self, self.flow_sensors[1], name=self.flow_sensors[1].name)
+        PV_flow._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        PV_flow._panel_cfg.choice_line.SetSelection(4)
+        PV_flow._panel_cfg.choice_dev.Enable(False)
+        PV_flow._panel_cfg.choice_line.Enable(False)
+        PV_flow._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(PV_flow, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelPressureFlowControl(self, self.flow_sensors[1], name=self.flow_sensors[1].name, dev='Dev3', line=0), 1, wx.ALL | wx.EXPAND, border=1)
 
         self._IVC_pressure = SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq)
 
-        sizer.Add(PanelAI(self, self._IVC_pressure, name=self._IVC_pressure.name), 1, wx.ALL | wx.EXPAND, border=1)
+        IVC_pressure = PanelAI(self, self._IVC_pressure, name=self._IVC_pressure.name)
+        IVC_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
+        IVC_pressure._panel_cfg.choice_line.SetSelection(2)
+        IVC_pressure._panel_cfg.choice_dev.Enable(False)
+        IVC_pressure._panel_cfg.choice_line.Enable(False)
+        IVC_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
+        sizer.Add(IVC_pressure, 1, wx.ALL | wx.EXPAND, border=1)
 
         heparin_methylprednisolone_injection = PHDserial('Heparin and Methylprednisolone')
         heparin_methylprednisolone_injection.open('COM13', 9600)
@@ -184,7 +220,9 @@ class TestFrame(wx.Frame):
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             syringe.stop_stream()
-        for sensor in self.pressure_sensors.keys():
+        for sensor in self.pressure_sensors:
+            sensor.stop()
+        for sensor in self.flow_sensors:
             sensor.stop()
         self._IVC_pressure.stop()
         self.Destroy()
