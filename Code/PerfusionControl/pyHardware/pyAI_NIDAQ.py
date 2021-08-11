@@ -25,13 +25,14 @@ class NIDAQ_AI(pyAI.AI):
         self._dev = None
         self._line = None
         self.__timeout = 1.0
-        self.__task = None
+        self._task = None
         self._volts_p2p = volts_p2p
         self._volts_offset = volts_offset
         self._exception_msg_ack = False
         self._last_acq = None
         self._acq_buf = None
         self._acq_type = np.float64
+        self._sample_mode = PyDAQmx.DAQmx_Val_ContSamps
 
     @property
     def devname(self):
@@ -61,9 +62,9 @@ class NIDAQ_AI(pyAI.AI):
         samples_read = PyDAQmx.int32()
         buffer_t = time.perf_counter()
         try:
-            if self.__task and len(self.get_ids()) > 0:
-                self.__task.ReadAnalogF64(self.samples_per_read, self._read_period_ms / 1000.0, DAQmx_Val_GroupByChannel,
-                                          self._acq_buf, len(self._acq_buf), PyDAQmx.byref(samples_read), None)
+            if self._task and len(self.get_ids()) > 0:
+                self._task.ReadAnalogF64(self.samples_per_read, 1.05 * self._read_period_ms / 1000.0, DAQmx_Val_GroupByChannel,
+                                         self._acq_buf, len(self._acq_buf), PyDAQmx.byref(samples_read), None)
         except PyDAQmx.ReadBufferTooSmallError:
             self._logger.error(f'ReadBufferTooSmallError when reading {self.devname}')
             self._logger.error(f'Samples/read = {self.samples_per_read}, '
@@ -73,7 +74,6 @@ class NIDAQ_AI(pyAI.AI):
             self._logger.error(f'Attempt to acquire data from {self.devname} before channels were added')
         else:
             offset = 0
-
             for ch in self.get_ids():
                 buf = self.data_type(self._acq_buf[offset:offset+self.samples_per_read])
                 if len(self._calibration[ch]):  # If the ai channel has been calibrated:
@@ -103,7 +103,7 @@ class NIDAQ_AI(pyAI.AI):
         if self._is_valid_device_name(dev):
             self._logger.debug(f'Opening device "{dev}"')
             self._dev = dev
-            self.__task = Task()
+            self._task = Task()
             super().open()
         else:
             msg = f'Device "{dev}" is not a valid device name on this system. ' \
@@ -116,7 +116,7 @@ class NIDAQ_AI(pyAI.AI):
         if channel_id in self.get_ids():
             self._logger.warning(f'Channel {channel_id} already exists')
             return
-        if not self.__task:
+        if not self._task:
             raise pyAI.AIDeviceException(f'Cannot add channel {channel_id}, device {self._dev} not yet opened')
         super().add_channel(channel_id)
         try:
@@ -130,26 +130,29 @@ class NIDAQ_AI(pyAI.AI):
         if channel_id not in self.get_ids():
             self._logger.warning(f'Channel {channel_id} does not exist')
             return
-        if not self.__task:
+        if not self._task:
             raise pyAI.AIDeviceException(f'Cannot remove channel {channel_id}, device {self._dev} not yet opened')
+        acquiring = self.is_acquiring
+        self.stop()
         super().remove_channel(channel_id)
         self._update_task()
+        if acquiring:
+            self.start()
 
     def _update_task(self):
         cleanup = True
         msg = ''
         try:
             if self._dev and len(self.get_ids()) > 0:
-                if self.__task:
-                    self.__task.ClearTask()
-                    self.__task = Task()
+                if self._task:
+                    self._task.ClearTask()
+                    self._task = Task()
 
                 volt_min = self._volts_offset - 0.5 * self._volts_p2p
                 volt_max = self._volts_offset + 0.5 * self._volts_p2p
-                self.__task.CreateAIVoltageChan(self.devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
+                self._task.CreateAIVoltageChan(self.devname, None, DAQmx_Val_RSE, volt_min, volt_max, DAQmx_Val_Volts, None)
                 hz = 1.0 / (self._period_sampling_ms / 1000.0)
-                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
-                                             self.samples_per_read)
+                self._task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, self._sample_mode, self.samples_per_read)
             cleanup = False
         except PyDAQmx.DevCannotBeAccessedError as e:
             msg = f'Could not access device "{self._dev}". Please ensure device is ' \
@@ -161,7 +164,7 @@ class NIDAQ_AI(pyAI.AI):
         except PyDAQmx.DAQmxFunctions.PhysicalChannelNotSpecifiedError:
             msg = f'A input channel/line must be specified.'
             self._logger.error(msg)
-            self._logger.error(f'task is {self.__task}')
+            self._logger.error(f'task is {self._task}')
 
         except PyDAQmx.DAQmxFunctions.InvalidDeviceIDError:
             msg = f'Device "{self.devname}" is not a valid device ID'
@@ -178,18 +181,18 @@ class NIDAQ_AI(pyAI.AI):
 
     def close(self):
         self.stop()
-        self.__task.ClearTask()
-        self.__task = None
+        self._task.ClearTask()
+        self._task = None
 
     def start(self):
-        if self.__task:
+        if self._task:
             ch_ids = self.get_ids()
             self._acq_buf = np.zeros(self.samples_per_read * len(ch_ids), dtype=self._acq_type)
-            self.__task.StartTask()
+            self._task.StartTask()
             super().start()
 
     def stop(self):
         super().stop()
-        if self.__task:
-            self.__task.StopTask()
-            self.__task.WaitUntilTaskDone(2.0)
+        if self._task:
+            self._task.StopTask()
+            self._task.WaitUntilTaskDone(2.0)

@@ -10,7 +10,7 @@ setup_stream_logger(logger, logging.DEBUG)
 setup_stream_logger(logging.getLogger('pyHardware'), logging.DEBUG)
 
 
-dev = 'Dev4'
+dev = 'Dev1'
 
 # test single channel, non-HW pyAI
 ai = AI(period_sample_ms=100)

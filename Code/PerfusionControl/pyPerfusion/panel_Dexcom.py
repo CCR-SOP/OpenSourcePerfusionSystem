@@ -6,11 +6,14 @@
 Panel class for testing and configuring Dexcom G6 Receiver/Sensor pair, and for initiating glucose controlled insulin/glucagon infusions
 """
 import wx
+import logging
+import pyPerfusion.utils as utils
 
 from dexcom_G6_reader.readdata import Dexcom
 from pyPerfusion.panel_plotting import PanelPlotting, PanelPlotLT
 from pyPerfusion.DexcomPoint import DexcomPoint
-from pyPerfusion.syringe_timer import SyringeTimer
+from pyHardware.PHDserial import PHDserial
+from pytests.test_vasoactive_syringe import PanelTestVasoactiveSyringe
 
 import pyPerfusion.PerfusionConfig as LP_CFG
 
@@ -19,6 +22,7 @@ sensors = []
 
 class PanelDexcom(wx.Panel):
     def __init__(self, parent, receiver_class, name):
+        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._receiver_class = receiver_class
         self._name = name
@@ -37,17 +41,10 @@ class PanelDexcom(wx.Panel):
         self.btn_start = wx.Button(self, label='Start Acquisition')
         self.btn_start.Enable(False)
 
-      #  self.btn_injection = wx.Button(self, label='Start Injections')
-      #  self.btn_injection.Enable(False)
-
         self.set_receiver()
 
         self.sensor = DexcomPoint(self._name[14:] + ' Glucose', 'mg/dL', self._connected_receiver, valid_range=[80, 110])
         sensors.append(self.sensor)
-
-    #    self.tolerance = 5
-    #    self._insulin_injection = SyringeTimer(self, 'Insulin', 'COM12', 9600, self.sensor._valid_range[1], self.tolerance, self.sensor)
-    #    self._glucagon_injection = SyringeTimer(self, 'Glucagon', 'COM6', 9600, self.sensor._valid_range[0], self.tolerance, self.sensor)
 
         self.sizer_plot = wx.BoxSizer(wx.VERTICAL)
         self._panel_plot = PanelPlotting(self)
@@ -84,7 +81,6 @@ class PanelDexcom(wx.Panel):
                     engaged_COM_list.append(COM)
                     self.label_connect.SetLabel('Connected to %s' % COM)
                     self.btn_start.Enable(True)
-                  #  self.btn_injection.Enable(True)
                     return
                 else:
                     potential_receiver.Disconnect()
@@ -103,8 +99,6 @@ class PanelDexcom(wx.Panel):
         sizer.Add(self.label_connect, flags)
         sizer.AddSpacer(30)
         sizer.Add(self.btn_start, flags)
-     #   sizer.AddSpacer(30)
-     #   sizer.Add(self.btn_injection, flags)
         self.sizer_main.Add(sizer)
 
         self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)
@@ -117,7 +111,6 @@ class PanelDexcom(wx.Panel):
 
     def __set_bindings(self):
         self.btn_start.Bind(wx.EVT_BUTTON, self.OnStart)
-     #   self.btn_injection.Bind(wx.EVT_BUTTON, self.OnInjection)
 
     def OnStart(self, evt):
         state = self.btn_start.GetLabel()
@@ -128,32 +121,50 @@ class PanelDexcom(wx.Panel):
             self.sensor.hw.read_data = False
             self.btn_start.SetLabel('Start Acquisition')
 
-  #  def OnInjection(self, evt):
-  #      state = self.btn_injection.GetLabel()
-  #      if state == 'Start Injections':
-  #          self._insulin_injection.start_injection_timer(10000)
-  #          self._glucagon_injection.start_injection_timer(10000)
-  #          self.btn_injection.SetLabel('Stop Injections')
-  #      else:
-  #          self._insulin_injection.stop_injection_timer()
-  #          self._glucagon_injection.stop_injection_timer()
-  #          self.btn_injection.SetLabel('Start Injections')
-
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        devices =  {'Receiver #1 - Portal Vein': Dexcom,
-                    'Receiver #2 - Inferior Vena Cava': Dexcom}
-        sizer = wx.GridSizer(cols=1)
-        for key, device in devices.items():
-            sizer.Add(PanelDexcom(self, device, name=key), 1, wx.EXPAND, border=2)
+
+        panel_PV = PanelDexcom(self, Dexcom, 'Receiver #1 - Portal Vein')
+        panel_IVC = PanelDexcom(self, Dexcom, 'Receiver #2 - Inferior Vena Cava')
+
+        graph_sizer = wx.GridSizer(cols=1)
+        graph_sizer.Add(panel_PV, 1, wx.EXPAND, border=2)
+        graph_sizer.Add(panel_IVC, 1, wx.EXPAND, border=2)
+
+        insulin_injection = PHDserial('Insulin')
+        insulin_injection.open('COM12', 9600)
+        insulin_injection.ResetSyringe()
+        insulin_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        insulin_injection.start_stream()
+
+        glucagon_unasyn_injection = PHDserial('Glucagon (Unasyn)')
+        glucagon_unasyn_injection.open('COM6', 9600)
+        glucagon_unasyn_injection.ResetSyringe()
+        glucagon_unasyn_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        glucagon_unasyn_injection.start_stream()
+
+        self.sensor = panel_IVC.sensor  # Glucose measurements which inform syringe injections are from the IVC; this is the panel being referenced here
+        self._syringes = [insulin_injection, glucagon_unasyn_injection]
+
+        syringe_sizer = wx.GridSizer(cols=2)
+        syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Insulin Syringe', insulin_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Glucagon (Unasyn) Syringe', glucagon_unasyn_injection), 1, wx.ALL | wx.EXPAND, border=1)
+
+        sizer = wx.GridSizer(cols=2)
+        sizer.Add(graph_sizer, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(syringe_sizer, 1, wx.ALL | wx.EXPAND, border=1)
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        for syringe in self._syringes:
+            infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
+            syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
+            syringe.stop_stream()
         for sensor in sensors:
             sensor.stop()
         self.Destroy()
@@ -168,5 +179,6 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_Dexcom')
     app = MyTestApp(0)
     app.MainLoop()
