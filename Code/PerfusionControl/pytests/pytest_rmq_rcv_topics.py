@@ -2,6 +2,11 @@
 """Simple test program for receiving RabbitMQ Topics
 Based on Topics Tutorial example from https://www.rabbitmq.com
 
+Example: python -m pytests.pytest_rmq_rcv_topics "alarm.flow.#.#"
+Will print any messages with a topic starting with alarm.flow (e.g. alarm.flow.range.under)
+The publisher must use the same exchange name (defaults to "perfusion")
+
+
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH
 

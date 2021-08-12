@@ -2,6 +2,10 @@
 """Simple test program for sending RabbitMQ topic messages
 Based on Topics Tutorial example from https://www.rabbitmq.com
 
+Example:  python -m pytests.pytest_rmq_send_topics alarm.flow.range.over 50
+Sends a message of "50" with a topic of alarm.flow.range.over
+The subscribers must use the same exchange name (defaults to "perfusion")
+
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH
 
