@@ -57,20 +57,18 @@ class AlarmSubscriber:
 
         result = self._channel.queue_declare('', exclusive=True)
         self._queue = result.method.queue
-
+        self._tag = self._channel.basic_consume(queue=self._queue,
+                                                on_message_callback=self._callback,
+                                                auto_ack=True)
         self._thread = threading.Thread(target=self._run)
         self._thread.name = f'AlarmSubscriber {self._exchange} on {self._host}'
         self._thread.start()
 
     def subscribe(self, topic_name):
-        self._lgr.info('Subscribing to {topic_name}')
+        self._lgr.info(f'Subscribing to {topic_name}')
         self._channel.queue_bind(exchange=self._exchange,
                                  queue=self._queue,
                                  routing_key=topic_name)
-
-        self._tag = self._channel.basic_consume(queue=self._queue,
-                                                on_message_callback=self._callback,
-                                                auto_ack=True)
 
     def cancel(self):
         self._channel.basic_cancel(self._tag)
@@ -78,7 +76,7 @@ class AlarmSubscriber:
     def _callback(self, ch, method, properties, body):
         self._lgr.info(f'Received message {method.routing_key}: {body}')
         self.callback(method.routing_key, body)
-    
+
     def _run(self):
         self._channel.start_consuming()
 
