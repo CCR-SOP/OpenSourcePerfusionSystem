@@ -1,4 +1,4 @@
-from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.DexcomStream import DexcomStream
 import numpy as np
 from os import SEEK_SET
 from time import perf_counter
@@ -7,7 +7,7 @@ import struct
 DATA_VERSION = 2
 
 
-class DexcomPoint(SensorStream):
+class DexcomPoint(DexcomStream):
     def __init__(self, name, unit_str, hw, valid_range):
         super().__init__(name, unit_str, hw, valid_range)
         self._samples_per_ts = 1
@@ -29,7 +29,7 @@ class DexcomPoint(SensorStream):
         return hdr_str
 
     def run(self):
-        while not self._SensorStream__evt_halt.wait(self.hw.period_sampling_ms / 1000.0):
+        while not self._DexcomStream__evt_halt.wait(self.hw.period_sampling_ms / 1000.0):
             t = perf_counter()
             data_buf, self._time = self.hw.get_data()
             if data_buf is not None and self._fid_write is not None:

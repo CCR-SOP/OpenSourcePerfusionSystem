@@ -10,10 +10,10 @@ import numpy as np
 DATA_VERSION = 1
 
 
-class SensorStream:
+class DexcomStream:
     def __init__(self, name, unit_str, hw, valid_range=None):
         self._logger = logging.getLogger(__name__)
-        self._logger.info(f'Creating SensorStream object {name}')
+        self._logger.info(f'Creating DexcomStream object {name}')
         self.__thread = None
         self._unit_str = unit_str
         self._valid_range = valid_range
