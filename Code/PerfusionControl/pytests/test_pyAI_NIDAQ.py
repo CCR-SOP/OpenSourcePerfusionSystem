@@ -93,3 +93,26 @@ def test_isopen_remove(ai):
     assert ai.is_open()
     ai.remove_channel('1')
     assert not ai.is_open()
+
+
+def test_is_acquiring(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
+    ai.add_channel('1')
+    assert not ai.is_acquiring
+    ai.start()
+    assert ai.is_acquiring
+    ai.stop()
+    assert not ai.is_acquiring
+
+
+def test_open2ch_close1(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
+    ai.add_channel('1')
+    ai.add_channel('2')
+    assert ai.is_open()
+    ai.remove_channel('1')
+    assert not ai.is_acquiring
+    ai.add_channel('1')
+    ai.start()
+    ai.remove_channel('1')
+    assert ai.is_acquiring

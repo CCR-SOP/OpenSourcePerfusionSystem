@@ -84,7 +84,6 @@ class VCS:
         except KeyError:
             self._lgr.debug(f'No set name {set_name} in _cleared_perfusate')
         try:
-            self._pump.stop()
             self._lgr.debug(f'perfusate cleared for {set_name}')
             self._timer_clearance[set_name] = None
             key = f'{set_name}:{self._active_valve[set_name].name}'
@@ -131,7 +130,9 @@ class VCS:
                     self._active_valve[set_name].deactivate()
                 self._active_valve[set_name] = next(self._cycled_it[set_name])
                 self._lgr.debug(f'Activating {self._active_valve[set_name].name} in {set_name}')
+                self._pump.stop()
                 self._active_valve[set_name].activate()
+                self._pump.start()
                 self._start_clearance_timer(set_name)
 
     def start_cycle(self, set_name):
