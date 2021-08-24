@@ -44,7 +44,7 @@ class PanelAI(wx.Panel):
 
         self.__do_layout()
         self.__set_bindings()
-        self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes)
+        self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
         self._panel_plot.add_plot(self._sensorplot)
         self._sensorplot.set_strategy(self._sensor.get_file_strategy('Raw'))
         self._sensor.start()

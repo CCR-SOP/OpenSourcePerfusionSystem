@@ -23,7 +23,7 @@ import pyPerfusion.PerfusionConfig as LP_CFG
 
 
 class SensorPlot:
-    def __init__(self, sensor, axes, readout=False):
+    def __init__(self, sensor, axes, readout=True):
         self._lgr = logging.getLogger(__name__)
         self._sensor = sensor
         self._strategy = None
@@ -98,7 +98,7 @@ class SensorPlot:
 
 
 class EventPlot(SensorPlot):
-    def __init__(self, sensor, axes, readout=False):
+    def __init__(self, sensor, axes, readout=True):
         super().__init__(sensor, axes, readout)
         self._line = self._axes.vlines([], ymin=0, ymax=100, color=self._color)
         self._line.set_label(self.name)
