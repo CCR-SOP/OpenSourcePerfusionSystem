@@ -2,7 +2,8 @@
 # @file 
 # Modbus wrapper with read/write functions for Gas Blender 3000+ instruments
 # 
-import minimalmodbus, configparser
+import minimalmodbus
+import configparser
 from . import utils as mcq_utils
 from . import modbus_helper as mb
 from serial import PARITY_NONE

@@ -1,6 +1,8 @@
-import sys, time
+import sys
+import time
+import mcqlib_GB100.mcqlib.main as mcq
+
 sys.path.append("/mcqlib")
-import mcqlib.main as mcq
 
 
 print("Start Script")
