@@ -10,11 +10,11 @@ pydaqmx = "*"
 wxpython = "*"
 matplotlib = "*"
 numpy = "*"
-pyserial = "*"
+pyserial = "~=3.4"
 configparser = "*"
 simple-pid = "*"
 pytest = "*"
-minimalmodbus = "*"
+minimalmodbus = "~=1.0.2"
 
 [requires]
 python_version = "3.8"
