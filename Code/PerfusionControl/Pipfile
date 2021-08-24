@@ -14,6 +14,7 @@ pyserial = "*"
 configparser = "*"
 simple-pid = "*"
 pytest = "*"
+minimalmodbus = "*"
 
 [requires]
 python_version = "3.8"
