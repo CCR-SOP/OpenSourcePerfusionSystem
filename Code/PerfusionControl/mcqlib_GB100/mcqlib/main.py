@@ -9,7 +9,7 @@ from . import modbus_helper as mb
 from serial import PARITY_NONE
 
 config = configparser.ConfigParser()
-config.read('./mcqlib/config.ini')
+config.read('./mcqlib_GB100/mcqlib/config.ini')
 # Serial Port configuration, taken from file config.ini
 serial_port = str(config['DEFAULT']['SerialPort'])
 serial_baud = int(config['DEFAULT']['SerialBaudrate'])
@@ -18,37 +18,37 @@ serial_timeout = int(config['DEFAULT']['SerialTimeout'])
 instrument = minimalmodbus.Instrument(serial_port, 1, minimalmodbus.MODE_RTU, debug=False)
 instrument.serial.baudrate = serial_baud
 instrument.serial.bytesize = 8
-instrument.serial.parity   = PARITY_NONE
+instrument.serial.parity = PARITY_NONE
 instrument.serial.stopbits = 1
-instrument.serial.timeout  = serial_timeout  # seconds
+instrument.serial.timeout = serial_timeout  # seconds
 
 
 # READ : HOLDING REGISTERS (03H)
 # MAINBOARD FUNCTIONS - READ
 
-## Get Mainboard firmware version
+# Get Mainboard firmware version
 #
 # eg. 0109
 def get_mainboard_fw_ver():
   address = 0  
   response = mb.read_holding_register(instrument, address)
   h = str(hex(response))
-  h = h.replace("0x","")
-  ver = h.rjust(4,"0")  
+  h = h.replace("0x", "")
+  ver = h.rjust(4, "0")
   return ver
 
-## Get Mainboard hardware version
+# Get Mainboard hardware version
 #
 # eg. 0102
 def get_mainboard_hw_ver():
   address = 1
   response = mb.read_holding_register(instrument, address)
   h = str(hex(response))
-  h = h.replace("0x","")
-  ver = h.rjust(4,"0")  
+  h = h.replace("0x", "")
+  ver = h.rjust(4, "0")
   return ver
 
-## Get Mainboard status
+# Get Mainboard status
 #
 #  @return an array with possible values:
 #  - System ready
@@ -61,7 +61,7 @@ def get_mainboard_status():
   arr = mcq_utils.mb_status(response)
   return arr
 
-## Get Mainboard alerts
+# Get Mainboard alerts
 #
 #  @return an array with possible values:
 #  - Generic error
@@ -81,7 +81,7 @@ def get_mainboard_alert():
 #   temp = response
 #   return temp
 
-## Get the number of channels available on the instrument
+# Get the number of channels available on the instrument
 #
 # @return number of channels (eg. 3)
 def get_total_channels():
@@ -90,7 +90,7 @@ def get_total_channels():
   value = response
   return value
 
-## Get the balance channel
+# Get the balance channel
 #
 #  @return number of the current balance channel
 def get_channel_balance():
@@ -99,7 +99,7 @@ def get_channel_balance():
   value = response
   return value
 
-## Get mainboard total flow
+# Get mainboard total flow
 #
 #  @return SCCM
 def get_mainboard_total_flow():
@@ -108,7 +108,7 @@ def get_mainboard_total_flow():
   value = response
   return value
 
-## Get instrument working status
+# Get instrument working status
 #
 #  @return a number with current status of instrument:
 #  - 0 (Status ON)
@@ -123,10 +123,10 @@ def get_working_status():
 # MODULES FUNCTIONS - READ
 
 def __get_channel_base_address(channel_nr):
-	return ((channel_nr - 1) * 15) + 10
+  return ((channel_nr - 1) * 15) + 10
 
 
-## Get channel firmware version
+# Get channel firmware version
 #
 def get_channel_fw_ver(channel_nr):
   offset = 0
@@ -134,7 +134,7 @@ def get_channel_fw_ver(channel_nr):
   response = mb.read_holding_register(instrument, address)    
   return response
 
-## Get channel hardware version
+# Get channel hardware version
 #
 def get_channel_hw_ver(channel_nr):
   offset = 1
@@ -143,7 +143,7 @@ def get_channel_hw_ver(channel_nr):
   return response
 
 
-## Get channel alerts
+# Get channel alerts
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return Array with possible values:
@@ -159,7 +159,7 @@ def get_channel_alert(channel_nr):
   arr = mcq_utils.channel_alert(response)
   return arr
 
-## Get id gas - calibration
+# Get id gas - calibration
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return ID of gas used for calibration on specific channel
@@ -169,7 +169,7 @@ def get_channel_id_gas_calibration(channel_nr):
   response = mb.read_holding_register(instrument, address)    
   return response
 
-## Get K-Factor - calibration
+# Get K-Factor - calibration
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return K-Factor of gas on specific channel
@@ -180,7 +180,7 @@ def get_channel_k_factor_calibration(channel_nr):
   value = response / 1000
   return value
 
-## Get if the specified channel is enabled or disabled
+# Get if the specified channel is enabled or disabled
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return Possible values:
@@ -192,7 +192,7 @@ def get_channel_enabled(channel_nr):
   response = mb.read_holding_register(instrument, address)    
   return response
 
-## Get percentage value set on channel
+# Get percentage value set on channel
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return % value (eg. 85)
@@ -203,7 +203,7 @@ def get_channel_percent_value(channel_nr):
   value = response / 100
   return value
 
-## Get ID of gas selected on the channel
+# Get ID of gas selected on the channel
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return ID of gas (eg . 11)
@@ -213,7 +213,7 @@ def get_channel_id_gas(channel_nr):
   response = mb.read_holding_register(instrument, address)    
   return response
 
-## Get K-Factor value on selected channel
+# Get K-Factor value on selected channel
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return K-Factor value (eg. 0.872)
@@ -224,7 +224,7 @@ def get_channel_k_factor_gas(channel_nr):
   value = response / 1000
   return value
 
-## Get SCCM for selected channel
+# Get SCCM for selected channel
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return SCCM value
@@ -232,11 +232,11 @@ def get_channel_sccm(channel_nr):
   offset = 9
   address = __get_channel_base_address(channel_nr) + offset
   response = mb.read_long(instrument, address)
-  #valore registrato con 2 decimali
+  # valore registrato con 2 decimali
   value = response / 100
   return value
 
-## Get target SCCM for selected channel
+# Get target SCCM for selected channel
 #  @param channel_nr Channel number (1,2,3...)
 #
 #  @return SCCM target value
@@ -244,7 +244,7 @@ def get_channel_target_sccm(channel_nr):
   offset = 11
   address = __get_channel_base_address(channel_nr) + offset
   response = mb.read_long(instrument, address)
-  #valore registrato con 2 decimali
+  # valore registrato con 2 decimali
   value = response / 100
   return value
 
@@ -254,14 +254,14 @@ def get_channel_target_sccm(channel_nr):
 
 # MAINBOARD
 
-## Set mainboard balance channel
+# Set mainboard balance channel
 #  @param channel_nr Channel number (1,2,3...)
 def set_balance_channel(channel_nr):
   address = 6  
   response = mb.write_register(instrument, address, channel_nr)
   return response
 
-## Set mainboard total flow
+# Set mainboard total flow
 #  @param total flow (SCCM) of instrument
 def set_mainboard_total_flow(sccm):
   address = 7
@@ -275,22 +275,22 @@ def set_mainboard_total_flow(sccm):
 #   response = mb.write_register(instrument, address, value)
 #   return response
 
-## Set mainboard working status as ON
+# Set mainboard working status as ON
 def set_working_status_ON():
   address = 9
-  response = mb.write_register(instrument, address, 1) #parametro 1
+  response = mb.write_register(instrument, address, 1)  # parametro 1
   return response
 
-## Set mainboard working status as OFF
+# Set mainboard working status as OFF
 def set_working_status_OFF():
   address = 9
-  response = mb.write_register(instrument, address, 0) #parametro 0
+  response = mb.write_register(instrument, address, 0)  # parametro 0
   return response
 
 
-#MODULES
+# MODULES
 
-## Enable/disable selected channel
+# Enable/disable selected channel
 #  @param channel_nr Channel number (1,2,3...)
 #  @param status Value 0 (disabled) or 1 (enabled)
 def set_channel_enabled(channel_nr, status):  
@@ -300,7 +300,7 @@ def set_channel_enabled(channel_nr, status):
   response = mb.write_register(instrument, address, status)
   return response
 
-## Set percentage (%) flow on selected channel
+# Set percentage (%) flow on selected channel
 #  @param channel_nr Channel number (1,2,3...)
 #  @param percent Percent (%) value
 def set_channel_percent_value(channel_nr, percent):
@@ -312,7 +312,7 @@ def set_channel_percent_value(channel_nr, percent):
 
 
 
-## Set Gas ID on selected channel. 
+# Set Gas ID on selected channel.
 #  **Warning! This command doesn't modify the K-Factor!!**
 #  @param channel_nr Channel number (1,2,3...)
 #  @param id Gas ID (number)
@@ -324,7 +324,7 @@ def set_channel_id_gas_only(channel_nr, id):
   return response
 
 
-## Set K-Factor on selected channel. 
+# Set K-Factor on selected channel.
 #  @param channel_nr Channel number (1,2,3...)
 #  @param kfactor K-Factor number (eg. 0.606)
 def set_channel_k_factor_only(channel_nr, kfactor):
@@ -336,7 +336,7 @@ def set_channel_k_factor_only(channel_nr, kfactor):
   response = mb.write_register(instrument, address, kfactor)
   return response
 
-## Set Gas ID and K-Factor as defined in file Data.xml
+# Set Gas ID and K-Factor as defined in file Data.xml
 #  @param channel_nr Channel number (1,2,3...)
 #  @param gas_id Gas ID as registered in file Data.xml (eg. 11)
 def set_gas_from_xml_file(channel_nr, gas_id):
@@ -354,7 +354,7 @@ def set_gas_from_xml_file(channel_nr, gas_id):
   return response
 
 
-## Set custom Gas ID and K-factor as defined in file CustomData.xml
+# Set custom Gas ID and K-factor as defined in file CustomData.xml
 #  @param channel_nr Channel number (1,2,3...)
 #  @param gas_id Gas ID as defined in file CustomData.xml (eg. 100)
 def set_gas_custom_from_xml_file(channel_nr, gas_id):
