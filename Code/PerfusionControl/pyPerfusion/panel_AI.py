@@ -26,12 +26,13 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelAI(wx.Panel):
-    def __init__(self, parent, sensor, name):
+    def __init__(self, parent, sensor, name, strategy):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._strategy = strategy
         self._dev = None
 
         self._avail_dev = DEV_LIST
@@ -46,7 +47,7 @@ class PanelAI(wx.Panel):
         self.__set_bindings()
         self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
         self._panel_plot.add_plot(self._sensorplot)
-        self._sensorplot.set_strategy(self._sensor.get_file_strategy('Raw'))
+        self._sensorplot.set_strategy(self._sensor.get_file_strategy(self._strategy))
         self._sensor.start()
 
     def __do_layout(self):
@@ -274,7 +275,7 @@ class TestFrame(wx.Frame):
         ai_name = 'Analog Input'
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Analog Input 1', 'Volts', self.acq)
-        self.raw = StreamToFile('Raw', None, self.acq.buf_len)
+        self.raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
         self.raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(self.raw)
         self.rms = RMSStrategy('RMS', 15, self.acq.buf_len)
@@ -282,7 +283,7 @@ class TestFrame(wx.Frame):
         self.raw2file = StreamToFile('StreamRMS', None, self.acq.buf_len)
         self.raw2file.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', self.sensor.params)
         self.sensor.add_strategy(self.raw2file)
-        self.panel = PanelAI(self, self.sensor, name=ai_name)
+        self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRMS')
 
         # self.panel = PanelAI_Config(self, self.sensor, 'test', 'test', None)
         # self.panel = PanelAICalibration(self, self.sensor)
