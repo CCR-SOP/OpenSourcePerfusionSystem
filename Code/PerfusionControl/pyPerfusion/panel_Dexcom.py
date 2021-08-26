@@ -10,8 +10,7 @@ import logging
 import pyPerfusion.utils as utils
 
 from dexcom_G6_reader.readdata import Dexcom
-from pyPerfusion.plotting_Dexcom import PanelPlotting, PanelPlotLT
-from pyPerfusion.DexcomPoint import DexcomPoint
+from pyPerfusion.DexcomSensor import DexcomPoint, PanelPlotting, PanelPlotLT
 from pyHardware.PHDserial import PHDserial
 from pytests.test_vasoactive_syringe import PanelTestVasoactiveSyringe
 
