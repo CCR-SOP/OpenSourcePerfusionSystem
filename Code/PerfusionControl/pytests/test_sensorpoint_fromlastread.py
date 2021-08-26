@@ -13,12 +13,13 @@ from datetime import datetime
 import logging
 import time
 
-from pyHardware.pyAI_NIDAQ import NIDAQ_AI
+from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.FileStrategy import PointsToFile
 
-dev = 'Dev1'
+dev = 'Dev2'
 
 logger = logging.getLogger()
 LP_CFG.set_base(basepath='~/Documents/LPTEST')
@@ -28,10 +29,17 @@ utils.configure_matplotlib_logging()
 
 ai_name = 'Analog Input'
 logger.debug('creating NIDAQ_AI')
-acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
+acq = AI_Finite_NIDAQ(period_ms=100, volts_p2p=5, volts_offset=2.5, samples_per_read=2)
 sensor = SensorPoint('Analog Input 1', 'Volts', acq)
 logger.debug('opening sensor')
-sensor.open(LP_CFG.LP_PATH['stream'])
+
+strategy = PointsToFile('StreamToFileRaw', 1, 10)
+strategy.open(LP_CFG.LP_PATH['stream'], sensor.name,
+              {'Sampling Period (ms)': 100, 'Data Format': 'float32',
+               'Samples Per Timestamp': 2})
+
+sensor.open()
+sensor.add_strategy(strategy)
 acq.open(dev=dev)
 acq.add_channel('0')
 sensor.set_ch_id('0')
@@ -44,8 +52,9 @@ last_acq = 0
 
 
 def get_last_sample():
-    global sensor, last_acq
-    ts, samples = sensor.get_data_from_last_read(last_acq)
+    global strategy, last_acq
+    logger.debug(f'last read occurred at  {last_acq}')
+    ts, samples = strategy.get_data_from_last_read(last_acq)
     logger.debug(f'Acquired {len(ts)} samples')
     logger.debug(f'Acquired ts = {ts}')
     if len(ts) > 0:
@@ -57,8 +66,6 @@ def stop_program():
     STOP_PROGRAM = True
 
 
-#timer_stop = Timer(5 * 60.0, stop_program)
-#timer_stop.start()
 timer = Timer(1.0, get_last_sample)
 
 while not STOP_PROGRAM:
@@ -67,7 +74,8 @@ while not STOP_PROGRAM:
             timer = Timer(5.0, get_last_sample)
             timer.start()
         else:
-            time.sleep(0.1)
+            time.sleep(1.0)
+            acq.start()
     except KeyboardInterrupt:
         STOP_PROGRAM = True
 

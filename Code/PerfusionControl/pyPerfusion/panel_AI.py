@@ -15,35 +15,39 @@ import wx
 from pyHardware.pyAI import AIDeviceException
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pyPerfusion.panel_plotting import PanelPlotting
+from pyPerfusion.plotting import PanelPlotting, SensorPlot
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
+from pyPerfusion.ProcessingStrategy import RMSStrategy
+from pyPerfusion.FileStrategy import StreamToFile
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelAI(wx.Panel):
-    def __init__(self, parent, sensor, name):
+    def __init__(self, parent, sensor, name, strategy):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._strategy = strategy
         self._dev = None
 
         self._avail_dev = DEV_LIST
         self._avail_lines = LINE_LIST
 
         self._panel_plot = PanelPlotting(self)
-        self._panel_cfg = PanelAI_Config(self, self._sensor, name, 'Configuration', plot=self)
+        self._panel_cfg = PanelAI_Config(self, self._sensor, name, 'Configuration', plot=self, strategy=self._strategy)
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
         self.__set_bindings()
-
-        self._panel_plot.add_sensor(self._sensor)
+        self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
+        self._panel_plot.add_plot(self._sensorplot)
+        self._sensorplot.set_strategy(self._sensor.get_file_strategy(self._strategy))
         self._sensor.start()
 
     def __do_layout(self):
@@ -67,12 +71,13 @@ class PanelAI(wx.Panel):
 
 
 class PanelAI_Config(wx.Panel):
-    def __init__(self, parent, sensor, name, sizer_name, plot):
+    def __init__(self, parent, sensor, name, sizer_name, plot, strategy):
         super().__init__(parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._strategy = strategy
 
         self._update_plot = plot
 
@@ -93,12 +98,10 @@ class PanelAI_Config(wx.Panel):
         self.btn_save_cfg = wx.Button(self, label='Save')
         self.btn_load_cfg = wx.Button(self, label='Load')
 
-        self.panel_cal = PanelAICalibration(self, sensor, self._name)
+        self.panel_cal = PanelAICalibration(self, sensor, self._name, self._strategy)
 
         self.__do_layout()
         self.__set_bindings()
-
-        self._sensor.open(LP_CFG.LP_PATH['stream'])
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -166,12 +169,13 @@ class PanelAI_Config(wx.Panel):
 
 
 class PanelAICalibration(wx.Panel):
-    def __init__(self, parent, sensor, name):
+    def __init__(self, parent, sensor, name, strategy):
         super().__init__(parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._strategy = strategy
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -227,11 +231,13 @@ class PanelAICalibration(wx.Panel):
         self.btn_save_cal.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
 
     def OnCalPt1(self, evt):
-        val = self._sensor.get_current()
+        t, val = self._sensor.get_file_strategy(self._strategy).retrieve_buffer(0, 1)
+        val = float(val)
         self.label_cal_pt1_val.SetLabel(f'{val:.3f}')
 
     def OnCalPt2(self, evt):
-        val = self._sensor.get_current()
+        t, val = self._sensor.get_file_strategy(self._strategy).retrieve_buffer(0, 1)
+        val = float(val)
         self.label_cal_pt2_val.SetLabel(f'{val:.3f}')
 
     def OnCalibrate(self, evt):
@@ -271,9 +277,18 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         ai_name = 'Analog Input'
-        self.acq = NIDAQ_AI(period_ms=1, volts_p2p=5, volts_offset=2.5)
+        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Analog Input 1', 'Volts', self.acq)
-        self.panel = PanelAI(self, self.sensor, name=ai_name)
+        self.raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
+        self.raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        self.sensor.add_strategy(self.raw)
+        self.rms = RMSStrategy('RMS', 50, self.acq.buf_len)
+        self.sensor.add_strategy(self.rms)
+        self.raw2file = StreamToFile('StreamRMS', None, self.acq.buf_len)
+        self.raw2file.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', self.sensor.params)
+        self.sensor.add_strategy(self.raw2file)
+        self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRMS')
+
         # self.panel = PanelAI_Config(self, self.sensor, 'test', 'test', None)
         # self.panel = PanelAICalibration(self, self.sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)

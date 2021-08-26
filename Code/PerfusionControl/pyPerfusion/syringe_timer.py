@@ -55,7 +55,11 @@ class SyringeTimer:
     def check_for_injection(self):
         injection = False
         if self.sensor:
-            value = float(self.sensor.get_current())
+            if self.name in ['Insulin', 'Glucagon (Unasyn)']:
+                value = float(self.sensor.get_current())
+            else:
+                t, value = self.sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
+                value = float(value)
         else:
             self._logger.error('Perfusion-condition informed syringe injections are not supported for this syringe')
             return
