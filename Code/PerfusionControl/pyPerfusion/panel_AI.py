@@ -39,7 +39,7 @@ class PanelAI(wx.Panel):
         self._avail_lines = LINE_LIST
 
         self._panel_plot = PanelPlotting(self)
-        self._panel_cfg = PanelAI_Config(self, self._sensor, name, 'Configuration', plot=self)
+        self._panel_cfg = PanelAI_Config(self, self._sensor, name, 'Configuration', plot=self, strategy=self._strategy)
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
@@ -71,12 +71,13 @@ class PanelAI(wx.Panel):
 
 
 class PanelAI_Config(wx.Panel):
-    def __init__(self, parent, sensor, name, sizer_name, plot):
+    def __init__(self, parent, sensor, name, sizer_name, plot, strategy):
         super().__init__(parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._strategy = strategy
 
         self._update_plot = plot
 
@@ -97,7 +98,7 @@ class PanelAI_Config(wx.Panel):
         self.btn_save_cfg = wx.Button(self, label='Save')
         self.btn_load_cfg = wx.Button(self, label='Load')
 
-        self.panel_cal = PanelAICalibration(self, sensor, self._name)
+        self.panel_cal = PanelAICalibration(self, sensor, self._name, self._strategy)
 
         self.__do_layout()
         self.__set_bindings()
@@ -168,12 +169,13 @@ class PanelAI_Config(wx.Panel):
 
 
 class PanelAICalibration(wx.Panel):
-    def __init__(self, parent, sensor, name):
+    def __init__(self, parent, sensor, name, strategy):
         super().__init__(parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
+        self._strategy = strategy
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -229,12 +231,12 @@ class PanelAICalibration(wx.Panel):
         self.btn_save_cal.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
 
     def OnCalPt1(self, evt):
-        t, val = self._sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
+        t, val = self._sensor.get_file_strategy(self._strategy).retrieve_buffer(0, 1)
         val = float(val)
         self.label_cal_pt1_val.SetLabel(f'{val:.3f}')
 
     def OnCalPt2(self, evt):
-        t, val = self._sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
+        t, val = self._sensor.get_file_strategy(self._strategy).retrieve_buffer(0, 1)
         val = float(val)
         self.label_cal_pt2_val.SetLabel(f'{val:.3f}')
 

@@ -48,7 +48,7 @@ class TestFrame(wx.Frame):
 
         self.panel = {}
         for sensor in self.sensors:
-            self.panel[sensor.name] = PanelAI(self, sensor, name=sensor.name)
+            self.panel[sensor.name] = PanelAI(self, sensor, sensor.name, 'Raw')
             sizer.Add(self.panel[sensor.name], 1, wx.ALL | wx.EXPAND, border=1)
             self.panel[sensor.name].force_device(dev)
 
