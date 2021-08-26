@@ -346,10 +346,10 @@ class TestFrame(wx.Frame):
         sizer = wx.GridSizer(cols=3)
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
-        raw = StreamToFile('Raw', None, self.acq.buf_len)
+        raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
-        sizer.Add(PanelAI(self, self.sensor, self.sensor.name), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelAI(self, self.sensor, self.sensor.name, 'StreamRaw'), 1, wx.ALL | wx.EXPAND, border=1)
 
         vasoconstrictor_injection = PHDserial('Phenylephrine')
         vasoconstrictor_injection.open('COM4', 9600)

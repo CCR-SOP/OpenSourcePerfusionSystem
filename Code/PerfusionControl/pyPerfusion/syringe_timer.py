@@ -55,7 +55,7 @@ class SyringeTimer:
     def check_for_injection(self):
         injection = False
         if self.sensor:
-            t, value = self.sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+            t, value = self.sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
             value = float(value)
         else:
             self._logger.error('Perfusion-condition informed syringe injections are not supported for this syringe')
