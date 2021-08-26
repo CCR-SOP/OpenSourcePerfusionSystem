@@ -15,6 +15,7 @@ from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pytests.test_vasoactive_syringe import PanelTestVasoactiveSyringe
 from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.ProcessingStrategy import RMSStrategy
 
 class PanelPressureFlowControl(wx.Panel):
     def __init__(self, parent, sensor, name, dev, line):
@@ -104,7 +105,10 @@ class PanelPressureFlowControl(wx.Panel):
             self.update_output()
 
     def update_output(self):
-        t, value = self._sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+        if 'Hepatic Artery' in self._sensor.name:
+            t, value = self._sensor.get_file_strategy('StreamRMS').retrieve_buffer(0, 1)
+        else:
+            t, value = self._sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
         desired = float(self.spin_desired_output.GetValue())
         tol = float(self.spin_tolerance.GetValue())
         inc = float(self.spin_increment.GetValue())
@@ -121,7 +125,7 @@ class PanelPressureFlowControl(wx.Panel):
                 if new_val < 0:
                     new_val = 0
             if "Hepatic Artery" in self._sensor.name:
-                self._ao.set_sine(new_val/12, new_val, Hz=1)
+                self._ao.set_sine(new_val/6, new_val, Hz=1)
             else:
                 self._ao.set_dc(new_val)
 
@@ -132,58 +136,53 @@ class TestFrame(wx.Frame):
         sizer = wx.FlexGridSizer(cols=3)
         self.acq =  NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 
-        self.pressure_sensors = {SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq): ['Dev3', 1], SensorStream('Portal Vein Pressure', 'mmHg', self.acq): ['Dev3', 0]}
+        self._sensors = [SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq), SensorStream('Portal Vein Pressure', 'mmHg', self.acq), SensorStream('Hepatic Artery Flow', 'ml/min', self.acq), SensorStream('Portal Vein Flow', 'ml/min', self.acq), SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq)]
 
-        for sensor in self.pressure_sensors:
-            raw = StreamToFile('Raw', None, self.acq.buf_len)
+        for sensor in self._sensors:
+            raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
             raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
             sensor.add_strategy(raw)
+            if 'Hepatic Artery' in sensor.name:
+                rms = RMSStrategy('RMS', 50, self.acq.buf_len)
+                save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
+                save_rms.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_rms', sensor.params)
+                sensor.add_strategy(rms)
+                sensor.add_strategy(save_rms)
 
-        self.flow_sensors = [SensorStream('Portal Vein Flow', 'L/min', self.acq), SensorStream('Hepatic Artery Flow', 'ml/min', self.acq)]
-
-        for sensor in self.flow_sensors:
-            raw = StreamToFile('Raw', None, self.acq.buf_len)
-            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
-            sensor.add_strategy(raw)
-
-        HA_pressure = PanelAI(self, self.pressure_sensors[0], name=self.pressure_sensors[0].name)
+        HA_pressure = PanelAI(self, self._sensors[0], name=self._sensors[0].name, strategy='StreamRaw')
         HA_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
         HA_pressure._panel_cfg.choice_line.SetSelection(0)
         HA_pressure._panel_cfg.choice_dev.Enable(False)
         HA_pressure._panel_cfg.choice_line.Enable(False)
         HA_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
         sizer.Add(HA_pressure, 1, wx.ALL | wx.EXPAND, border=1)
-        HA_flow = PanelAI(self, self.flow_sensors[0], name=self.flow_sensors[0].name)
+        HA_flow = PanelAI(self, self._sensors[2], name=self._sensors[2].name, strategy='StreamRaw')
         HA_flow._panel_cfg.choice_dev.SetStringSelection('Dev1')
         HA_flow._panel_cfg.choice_line.SetSelection(3)
         HA_flow._panel_cfg.choice_dev.Enable(False)
         HA_flow._panel_cfg.choice_line.Enable(False)
         HA_flow._panel_cfg.panel_cal.OnLoadCfg(True)
         sizer.Add(HA_flow, 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelPressureFlowControl(self, self.pressure_sensors[0], name=self.pressure_sensors[0].name, dev='Dev3', line=1), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelPressureFlowControl(self, self._sensors[2], name=self._sensors[2].name, dev='Dev3', line=1), 1, wx.ALL | wx.EXPAND, border=1)
 
-        PV_pressure = PanelAI(self, self.pressure_sensors[1], name=self.pressure_sensors[1].name)
+        PV_pressure = PanelAI(self, self._sensors[1], name=self._sensors[1].name, strategy='StreamRaw')
         PV_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
         PV_pressure._panel_cfg.choice_line.SetSelection(1)
         PV_pressure._panel_cfg.choice_dev.Enable(False)
         PV_pressure._panel_cfg.choice_line.Enable(False)
         PV_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
         sizer.Add(PV_pressure, 1, wx.ALL | wx.EXPAND, border=1)
-        PV_flow = PanelAI(self, self.flow_sensors[1], name=self.flow_sensors[1].name)
+        PV_flow = PanelAI(self, self._sensors[3], name=self._sensors[3].name, strategy='StreamRaw')
         PV_flow._panel_cfg.choice_dev.SetStringSelection('Dev1')
         PV_flow._panel_cfg.choice_line.SetSelection(4)
         PV_flow._panel_cfg.choice_dev.Enable(False)
         PV_flow._panel_cfg.choice_line.Enable(False)
         PV_flow._panel_cfg.panel_cal.OnLoadCfg(True)
         sizer.Add(PV_flow, 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelPressureFlowControl(self, self.flow_sensors[1], name=self.flow_sensors[1].name, dev='Dev3', line=0), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelPressureFlowControl(self, self._sensors[3], name=self._sensors[3].name, dev='Dev3', line=0), 1, wx.ALL | wx.EXPAND, border=1)
 
-        self._IVC_pressure = SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq)
-        raw = StreamToFile('Raw', None, self.acq.buf_len)
-        raw.open(LP_CFG.LP_PATH['stream'], f'{self._IVC_pressure.name}_raw', self._IVC_pressure.params)
-        self._IVC_pressure.add_strategy(raw)
 
-        IVC_pressure = PanelAI(self, self._IVC_pressure, name=self._IVC_pressure.name)
+        IVC_pressure = PanelAI(self, self._sensors[4], name=self._sensors[4].name, strategy='StreamRaw')
         IVC_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
         IVC_pressure._panel_cfg.choice_line.SetSelection(2)
         IVC_pressure._panel_cfg.choice_dev.Enable(False)
@@ -221,8 +220,8 @@ class TestFrame(wx.Frame):
         self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, None, 'TPN and Bile Salts Syringe', tpn_bilesalts_injection), 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(self.sizer_syringes, 1, wx.EXPAND, border=2)
         self.sizer_syringes = wx.GridSizer(cols=2)
-        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, self.flow_sensors[1], 'Epoprostenol Syringe', epoprostenol_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, self.flow_sensors[1], 'Phenylephrine Syringe', phenylephrine_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, self._sensors[2], 'Epoprostenol Syringe', epoprostenol_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_syringes.Add(PanelTestVasoactiveSyringe(self, self._sensors[2], 'Phenylephrine Syringe', phenylephrine_injection), 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(self.sizer_syringes, 1, wx.EXPAND, border=2)
 
         self.SetSizer(sizer)
@@ -235,11 +234,8 @@ class TestFrame(wx.Frame):
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             syringe.stop_stream()
-        for sensor in self.pressure_sensors:
+        for sensor in self._sensors:
             sensor.stop()
-        for sensor in self.flow_sensors:
-            sensor.stop()
-        self._IVC_pressure.stop()
         self.Destroy()
 
 class MyTestApp(wx.App):
