@@ -17,6 +17,8 @@ import matplotlib.transforms as mtransforms
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 
+DATA_VERSION = 1
+
 class SensorStream:
     def __init__(self, name, unit_str, hw, valid_range=None):
         self._logger = logging.getLogger(__name__)
