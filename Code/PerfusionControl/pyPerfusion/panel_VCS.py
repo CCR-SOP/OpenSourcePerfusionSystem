@@ -31,14 +31,15 @@ DEFAULT_SAMPLES_PER_READ = 3
 
 
 class PanelAIVCS(wx.Panel):
-    def __init__(self, parent, sensor, name):
+    def __init__(self, parent, sensor, name, strategy):
         super().__init__(parent)
+        self._strategy = strategy
         self._logger = logging.getLogger(__name__)
 
         dev = sensor.hw.devname.split('/')
         hw_details = f'{dev[0]}/ai{sensor.ch_id}'
 
-        self._panel_cfg = PanelAICalibration(self, sensor, name)
+        self._panel_cfg = PanelAICalibration(self, sensor, name, self._strategy)
         self._label = wx.StaticText(self, label=name)
         self._label.SetToolTip(wx.ToolTip(hw_details))
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -350,7 +351,7 @@ class TestFrame(wx.Frame):
             raw = PointsToFile('Raw', None, self.acq.buf_len)
             raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
             sensor.add_strategy(raw)
-            self.sizer_sensors.Add(PanelAIVCS(self, sensor, name=sensor.name), flags.Border())
+            self.sizer_sensors.Add(PanelAIVCS(self, sensor, name=sensor.name, strategy='Raw'), flags.Border())
             sensor.open()
             sensor.start()
 
