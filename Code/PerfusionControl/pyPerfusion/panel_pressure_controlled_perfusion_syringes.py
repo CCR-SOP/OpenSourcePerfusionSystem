@@ -40,12 +40,20 @@ class PanelPressureFlowControl(wx.Panel):
         else:
             desired = 0
         self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=500, initial=desired, inc=0.1)
+        self.btn_update_desired = wx.Button(self, label='Update Desired Parameter')
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (' + self._sensor._unit_str + ')')
         self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=0, inc=0.01)
+        self.btn_update_tolerance = wx.Button(self, label='Update Tolerance')
 
         self.label_increment = wx.StaticText(self, label='Voltage Increment')
         self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0.05, inc=0.001)
+        self.btn_update_increment = wx.Button(self, label='Update Voltage Increment')
+
+        if 'Hepatic Artery' in self._name:
+            self.label_divisor = wx.StaticText(self, label='Peak-to-Peak Divisor')
+            self.spin_divisor = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
+            self.btn_update_divisor = wx.Button(self, label='Update Divisor')
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -61,20 +69,31 @@ class PanelPressureFlowControl(wx.Panel):
         self.sizer_label = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_label.Add(self.label_desired_output, flags)
         self.sizer_label.Add(self.spin_desired_output, flags)
+        self.sizer_label.Add(self.btn_update_desired, flags)
 
         self.sizer_tol = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_tol.Add(self.label_tolerance, flags)
         self.sizer_tol.Add(self.spin_tolerance, flags)
+        self.sizer_tol.Add(self.btn_update_tolerance, flags)
 
         self.sizer_increment = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_increment.Add(self.label_increment, flags)
         self.sizer_increment.Add(self.spin_increment, flags)
+        self.sizer_increment.Add(self.btn_update_increment, flags)
+
+        if 'Hepatic Artery' in self._name:
+            self.sizer_divisor = wx.BoxSizer(wx.HORIZONTAL)
+            self.sizer_divisor.Add(self.label_divisor, flags)
+            self.sizer_divisor.Add(self.spin_divisor, flags)
+            self.sizer_divisor.Add(self.btn_update_divisor, flags)
 
         sizer = wx.GridSizer(cols=1)
         sizer.Add(self.sizer_label)
         sizer.Add(self.sizer_tol)
         sizer.Add(self.sizer_increment, flags)
         sizer.Add(self.btn_stop, flags)
+        if 'Hepatic Artery' in self._name:
+            sizer.Add(self.sizer_divisor, flags)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -85,6 +104,10 @@ class PanelPressureFlowControl(wx.Panel):
 
     def __set_bindings(self):
         self.btn_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
+        self.btn_update_desired.Bind(wx.EVT_BUTTON, self.OnDesired)
+        self.btn_update_tolerance.Bind(wx.EVT_BUTTON, self.OnTolerance)
+        self.btn_update_increment.Bind(wx.EVT_BUTTON, self.OnIncrement)
+        self.btn_update_divisor.Bind(wx.EVT_BUTTON, self.OnDivisor)
 
     def OnStartStop(self, evt):
         state = self.btn_stop.GetLabel()
@@ -99,6 +122,18 @@ class PanelPressureFlowControl(wx.Panel):
             self._ao.close()
             self._ao.halt()
             self.btn_stop.SetLabel('Start')
+
+    def OnDesired(self, evt)
+        pass
+
+    def OnTolerance(self, evt)
+        pass
+
+    def OnIncrement(self, evt)
+        pass
+
+    def OnDivisor(self, evt)
+        pass
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_adjust.GetId():
