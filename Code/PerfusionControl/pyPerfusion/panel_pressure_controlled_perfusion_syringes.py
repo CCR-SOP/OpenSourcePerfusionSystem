@@ -27,6 +27,11 @@ class PanelPressureFlowControl(wx.Panel):
         self._line = line
         self._ao = NIDAQ_AO()
 
+        self._desired = None
+        self._tolerance = None
+        self._increment = None
+        self._divisor = None
+
         wx.Panel.__init__(self, parent, -1)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
@@ -116,6 +121,10 @@ class PanelPressureFlowControl(wx.Panel):
             self._ao.set_dc(1)
             self.timer_adjust.Start(3000, wx.TIMER_CONTINUOUS)
             self.btn_stop.SetLabel('Stop')
+            self._desired = self.spin_desired_output.GetValue()
+            self._tolerance = self.spin_tolerance.GetValue()
+            self._increment = self.spin_increment.GetValue()
+            self._divisor = self.spin_divisor.GetValue()
         else:
             self.timer_adjust.Stop()
             self._ao.set_dc(0)
@@ -123,17 +132,17 @@ class PanelPressureFlowControl(wx.Panel):
             self._ao.halt()
             self.btn_stop.SetLabel('Start')
 
-    def OnDesired(self, evt)
-        pass
+    def OnDesired(self, evt):
+        self._desired = self.spin_desired_output.GetValue()
 
-    def OnTolerance(self, evt)
-        pass
+    def OnTolerance(self, evt):
+        self._tolerance = self.spin_tolerance.GetValue()
 
-    def OnIncrement(self, evt)
-        pass
+    def OnIncrement(self, evt):
+        self._increment = self.spin_increment.GetValue()
 
-    def OnDivisor(self, evt)
-        pass
+    def OnDivisor(self, evt):
+        self._divisor = self.spin_divisor.GetValue()
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_adjust.GetId():
@@ -144,23 +153,20 @@ class PanelPressureFlowControl(wx.Panel):
             t, value = self._sensor.get_file_strategy('StreamRMS').retrieve_buffer(0, 1)
         else:
             t, value = self._sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
-        desired = float(self.spin_desired_output.GetValue())
-        tol = float(self.spin_tolerance.GetValue())
-        inc = float(self.spin_increment.GetValue())
-        dev = abs(desired - value)
+        dev = abs(self._desired - value)
       #  print(f'Pressure is {value:.3f}, desired is {desired:.3f}')
       #  print(f'Deviation is {dev}, tol is {tol}')
-        if dev > tol:
-            if value < desired:
-                new_val = self._ao._volts_offset + inc
+        if dev > self._tolerance:
+            if value < self._desired:
+                new_val = self._ao._volts_offset + self._increment
                 if new_val > 5:
                     new_val = 5
             else:
-                new_val = self._ao._volts_offset - inc
+                new_val = self._ao._volts_offset - self._increment
                 if new_val < 0:
                     new_val = 0
             if "Hepatic Artery" in self._sensor.name:
-                self._ao.set_sine(new_val/6, new_val, Hz=1)
+                self._ao.set_sine(new_val/self._divisor, new_val, Hz=1)
             else:
                 self._ao.set_dc(new_val)
 
