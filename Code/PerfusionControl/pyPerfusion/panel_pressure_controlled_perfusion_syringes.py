@@ -55,10 +55,11 @@ class PanelPressureFlowControl(wx.Panel):
         self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0.05, inc=0.001)
         self.btn_update_increment = wx.Button(self, label='Update Voltage Increment')
 
-        if 'Hepatic Artery' in self._name:
-            self.label_divisor = wx.StaticText(self, label='Peak-to-Peak Divisor')
-            self.spin_divisor = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
-            self.btn_update_divisor = wx.Button(self, label='Update Divisor')
+        self.label_divisor = wx.StaticText(self, label='Peak-to-Peak Divisor')
+        self.spin_divisor = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
+        self.btn_update_divisor = wx.Button(self, label='Update Divisor')
+        if 'Portal Vein' in self._name:
+            self.btn_update_divisor.Enable(False)
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -86,19 +87,17 @@ class PanelPressureFlowControl(wx.Panel):
         self.sizer_increment.Add(self.spin_increment, flags)
         self.sizer_increment.Add(self.btn_update_increment, flags)
 
-        if 'Hepatic Artery' in self._name:
-            self.sizer_divisor = wx.BoxSizer(wx.HORIZONTAL)
-            self.sizer_divisor.Add(self.label_divisor, flags)
-            self.sizer_divisor.Add(self.spin_divisor, flags)
-            self.sizer_divisor.Add(self.btn_update_divisor, flags)
+        self.sizer_divisor = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_divisor.Add(self.label_divisor, flags)
+        self.sizer_divisor.Add(self.spin_divisor, flags)
+        self.sizer_divisor.Add(self.btn_update_divisor, flags)
 
         sizer = wx.GridSizer(cols=1)
         sizer.Add(self.sizer_label)
         sizer.Add(self.sizer_tol)
         sizer.Add(self.sizer_increment, flags)
         sizer.Add(self.btn_stop, flags)
-        if 'Hepatic Artery' in self._name:
-            sizer.Add(self.sizer_divisor, flags)
+        sizer.Add(self.sizer_divisor, flags)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
