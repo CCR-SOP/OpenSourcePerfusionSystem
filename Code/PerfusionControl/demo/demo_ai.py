@@ -14,6 +14,7 @@ from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 import pyPerfusion.utils as utils
+from pyPerfusion.FileStrategy import StreamToFile
 
 
 class TestFrame(wx.Frame):
@@ -23,6 +24,9 @@ class TestFrame(wx.Frame):
         sizer = wx.GridSizer(cols=2)
         LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
+        utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+        utils.configure_matplotlib_logging()
+
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensors = [
             SensorStream('HA Flow', 'Volts', self.acq),
@@ -32,6 +36,11 @@ class TestFrame(wx.Frame):
             SensorStream('PV Pressure', 'Volts', self.acq),
             SensorStream('IVC Pressure', 'Volts', self.acq)
         ]
+        for sensor in self.sensors:
+            raw = StreamToFile('Raw', None, self.acq.buf_len)
+            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            sensor.add_strategy(raw)
+
         dlg = wx.SingleChoiceDialog(self, 'Choose NI Device', 'Device', DEV_LIST)
         if dlg.ShowModal() == wx.ID_OK:
             dev = dlg.GetStringSelection()
@@ -39,7 +48,7 @@ class TestFrame(wx.Frame):
 
         self.panel = {}
         for sensor in self.sensors:
-            self.panel[sensor.name] = PanelAI(self, sensor, name=sensor.name)
+            self.panel[sensor.name] = PanelAI(self, sensor, sensor.name, 'Raw')
             sizer.Add(self.panel[sensor.name], 1, wx.ALL | wx.EXPAND, border=1)
             self.panel[sensor.name].force_device(dev)
 
@@ -64,8 +73,6 @@ class MyTestApp(wx.App):
         return True
 
 
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
-utils.setup_default_logging(filename='demo_ai')
-app = MyTestApp(0)
-app.MainLoop()
+if __name__ == "__main__":
+    app = MyTestApp(0)
+    app.MainLoop()

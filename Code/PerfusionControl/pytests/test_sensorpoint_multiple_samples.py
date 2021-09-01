@@ -17,8 +17,9 @@ from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.FileStrategy import PointsToFile
 
-dev = 'Dev1'
+dev = 'Dev2'
 
 logger = logging.getLogger()
 LP_CFG.set_base(basepath='~/Documents/LPTEST')
@@ -30,8 +31,13 @@ ai_name = 'Analog Input'
 logger.debug('creating NIDAQ_AI')
 acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 sensor = SensorPoint('Analog Input 1', 'Volts', acq)
-logger.debug('opening sensor')
-sensor.open(LP_CFG.LP_PATH['stream'])
+strategy = PointsToFile('StreamToFileRaw', 1, 10)
+strategy.open(LP_CFG.LP_PATH['stream'], 'Analog Input 1',
+              {'Sampling Period (ms)': 100, 'Data Format': 'float32',
+               'Samples Per Timestamp': 2})
+
+sensor.open()
+sensor.add_strategy(strategy)
 acq.open(dev=dev)
 acq.add_channel('0')
 sensor.set_ch_id('0')
@@ -43,8 +49,8 @@ STOP_PROGRAM = False
 
 
 def get_last_sample():
-    global sensor, last_acq
-    ts, samples = sensor.get_last_acq()
+    global strategy, last_acq
+    ts, samples = strategy.retrieve_buffer(0, 1)
     logger.debug(f'Acquired ts = {ts}, samples={samples}')
 
 
