@@ -165,7 +165,12 @@ class PanelPressureFlowControl(wx.Panel):
                 if new_val < 0:
                     new_val = 0
             if "Hepatic Artery" in self._sensor.name:
-                self._ao.set_sine(new_val/self._divisor, new_val, Hz=1)
+                peak = (new_val / self._divisor) / 2
+                if 5 < new_val + peak:
+                    peak = (4.9-new_val)
+                elif 0 > new_val - peak:
+                    peak = (new_val - 0.1)
+                self._ao.set_sine(2 * peak, new_val, Hz=1)
             else:
                 self._ao.set_dc(new_val)
 
@@ -203,7 +208,7 @@ class TestFrame(wx.Frame):
         HA_flow._panel_cfg.choice_line.Enable(False)
         HA_flow._panel_cfg.panel_cal.OnLoadCfg(True)
         sizer.Add(HA_flow, 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelPressureFlowControl(self, self._sensors[2], name=self._sensors[2].name, dev='Dev3', line=1), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelPressureFlowControl(self, self._sensors[0], name=self._sensors[0].name, dev='Dev3', line=1), 1, wx.ALL | wx.EXPAND, border=1)
 
         PV_pressure = PanelAI(self, self._sensors[1], name=self._sensors[1].name, strategy='StreamRaw')
         PV_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
