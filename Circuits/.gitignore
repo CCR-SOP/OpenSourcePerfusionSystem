@@ -13,3 +13,28 @@
 
 # Keep GERBER files if in a folder called GERBER
 !**/GERBER/*
+
+
+
+# Altium Files
+*.PrjPCBStructure
+*.SchDocPreview
+*.PcbDocPreview
+__Previews
+*.PrjPcbStructure
+*.Dat
+*.REP 
+*.TLT
+*.LOG
+*.log
+*.htm
+*.html
+*.$$$
+
+# Altium Dirs for auto-generated files
+Project\ Outputs
+Project\ Logs
+Project Outputs for*
+
+# Altium History folder
+History
