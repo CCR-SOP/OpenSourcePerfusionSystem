@@ -47,8 +47,8 @@ class AlarmPublisher:
             self._channel.cancel()
             self._connection.close()
             self._lgr.info(f'Closing connection to exchange {self._exchange} on {self._host}')
-        self._connection.close()
-        self._lgr.info(f'Closing connection to exchange {self._exchange} on {self._host}')
+        else:
+            self._lgr.warning(f'Attempt to close an already closed connection {self._exchange} on {self._host}')
 
     def publish(self, routing_key, msg):
         self._lgr.info(f'Publishing {routing_key}:{msg} to {self._exchange}')
@@ -96,6 +96,7 @@ class AlarmSubscriber:
     def close(self):
         if self.is_open():
             self.cancel()
+            self._thread.join()
             try:
                 self._connection.close()
             except pika.exceptions.StreamLostError:
