@@ -47,6 +47,8 @@ class AlarmPublisher:
             self._channel.cancel()
             self._connection.close()
             self._lgr.info(f'Closing connection to exchange {self._exchange} on {self._host}')
+        self._connection.close()
+        self._lgr.info(f'Closing connection to exchange {self._exchange} on {self._host}')
 
     def publish(self, routing_key, msg):
         self._lgr.info(f'Publishing {routing_key}:{msg} to {self._exchange}')
