@@ -14,12 +14,6 @@ from dataclasses import dataclass
 
 import pika
 
-# Alarm Topics:
-#     alarm.<sensor>.<type>.<subtype> value
-#         <sensor> = flow, pressure, temp
-#         <type> = range
-#         <subtype> = over, under, out
-#         <value> = current value of sensor
 
 @dataclass
 class Msg:
@@ -36,6 +30,12 @@ class AlarmPublisher:
         self._channel = None
         self._host = host
 
+    def is_open(self):
+        is_open = False
+        if self._connection:
+            is_open = self._connection.is_open
+        return is_open
+
     def connect(self):
         self._lgr.info(f'Creating connection to exchange {self._exchange} on {self._host}')
         self._connection = pika.BlockingConnection(pika.ConnectionParameters(host=self._host))
@@ -43,8 +43,10 @@ class AlarmPublisher:
         self._channel.exchange_declare(exchange=self._exchange,  exchange_type='topic')
 
     def close(self):
-        self._connection.close()
-        self._lgr.info(f'Closing connection to exchange {self._exchange} on {self._host}')
+        if self._connection:
+            self._channel.cancel()
+            self._connection.close()
+            self._lgr.info(f'Closing connection to exchange {self._exchange} on {self._host}')
 
     def publish(self, routing_key, msg):
         self._lgr.info(f'Publishing {routing_key}:{msg} to {self._exchange}')
@@ -61,6 +63,16 @@ class AlarmSubscriber:
         self._queue = None
         self._thread = None
         self._tag = None
+        self.__callback = None
+
+    def is_open(self):
+        is_open = False
+        if self._connection:
+            is_open = self._connection.is_open
+        return is_open
+
+    def set_callback(self, callback):
+        self.__callback = callback
 
     def connect(self):
         self._lgr.info(f'Creating connection to exchange {self._exchange} on {self._host}')
@@ -71,12 +83,21 @@ class AlarmSubscriber:
 
         result = self._channel.queue_declare('', exclusive=True)
         self._queue = result.method.queue
+        # use protected callback to guarantee logging of the message
         self._tag = self._channel.basic_consume(queue=self._queue,
                                                 on_message_callback=self._callback,
                                                 auto_ack=True)
         self._thread = threading.Thread(target=self._run)
         self._thread.name = f'AlarmSubscriber {self._exchange} on {self._host}'
         self._thread.start()
+
+    def close(self):
+        if self.is_open():
+            self.cancel()
+            try:
+                self._connection.close()
+            except pika.exceptions.StreamLostError:
+                pass
 
     def subscribe(self, topic_name):
         self._lgr.info(f'Subscribing to {topic_name}')
@@ -89,10 +110,7 @@ class AlarmSubscriber:
 
     def _callback(self, ch, method, properties, body):
         self._lgr.info(f'Received message {method.routing_key}: {body}')
-        self.callback(method.routing_key, body)
+        self.__callback(method.routing_key, body)
 
     def _run(self):
         self._channel.start_consuming()
-
-    def callback(self, routing_key, body):
-        pass
