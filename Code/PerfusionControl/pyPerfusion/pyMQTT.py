@@ -11,7 +11,6 @@ and under the public domain.
 import logging
 import threading
 from dataclasses import dataclass
-from sys import float_info
 
 import pika
 
@@ -27,33 +26,6 @@ class Msg:
     name: str = 'None'
     sensor_type: str = 'None'
     msg = 'None'
-
-
-class AlarmMsg(Msg):
-    name = 'alarm'
-    main_topic: str = 'None'
-    sub_topic: str = 'None'
-
-
-class AlarmRange(Msg):
-    name = 'alarm'
-    main_topic = 'range'
-    sub_topic = 'out'
-    # alarm on values >upper or <lower
-    # default values will always alarm
-    # to ensure they are set by caller
-    upper: float = float_info.min
-    lower: float = float_info.max
-
-
-class AlarmOver(AlarmRange):
-    sub_topic = 'over'
-    lower = float_info.min
-
-
-class AlarmUnder(AlarmRange):
-    sub_topic = 'under'
-    upper = float_info.max
 
 
 class AlarmPublisher:
