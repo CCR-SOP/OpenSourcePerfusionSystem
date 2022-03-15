@@ -229,19 +229,22 @@ class PanelSyringe(wx.Panel):
         target_volume = self.spin_volume_infuse.GetValue()
         self._syringe.set_target_volume(target_volume, 'ml')
         infusion_rate = int(self._syringe.get_infusion_rate().split(' ')[0])
-        infusion_rate_unit = int(self._syringe.get_infusion_rate().split(' ')[1])
+        infusion_rate_unit = self._syringe.get_infusion_rate().split(' ')[1]
         if 'ul' in infusion_rate_unit:
             ml_min_rate = False
         else:
             ml_min_rate = True
         self._syringe.infuse(target_volume, infusion_rate, True, ml_min_rate)
         self.wait = True
-        t = time.perf_counter()
+        time.sleep(60 * target_volume / infusion_rate)
         while self.wait:
-            x = time.perf_counter()
-            if x - t > (target_volume / infusion_rate):
+            response = float(self._syringe.get_infused_volume().split(' ')[0])
+            unit = self._syringe.get_infused_volume().split(' ')[1]
+            if 'ul' in unit:
+                response = response / 1000
+            if response >= target_volume:
                 self.wait = False
-        self._syringe.ResetSyringe()
+        self._syringe.reset_target_volume()
 
     def OnSaveConfig(self, evt):
         section = LP_CFG.get_hwcfg_section(self._name)
