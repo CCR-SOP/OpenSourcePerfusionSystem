@@ -62,7 +62,7 @@ class TSMSerial(USBSerial):
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
-        self._timestamp_perf = perf_counter()
+        self._timestamp_perf = perf_counter() * 1000
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
@@ -89,7 +89,7 @@ class TSMSerial(USBSerial):
         header = [f'File Format: {DATA_VERSION}',
                   f'Instrument: {self.name}',
                   f'Data Format: {str(np.dtype(np.byte))}',
-                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Every Datapoint contains: Header, Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))'
+                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Every Datapoint contains: Header, Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
@@ -98,7 +98,7 @@ class TSMSerial(USBSerial):
         return hdr_str
 
     def _write_to_file(self, data_buf, t):
-        ts_bytes = struct.pack('i', int(t * 1000.0))
+        ts_bytes = struct.pack('i', t)
         self._fid_write.write(ts_bytes)
         self._fid_write.write(data_buf)
 
@@ -115,7 +115,8 @@ class TSMSerial(USBSerial):
 
     def stream(self):
         if self._USBSerial__serial.inWaiting() > 0:
-            t = perf_counter()
+            t = int(perf_counter() * 1000)
+            print(t)
             data_raw = self._USBSerial__serial.readline()
             buf_len = len(data_raw)
             self._write_to_file(data_raw, t)
