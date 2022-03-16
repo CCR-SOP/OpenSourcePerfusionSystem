@@ -5,6 +5,7 @@ import datetime
 from time import perf_counter
 import struct
 import numpy as np
+from threading import Thread, Event
 
 DATA_VERSION = 4
 
@@ -38,6 +39,9 @@ class TSMSerial(USBSerial):
         self._last_idx = 0
         self._datapoints_per_ts = 1
         self._bytes_per_ts = 101
+
+        self.__thread_streaming = None
+        self.__evt_halt_streaming = Event()
 
     @property
     def full_path(self):
@@ -98,5 +102,35 @@ class TSMSerial(USBSerial):
         data_buf.tofile(self._fid_write)
 
     def start_stream(self):
-        pass
+        self._USBSerial__serial.flushInput()
+        self._USBSerial__serial.flushOutput()
+        self.__evt_halt_streaming.clear()
+        self.__thread_streaming = Thread(target=self.OnStreaming)
+        self.__thread_streaming.start()
 
+    def OnStreaming(self):
+        while not self.__evt_halt_streaming.wait(30):
+            self.stream
+
+    def stream(self):
+        data_raw = self._USBSerial__serial.readline()
+        print(data_raw)
+        #bytesToRead = self._USBSerial__serial.inWaiting()
+        #data_raw = self._USBSerial__serial.read(bytesToRead)
+        #print(data_raw)
+        t = perf_counter()
+        buf_len = len(data_raw)
+        self._write_to_file(data_raw, t)
+        self._last_idx += buf_len
+        self._fid_write.flush()
+
+    def stop_stream(self):
+        if self.__thread_streaming and self.__thread_streaming.is_alive():
+            self.__evt_halt_streaming.set()
+            self.__thread_streaming.join(2.0)
+            self.__thread_streaming = None
+        self._USBSerial__serial.flushInput()
+        self._USBSerial__serial.flushOutput()
+        if self._fid_write:
+            self._fid_write.close()
+        self._fid_write = None
