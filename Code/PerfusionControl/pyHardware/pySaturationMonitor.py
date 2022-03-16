@@ -99,7 +99,7 @@ class TSMSerial(USBSerial):
     def _write_to_file(self, data_buf, t):
         ts_bytes = struct.pack('i', int(t * 1000.0))
         self._fid_write.write(ts_bytes)
-        data_buf.tofile(self._fid_write)
+       # data_buf.tofile(self._fid_write)
 
     def start_stream(self):
         self._USBSerial__serial.flushInput()
@@ -109,8 +109,8 @@ class TSMSerial(USBSerial):
         self.__thread_streaming.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(30):
-            self.stream
+        while not self.__evt_halt_streaming.wait(5):
+            self.stream()
 
     def stream(self):
         data_raw = self._USBSerial__serial.readline()
