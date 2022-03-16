@@ -20,9 +20,11 @@ class TSMSerial(USBSerial):
     open(port_name, baud, bytesize, parity, stopbits)
         opens USB port of given name with the specified baud rate, bytesize, parity, and stopbits which correspond to the TSM
     open_stream(full_path)
-        creates .txt and .dat files for recording syringe data
+        creates .txt and .dat files for recording CDI data
+    start_stream()
+        starts thread for writing streamed data from CDI monitor to file
     stop_stream()
-        stops recording of syringe data
+        stops thread and recording of data
     """
 
     def __init__(self, name):
@@ -66,7 +68,6 @@ class TSMSerial(USBSerial):
             self._fid_write = None
 
         self._open_write()
-        self._write_to_file(np.array([0]), np.array([0]))
         self._fid_write.seek(0)
 
         self.print_stream_info()
@@ -87,7 +88,7 @@ class TSMSerial(USBSerial):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
                   f'Instrument: {self.name}',
-                  f'Data Format: {str(np.dtype(np.float32))}',
+                  f'Data Format: {str(np.dtype(np.byte))}',
                   f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Every Datapoint contains: Header, Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))'
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
@@ -99,7 +100,7 @@ class TSMSerial(USBSerial):
     def _write_to_file(self, data_buf, t):
         ts_bytes = struct.pack('i', int(t * 1000.0))
         self._fid_write.write(ts_bytes)
-       # data_buf.tofile(self._fid_write)
+        self._fid_write.write(data_buf)
 
     def start_stream(self):
         self._USBSerial__serial.flushInput()
@@ -109,20 +110,21 @@ class TSMSerial(USBSerial):
         self.__thread_streaming.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(5):
+        while not self.__evt_halt_streaming.wait(25):
             self.stream()
 
     def stream(self):
-        data_raw = self._USBSerial__serial.readline()
-        print(data_raw)
-        #bytesToRead = self._USBSerial__serial.inWaiting()
-        #data_raw = self._USBSerial__serial.read(bytesToRead)
-        #print(data_raw)
-        t = perf_counter()
-        buf_len = len(data_raw)
-        self._write_to_file(data_raw, t)
-        self._last_idx += buf_len
-        self._fid_write.flush()
+        if self._USBSerial__serial.inWaiting() > 0:
+            t = perf_counter()
+            data_raw = self._USBSerial__serial.readline()
+            buf_len = len(data_raw)
+            self._write_to_file(data_raw, t)
+            self._last_idx += buf_len
+            self._fid_write.flush()
+            self._USBSerial__serial.flushInput()
+            self._USBSerial__serial.flushOutput()
+        else:
+            pass
 
     def stop_stream(self):
         if self.__thread_streaming and self.__thread_streaming.is_alive():
