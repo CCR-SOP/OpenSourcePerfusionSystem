@@ -3,7 +3,6 @@ import logging
 import pathlib
 import datetime
 from time import perf_counter
-import struct
 import numpy as np
 from threading import Thread, Event
 
@@ -25,6 +24,8 @@ class TSMSerial(USBSerial):
         starts thread for writing streamed data from CDI monitor to file
     stop_stream()
         stops thread and recording of data
+    get_latest()
+        returns latest sample from monitor, in string format
     """
 
     def __init__(self, name):
@@ -89,17 +90,15 @@ class TSMSerial(USBSerial):
         header = [f'File Format: {DATA_VERSION}',
                   f'Instrument: {self.name}',
                   f'Data Format: {str(np.dtype(np.byte))}',
-                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Every Datapoint contains: Header, Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
-                  f'Bytes Per Timestamp: {self._bytes_per_ts}',
+                  f'Sample Description: {self._datapoints_per_ts} (Each Sample includes Header, Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
+                  f'Bytes Per Sample: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
         end_of_line = '\n'
         hdr_str = f'{end_of_line.join(header)}{end_of_line}'
         return hdr_str
 
-    def _write_to_file(self, data_buf, t):
-        ts_bytes = struct.pack('i', t)
-        self._fid_write.write(ts_bytes)
+    def _write_to_file(self, data_buf):
         self._fid_write.write(data_buf)
 
     def start_stream(self):
@@ -110,16 +109,14 @@ class TSMSerial(USBSerial):
         self.__thread_streaming.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(25):
+        while not self.__evt_halt_streaming.wait(4):
             self.stream()
 
     def stream(self):
         if self._USBSerial__serial.inWaiting() > 0:
-            t = int(perf_counter() * 1000)
-            print(t)
             data_raw = self._USBSerial__serial.readline()
             buf_len = len(data_raw)
-            self._write_to_file(data_raw, t)
+            self._write_to_file(data_raw)
             self._last_idx += buf_len
             self._fid_write.flush()
             self._USBSerial__serial.flushInput()
@@ -137,3 +134,14 @@ class TSMSerial(USBSerial):
         if self._fid_write:
             self._fid_write.close()
         self._fid_write = None
+
+    def get_latest(self):
+        _fid, data = self._open_read_latest()
+        string_data = str(data, 'ascii')[1:]
+        return string_data
+
+    def _open_read_latest(self):
+        _fid = open(self.full_path, 'rb')
+        lines = _fid.readlines()
+        data = lines[-1].rstrip()
+        return _fid, data
