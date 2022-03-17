@@ -55,12 +55,11 @@ The assumption is that infusion volume and infusion rate data are acquired at th
 For targeted infusions (i.e. those which stop after a certain volume of fluid has been delivered), InfusionVolume will be non-zero; for non-targeted (i.e. continuous) infusions, InfusionVolume will be '-2' or '-1'; for these continuous infusions, data will be recorded both when the infusion is started ('-2') and stopped ('-1')
 
 ## Version 4:
-Text-based header followed by a stream of timestamp/sample pairs in binary format
-The timestamp is stored as the number of milliseconds from the start of the acquisition
+Text-based header followed by a stream of samples in binary format; each sample has an inherent time stamp
 Header Lines:
 File Format: 4
 Instrument: {string containing name for the CDI Instrument}
 Data Format: {string representing sample format (e.g. "int8")
-Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 1 (which includes Header, Time, Arterial pH, Arterial pC02, Arterial pO2, Arterial Temperature, Arterial HCO3-, Arterial Base Excess, Calculated O2 sat, K, VO2, Pump Flow, BSA, Venous pH, Venous pCO2, Venous pO2, Venous Temperature, Measure O2 sat, Hct, and Hb}
-Bytes per Timestamp: {number of bytes used to store the timestamp}
+Sample Description: {Each sample includes Header, Time, Arterial pH, Arterial pC02, Arterial pO2, Arterial Temperature, Arterial HCO3-, Arterial Base Excess, Calculated O2 sat, K, VO2, Pump Flow, BSA, Venous pH, Venous pCO2, Venous pO2, Venous Temperature, Measure O2 sat, Hct, and Hb}
+Bytes per Sample: {number of bytes used to store the sample}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}
