@@ -144,6 +144,37 @@ class GB100: ###
             self._fid_write.close()
         self._fid_write = None
 
+    def get_data(self, last_ms, samples_needed):
+        _fid, tmp = self._open_read()
+        cur_time = int(perf_counter() * 1000)
+        _fid.seek(0)
+        chunk = [1]
+        data_time = []
+        data = []
+        while chunk[0]:
+            chunk, ts = self.__read_chunk(_fid)
+            if type(chunk) is list:
+                break
+            if chunk.any() and (cur_time - ts < last_ms or last_ms == 0):
+                data.append(chunk)
+                data_time.append(ts / 1000.0)
+        _fid.close()
+        return data_time, data
+
+    def _open_read(self):
+        _fid = open(self.full_path, 'rb')
+        data = np.memmap(_fid, dtype=np.float32, mode='r')
+        return _fid, data
+
+    def __read_chunk(self, _fid):
+        ts = 0
+        data_buf = []
+        ts_bytes = _fid.read(self._bytes_per_ts)
+        if len(ts_bytes) == 4:
+            ts, = struct.unpack('i', ts_bytes)
+            data_buf = np.fromfile(_fid, dtype=np.float32, count=self._datapoints_per_ts)
+        return data_buf, ts
+
     def get_working_status(self):  # Gives ON/OFF status of instrument
         response = main.get_working_status()
         return response
