@@ -7,7 +7,7 @@ from time import perf_counter
 import numpy as np
 import struct
 
-DATA_VERSION = 5 ###
+DATA_VERSION = 5
 
 class GB100: ###
 
@@ -53,7 +53,7 @@ class GB100: ###
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
-        self._timestamp_perf = perf_counter()  ###
+        self._timestamp_perf = perf_counter() * 1000
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
@@ -81,7 +81,7 @@ class GB100: ###
         header = [f'File Format: {DATA_VERSION}',
                   f'Instrument: {self.name}',
                   f'Data Format: {str(np.dtype(np.float32))}',
-                  f'Datapoints per Timestamp: {self._datapoints_per_ts} (Gas 1 ID, Gas 2 ID, Gas 1 Percentage, Gas 2 Percentage, Total Flow, Working Status)',
+                  f'Datapoints per Timestamp: {self._datapoints_per_ts} (Gas 1 ID, Gas 2 ID, Gas 1 Percentage, Gas 2 Percentage, Total Flow (ml/min), Working Status (O for OFF, 1 for ON)',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]

@@ -63,3 +63,14 @@ Data Format: {string representing sample format (e.g. "int8")
 Sample Description: {Each sample includes Header, Time, Arterial pH, Arterial pC02, Arterial pO2, Arterial Temperature, Arterial HCO3-, Arterial Base Excess, Calculated O2 sat, K, VO2, Pump Flow, BSA, Venous pH, Venous pCO2, Venous pO2, Venous Temperature, Measure O2 sat, Hct, and Hb}
 Bytes per Sample: {number of bytes used to store the sample}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}
+
+## Version 5:
+Text-based header followed by a stream of timestamp/sample pairs in binary format
+The timestamp is stored as the number of milliseconds from the start of the acquisition
+Header Lines:
+File Format: 5
+Instrument: {string containing name for the GB100 mixer}
+Data Format: {string representing sample format (e.g. "float32")
+Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 6 (Gas 1 ID, Gas 2 ID, Gas 1 Percentage, Gas 2 Percentage, Total Flow (ml/min), and Working Status (0 for OFF, 1 for ON)}
+Bytes per Timestamp: {number of bytes used to store the timestamp}
+Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}
