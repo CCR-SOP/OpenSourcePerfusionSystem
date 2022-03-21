@@ -9,7 +9,7 @@ import struct
 
 DATA_VERSION = 5
 
-class GB100: ###
+class GB100:
 
     """
     Class for serial communication over USB using GB100+ command set
@@ -21,8 +21,14 @@ class GB100: ###
         creates .txt and .dat files for recording GB100 data
     start_stream()
         starts thread for writing streamed data from mixer to file
+    change_gas_mix()
+        changes chosen parameters on gas mixer
+    record_change()
+        records changes to gas mixer in .dat file
+    set_gas_types()
+        sets gas for each channel
     stop_stream()
-        stops thread and recording of data
+        stops recording of data
     """
 
     def __init__(self, name):
@@ -109,7 +115,7 @@ class GB100: ###
 
     def change_gas_mix(self, gas_1_percentage, gas_2_percentage, total_flow, working_status, gas1=None, gas2=None, balance_channel=None):
         if gas1 is not None and gas2 is not None:
-            self.set_initial_gas_types(gas1, gas2)
+            self.set_gas_types(gas1, gas2)
         if balance_channel is not None:
             self.set_balance_channel(balance_channel)
         self.set_channel_percent_value(1, gas_1_percentage)
@@ -135,7 +141,7 @@ class GB100: ###
         total_flow_buffer.tofile(self._fid_write)
         working_status_buffer.tofile(self._fid_write)
 
-    def set_initial_gas_types(self, gas1, gas2):
+    def set_gas_types(self, gas1, gas2):
         self.set_gas_from_xml_file(1, gas1)
         self.set_gas_from_xml_file(2, gas2)
 
