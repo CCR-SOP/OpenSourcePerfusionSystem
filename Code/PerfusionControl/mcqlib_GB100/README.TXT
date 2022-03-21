@@ -21,7 +21,7 @@
 
 4. Configure correct serial connection settings in file ./mcqlib/config.ini
   - COM Port
-  - Baud Rate
+  - Baud Rate (115200)
 
 5. Open CMD (terminal), navigate to root folder (where read_sample1.py is located) and run command:
   > python read_sample1.py
