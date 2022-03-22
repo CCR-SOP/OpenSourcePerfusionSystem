@@ -145,3 +145,27 @@ class TSMSerial(USBSerial):
         lines = _fid.readlines()
         data = lines[-1].rstrip()
         return _fid, data
+
+    def get_parsed_data(self):
+        data = self.get_latest()
+        # time = data[0:8]
+        arterial_pH = data[9:13]
+        arterial_CO2 = data[14:18]
+        arterial_O2 = data[19:23]
+        arterial_temp = data[24:28]
+        arterial_bicarb = data[29:33]
+        arterial_BE = data[34:38]
+        calculated_O2_sat = data[39:43]  # Only calculated if sat can't be measured directly
+        K = data[44:48]
+        # VO2 = data[49:53]
+        # Q = data[54:58]
+        # BSA = data[59:63]
+        # venous_pH = data[64:68]
+        # venous_CO2 = data[69:73]
+        # venous_O2 = data[74:78]
+        # venous_temp = data[79:83]
+        measured_O2_sat = data[84:88]
+        hct = data[89:93]
+        hb = data[94:98]
+        return arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, calculated_O2_sat, K, measured_O2_sat, hct, hb
+
