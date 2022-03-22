@@ -155,7 +155,7 @@ class TSMSerial(USBSerial):
         arterial_temp = data[24:28]
         arterial_bicarb = data[29:33]
         arterial_BE = data[34:38]
-        calculated_O2_sat = data[39:43]  # Only calculated if sat can't be measured directly
+        # calculated_O2_sat = data[39:43]  # Only calculated if sat can't be measured directly
         K = data[44:48]
         # VO2 = data[49:53]
         # Q = data[54:58]
@@ -167,4 +167,4 @@ class TSMSerial(USBSerial):
         measured_O2_sat = data[84:88]
         hct = data[89:93]
         hb = data[94:98]
-        return arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, calculated_O2_sat, K, measured_O2_sat, hct, hb
+        return arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, K, measured_O2_sat, hct, hb
