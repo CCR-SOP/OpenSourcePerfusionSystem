@@ -43,7 +43,7 @@ class GB100:
         self._end_of_header = 0
         self._last_idx = 0
         self._datapoints_per_ts = 6
-        self._bytes_per_ts = 4 ###
+        self._bytes_per_ts = 4
 
     @property
     def full_path(self):
@@ -150,9 +150,8 @@ class GB100:
             self._fid_write.close()
         self._fid_write = None
 
-    def get_data(self, last_ms, samples_needed):
+    def get_data(self):
         _fid, tmp = self._open_read()
-        cur_time = int(perf_counter() * 1000)
         _fid.seek(0)
         chunk = [1]
         data_time = []
@@ -161,7 +160,7 @@ class GB100:
             chunk, ts = self.__read_chunk(_fid)
             if type(chunk) is list:
                 break
-            if chunk.any() and (cur_time - ts < last_ms or last_ms == 0):
+            elif chunk.any():
                 data.append(chunk)
                 data_time.append(ts / 1000.0)
         _fid.close()
