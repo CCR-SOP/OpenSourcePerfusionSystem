@@ -168,4 +168,3 @@ class TSMSerial(USBSerial):
         hct = data[89:93]
         hb = data[94:98]
         return arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, calculated_O2_sat, K, measured_O2_sat, hct, hb
-
