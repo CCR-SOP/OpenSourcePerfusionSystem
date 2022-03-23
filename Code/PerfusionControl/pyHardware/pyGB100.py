@@ -9,6 +9,8 @@ import struct
 
 DATA_VERSION = 5
 
+GAS_TYPES = {'Air': 1, 'Nitrogen': 2, 'Oxygen': 3, 'Carbon Dioxide': 4}
+
 class GB100:
 
     """
@@ -204,6 +206,9 @@ class GB100:
     def get_gas_type(self, gasID):  # Returns gas name from gas ID
         response = utils.get_gas_type(gasID)
         return response
+
+    def get_gas_ID(self, gas_name):
+        return GAS_TYPES[gas_name]
 
     def get_channel_balance(self):  # Gives channel that automatically changes
         response = main.get_channel_balance()
