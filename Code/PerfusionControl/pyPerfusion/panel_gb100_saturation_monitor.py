@@ -290,6 +290,11 @@ class TestFrame(wx.Frame):
         self._plots_lt[1].plot(data_list[8], time)
         self._plots_lt[2].plot(data_list[3], time)
         self._plots_lt[3].plot(data_list[2], time)
+        if self._mixer.get_working_status:
+            self.update_gas_mix(data_list[8], data_list[1], data_list[2], data_list[3])
+
+    def update_gas_mix(self, o2_saturation, pH, pCO2, pO2):
+        pass
 
     def OnClose(self, evt):
         self._monitor.stop_stream()
