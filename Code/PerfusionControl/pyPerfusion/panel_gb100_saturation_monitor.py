@@ -167,9 +167,10 @@ class TestFrame(wx.Frame):
 
         self.readouts = []
         for label in self._labels:
-            readout = TSMReadout(self, label, self._labels[label])
-            self.readouts.append(readout)
-            self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
+            if label != 'Time':
+                readout = TSMReadout(self, label, self._labels[label])
+                self.readouts.append(readout)
+                self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.sizer_config.Add(self.label_choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
         self.sizer_config.Add(self.choice_time, 1, wx.ALL)
@@ -281,7 +282,7 @@ class TestFrame(wx.Frame):
         data_list = list(data)
         time = data_list[0]
         for num in range(1, 11):
-            self.readouts[num].label_value.SetLabel(data_list[num])
+            self.readouts[num-1].label_value.SetLabel(data_list[num])
         self._plots_main[0].plot(data_list[1], time)
         self._plots_main[1].plot(data_list[8], time)
         self._plots_main[2].plot(data_list[3], time)
