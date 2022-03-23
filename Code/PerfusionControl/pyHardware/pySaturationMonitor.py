@@ -93,7 +93,7 @@ class TSMSerial(USBSerial):
         header = [f'File Format: {DATA_VERSION}',
                   f'Instrument: {self.name}',
                   f'Data Format: {str(np.dtype(np.byte))}',
-                  f'Sample Description: {self._datapoints_per_ts} (Each Sample includes Timestamp(milliseconds from start, in byte format), Header, Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
+                  f'Sample Description: {self._datapoints_per_ts} (Each Sample includes Timestamp in milliseconds from start format, Header, Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
                   f'Bytes Per Sample: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
