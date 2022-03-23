@@ -148,7 +148,7 @@ class TSMSerial(USBSerial):
 
     def get_parsed_data(self):
         data = self.get_latest()
-        # time = data[0:8]
+        time = data[0:8]
         arterial_pH = data[9:13]
         arterial_CO2 = data[14:18]
         arterial_O2 = data[19:23]
@@ -167,4 +167,4 @@ class TSMSerial(USBSerial):
         measured_O2_sat = data[84:88]
         hct = data[89:93]
         hb = data[94:98]
-        return arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, K, measured_O2_sat, hct, hb
+        return time, arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, K, measured_O2_sat, hct, hb
