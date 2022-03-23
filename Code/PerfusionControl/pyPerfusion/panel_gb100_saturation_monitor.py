@@ -9,7 +9,7 @@ import logging
 import pyPerfusion.utils as utils
 import os
 from pathlib import Path
-from pyPerfusion.plotting_TSM_GB100 import TSMPanelPlotting, TSMPanelPlotLT, TSMSensorPlot
+from pyPerfusion.plotting import TSMPanelPlotting, TSMPanelPlotLT, TSMSensorPlot
 from pyHardware.pySaturationMonitor import TSMSerial
 from pyHardware.pyGB100 import GB100
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -127,9 +127,6 @@ class TestFrame(wx.Frame):
         self.__do_layout()
         self.__set_bindings()
 
-        for plot in self._plots_main:
-            plot.show_legend()
-
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def _add_lt(self, plot_name):
@@ -137,14 +134,14 @@ class TestFrame(wx.Frame):
 
         panel = TSMPanelPlotting(self)
         self._plots_main.append(panel)
-        plotraw = TSMSensorPlot(plot_name, panel.axes)
+        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name])
         panel.add_plot(plotraw)
         sizer.Add(panel, 10, wx.ALL | wx.EXPAND, border=0)
 
         panel = TSMPanelPlotLT(self)
         self._plots_lt.append(panel)
         panel.plot_frame_ms = -1
-        plotraw = TSMSensorPlot(plot_name, panel.axes)
+        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name])
         panel.add_plot(plotraw)
         sizer.Add(panel, 2, wx.ALL | wx.EXPAND, border=0)
 
@@ -280,7 +277,7 @@ class TestFrame(wx.Frame):
     def update_plots(self):
         data = self._monitor.get_parsed_data()
         data_list = list(data)
-        time = data_list[0]
+        time = data_list[0] / 60000
         for num in range(1, 11):
             self.readouts[num-1].label_value.SetLabel(data_list[num])
         self._plots_main[0].plot(data_list[1], time)
