@@ -278,7 +278,7 @@ class TestFrame(wx.Frame):
         data = self._monitor.get_parsed_data()
         data_list = list(data)
         time = data_list[0] / 60000
-        for num in range(1, 11):
+        for num in range(1, len(data_list)):
             self.readouts[num-1].label_value.SetLabel(data_list[num])
         self._plots_main[0].plot(data_list[1], time)
         self._plots_main[1].plot(data_list[8], time)
