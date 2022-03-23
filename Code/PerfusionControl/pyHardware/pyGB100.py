@@ -29,6 +29,8 @@ class GB100:
         sets gas for each channel
     stop_stream()
         stops recording of data
+    close_stream()
+        closes file
     """
 
     def __init__(self, name):
@@ -146,6 +148,9 @@ class GB100:
         self.set_gas_from_xml_file(2, gas2)
 
     def stop_stream(self):
+        pass
+
+    def close_stream(self):
         if self._fid_write:
             self._fid_write.close()
         self._fid_write = None

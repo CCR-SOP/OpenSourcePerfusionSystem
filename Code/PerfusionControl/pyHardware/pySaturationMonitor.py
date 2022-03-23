@@ -23,7 +23,9 @@ class TSMSerial(USBSerial):
     start_stream()
         starts thread for writing streamed data from CDI monitor to file
     stop_stream()
-        stops thread and recording of data
+        stops thread
+    close_stream()
+        closes file
     get_latest()
         returns latest sample from monitor, in string format
     """
@@ -131,6 +133,8 @@ class TSMSerial(USBSerial):
             self.__thread_streaming = None
         self._USBSerial__serial.flushInput()
         self._USBSerial__serial.flushOutput()
+
+    def close_stream(self):
         if self._fid_write:
             self._fid_write.close()
         self._fid_write = None
