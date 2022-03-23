@@ -62,21 +62,13 @@ class TSMPanelPlotting(wx.Panel):
     def __set_bindings(self):
         pass
 
-    def plot(self, value, time):
+    def plot(self, data, data_time):
         for plot in self._plots:
-            plot.plot(value, time)
+            plot.plot(data, data_time)
 
         self._axes.relim()
         self._axes.autoscale_view()
         self.canvas.draw()
-        self.show_legend()
-
-    def show_legend(self):
-        total_plots = len(self._plots)
-        ncols = total_plots if total_plots % 2 == 0 else total_plots + 1
-        if self._axes.lines:
-            self._axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
-                              borderaxespad=0, framealpha=0.0, fontsize='x-small')
 
     def add_plot(self, plot):
         self._plots.append(plot)
@@ -92,25 +84,24 @@ class TSMPanelPlotLT(TSMPanelPlotting):
         self.axes.set_xticklabels([])
 
 class TSMSensorPlot:
-    def __init__(self, plot_name, axes, readout=True):
+    def __init__(self, plot_name, axes, unit):
         self._lgr = logging.getLogger(__name__)
         self._plot_name = plot_name
         self._axes = axes
-        self._line = None
-        self._invalid = None
-        self._display = None
-        self._color = None
-        self._with_readout = readout
+        self._unit = unit
+        self._configure_plot()
 
     @property
     def full_name(self):
         return self._plot_name
 
-    def plot(self, value, time):
-        readout_color = 'black'
-        if value is None or len(value) == 0:
+    def plot(self, data, data_time):
+        if data is None:
             return
-        if time is None or len(time) == 0:
+        if data_time is None:
             return
-        if self._line is None:
-            self._line, = self._axes.plot(value, time, color='black', marker='o', xdate=True)
+        self._axes.plot(data_time, data, 'ko')
+
+    def _configure_plot(self):
+        self._axes.set_title(self._plot_name)
+        self._axes.set_ylabel(self._unit)
