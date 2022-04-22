@@ -122,7 +122,7 @@ def get_working_status():
 # MODULES FUNCTIONS - READ
 
 def __get_channel_base_address(channel_nr):
-	return ((channel_nr - 1) * 15) + 10
+ return ((channel_nr - 1) * 15) + 10
 
 
 ## Get channel firmware version
@@ -380,7 +380,6 @@ def set_gas_custom_from_xml_file(channel_nr, gas_id):
 
   response = mb.write_registers(instrument, address, values)
   return response
-
 
 # # todo ?
 # def set_custom_gas(channel_nr, gas_id, kfactor):
