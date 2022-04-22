@@ -246,6 +246,7 @@ class TSMPanelPlotting(wx.Panel):
         self._axes = self.fig.add_axes([0.05, 0.05, 0.9, 0.85])
         self._plots = []
         self._leg = []
+        self._x_range_minutes = None
 
         self.__do_layout()
         self.__set_bindings()
@@ -279,7 +280,11 @@ class TSMPanelPlotting(wx.Panel):
     def plot(self, data, data_time):
         for plot in self._plots:
             plot.plot(data, data_time)
-
+        current_upper_x_lim = data_time
+        if not self._x_range_minutes:
+            self._axes.set_xlim([0, current_upper_x_lim])
+        else:
+            self._axes.set_xlim([current_upper_x_lim - self._x_range_minutes, current_upper_x_lim])
         self._axes.relim()
         self._axes.autoscale_view()
         self.canvas.draw()
