@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 
 def get_gas_xml():
 	#print(os.getcwd())
-	tree = ET.parse('./mcqlib/Data.xml')
+	tree = ET.parse('./mcqlib_GB100/mcqlib/Data.xml')
 	gasItems = tree.findall("./gasTable/gasItem")
 
 	gasDictionary = {}
@@ -36,7 +36,7 @@ def get_gas_xml():
 
 def get_custom_gas_xml():
 	#print(os.getcwd())
-	tree = ET.parse('./mcqlib/CustomData.xml')
+	tree = ET.parse('./mcqlib_GB100/mcqlib/CustomData.xml')
 	gasItems = tree.findall("./gasItem")
 
 	gasDictionary = {}
@@ -56,7 +56,7 @@ def get_custom_gas_xml():
 
 def get_gas_type(gas_id):
 	#print(os.getcwd())
-	tree = ET.parse('./mcqlib/Data.xml')
+	tree = ET.parse('./mcqlib_GB100/mcqlib/Data.xml')
 	gasItems = tree.findall("./gasTable/gasItem")
 
 	gasDictionary = {}
