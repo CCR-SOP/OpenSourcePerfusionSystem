@@ -8,7 +8,7 @@ from . import modbus_helper as mb
 from serial import PARITY_NONE
 
 config = configparser.ConfigParser()
-config.read('./mcqlib/config.ini')
+config.read('./mcqlib_GB100/mcqlib/config.ini')
 # Serial Port configuration, taken from file config.ini
 serial_port = str(config['DEFAULT']['SerialPort'])
 serial_baud = int(config['DEFAULT']['SerialBaudrate'])
