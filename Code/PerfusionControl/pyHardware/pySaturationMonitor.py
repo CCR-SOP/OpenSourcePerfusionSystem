@@ -112,11 +112,11 @@ class TSMSerial(USBSerial):
         self.__thread_streaming.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(4):
+        while not self.__evt_halt_streaming.wait(4):  # Read new data every 4 seconds
             self.stream()
 
     def stream(self):
-        if self._USBSerial__serial.inWaiting() > 0:
+        if self._USBSerial__serial.inWaiting() > 0:  # Only read data if it is new
             ts_bytes = struct.pack('i', int(perf_counter() * 1000.0))
             data_raw = self._USBSerial__serial.readline()
             data_final = ts_bytes + data_raw
@@ -129,7 +129,7 @@ class TSMSerial(USBSerial):
         else:
             pass
 
-    def stop_stream(self):
+    def stop_stream(self): # Try stopping and restarting
         if self.__thread_streaming and self.__thread_streaming.is_alive():
             self.__evt_halt_streaming.set()
             self.__thread_streaming.join(2.0)
