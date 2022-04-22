@@ -246,3 +246,16 @@ class GB100:
 
     def set_channel_percent_value(self, channel, percent):
         main.set_channel_percent_value(channel, percent)
+
+    def setup_work(ch_balance, total_flow, perc_value=[]):
+        total_channels = main.get_total_channels()
+        # reset ch balance == 100
+        main.set_balance_channel(ch_balance)
+        main.set_channel_percent_value(ch_balance, 100.0)
+        # set perc_value
+        for i in range(len(perc_value)):
+            if i + 1 != ch_balance and i < total_channels:
+                main.set_channel_percent_value(i + 1, perc_value[i])
+        # set flow
+        main.set_mainboard_total_flow(total_flow)
+        return 0
