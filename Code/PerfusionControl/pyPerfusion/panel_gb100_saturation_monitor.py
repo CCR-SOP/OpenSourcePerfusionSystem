@@ -16,12 +16,12 @@ import pyPerfusion.PerfusionConfig as LP_CFG
 
 class PlotFrame(Enum):
     FROM_START = 0
-    LAST_30_SECONDS = 30_000
-    LAST_MINUTE = 60_000
-    Last_5_MINUTES = 300_000
-    LAST_15_MINUTES = 900_000
-    LAST_30_MINUTES = 1_800_000
-    LAST_HOUR = 3_600_000
+    LAST_30_SECONDS = 0.5
+    LAST_MINUTE = 1
+    Last_5_MINUTES = 5
+    LAST_15_MINUTES = 15
+    LAST_30_MINUTES = 30
+    LAST_HOUR = 60
 
 class TSMReadout(wx.Panel):
     def __init__(self, parent, label, unit):
@@ -149,6 +149,10 @@ class TestFrame(wx.Frame):
         parameters = [item.name for item in PlotFrame]
         choice = wx.Choice(self, choices=parameters)
         choice.SetStringSelection(self.__plot_frame.name)
+        for panel in self._plots_main:
+            panel._x_range_minutes = PlotFrame.LAST_MINUTE.value
+        for panel in self._plots_lt:
+            panel._x_range_minutes = PlotFrame.LAST_MINUTE.value
         font = choice.GetFont()
         font.SetPointSize(12)
         choice.SetFont(font)
@@ -219,9 +223,11 @@ class TestFrame(wx.Frame):
         self.btn_stream_TSM.Bind(wx.EVT_TOGGLEBUTTON, self.OnTSM)
 
     def _onchange_plotchoice(self, event):
-        self.__plot_frame = PlotFrame[self.choice_time.GetStringSelection()]
+        choice_time = PlotFrame[self.choice_time.GetStringSelection()]
         for plot in self._plots_main:
-            plot.plot_frame_ms = self.__plot_frame.value
+            plot._x_range_minutes = choice_time.value
+        for plot in self._plots_lt:
+            plot._x_range_minutes = choice_time.value
 
     def OnGB100(self, event):
         label = self.btn_stream_GB100.GetLabel()
@@ -288,14 +294,14 @@ class TestFrame(wx.Frame):
             self.update_gas_mix(data_list[8], data_list[1], data_list[2], data_list[3])
 
     def update_gas_mix(self, o2_saturation, pH, pCO2, pO2):
-        print(o2_saturation)
-        print(type(o2_saturation))
-        print(pH)
-        print(type(pH))
-        print(pCO2)
-        print(type(pCO2))
-        print(pO2)
-        print(type(pO2))
+        # o2_saturation = float(o2_saturation)
+        pH = float(pH)
+        # pCO2 = float(pCO2)
+        # pO2 = float(pO2)
+        if pH > 7:
+            pass
+        else:
+            pass
 
     def OnClose(self, evt):
         self._monitor.stop_stream()
