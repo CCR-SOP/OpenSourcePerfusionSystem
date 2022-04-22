@@ -78,17 +78,16 @@ class TestFrame(wx.Frame):
         self._monitor.open_stream(LP_PATH)
         self._labels = {'Time': '', 'Arterial pH': 'units', 'Arterial pCO2': 'mmHg', 'Arterial pO2': 'mmHg', 'Arterial Temperature': 'C', 'Arterial Bicarbonate': 'mmol/L', 'Arterial BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
 
-        self.sizer_main = wx.BoxSizer(wx.HORIZONTAL)
-
-        self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)
+        self.sizer_main = wx.BoxSizer(wx.HORIZONTAL)  # Main sizer
+        self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)  # Grid which will be added to main sizer
         self.sizer_plots = []  # List of sizers, one for each plot set (big + small)
-        self._plots_main = []  # List of TSMPanelPlotting objects; each associated w/a TSMSensorPlot object
-        self._plots_lt = []  # List of TSMPanelPlotLT objects; each associated w/a TSMSensorPlot object
+        self._plots_main = []  # List of TSMPanelPlotting objects; each associated w/a TSMSensorPlot object (which is also associated w/a TSMPanelPlotLT object)
+        self._plots_lt = []  # List of TSMPanelPlotLT objects; each associated w/a TSMSensorPlot object (which is also associated w/a TSMPanelPlotting object)
 
         for plot_name in ['Arterial pH', 'O2 Saturation', 'Arterial pO2', 'Arterial pCO2']:
             self.sizer_plots.append(self._add_lt(plot_name))
 
-        self.sizer_readout = wx.GridSizer(cols=1)
+        self.sizer_readout = wx.GridSizer(cols=1)  # Size for all readouts, buttons, etc.
         self.sizer_config = wx.BoxSizer(wx.VERTICAL)
         self.sizer_gas_config = wx.BoxSizer(wx.VERTICAL)
         self.sizer_balance = wx.BoxSizer(wx.HORIZONTAL)
@@ -129,20 +128,19 @@ class TestFrame(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
-    def _add_lt(self, plot_name):
+    def _add_lt(self, plot_name):  # Adds a large and small plot for each sizer
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         panel = TSMPanelPlotting(self)
         self._plots_main.append(panel)
-        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name])
+        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name])  # Adds sensor to plot
         panel.add_plot(plotraw)
-        sizer.Add(panel, 10, wx.ALL | wx.EXPAND, border=0)
+        sizer.Add(panel, 9, wx.ALL | wx.EXPAND, border=0)
 
         panel = TSMPanelPlotLT(self)
         self._plots_lt.append(panel)
         panel.plot_frame_ms = -1
-        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name])
-        panel.add_plot(plotraw)
+        panel.add_plot(plotraw)  # Adds sensor created above to plot
         sizer.Add(panel, 2, wx.ALL | wx.EXPAND, border=0)
 
         return sizer
@@ -158,19 +156,19 @@ class TestFrame(wx.Frame):
 
     def __do_layout(self):
         for plot in self.sizer_plots:
-            self.sizer_plot_grid.Add(plot, 1, wx.ALL | wx.EXPAND)
+            self.sizer_plot_grid.Add(plot, 1, wx.ALL | wx.EXPAND)  # Adding each large/small graph panel to grid
 
-        self.sizer_main.Add(self.sizer_plot_grid, 1, wx.ALL | wx.EXPAND)
+        self.sizer_main.Add(self.sizer_plot_grid, 1, wx.ALL | wx.EXPAND)  # Adding grid to main sizer
 
         self.readouts = []
         for label in self._labels:
             if label != 'Time':
                 readout = TSMReadout(self, label, self._labels[label])
                 self.readouts.append(readout)
-                self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
+                self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)  # Adding each readout panel to main readout panel
 
         self.sizer_config.Add(self.label_choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
-        self.sizer_config.Add(self.choice_time, 1, wx.ALL)
+        self.sizer_config.Add(self.choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
 
         self.sizer_balance.Add(self.label_balance)
         self.sizer_balance.AddSpacer(3)
@@ -197,17 +195,15 @@ class TestFrame(wx.Frame):
         self.sizer_gas_config.Add(self.sizer_gas2_percentage)
         self.sizer_gas_config.Add(self.sizer_flow)
 
-        self.sizer_start_streams.Add(self.btn_stream_GB100, 1, wx.ALL)
+        self.sizer_start_streams.Add(self.btn_stream_GB100, 1, wx.ALL | wx.EXPAND, border=1)
         self.sizer_start_streams.AddSpacer(5)
-        self.sizer_start_streams.Add(self.btn_stream_TSM, 1, wx.ALL)
+        self.sizer_start_streams.Add(self.btn_stream_TSM, 1, wx.ALL | wx.EXPAND, border=1)
 
-        self.sizer_readout.AddSpacer(5)
-        self.sizer_readout.Add(self.sizer_config, 1, wx.ALL)
-        self.sizer_readout.AddSpacer(5)
+        self.sizer_readout.Add(self.sizer_config, 1, wx.ALL | wx.ALIGN_CENTER)  # Adding buttons and such to readout panel, which already has individual readout panels
         self.sizer_readout.Add(self.sizer_gas_config, 1, wx.ALL)
-        self.sizer_readout.AddSpacer(5)
-        self.sizer_readout.Add(self.sizer_start_streams, 1, wx.ALL)
-        self.sizer_main.Add(self.sizer_readout)
+        self.sizer_readout.AddSpacer(2)
+        self.sizer_readout.Add(self.sizer_start_streams, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_main.Add(self.sizer_readout)  # Adding readout sizer to main sizer
         self.SetSizer(self.sizer_main)
 
         self.Fit()
@@ -229,18 +225,18 @@ class TestFrame(wx.Frame):
 
     def OnGB100(self, event):
         label = self.btn_stream_GB100.GetLabel()
-        gas1 = self._mixer.get_gas_ID((self.choice_gas1.GetStringSelection()))
-        gas2 = self._mixer.get_gas_ID((self.choice_gas2.GetStringSelection()))
         balance = float(self.choice_balance.GetStringSelection())
         if label == 'Start Gas Mixer':
             self.btn_stream_GB100.SetLabel('Stop Gas Mixer')
             self._mixer.start_stream()
+            self.choice_balance.Enable(False)
             self.choice_gas1.Enable(False)
             self.spin_gas1_percentage.Enable(False)
             self.choice_gas2.Enable(False)
             self.spin_gas2_percentage.Enable(False)
             self.spin_total_flow.Enable(False)
-            self.choice_balance.Enable(False)
+            gas1 = self._mixer.get_gas_ID((self.choice_gas1.GetStringSelection()))
+            gas2 = self._mixer.get_gas_ID((self.choice_gas2.GetStringSelection()))
             gas1_percentage = self.spin_gas1_percentage.GetValue()
             gas2_percentage = self.spin_gas2_percentage.GetValue()
             flow = int(self.spin_total_flow.GetValue())
@@ -248,12 +244,12 @@ class TestFrame(wx.Frame):
         elif label == 'Stop Gas Mixer':
             self.btn_stream_GB100.SetLabel('Start Gas Mixer')
             self._mixer.stop_stream()
+            self.choice_balance.Enable(True)
             self.choice_gas1.Enable(True)
             self.spin_gas1_percentage.Enable(True)
             self.choice_gas2.Enable(True)
             self.spin_gas2_percentage.Enable(True)
             self.spin_total_flow.Enable(True)
-            self.choice_balance.Enable(True)
             gas1_percentage = self._mixer.get_channel_percent_value(1)
             gas2_percentage = self._mixer.get_channel_percent_value(2)
             flow = self._mixer.get_mainboard_total_flow()
@@ -277,22 +273,29 @@ class TestFrame(wx.Frame):
     def update_plots(self):
         data = self._monitor.get_parsed_data()
         data_list = list(data)
-        time = data_list[0] / 60000
-        for num in range(1, len(data_list)):
+        time = data_list[0] / 60000  # Gives time in minutes
+        for num in range(1, len(data_list)):  # Updating readouts
             self.readouts[num-1].label_value.SetLabel(data_list[num])
         self._plots_main[0].plot(data_list[1], time)
-        self._plots_main[1].plot(data_list[8], time)
-        self._plots_main[2].plot(data_list[3], time)
-        self._plots_main[3].plot(data_list[2], time)
+   #     self._plots_main[1].plot(data_list[8], time)
+   #     self._plots_main[2].plot(data_list[3], time)
+   #     self._plots_main[3].plot(data_list[2], time)
         self._plots_lt[0].plot(data_list[1], time)
-        self._plots_lt[1].plot(data_list[8], time)
-        self._plots_lt[2].plot(data_list[3], time)
-        self._plots_lt[3].plot(data_list[2], time)
+   #     self._plots_lt[1].plot(data_list[8], time)
+   #     self._plots_lt[2].plot(data_list[3], time)
+   #     self._plots_lt[3].plot(data_list[2], time)
         if self._mixer.get_working_status:
             self.update_gas_mix(data_list[8], data_list[1], data_list[2], data_list[3])
 
     def update_gas_mix(self, o2_saturation, pH, pCO2, pO2):
-        pass
+        print(o2_saturation)
+        print(type(o2_saturation))
+        print(pH)
+        print(type(pH))
+        print(pCO2)
+        print(type(pCO2))
+        print(pO2)
+        print(type(pO2))
 
     def OnClose(self, evt):
         self._monitor.stop_stream()
