@@ -122,9 +122,9 @@ class GB100:
             self.set_gas_types(gas1, gas2)
         if balance_channel is not None:
             self.set_balance_channel(balance_channel)
+        self.set_mainboard_total_flow(total_flow)
         self.set_channel_percent_value(1, gas_1_percentage)
         self.set_channel_percent_value(2, gas_2_percentage)
-        self.set_mainboard_total_flow(total_flow)
         if working_status:  # If you want to start the gas flow
             if not self.get_working_status():  # Only start if mixer is currently off; or else this is redundant
                 self.set_working_status_ON()
