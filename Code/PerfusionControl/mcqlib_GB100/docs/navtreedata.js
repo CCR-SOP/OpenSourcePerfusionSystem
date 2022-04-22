@@ -24,7 +24,7 @@
 */
 var NAVTREE =
 [
-  [ "McqLib", "index.html", [
+  [ "McqLib 0.2", "index.html", [
     [ "Files", "files.html", [
       [ "File List", "files.html", "files_dup" ]
     ] ]

@@ -16,7 +16,7 @@ import xml.etree.ElementTree as ET
 
 def get_gas_xml():
 	#print(os.getcwd())
-	tree = ET.parse('./mcqlib_GB100/mcqlib/Data.xml')
+	tree = ET.parse('./mcqlib/Data.xml')
 	gasItems = tree.findall("./gasTable/gasItem")
 
 	gasDictionary = {}
@@ -36,7 +36,7 @@ def get_gas_xml():
 
 def get_custom_gas_xml():
 	#print(os.getcwd())
-	tree = ET.parse('./mcqlib_GB100/mcqlib/CustomData.xml')
+	tree = ET.parse('./mcqlib/CustomData.xml')
 	gasItems = tree.findall("./gasItem")
 
 	gasDictionary = {}
@@ -56,7 +56,7 @@ def get_custom_gas_xml():
 
 def get_gas_type(gas_id):
 	#print(os.getcwd())
-	tree = ET.parse('./mcqlib_GB100/mcqlib/Data.xml')
+	tree = ET.parse('./mcqlib/Data.xml')
 	gasItems = tree.findall("./gasTable/gasItem")
 
 	gasDictionary = {}
@@ -79,11 +79,11 @@ def get_gas_type(gas_id):
 
 # rappresentazione binaria di decimale
 def dec_to_bin(x):
-	return int(bin(x)[2:])
+  return int(bin(x)[2:])
 
 # rappresentazione decimale di binario
 def bin_to_dec(x):
-	return int(x,2)
+  return int(x,2)
 		
 #nel file XML i float sono salvati con separatore decimale (,)
 def get_float(x):		

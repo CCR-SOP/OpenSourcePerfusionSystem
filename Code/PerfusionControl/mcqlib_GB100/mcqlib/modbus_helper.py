@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 import socket
-# import mcq_utils
-import time
-import random
-import os
-import sys
+#import mcq_utils
+import time, random, os, sys
 import minimalmodbus
 
 debug_mode = False
