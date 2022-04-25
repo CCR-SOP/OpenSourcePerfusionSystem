@@ -56,38 +56,32 @@ class TSMReadout(wx.Panel):
         self.Layout()
         self.Fit()
 
-class TestFrame(wx.Frame):
-    def __init__(self, *args, **kwds):
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, *args, **kwds)
-        self.__plot_frame = PlotFrame.LAST_MINUTE
-
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
+class PanelPGB100SaturationMonitor(wx.Panel):
+    def __init__(self, parent, mixer, monitor, labels, graphs_ranges, gas_parameters, name):
         self._logger = logging.getLogger(__name__)
         utils.setup_stream_logger(self._logger, logging.DEBUG)
         utils.configure_matplotlib_logging()
+        self.parent = parent
+        self._mixer = mixer
+        self._monitor = monitor
+        self._labels = labels
+        self._graphs_ranges = graphs_ranges
+        self._gas_parameters = gas_parameters
+        self._name = name
+        self.__plot_frame = PlotFrame.LAST_MINUTE
 
-        self._mixer = GB100('GB100')
-        self._mixer.open()
-        LP_PATH = Path(os.path.expanduser('~')) / 'Documents/LPTEST/LiverPerfusion/data/Gas Mixer Stream'
-        self._mixer.open_stream(LP_PATH)
-        self._monitor = TSMSerial('CDI Monitor')
-        self._monitor.open('COM17', 9600, 8, 'N', 1)
-        LP_PATH = Path(os.path.expanduser('~')) / 'Documents/LPTEST/LiverPerfusion/data/CDI Stream'
-        self._monitor.open_stream(LP_PATH)
-        self._labels = {'Time': '', 'Arterial pH': 'units', 'Arterial pCO2': 'mmHg', 'Arterial pO2': 'mmHg', 'Arterial Temperature': 'C', 'Arterial Bicarbonate': 'mmol/L', 'Arterial BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
+        wx.Panel.__init__(self, parent, -1)
 
-        self.sizer_main = wx.BoxSizer(wx.HORIZONTAL)  # Main sizer
-        self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)  # Grid which will be added to main sizer
-        self.sizer_plots = []  # List of sizers, one for each plot set (big + small)
-        self._plots_main = []  # List of TSMPanelPlotting objects; each associated w/a TSMSensorPlot object (which is also associated w/a TSMPanelPlotLT object)
-        self._plots_lt = []  # List of TSMPanelPlotLT objects; each associated w/a TSMSensorPlot object (which is also associated w/a TSMPanelPlotting object)
+        self.sizer_main = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_plot_grid = wx.GridSizer(cols=2, hgap=5, vgap=5)
+        self.sizer_plots = []
+        self._plots_main = []
+        self._plots_lt = []
 
-        for key, value in {'Arterial pH': [7.35, 7.45], 'O2 Saturation': [80, 87], 'Arterial pO2': [40, 60], 'Arterial pCO2': [30, 40]}.items():
+        for key, value in self._graphs_ranges.items():
             self.sizer_plots.append(self._add_lt(key, value))
 
-        self.sizer_readout = wx.GridSizer(cols=1)  # Size for all readouts, buttons, etc.
+        self.sizer_readout = wx.GridSizer(cols=1)
         self.sizer_config = wx.BoxSizer(wx.VERTICAL)
         self.sizer_gas_config = wx.BoxSizer(wx.VERTICAL)
         self.sizer_balance = wx.BoxSizer(wx.HORIZONTAL)
@@ -100,11 +94,10 @@ class TestFrame(wx.Frame):
         self.choice_time = self._create_choice_time()
         self.label_choice_time = wx.StaticText(self, label='Display Window')
 
-        parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
-        self.choice_gas1 = wx.Choice(self, choices=parameters)
-        self.choice_gas1.SetStringSelection(parameters[2])
-        self.choice_gas2 = wx.Choice(self, choices=parameters)
-        self.choice_gas2.SetStringSelection(parameters[1])
+        self.choice_gas1 = wx.Choice(self, choices=self._gas_parameters)
+        self.choice_gas1.SetStringSelection(self._gas_parameters[2])
+        self.choice_gas2 = wx.Choice(self, choices=self._gas_parameters)
+        self.choice_gas2.SetStringSelection(self._gas_parameters[1])
 
         parameters = ['1', '2']
         self.choice_balance = wx.Choice(self, choices=parameters)
@@ -126,14 +119,12 @@ class TestFrame(wx.Frame):
         self.__do_layout()
         self.__set_bindings()
 
-        self.Bind(wx.EVT_CLOSE, self.OnClose)
-
-    def _add_lt(self, plot_name, valid_range):  # Adds a large and small plot for each sizer
+    def _add_lt(self, plot_name, valid_range):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         panel = TSMPanelPlotting(self)
         self._plots_main.append(panel)
-        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name], valid_range)  # Adds sensor to plot
+        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name], valid_range)
         panel.add_plot(plotraw)
         sizer.Add(panel, 9, wx.ALL | wx.EXPAND, border=0)
 
@@ -158,16 +149,16 @@ class TestFrame(wx.Frame):
 
     def __do_layout(self):
         for plot in self.sizer_plots:
-            self.sizer_plot_grid.Add(plot, 1, wx.ALL | wx.EXPAND)  # Adding each large/small graph panel to grid
+            self.sizer_plot_grid.Add(plot, 1, wx.ALL | wx.EXPAND)
 
-        self.sizer_main.Add(self.sizer_plot_grid, 1, wx.ALL | wx.EXPAND)  # Adding grid to main sizer
+        self.sizer_main.Add(self.sizer_plot_grid, 1, wx.ALL | wx.EXPAND)
 
         self.readouts = []
         for label in self._labels:
             if label != 'Time':
                 readout = TSMReadout(self, label, self._labels[label])
                 self.readouts.append(readout)
-                self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)  # Adding each readout panel to main readout panel
+                self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.sizer_config.Add(self.label_choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
         self.sizer_config.Add(self.choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
@@ -201,16 +192,15 @@ class TestFrame(wx.Frame):
         self.sizer_start_streams.AddSpacer(5)
         self.sizer_start_streams.Add(self.btn_stream_TSM, 1, wx.ALL | wx.EXPAND, border=1)
 
-        self.sizer_readout.Add(self.sizer_config, 1, wx.ALL | wx.ALIGN_CENTER)  # Adding buttons and such to readout panel, which already has individual readout panels
+        self.sizer_readout.Add(self.sizer_config, 1, wx.ALL | wx.ALIGN_CENTER)
         self.sizer_readout.Add(self.sizer_gas_config, 1, wx.ALL)
         self.sizer_readout.AddSpacer(2)
         self.sizer_readout.Add(self.sizer_start_streams, 1, wx.ALL | wx.EXPAND, border=1)
-        self.sizer_main.Add(self.sizer_readout)  # Adding readout sizer to main sizer
+        self.sizer_main.Add(self.sizer_readout)
         self.SetSizer(self.sizer_main)
 
         self.Fit()
         self.Layout()
-        self.Maximize(True)
 
         self.timer_update_CDI = wx.Timer(self, id=1)
         self.Bind(wx.EVT_TIMER, self.OnCDITimer, id=1)
@@ -342,8 +332,8 @@ class TestFrame(wx.Frame):
         data = self._monitor.get_parsed_data()
         data_list = list(data)
         time = data_list[0] / 60000  # Gives time in minutes
-        for num in range(1, len(data_list)):  # Updating readouts
-            self.readouts[num-1].label_value.SetLabel(data_list[num])
+        for num in range(1, len(data_list)):
+            self.readouts[num - 1].label_value.SetLabel(data_list[num])
         values = self.get_label_values()
         if values[0]:
             self._plots_main[0].plot(data_list[1], time)
@@ -358,20 +348,44 @@ class TestFrame(wx.Frame):
             self._plots_main[1].plot(data_list[8], time)
             self._plots_lt[1].plot(data_list[8], time)
 
+class TestFrame(wx.Frame):
+    def __init__(self, *args, **kwds):
+        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
+        wx.Frame.__init__(self, *args, **kwds)
+
+        self.mixer = GB100('GB100')
+        self.mixer.open()
+        LP_PATH = Path(os.path.expanduser('~')) / 'Documents/LPTEST/LiverPerfusion/data/Gas Mixer Stream'
+        self.mixer.open_stream(LP_PATH)
+        self.monitor = TSMSerial('CDI Monitor')
+        self.monitor.open('COM17', 9600, 8, 'N', 1)
+        LP_PATH = Path(os.path.expanduser('~')) / 'Documents/LPTEST/LiverPerfusion/data/CDI Stream'
+        self.monitor.open_stream(LP_PATH)
+        self.labels = {'Time': '', 'Arterial pH': 'units', 'Arterial pCO2': 'mmHg', 'Arterial pO2': 'mmHg', 'Arterial Temperature': 'C', 'Arterial Bicarbonate': 'mmol/L', 'Arterial BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
+        self.graphs_ranges = {'Arterial pH': [7.35, 7.45], 'O2 Saturation': [80, 87], 'Arterial pO2': [40, 60], 'Arterial pCO2': [30, 40]}
+        self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
+        self.name = 'GB100 CDI Panel'
+
+        panel_GB100_CDI = PanelPGB100SaturationMonitor(self, self.mixer, self.monitor, self.labels, self.graphs_ranges, self.gas_parameters, self.name)
+        sizer = wx.GridSizer(cols=1)
+        sizer.Add(panel_GB100_CDI, 1, wx.EXPAND, border=2)
+
+        self.SetSizer(sizer)
+        self.Fit()
+        self.Layout()
+        self.Maximize(True)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
     def OnClose(self, evt):
-        self._monitor.stop_stream()
-        self._monitor.close_stream()
-        if self._mixer.get_working_status():
-            gas1_percentage = self._mixer.get_channel_percent_value(1)
-            gas2_percentage = self._mixer.get_channel_percent_value(2)
-            flow = self._mixer.get_mainboard_total_flow()
-            self._mixer.change_gas_mix(gas1_percentage,  gas2_percentage, flow, 0)
-        self._mixer.stop_stream()
-        self._mixer.close_stream()
-        for plot in self._plots_main:
-            plot.Destroy()
-        for plot in self._plots_lt:
-            plot.Destroy()
+        self.monitor.stop_stream()
+        self.monitor.close_stream()
+        if self.mixer.get_working_status():
+            gas1_percentage = self.mixer.get_channel_percent_value(1)
+            gas2_percentage = self.mixer.get_channel_percent_value(2)
+            flow = self.mixer.get_mainboard_total_flow()
+            self.mixer.change_gas_mix(gas1_percentage,  gas2_percentage, flow, 0)
+        self.mixer.stop_stream()
+        self.mixer.close_stream()
         self.Destroy()
 
 class MyTestApp(wx.App):
@@ -382,5 +396,8 @@ class MyTestApp(wx.App):
         return True
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
+    utils.setup_default_logging(filename='panel_gb100_saturation_monitor')
     app = MyTestApp(0)
     app.MainLoop()
