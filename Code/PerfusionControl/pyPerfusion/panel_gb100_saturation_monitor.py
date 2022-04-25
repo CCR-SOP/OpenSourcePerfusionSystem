@@ -214,8 +214,11 @@ class TestFrame(wx.Frame):
         self.Layout()
         self.Maximize(True)
 
-        self.timer_update = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimer)
+        self.timer_update_CDI = wx.Timer(self, id=1)
+        self.Bind(wx.EVT_TIMER, self.OnCDITimer, id=1)
+
+        self.timer_update_GB100 = wx.Timer(self, id=2)
+        self.Bind(wx.EVT_TIMER, self.OnGB100Timer, id=2)
 
     def __set_bindings(self):
         self.choice_time.Bind(wx.EVT_CHOICE, self._onchange_plotchoice)
@@ -247,8 +250,10 @@ class TestFrame(wx.Frame):
             gas2_percentage = self.spin_gas2_percentage.GetValue()
             flow = int(self.spin_total_flow.GetValue())
             self._mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 1, gas1=gas1, gas2=gas2, balance_channel=balance)
+            self.timer_update_GB100.Start(10000, wx.TIMER_CONTINUOUS)
         elif label == 'Stop Gas Mixer':
             self.btn_stream_GB100.SetLabel('Start Gas Mixer')
+            self.timer_update_GB100.Stop()
             self._mixer.stop_stream()
             self.choice_balance.Enable(True)
             self.choice_gas1.Enable(True)
@@ -266,15 +271,66 @@ class TestFrame(wx.Frame):
         if label == 'Start CDI Monitor':
             self.btn_stream_TSM.SetLabel('Stop CDI Monitor')
             self._monitor.start_stream()
-            self.timer_update.Start(6000, wx.TIMER_CONTINUOUS)
+            self.timer_update_CDI.Start(6000, wx.TIMER_CONTINUOUS)
         elif label == 'Stop CDI Monitor':
             self.btn_stream_TSM.SetLabel('Start CDI Monitor')
             self._monitor.stop_stream()
-            self.timer_update.Stop()
+            self.timer_update_CDI.Stop()
 
-    def OnTimer(self, event):
-        if event.GetId() == self.timer_update.GetId():
+    def OnGB100Timer(self, event):
+        if event.GetId() == self.timer_update_GB100.GetId():
+            self.update_gas_mix()
+
+    def OnCDITimer(self, event):
+        if event.GetId() == self.timer_update_CDI.GetId():
             self.update_plots()
+
+    def update_gas_mix(self):
+        str_pH = self.readouts[0].label_value.GetLabel()
+        str_pCO2 = self.readouts[1].label_value.GetLabel()
+        str_sO2 = self.readouts[7].label_value.GetLabel()
+        pH = self.is_value_empty(str_pH)
+        pCO2 = self.is_value_empty(str_pCO2)
+        sO2 = self.is_value_empty(str_sO2)
+        current_flow = self._mixer.get_mainboard_total_flow()
+        new_gas_flow = current_flow
+        new_channel_1_percentage = self._mixer.get_channel_percent_value(1)
+        new_channel_2_percentage = self._mixer.get_channel_percent_value(2)
+        channel1_gas_ID = self._mixer.get_channel_id_gas(1)
+        if pCO2:
+            if pCO2 > 45:
+                new_gas_flow = current_flow + 4
+            elif pCO2 < 25:
+                new_gas_flow = current_flow - 4
+        if pH:
+            if pH < 7.35:
+                new_gas_flow = new_gas_flow + 6
+            elif pH > 7.45:
+                new_gas_flow = new_gas_flow - 6
+        if sO2 and sO2 > 87:
+            if channel1_gas_ID == 2:
+                new_channel_1_percentage = self._mixer.get_channel_percent_value(1) + 1
+                new_channel_2_percentage = self._mixer.get_channel_percent_value(2) - 1
+            elif channel1_gas_ID == 3:
+                new_channel_1_percentage = self._mixer.get_channel_percent_value(1) - 1
+                new_channel_2_percentage = self._mixer.get_channel_percent_value(2) + 1
+        elif sO2 and sO2 < 80:
+            if channel1_gas_ID == 2:
+                new_channel_1_percentage = self._mixer.get_channel_percent_value(1) - 1
+                new_channel_2_percentage = self._mixer.get_channel_percent_value(2) + 1
+            elif channel1_gas_ID == 3:
+                new_channel_1_percentage = self._mixer.get_channel_percent_value(1) + 1
+                new_channel_2_percentage = self._mixer.get_channel_percent_value(2) - 1
+        if new_gas_flow == current_flow and new_channel_1_percentage == self._mixer.get_channel_percent_value(1) and new_channel_2_percentage == self._mixer.get_channel_percent_value(2):
+            return
+        else:
+            self._mixer.change_gas_mix(new_channel_1_percentage, new_channel_2_percentage, new_gas_flow, 1)
+
+    def is_value_empty(self, value):
+        if value == '000' or value == ' ---' or value == ' -- ' or value == ' -.-':
+            return []
+        else:
+            return float(value)
 
     def update_plots(self):
         data = self._monitor.get_parsed_data()
@@ -290,22 +346,15 @@ class TestFrame(wx.Frame):
    #     self._plots_lt[1].plot(data_list[8], time)
    #     self._plots_lt[2].plot(data_list[3], time)
    #     self._plots_lt[3].plot(data_list[2], time)
-        if self._mixer.get_working_status:
-            self.update_gas_mix(data_list[8], data_list[1], data_list[2], data_list[3])
-
-    def update_gas_mix(self, o2_saturation, pH, pCO2, pO2):
-        # o2_saturation = float(o2_saturation)
-        pH = float(pH)
-        # pCO2 = float(pCO2)
-        # pO2 = float(pO2)
-        if pH > 7:
-            pass
-        else:
-            pass
 
     def OnClose(self, evt):
         self._monitor.stop_stream()
         self._monitor.close_stream()
+        if self._mixer.get_working_status():
+            gas1_percentage = self._mixer.get_channel_percent_value(1)
+            gas2_percentage = self._mixer.get_channel_percent_value(2)
+            flow = self._mixer.get_mainboard_total_flow()
+            self._mixer.change_gas_mix(gas1_percentage,  gas2_percentage, flow, 0)
         self._mixer.stop_stream()
         self._mixer.close_stream()
         for plot in self._plots_main:
