@@ -139,8 +139,8 @@ class TestFrame(wx.Frame):
 
         panel = TSMPanelPlotLT(self)
         self._plots_lt.append(panel)
-        panel.plot_frame_ms = -1
-        panel.add_plot(plotraw)  # Adds sensor created above to plot
+        plotraw = TSMSensorPlot('', panel.axes, '')
+        panel.add_plot(plotraw)
         sizer.Add(panel, 2, wx.ALL | wx.EXPAND, border=0)
 
         return sizer
@@ -150,8 +150,6 @@ class TestFrame(wx.Frame):
         choice = wx.Choice(self, choices=parameters)
         choice.SetStringSelection(self.__plot_frame.name)
         for panel in self._plots_main:
-            panel._x_range_minutes = PlotFrame.LAST_MINUTE.value
-        for panel in self._plots_lt:
             panel._x_range_minutes = PlotFrame.LAST_MINUTE.value
         font = choice.GetFont()
         font.SetPointSize(12)
@@ -228,8 +226,6 @@ class TestFrame(wx.Frame):
     def _onchange_plotchoice(self, event):
         choice_time = PlotFrame[self.choice_time.GetStringSelection()]
         for plot in self._plots_main:
-            plot._x_range_minutes = choice_time.value
-        for plot in self._plots_lt:
             plot._x_range_minutes = choice_time.value
 
     def OnGB100(self, event):
