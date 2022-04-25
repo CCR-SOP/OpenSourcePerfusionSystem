@@ -355,12 +355,10 @@ class TestFrame(wx.Frame):
 
         self.mixer = GB100('GB100')
         self.mixer.open()
-        LP_PATH = Path(os.path.expanduser('~')) / 'Documents/LPTEST/LiverPerfusion/data/Gas Mixer Stream'
-        self.mixer.open_stream(LP_PATH)
+        self.mixer.open_stream(LP_CFG.LP_PATH['stream'])
         self.monitor = TSMSerial('CDI Monitor')
         self.monitor.open('COM17', 9600, 8, 'N', 1)
-        LP_PATH = Path(os.path.expanduser('~')) / 'Documents/LPTEST/LiverPerfusion/data/CDI Stream'
-        self.monitor.open_stream(LP_PATH)
+        self.monitor.open_stream(LP_CFG.LP_PATH['stream'])
         self.labels = {'Time': '', 'Arterial pH': 'units', 'Arterial pCO2': 'mmHg', 'Arterial pO2': 'mmHg', 'Arterial Temperature': 'C', 'Arterial Bicarbonate': 'mmol/L', 'Arterial BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
         self.graphs_ranges = {'Arterial pH': [7.35, 7.45], 'O2 Saturation': [80, 87], 'Arterial pO2': [40, 60], 'Arterial pCO2': [30, 40]}
         self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
