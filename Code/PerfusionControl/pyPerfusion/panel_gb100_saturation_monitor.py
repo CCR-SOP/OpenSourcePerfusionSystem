@@ -84,8 +84,8 @@ class TestFrame(wx.Frame):
         self._plots_main = []  # List of TSMPanelPlotting objects; each associated w/a TSMSensorPlot object (which is also associated w/a TSMPanelPlotLT object)
         self._plots_lt = []  # List of TSMPanelPlotLT objects; each associated w/a TSMSensorPlot object (which is also associated w/a TSMPanelPlotting object)
 
-        for plot_name in ['Arterial pH', 'O2 Saturation', 'Arterial pO2', 'Arterial pCO2']:
-            self.sizer_plots.append(self._add_lt(plot_name))
+        for key, value in {'Arterial pH': [7.35, 7.45], 'O2 Saturation': [80, 87], 'Arterial pO2': [40, 60], 'Arterial pCO2': [30, 40]}.items():
+            self.sizer_plots.append(self._add_lt(key, value))
 
         self.sizer_readout = wx.GridSizer(cols=1)  # Size for all readouts, buttons, etc.
         self.sizer_config = wx.BoxSizer(wx.VERTICAL)
@@ -128,18 +128,18 @@ class TestFrame(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
-    def _add_lt(self, plot_name):  # Adds a large and small plot for each sizer
+    def _add_lt(self, plot_name, valid_range):  # Adds a large and small plot for each sizer
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         panel = TSMPanelPlotting(self)
         self._plots_main.append(panel)
-        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name])  # Adds sensor to plot
+        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name], valid_range)  # Adds sensor to plot
         panel.add_plot(plotraw)
         sizer.Add(panel, 9, wx.ALL | wx.EXPAND, border=0)
 
         panel = TSMPanelPlotLT(self)
         self._plots_lt.append(panel)
-        plotraw = TSMSensorPlot('', panel.axes, '')
+        plotraw = TSMSensorPlot('', panel.axes, '', valid_range)
         panel.add_plot(plotraw)
         sizer.Add(panel, 2, wx.ALL | wx.EXPAND, border=0)
 
@@ -294,7 +294,7 @@ class TestFrame(wx.Frame):
         new_channel_1_percentage = self._mixer.get_channel_percent_value(1)
         new_channel_2_percentage = self._mixer.get_channel_percent_value(2)
         channel1_gas_ID = self._mixer.get_channel_id_gas(1)
-        if pCO2 and self._monitor._TSMSerial__thread_streaming: # Check if new data is being streamed by the CDI; if not, don't update gas mix
+        if pCO2 and self._monitor._TSMSerial__thread_streaming:  # Check if new data is being streamed by the CDI; if not, don't update gas mix
             if pCO2 > 45:
                 new_gas_flow = current_flow + 4
             elif pCO2 < 25:

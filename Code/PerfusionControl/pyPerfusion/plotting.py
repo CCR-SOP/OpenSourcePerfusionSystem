@@ -97,11 +97,12 @@ class SensorPlot:
             self._axes.set_ylabel(self._sensor.unit_str)
 
 class TSMSensorPlot:
-    def __init__(self, plot_name, axes, unit):
+    def __init__(self, plot_name, axes, unit, valid_range):
         self._lgr = logging.getLogger(__name__)
         self._plot_name = plot_name
         self._axes = axes
         self._unit = unit
+        self._valid_range = valid_range
         self._configure_plot()
 
     @property
@@ -118,6 +119,9 @@ class TSMSensorPlot:
     def _configure_plot(self):
         self._axes.set_title(self._plot_name)
         self._axes.set_ylabel(self._unit)
+        if self._valid_range is not None:
+            rng = self._valid_range
+            self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
 
 class EventPlot(SensorPlot):
     def __init__(self, sensor, axes, readout=True):
