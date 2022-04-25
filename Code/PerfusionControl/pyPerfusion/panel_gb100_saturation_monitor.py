@@ -300,30 +300,31 @@ class TestFrame(wx.Frame):
         new_channel_1_percentage = self._mixer.get_channel_percent_value(1)
         new_channel_2_percentage = self._mixer.get_channel_percent_value(2)
         channel1_gas_ID = self._mixer.get_channel_id_gas(1)
-        if pCO2:
+        if pCO2 and self._monitor._TSMSerial__thread_streaming: # Check if new data is being streamed by the CDI; if not, don't update gas mix
             if pCO2 > 45:
                 new_gas_flow = current_flow + 4
             elif pCO2 < 25:
                 new_gas_flow = current_flow - 4
-        if pH:
+        if pH and self._monitor._TSMSerial__thread_streaming:
             if pH < 7.35:
                 new_gas_flow = new_gas_flow + 6
             elif pH > 7.45:
                 new_gas_flow = new_gas_flow - 6
-        if sO2 and sO2 > 87:
-            if channel1_gas_ID == 2:
-                new_channel_1_percentage = self._mixer.get_channel_percent_value(1) + 1
-                new_channel_2_percentage = self._mixer.get_channel_percent_value(2) - 1
-            elif channel1_gas_ID == 3:
-                new_channel_1_percentage = self._mixer.get_channel_percent_value(1) - 1
-                new_channel_2_percentage = self._mixer.get_channel_percent_value(2) + 1
-        elif sO2 and sO2 < 80:
-            if channel1_gas_ID == 2:
-                new_channel_1_percentage = self._mixer.get_channel_percent_value(1) - 1
-                new_channel_2_percentage = self._mixer.get_channel_percent_value(2) + 1
-            elif channel1_gas_ID == 3:
-                new_channel_1_percentage = self._mixer.get_channel_percent_value(1) + 1
-                new_channel_2_percentage = self._mixer.get_channel_percent_value(2) - 1
+        if sO2 and self._monitor._TSMSerial__thread_streaming:
+            if sO2 > 87:
+                if channel1_gas_ID == 2:
+                    new_channel_1_percentage = self._mixer.get_channel_percent_value(1) + 1
+                    new_channel_2_percentage = self._mixer.get_channel_percent_value(2) - 1
+                elif channel1_gas_ID == 3:
+                    new_channel_1_percentage = self._mixer.get_channel_percent_value(1) - 1
+                    new_channel_2_percentage = self._mixer.get_channel_percent_value(2) + 1
+            elif sO2 < 80:
+                if channel1_gas_ID == 2:
+                    new_channel_1_percentage = self._mixer.get_channel_percent_value(1) - 1
+                    new_channel_2_percentage = self._mixer.get_channel_percent_value(2) + 1
+                elif channel1_gas_ID == 3:
+                    new_channel_1_percentage = self._mixer.get_channel_percent_value(1) + 1
+                    new_channel_2_percentage = self._mixer.get_channel_percent_value(2) - 1
         if new_gas_flow == current_flow and new_channel_1_percentage == self._mixer.get_channel_percent_value(1) and new_channel_2_percentage == self._mixer.get_channel_percent_value(2):
             return
         else:
