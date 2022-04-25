@@ -254,6 +254,10 @@ class TestFrame(wx.Frame):
         elif label == 'Stop Gas Mixer':
             self.btn_stream_GB100.SetLabel('Start Gas Mixer')
             self.timer_update_GB100.Stop()
+            gas1_percentage = self._mixer.get_channel_percent_value(1)
+            gas2_percentage = self._mixer.get_channel_percent_value(2)
+            flow = self._mixer.get_mainboard_total_flow()
+            self._mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 0)
             self._mixer.stop_stream()
             self.choice_balance.Enable(True)
             self.choice_gas1.Enable(True)
@@ -261,10 +265,9 @@ class TestFrame(wx.Frame):
             self.choice_gas2.Enable(True)
             self.spin_gas2_percentage.Enable(True)
             self.spin_total_flow.Enable(True)
-            gas1_percentage = self._mixer.get_channel_percent_value(1)
-            gas2_percentage = self._mixer.get_channel_percent_value(2)
-            flow = self._mixer.get_mainboard_total_flow()
-            self._mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 0)
+            self.spin_gas1_percentage.SetValue(gas1_percentage)
+            self.spin_gas2_percentage.SetValue(gas2_percentage)
+            self.spin_total_flow.SetValue(flow)
 
     def OnTSM(self, event):
         label = self.btn_stream_TSM.GetLabel()
