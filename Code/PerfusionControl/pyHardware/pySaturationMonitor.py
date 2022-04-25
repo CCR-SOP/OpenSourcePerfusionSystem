@@ -129,7 +129,7 @@ class TSMSerial(USBSerial):
         else:
             pass
 
-    def stop_stream(self): # Try stopping and restarting
+    def stop_stream(self):  # Try stopping and restarting
         if self.__thread_streaming and self.__thread_streaming.is_alive():
             self.__evt_halt_streaming.set()
             self.__thread_streaming.join(2.0)
