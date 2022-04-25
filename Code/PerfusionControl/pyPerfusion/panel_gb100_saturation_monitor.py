@@ -289,12 +289,10 @@ class TestFrame(wx.Frame):
             self.update_plots()
 
     def update_gas_mix(self):
-        str_pH = self.readouts[0].label_value.GetLabel()
-        str_pCO2 = self.readouts[1].label_value.GetLabel()
-        str_sO2 = self.readouts[7].label_value.GetLabel()
-        pH = self.is_value_empty(str_pH)
-        pCO2 = self.is_value_empty(str_pCO2)
-        sO2 = self.is_value_empty(str_sO2)
+        values = self.get_label_values()
+        pH = values[0]
+        pCO2 = values[1]
+        sO2 = values[3]
         current_flow = self._mixer.get_mainboard_total_flow()
         new_gas_flow = current_flow
         new_channel_1_percentage = self._mixer.get_channel_percent_value(1)
@@ -330,11 +328,19 @@ class TestFrame(wx.Frame):
         else:
             self._mixer.change_gas_mix(new_channel_1_percentage, new_channel_2_percentage, new_gas_flow, 1)
 
-    def is_value_empty(self, value):
-        if value == '000' or value == ' ---' or value == ' -- ' or value == ' -.-':
-            return []
-        else:
-            return float(value)
+    def get_label_values(self):
+        str_pH = self.readouts[0].label_value.GetLabel()
+        str_pCO2 = self.readouts[1].label_value.GetLabel()
+        str_pO2 = self.readouts[2].label_value.GetLabel()
+        str_sO2 = self.readouts[7].label_value.GetLabel()
+        strings = [str_pH, str_pCO2, str_pO2, str_sO2]
+        values = []
+        for item in strings:
+            if item == '000' or item == ' ---' or item == ' -- ' or item == ' -.-':
+                values.append([])
+            else:
+                values.append(float(item))
+        return values
 
     def update_plots(self):
         data = self._monitor.get_parsed_data()
@@ -342,14 +348,19 @@ class TestFrame(wx.Frame):
         time = data_list[0] / 60000  # Gives time in minutes
         for num in range(1, len(data_list)):  # Updating readouts
             self.readouts[num-1].label_value.SetLabel(data_list[num])
-        self._plots_main[0].plot(data_list[1], time)
-   #     self._plots_main[1].plot(data_list[8], time)
-   #     self._plots_main[2].plot(data_list[3], time)
-   #     self._plots_main[3].plot(data_list[2], time)
-        self._plots_lt[0].plot(data_list[1], time)
-   #     self._plots_lt[1].plot(data_list[8], time)
-   #     self._plots_lt[2].plot(data_list[3], time)
-   #     self._plots_lt[3].plot(data_list[2], time)
+        values = self.get_label_values()
+        if values[0]:
+            self._plots_main[0].plot(data_list[1], time)
+            self._plots_lt[0].plot(data_list[1], time)
+        if values[1]:
+            self._plots_main[3].plot(data_list[2], time)
+            self._plots_lt[3].plot(data_list[2], time)
+        if values[2]:
+            self._plots_main[2].plot(data_list[3], time)
+            self._plots_lt[2].plot(data_list[3], time)
+        if values[3]:
+            self._plots_main[1].plot(data_list[8], time)
+            self._plots_lt[1].plot(data_list[8], time)
 
     def OnClose(self, evt):
         self._monitor.stop_stream()
