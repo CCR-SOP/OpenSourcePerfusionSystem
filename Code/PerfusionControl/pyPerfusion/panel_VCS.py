@@ -18,8 +18,7 @@ DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 DEFAULT_CLEARANCE_TIME_MS = 10_000
-DEFAULT_ACQ_TIME_MS = 60_000
-DEFAULT_SAMPLES_PER_READ = 3
+DEFAULT_ACQ_TIME_MS = 10_000
 
 class PanelCoordination(wx.Panel):
     def __init__(self, parent, vcs, name):
@@ -58,10 +57,10 @@ class PanelCoordination(wx.Panel):
     def OnStartStop(self, evt):
         state = self.btn_start_stop.GetLabel()
         if state == 'Start':
-            self._vcs.start_cycle('Chemical')
+            self._vcs.start_cycle('CDI')
             self.btn_start_stop.SetLabel('Stop')
-        else:
-            self._vcs.stop_cycle('Chemical')
+        elif state == 'Stop':
+            self._vcs.stop_cycle('CDI')
             self.btn_start_stop.SetLabel('Start')
 
     def OnGlucoseStartStop(self, evt):
@@ -123,7 +122,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS)
+        self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS, acq_time_ms=DEFAULT_ACQ_TIME_MS)
         self._panel_coord = PanelCoordination(self, self._vcs, name='Valve Coordination')
 
         self.ao = NIDAQ_AO('VCS Pump')
@@ -194,7 +193,7 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self._vcs.stop()
+        self._vcs.close()
         self.ao.close()
         self.Destroy()
 
