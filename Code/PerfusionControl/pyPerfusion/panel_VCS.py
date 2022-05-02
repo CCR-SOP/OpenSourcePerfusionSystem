@@ -1,140 +1,24 @@
 # -*- coding: utf-8 -*-
 """
 @author: Allen Luna
-Panel class for testing and configuring Valve Control System and associated Chemical Sensors
+Panel class for testing and configuring Valve Control System
 """
 import wx
 import logging
-import datetime
-
-import numpy as np
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
-from pyPerfusion.panel_AI import PanelAI, PanelAICalibration
-from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pyPerfusion.panel_readout import PanelReadout
-from pyPerfusion.panel_DIO import PanelDIO, PanelDIOControls, PanelDIOIndicator
+from pyPerfusion.panel_DIO import PanelDIOIndicator
 from pyHardware.pyDIO import DIODeviceException
 import pyPerfusion.utils as utils
-from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
 from pyHardware.pyVCS import VCS, VCSPump
-from pyPerfusion.FileStrategy import PointsToFile
-
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
-DEFAULT_CLEARANCE_TIME_MS = 20_000  # 150_000
-DEFAULT_SAMPLES_PER_READ = 3
-
-
-class PanelAIVCS(wx.Panel):
-    def __init__(self, parent, sensor, name, strategy):
-        super().__init__(parent)
-        self._strategy = strategy
-        self._logger = logging.getLogger(__name__)
-
-        dev = sensor.hw.devname.split('/')
-        hw_details = f'{dev[0]}/ai{sensor.ch_id}'
-
-        self._panel_cfg = PanelAICalibration(self, sensor, name, self._strategy)
-        self._label = wx.StaticText(self, label=name)
-        self._label.SetToolTip(wx.ToolTip(hw_details))
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-
-        self.__do_layout()
-
-    def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Border()
-
-        self.sizer.Add(self._label)
-        self.sizer.Add(self._panel_cfg, flags)
-        self.SetSizer(self.sizer)
-        self.Layout()
-        self.Fit()
-
-
-class PanelReadoutGroup(wx.Panel):
-    def __init__(self, parent, group_name, o2, co2, ph):
-        super().__init__(parent)
-        self.name = group_name
-        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
-        self.sizer = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
-        self.readout_o2 = PanelReadoutVCS(self, o2, f'Oxygen')
-        self.readout_co2 = PanelReadoutVCS(self, co2, f'Carbon Dioxide')
-        self.readout_ph = PanelReadoutVCS(self, ph, f'pH')
-
-        self.__do_layout()
-        self.__set_bindings()
-
-    def __set_bindings(self):
-        pass
-
-    def __do_layout(self):
-        flags = wx.SizerFlags().Proportion(1).Expand().Border()
-
-        self.sizer.Add(self.readout_o2, flags)
-        self.sizer.Add(self.readout_co2, flags)
-        self.sizer.Add(self.readout_ph, flags)
-
-        self.SetSizer(self.sizer)
-        self.Layout()
-        self.Fit()
-
-    def update_label(self, ct):
-        time_str = "{0:0=2d}".format(ct.hour) + ':' + "{0:0=2d}".format(ct.minute) + ':' + "{0:0=2d}".format(ct.second)
-        self.static_box.SetLabel(f'{self.name} as of {time_str}')
-
-    def update_value(self):
-        ct = datetime.datetime.now()
-        self.update_label(ct)
-        self.readout_co2.update_value()
-        self.readout_o2.update_value()
-        self.readout_ph.update_value()
-
-
-class PanelReadoutVCS(PanelReadout):
-    def __init__(self, parent, sensor, name):
-        super().__init__(parent, sensor)
-        self._logger = logging.getLogger(__name__)
-        self.name = name
-        self._parent = parent
-
-        # panel will be manually updated
-        self.timer_update.Stop()
-
-    def update_value(self):
-        ts, data = self._sensor.get_file_strategy('Raw').get_last_acq()
-        # data = self._sensor.get_current()
-        if data is not None:
-            avg = np.mean(data)
-            val = float(avg)
-            self.label_value.SetLabel(f'{round(val, 1):3}')
-
-
-class PanelReadoutOxygenUtilization(PanelReadout):
-    def __init__(self, parent, sensors, readout, name):
-        self._logger = logging.getLogger(__name__)
-        self.sensors = sensors
-        self.readout = readout
-        old_name = sensors[0].name
-        sensors[0].name = name
-        super().__init__(parent, sensors[0])
-        sensors[0].name = old_name
-
-    def update_value(self):
-        val0 = float(self.readout[0].readout_o2.label_value.GetLabel())
-        val1 = float(self.readout[2].readout_o2.label_value.GetLabel())
-        # val1 can be 0, but val0 must be non-zero
-        if val0 is not None and val0 != 0 and val1 is not None:
-            val = (float(val0) - float(val1)) / float(val0)
-            val = val * 100
-            self.label_value.SetLabel(f'{round(val, 3):3}')
-        else:
-            self.label_value.SetLabel('NA')
-
+DEFAULT_CLEARANCE_TIME_MS = 10_000
+DEFAULT_ACQ_TIME_MS = 10_000
 
 class PanelCoordination(wx.Panel):
     def __init__(self, parent, vcs, name):
@@ -143,18 +27,9 @@ class PanelCoordination(wx.Panel):
         self.parent = parent
         self._vcs = vcs
         self._name = name
-        self._readout_list = None
-
-        self._readings = None  # Readings taken before switching to next valve
-        self._sampling_period_ms = 3000  # New readings (O2/CO2/pH) are collected every 3 seconds and are coordinated (occur @ the same time)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self._name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
-
-        self.spin_readings_chemical = wx.SpinCtrlDouble(self, min=0, max=20,
-                                                        initial=DEFAULT_SAMPLES_PER_READ,
-                                                        inc=1)
-        self.lbl_readings_chemical = wx.StaticText(self, label='Sensor Readings per Switch')
 
         self.btn_start_stop = wx.ToggleButton(self, label='Start')
 
@@ -163,19 +38,9 @@ class PanelCoordination(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
-    @property
-    def acq_period_ms(self):
-        return self._sampling_period_ms
-
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Left().Proportion(0)
 
-        self.sizer_chemical = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_chemical.Add(self.lbl_readings_chemical, flags)
-        self.sizer_chemical.Add(self.spin_readings_chemical, flags)
-
-        self.sizer.Add(self.sizer_chemical)
-        self.sizer.AddSpacer(5)
         self.sizer.Add(self.btn_start_stop)
         self.sizer.Add(self.btn_glucose_start_stop)
 
@@ -192,19 +57,13 @@ class PanelCoordination(wx.Panel):
     def OnStartStop(self, evt):
         state = self.btn_start_stop.GetLabel()
         if state == 'Start':
-            self._readings = int(self.spin_readings_chemical.GetValue())
-            # TODO update samples_per_read for each sensor
-            self._vcs.start_cycle('Chemical')
+            self._vcs.start_cycle('CDI')
             self.btn_start_stop.SetLabel('Stop')
-        else:
-            self._vcs.stop_cycle('Chemical')
-            if self._readout_list:
-                for readout in self._readout_list:
-                    readout.timer_update.Stop()
-                self._readout_list.clear()
+        elif state == 'Stop':
+            self._vcs.stop_cycle('CDI')
             self.btn_start_stop.SetLabel('Start')
 
-    def OnGlucoseStartStop(self, evt):  # For the moment, we are not using the Hepatic Artery Glucose Valve
+    def OnGlucoseStartStop(self, evt):
         state = self.btn_glucose_start_stop.GetLabel()
         if state == 'Open Glucose Valves':
             self._vcs.open_independent_valve('Portal Vein (Glucose)')
@@ -223,7 +82,7 @@ class PanelPump(wx.Panel):
         self._pump = pump
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.slider_speed = wx.Slider(self, value=25, minValue=0, maxValue=100,
+        self.slider_speed = wx.Slider(self, value=100, minValue=0, maxValue=100,
                                       style=wx.SL_HORIZONTAL | wx.SL_LABELS)
         self._default_label = 'VCS Pump Speed (%)'
         self.label_speed = wx.StaticText(self, label=self._default_label)
@@ -251,10 +110,10 @@ class PanelPump(wx.Panel):
         self._pump.set_speed(val)
 
     def OnUpdate(self, evt):
-        # color = wx.GREEN if self._pump.active else wx.RED
+        color = wx.GREEN if self._pump.active else wx.RED
         lbl = 'Active' if self._pump.active else 'Inactive'
         self.label_speed.SetLabel(f'{self._default_label}: {lbl}')
-        # self.label_speed.SetBackgroundColour(color)
+        self.label_speed.SetBackgroundColour(color)
 
 
 class TestFrame(wx.Frame):
@@ -263,7 +122,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS)
+        self._vcs = VCS(clearance_time_ms=DEFAULT_CLEARANCE_TIME_MS, acq_time_ms=DEFAULT_ACQ_TIME_MS)
         self._panel_coord = PanelCoordination(self, self._vcs, name='Valve Coordination')
 
         self.ao = NIDAQ_AO('VCS Pump')
@@ -273,14 +132,12 @@ class TestFrame(wx.Frame):
         line = section['LineName']
         self.ao.open(period_ms=1000, dev=dev, line=line)
         self.pump = VCSPump(self.ao)
-        self.pump.set_speed(3)
+        self.pump.set_speed(100)
         self.panel_pump = PanelPump(self, self.pump)
         self._vcs.set_pump(self.pump)
 
-        valves = [NIDAQ_DIO('Hepatic Artery (Chemical)'),
-                  NIDAQ_DIO('Portal Vein (Chemical)'),
-                  NIDAQ_DIO('Inferior Vena Cava (Chemical)'),
-                  NIDAQ_DIO('Hepatic Artery (Glucose)'),
+        valves = [NIDAQ_DIO('Hepatic Artery (CDI Shunt Sensor)'),
+                  NIDAQ_DIO('Portal Vein (CDI Shunt Sensor)'),
                   NIDAQ_DIO('Portal Vein (Glucose)'),
                   NIDAQ_DIO('Inferior Vena Cava (Glucose)')
                   ]
@@ -305,67 +162,17 @@ class TestFrame(wx.Frame):
                 self._lgr.error(f'Looking in {LP_CFG.LP_PATH["config"]}')
                 continue
             try:
-                valve.open(port=port, line=line, active_high=active_high_state, read_only=read_only_state, dev=dev)
-                if 'Chemical' in key:
-                    self._lgr.debug(f'Adding cycled input {key} to Chemical')
-                    self._vcs.add_cycled_input('Chemical', valve)
-                else:
+                valve.open(port=port, line=line, active_high=active_high_state, read_only=read_only_state, dev=dev)  # Setting dev/port/line values for DIO
+                if 'CDI' in key:
+                    self._lgr.debug(f'Adding cycled input {key} to CDI')
+                    self._vcs.add_cycled_input('CDI', valve)
+                elif 'Glucose' in key:
                     self._vcs.add_independent_input(valve)
                 panel.update_label()
             except DIODeviceException as e:
                 dlg = wx.MessageDialog(parent=self, message=str(e), caption='Digital Output Device Error', style=wx.OK)
                 dlg.ShowModal()
                 continue
-
-        self.acq = AI_Finite_NIDAQ(period_ms=self._panel_coord.acq_period_ms, volts_p2p=5, volts_offset=2.5,
-                                   samples_per_read=DEFAULT_SAMPLES_PER_READ)
-        self._chemical_sensors = [SensorPoint('Oxygen', 'mmHg', self.acq),
-                                  SensorPoint('Carbon Dioxide', 'mmHg', self.acq),
-                                  SensorPoint('pH', '', self.acq)]
-
-        readouts = [PanelReadoutGroup(self, 'HA',
-                                      self._chemical_sensors[0],
-                                      self._chemical_sensors[1],
-                                      self._chemical_sensors[2]),
-                    PanelReadoutGroup(self, 'PV',
-                                      self._chemical_sensors[0],
-                                      self._chemical_sensors[1],
-                                      self._chemical_sensors[2]),
-                    PanelReadoutGroup(self, 'IVC',
-                                      self._chemical_sensors[0],
-                                      self._chemical_sensors[1],
-                                      self._chemical_sensors[2])]
-        self.sizer_readout = wx.BoxSizer(wx.VERTICAL)
-        for panel in readouts:
-            self.sizer_readout.Add(panel, flags.Border())
-
-        self.sizer_sensors = wx.GridSizer(cols=2)
-        for sensor in self._chemical_sensors:
-            section = LP_CFG.get_hwcfg_section(sensor.name)
-            self._lgr.debug(f'Reading config for {sensor.name}')
-            dev = section['Device']
-            line = section['LineName']
-            self.acq.open(dev)
-            self.acq.add_channel(line)
-            sensor.set_ch_id(line)
-            raw = PointsToFile('Raw', None, self.acq.buf_len)
-            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
-            sensor.add_strategy(raw)
-            self.sizer_sensors.Add(PanelAIVCS(self, sensor, name=sensor.name, strategy='Raw'), flags.Border())
-            sensor.open()
-            sensor.start()
-
-        self._vcs.add_sensor_to_cycled_valves('Chemical', self._chemical_sensors[0])
-        self._vcs.add_sensor_to_cycled_valves('Chemical', self._chemical_sensors[1])
-        self._vcs.add_sensor_to_cycled_valves('Chemical', self._chemical_sensors[2])
-
-        self._lgr.debug(f'oxy readout is {readouts[0].readout_o2.update_value}')
-        self._vcs.add_notify('Chemical', valves[0].name, readouts[0].update_value)
-        self._vcs.add_notify('Chemical', valves[1].name, readouts[1].update_value)
-        self._vcs.add_notify('Chemical', valves[2].name, readouts[2].update_value)
-
-        panel_O2_util = PanelReadoutOxygenUtilization(self, [self._chemical_sensors[0], self._chemical_sensors[0]], readouts, 'Oxygen Utilization')
-        self.sizer_readout.Add(panel_O2_util, flags)
 
         sizerv = wx.BoxSizer(wx.VERTICAL)
         sizerv.Add(self._panel_coord, flags)
@@ -374,14 +181,11 @@ class TestFrame(wx.Frame):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         sizer_indicators = wx.BoxSizer(wx.VERTICAL)
         sizer_indicators.Add(self.sizer_dio)
-        sizer_indicators.Add(self.sizer_readout, flags)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(sizer_indicators, flags)
         sizer.Add(sizerv, flags)
         self.sizer.Add(sizer, flags)
-
-        self.sizer.Add(self.sizer_sensors, flags)
 
         self.SetSizer(self.sizer)
         self.Fit()
@@ -389,9 +193,7 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for sensor in self._chemical_sensors:
-            sensor.stop()
-        self._vcs.stop()
+        self._vcs.close()
         self.ao.close()
         self.Destroy()
 
@@ -401,7 +203,6 @@ class MyTestApp(wx.App):
         self.SetTopWindow(frame)
         frame.Show()
         return True
-
 
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
