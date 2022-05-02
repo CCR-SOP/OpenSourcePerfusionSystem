@@ -70,8 +70,6 @@ class VCS:
         self._timer_clearance[set_name] = Timer(self._clearance_time_ms / 1000.0,
                                                 function=self._cleared_perfusate,
                                                 kwargs={'set_name': set_name})
-        if self._pump:
-            self._pump.start()
         self._timer_clearance[set_name].start()
 
     def _cleared_perfusate(self, set_name):
@@ -82,9 +80,10 @@ class VCS:
         except KeyError:
             self._lgr.debug(f'No set name {set_name} in _cleared_perfusate')
         try:
-            self._lgr.debug(f'perfusate cleared for {set_name}')
+            self._lgr.debug(f'perfusate cleared for {set_name}; starting data acquisition')
+            self._timer_clearance[set_name].cancel()
             self._timer_clearance[set_name] = None
-            self._timer_acq[set_name] = Timer(self._acq_time_ms/1000.0, function=self._wait_for_data_collection, args=(set_name,))
+            self._timer_acq[set_name] = Timer(self._acq_time_ms/1000.0, function=self._wait_for_data_collection, kwargs={'set_name': set_name})
             self._timer_acq[set_name].start()
         except KeyError:
             self._lgr.warning(f'No sensors were added for set {set_name}')
@@ -99,8 +98,11 @@ class VCS:
             except KeyError:
                 self._lgr.debug(f'No set name {set_name} in _wait_for_data_collection ')
             else:
+                self._lgr.debug('Data collection complete')
+                self._timer_acq[set_name].cancel()
                 self._timer_acq[set_name] = None
                 self._cycle_next(set_name)
+                break
 
     def _cycle_next(self, set_name):
         self._lgr.debug(f'cycling {set_name}')
@@ -113,12 +115,10 @@ class VCS:
             with self._cycled_valve_lock:
                 if self._active_valve[set_name]:
                     self._lgr.debug(f'Deactivating {self._active_valve[set_name].name} in {set_name}')
-                    self._pump.stop()
                     self._active_valve[set_name].deactivate()
                 self._active_valve[set_name] = next(self._cycled_it[set_name])
                 self._lgr.debug(f'Activating {self._active_valve[set_name].name} in {set_name}')
                 self._active_valve[set_name].activate()
-                self._pump.start()
                 self._start_clearance_timer(set_name)
 
     def start_cycle(self, set_name):
@@ -128,17 +128,24 @@ class VCS:
             self._cycled_it[set_name] = cycle(self._cycled[set_name])
             self._cycle_active[set_name] = True
             self._cycle_next(set_name)
+            self._pump.start()
         else:
             self._lgr.error(f'Cannot start cycle on non-existent valve-set {set_name}')
 
     def stop_cycle(self, set_name):
+        if self._timer_clearance[set_name]:
+            self._timer_clearance[set_name].cancel()
+        if self._timer_acq[set_name]:
+            self._timer_acq[set_name].cancel()
+        self._timer_clearance[set_name] = None
+        self._timer_acq[set_name] = None
         self._evt_halt.set()
         self._pump.stop()
         if set_name in self._cycled.keys():
             self._cycle_active[set_name] = False
         self.close_cycled_valves(set_name)
 
-    def stop(self):
+    def close(self):
         if self._pump:
             self._pump.stop()
         self._evt_halt.set()
@@ -146,11 +153,11 @@ class VCS:
 
     def add_cycled_input(self, set_name: str, dio: DIO):
         # TODO if cycle active, don't allow adding more inputs
-        self.close_cycled_valves(set_name)
         if set_name not in self._cycled.keys():
             self._cycled[set_name] = []
         self._active_valve[set_name] = None
         self._cycled[set_name].append(dio)
+        self.close_cycled_valves(set_name)
         self._lgr.debug(f'# of cycled inputs is {len(self._cycled[set_name])}')
 
     def add_independent_input(self, dio: DIO):
@@ -168,6 +175,7 @@ class VCS:
             self._lgr.warning(f'Attempted to open non-existent independent valve {valve_name}')
 
     def close_independent_valve(self, valve_name):
+        self._lgr.debug(f'Closing independent valve {valve_name}')
         if valve_name in self._independent.keys():
             self._independent[valve_name].deactivate()
         else:
