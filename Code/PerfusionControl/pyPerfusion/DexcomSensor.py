@@ -1,9 +1,8 @@
 import pathlib
 import datetime
-from threading import Thread, Event
 import logging
-import time
 from time import perf_counter
+from threading import Thread, Event
 import struct
 
 import numpy as np
@@ -11,138 +10,81 @@ import numpy as np
 import wx
 import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
-import matplotlib.transforms as mtransforms
-# from matplotlib.backends.backend_wx import NavigationToolbar2Wx
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-DATA_VERSION = 1
+DATA_VERSION = 1  ###
 
-class SensorStream:
-    def __init__(self, name, unit_str, hw, valid_range=None):
+class DexcomSensor:
+
+    """
+       Class for serial communication with Dexcom Receiver over USB
+       ...
+       Methods
+       -------
+       open() ###
+           UPDATE
+       open_stream(full_path)
+           creates .txt and .dat files for recording Dexcom Sensor data
+       start_stream()
+           starts thread for writing streamed data from Dexcom sensor to file
+       stop_stream()
+           stops recording of data
+       close_stream()
+           closes file
+       get_latest() ###
+           UPDATE
+       """
+
+    def __init__(self, name, sensor, COM):
         self._logger = logging.getLogger(__name__)
-        self._logger.info(f'Creating SensorStream object {name}')
-        self.__thread = None
-        self._unit_str = unit_str
-        self._valid_range = valid_range
-        self.hw = hw
-        self._ch_id = None
-        self.__evt_halt = Event()
-        self._fid_write = None
-        self.data = None
         self.name = name
+        self.sensor = sensor(COM)  ###
+        self._fid_write = None
         self._full_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self.name}')
         self._ext = '.dat'
         self._timestamp = None
+        self._timestamp_perf = None
         self._end_of_header = 0
         self._last_idx = 0
-        self.data = np.array(self.hw.buf_len, dtype=self.hw.data_type)
+        self._datapoints_per_ts = 1
+        self._bytes_per_ts = 4
 
-    @property
-    def buf_len(self):
-        return self.hw.buf_len
+        self.__thread_streaming = None
+        self.__evt_halt_streaming = Event()
+
+        self.old_time = None
 
     @property
     def full_path(self):
         return self._full_path / self._filename.with_suffix(self._ext)
 
-    @property
-    def unit_str(self):
-        return self._unit_str
+    def open(self):  ###
+        pass
 
-    @property
-    def valid_range(self):
-        return self._valid_range
-
-    @property
-    def ch_id(self):
-        return self._ch_id
-
-    def run(self):
-        next_t = time.time()
-        offset = 0
-        while not self.__evt_halt.is_set():
-            next_t += offset + self.hw.period_sampling_ms / 1000.0
-            delay = next_t - time.time()
-            if delay > 0:
-                time.sleep(delay)
-                offset = 0
-            else:
-                offset = -delay
-            self._get_data_and_write_to_file()
-
-    def _get_data_and_write_to_file(self):
-        data_buf, t = self.hw.get_data(self._ch_id)
-        if data_buf is not None and self._fid_write is not None:
-            buf_len = len(data_buf)
-            self._write_to_file(data_buf, t)
-            self._last_idx += buf_len
-            self._fid_write.flush()
-
-    def _write_to_file(self, data_buf, t):
-        data_buf.tofile(self._fid_write)
-
-    def _open_read(self):
-        _fid = open(self.full_path, 'rb')
-        data = np.memmap(_fid, dtype=self.hw.data_type, mode='r')
-        return _fid, data
-
-    def _open_write(self):
-        self._logger.info(f'opening {self.full_path}')
-        self._fid_write = open(self.full_path, 'w+b')
-
-    def start(self):
-        if self.__thread:
-            self.__thread.start()
-
-    def set_ch_id(self, ch_id):
-        self._ch_id = ch_id
-
-    def open(self, full_path):
+    def open_stream(self, full_path):
         if not isinstance(full_path, pathlib.Path):
             full_path = pathlib.Path(full_path)
         self._full_path = full_path
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
+        self._timestamp_perf = perf_counter() * 1000
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
 
-        # write file handle should be opened first as the memory mapped read handle needs
-        # a file with data in it
         self._open_write()
         self._write_to_file(np.array([0]), np.array([0]))
-        # reset file point to start to overwrite the dummy value with valid data when it arrives
         self._fid_write.seek(0)
-        # self._open_read()
 
         self.print_stream_info()
-        self.__thread = Thread(target=self.run)
-        self.__thread.name = f'SensorStream ({self.name})'
 
-    def stop(self):
-        self.__evt_halt.set()
-        if self.__thread:
-            self.__thread.join(2.0)
-        if self._fid_write:
-            self._fid_write.close()
-        self._fid_write = None
-
-    def _get_stream_info(self):
-        stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
-        header = [f'File Format: {DATA_VERSION}',
-                  f'Sensor: {self.name}',
-                  f'Unit: {self._unit_str}',
-                  f'Data Format: {str(np.dtype(self.hw.data_type))}',
-                  f'Sampling Period (ms): {self.hw.period_sampling_ms}',
-                  f'Start of Acquisition: {stamp_str}'
-                  ]
-        end_of_line = '\n'
-        hdr_str = f'{end_of_line.join(header)}{end_of_line}'
-        return hdr_str
+    def _open_write(self):
+        self._logger.info(f'opening {self.full_path}')
+        self._fid_write = open(self.full_path, 'w+b')
 
     def print_stream_info(self):
         hdr_str = self._get_stream_info()
@@ -152,77 +94,79 @@ class SensorStream:
         fid.write(hdr_str)
         fid.close()
 
-    def get_data(self, last_ms, samples_needed):
-        _fid, data = self._open_read()
-        file_size = len(data)
-        if last_ms > 0:
-            data_size = int(last_ms / self.hw.period_sampling_ms)
-            if samples_needed > data_size:
-                samples_needed = data_size
-            start_idx = file_size - data_size
-            if start_idx < 0:
-                start_idx = 0
-        else:
-            start_idx = 0
-        idx = np.linspace(start_idx, file_size-1, samples_needed, dtype=np.int)
-        data = data[idx]
-
-        start_t = start_idx * self.hw.period_sampling_ms / 1000.0
-        stop_t = file_size * self.hw.period_sampling_ms / 1000.0
-        data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.float32)
-        _fid.close()
-
-        return data_time, data
-
-    def get_current(self):
-        _fid, data = self._open_read()
-        val = data[-1]
-        _fid.close()
-
-        return val
-
-    def get_latest(self, readings):
-        _fid, data = self._open_read()
-        val = data[-readings:]
-        _fid.close()
-
-        return val
-
-class DexcomPoint(SensorStream):
-    def __init__(self, name, unit_str, hw, valid_range):
-        super().__init__(name, unit_str, hw, valid_range)
-        self._samples_per_ts = 1
-        self._bytes_per_ts = 4
-        self._time = None
-
-    def _get_stream_info(self):
+    def _get_stream_info(self):  ###
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
                   f'Sensor: {self.name}',
-                  f'Unit: {self._unit_str}',
-                  f'Data Format: {str(np.dtype(self.hw.data_type))}',
-                  f'Samples Per Timestamp: {self._samples_per_ts}',
-                  f'Sampling Period (ms): {self.hw.period_sampling_ms}',
-                  f'Start of Acquisition: {stamp_str}'
+                  f'Unit: mg/dL',
+                  f'Data Format: {str(np.dtype(np.float32))}',
+                  f'Samples Per Timestamp: {self._datapoints_per_ts}',
+                  f'Bytes Per Sample: {self._bytes_per_ts}',
+                  f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
         end_of_line = '\n'
         hdr_str = f'{end_of_line.join(header)}{end_of_line}'
         return hdr_str
 
-    def run(self):
-        while not self._SensorStream__evt_halt.wait(self.hw.period_sampling_ms / 1000.0):
-            t = perf_counter()
-            data_buf, self._time = self.hw.get_data()
-            if data_buf is not None and self._fid_write is not None:
-                buf_len = len(data_buf)
-                self._write_to_file(data_buf, t)
-                self._last_idx += buf_len
-                self._fid_write.flush()
-
-    def _write_to_file(self, data_buf, t):
-        ts_bytes = struct.pack('i', int(t * 1000.0))
+    def _write_to_file(self, data_buf, ts_bytes):
         self._fid_write.write(ts_bytes)
         data_buf.tofile(self._fid_write)
+
+    def start_stream(self):
+        self.__evt_halt_streaming.clear()
+        self.__thread_streaming = Thread(target=self.OnStreaming)
+        self.__thread_streaming.start()
+
+    def OnStreaming(self):  ###
+        while not self.__evt_halt_streaming.wait(1.5):  # Attempt to read new data every 60 seconds
+            self.stream()
+
+    def stream(self):
+        data, new_time = self.sensor.get_data()
+        if not data or self.old_time == new_time:  ###
+            print('same read or no data; returning')  ###
+            return
+        else:
+            print('recording data') ###
+            ts_bytes = struct.pack('i', int(perf_counter() * 1000.0))
+            data_buf = np.ones(1, dtype=np.float32) * np.float32(data)
+            buf_len = len(data_buf)
+            self._write_to_file(data_buf, ts_bytes)
+            self._last_idx += buf_len
+            self._fid_write.flush()
+            self.old_time = new_time
+
+    def stop_stream(self):
+        if self.__thread_streaming and self.__thread_streaming.is_alive():
+            self.__evt_halt_streaming.set()
+            self.__thread_streaming.join(2.0)
+            self.__thread_streaming = None
+
+    def close_stream(self):
+        if self._fid_write:
+            self._fid_write.close()
+        self._fid_write = None
+
+    def get_data(self):
+        _fid, tmp = self._open_read()
+        _fid.seek(0)
+        chunk = [1]
+        data_time = []
+        data = []
+        while chunk[0]:
+            chunk, ts = self.__read_chunk(_fid)
+            if type(chunk) is list:
+                break
+            elif chunk.any():
+                data.append(chunk)
+                data_time.append(ts / 1000.0)
+        _fid.close()
+        return data_time, data
+
+    def _open_read(self):
+        _fid = open(self.full_path, 'rb')
+        data = np.memmap(_fid, dtype=np.float32, mode='r')
+        return _fid, data
 
     def __read_chunk(self, _fid):
         ts = 0
@@ -230,26 +174,11 @@ class DexcomPoint(SensorStream):
         ts_bytes = _fid.read(self._bytes_per_ts)
         if len(ts_bytes) == 4:
             ts, = struct.unpack('i', ts_bytes)
-            data_buf = np.fromfile(_fid, dtype=self.hw.data_type, count=self._samples_per_ts)
+            data_buf = np.fromfile(_fid, dtype=np.float32, count=self._datapoints_per_ts)
         return data_buf, ts
 
-    def get_data(self, last_ms, samples_needed):
-        _fid, tmp = self._open_read()
-        cur_time = int(perf_counter() * 1000.0)
-        _fid.seek(0)
-        chunk = [1]
-        data_time = []
-        data = []
-        while chunk:
-            chunk, ts = self.__read_chunk(_fid)
-            if chunk and (cur_time - ts < last_ms or last_ms == 0):
-                data.append(chunk)
-                data_time.append(ts / 1000.0)
-        _fid.close()
-        if data and data[-1] == 5000:
-            self.stop()
-            print('stopped')
-        return self._time, data
+    def get_latest(self):  ###
+        pass
 
 class PanelPlotting(wx.Panel):
     def __init__(self, parent, with_readout=True):
