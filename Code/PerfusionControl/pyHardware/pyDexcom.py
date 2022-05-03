@@ -16,8 +16,6 @@ class DexcomSensor:
        ...
        Methods
        -------
-       open() ###
-           UPDATE
        open_stream(full_path)
            creates .txt and .dat files for recording Dexcom Sensor data
        start_stream()
@@ -30,10 +28,11 @@ class DexcomSensor:
            returns latest glucose reading
        """
 
-    def __init__(self, name, sensor, COM):
+    def __init__(self, name, unit, receiver):
         self._logger = logging.getLogger(__name__)
         self.name = name
-        self.sensor = sensor(COM)  ###
+        self.receiver = receiver
+        self.unit = unit
         self._fid_write = None
         self._full_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self.name}')
@@ -54,7 +53,7 @@ class DexcomSensor:
     def full_path(self):
         return self._full_path / self._filename.with_suffix(self._ext)
 
-    def open(self):  ###
+    def open(self):
         pass
 
     def open_stream(self, full_path):
@@ -91,7 +90,7 @@ class DexcomSensor:
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
                   f'Sensor: {self.name}',
-                  f'Unit: mg/dL',
+                  f'Unit: {self.unit}',
                   f'Data Format: {str(np.dtype(np.float32))}',
                   f'Datapoints Per Timestamp: {self._datapoints_per_ts}',
                   f'Bytes Per Sample: {self._bytes_per_ts}',
@@ -115,7 +114,7 @@ class DexcomSensor:
             self.stream()
 
     def stream(self):
-        data, new_time = self.sensor.get_data()
+        data, new_time = self.receiver.get_data()
         if not data or self.old_time == new_time:
             return
         else:
