@@ -123,11 +123,9 @@ class DexcomSensor:
 
     def stream(self):
         data, new_time = self.sensor.get_data()
-        if not data or self.old_time == new_time:  ###
-            print('same read or no data; returning')  ###
+        if not data or self.old_time == new_time:
             return
         else:
-            print('recording data') ###
             ts_bytes = struct.pack('i', int(perf_counter() * 1000.0))
             data_buf = np.ones(1, dtype=np.float32) * np.float32(data)
             buf_len = len(data_buf)
@@ -177,8 +175,11 @@ class DexcomSensor:
             data_buf = np.fromfile(_fid, dtype=np.float32, count=self._datapoints_per_ts)
         return data_buf, ts
 
-    def get_latest(self):  ###
-        pass
+    def get_latest(self):
+        data_time, data = self.get_data()
+        time = data_time[-1]
+        data = data[-1]
+        return time, data
 
 class PanelPlotting(wx.Panel):
     def __init__(self, parent, with_readout=True):
