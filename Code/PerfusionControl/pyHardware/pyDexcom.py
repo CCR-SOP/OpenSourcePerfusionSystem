@@ -14,7 +14,7 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-DATA_VERSION = 1  ###
+DATA_VERSION = 6
 
 class DexcomSensor:
 
@@ -33,8 +33,8 @@ class DexcomSensor:
            stops recording of data
        close_stream()
            closes file
-       get_latest() ###
-           UPDATE
+       get_latest()
+           returns latest glucose reading
        """
 
     def __init__(self, name, sensor, COM):
@@ -94,13 +94,13 @@ class DexcomSensor:
         fid.write(hdr_str)
         fid.close()
 
-    def _get_stream_info(self):  ###
+    def _get_stream_info(self):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
                   f'Sensor: {self.name}',
                   f'Unit: mg/dL',
                   f'Data Format: {str(np.dtype(np.float32))}',
-                  f'Samples Per Timestamp: {self._datapoints_per_ts}',
+                  f'Datapoints Per Timestamp: {self._datapoints_per_ts}',
                   f'Bytes Per Sample: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
