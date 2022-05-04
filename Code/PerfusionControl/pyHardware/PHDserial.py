@@ -93,7 +93,7 @@ class PHDserial(USBSerial):
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
-        self._timestamp_perf = perf_counter()
+        self._timestamp_perf = perf_counter() * 1000
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
@@ -101,7 +101,6 @@ class PHDserial(USBSerial):
         self._open_write()
         self._write_to_file(np.array([0]), np.array([0]), np.array([0]))
         self._fid_write.seek(0)
-        # self._open_read()
 
         self.print_stream_info()
 
