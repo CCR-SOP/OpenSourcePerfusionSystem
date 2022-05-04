@@ -31,8 +31,8 @@ class DexcomSensor:
     def __init__(self, name, unit, receiver):
         self._logger = logging.getLogger(__name__)
         self.name = name
-        self.receiver = receiver
         self.unit = unit
+        self.receiver = receiver
         self._fid_write = None
         self._full_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self.name}')
@@ -48,6 +48,7 @@ class DexcomSensor:
         self.__evt_halt_streaming = Event()
 
         self.old_time = None
+        self.error = None
 
     @property
     def full_path(self):
@@ -109,12 +110,13 @@ class DexcomSensor:
         self.__thread_streaming = Thread(target=self.OnStreaming)
         self.__thread_streaming.start()
 
-    def OnStreaming(self):  ###
-        while not self.__evt_halt_streaming.wait(1.5):  # Attempt to read new data every 60 seconds
+    def OnStreaming(self):
+        while not self.__evt_halt_streaming.wait(5):  # Will want to read new data every 60 seconds
             self.stream()
 
     def stream(self):
-        data, new_time = self.receiver.get_data()
+        data, new_time, error = self.receiver.get_data()
+        self.error = error
         if not data or self.old_time == new_time:
             return
         else:
@@ -169,6 +171,9 @@ class DexcomSensor:
 
     def get_latest(self):
         data_time, data = self.get_data()
-        time = data_time[-1]
-        data = data[-1]
-        return time, data
+        if not data:  # If no data has been collected
+            return None, None
+        else:
+            time = data_time[-1]
+            data = data[-1]
+            return time, data, self.error
