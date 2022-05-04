@@ -298,9 +298,9 @@ class TSMDexPanelPlotting(wx.Panel):
         self.Fit()
         self.__parent.Fit()
 
-class TSMDexPanelPlotLT(TSMPanelPlotting):
+class TSMDexPanelPlotLT(TSMDexPanelPlotting):
     def __init__(self, parent):
-        TSMPanelPlotting.__init__(self, parent, with_readout=False)
+        TSMDexPanelPlotting.__init__(self, parent, with_readout=False)
 
     def _configure_plot(self, sensor):
         self.axes.set_yticklabels([])
