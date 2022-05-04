@@ -48,7 +48,7 @@ Rate Unit: {string containing units of infusion rate (e.g. "ml/min")}
 Data Format: {string representing sample format (e.g. "float32")
 Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 2 (infusion volume and infusion rate)}
 Bytes per Timestamp: {number of bytes used to store the timestamp}
-Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format}
+Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format and in milliseconds from start format}
 
 After the header, data is immediately stored in described format.
 The assumption is that infusion volume and infusion rate data are acquired at the same time
