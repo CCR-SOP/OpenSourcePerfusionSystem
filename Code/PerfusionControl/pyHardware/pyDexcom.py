@@ -111,7 +111,7 @@ class DexcomSensor:
         self.__thread_streaming.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(6):  # Will want to try to read new data every 60 seconds
+        while not self.__evt_halt_streaming.wait(60):
             self.stream()
 
     def stream(self):

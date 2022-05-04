@@ -62,7 +62,7 @@ class Dexcom(object):
   def __init__(self, port):
     self._port_name = port
     self._port = None
-    self._index = 19
+  # self._index = 22
 
   def Connect(self):
     if self._port is None:
@@ -386,8 +386,8 @@ class Dexcom(object):
 
   def get_data(self):  # Provides latest CGM value
     CGM_records = self.ReadRecords('EGV_DATA')
-    # latest_read_split = str(CGM_records[-1]).split(': ')
-    latest_read_split = str(CGM_records[self._index]).split(': ')
+    latest_read_split = str(CGM_records[-1]).split(': ')
+  # latest_read_split = str(CGM_records[self._index]).split(': ')
     time = latest_read_split[0][5:16]
     latest_value_raw = latest_read_split[1]
     if latest_value_raw[0:3] == 'CGM':
@@ -402,7 +402,7 @@ class Dexcom(object):
     else:
       buffer = None
       error = 'Unknown Sensor Error'
-    self._index += 1
+   # self._index += 1
     return buffer, time, error
 
 class DexcomG5 (Dexcom):
