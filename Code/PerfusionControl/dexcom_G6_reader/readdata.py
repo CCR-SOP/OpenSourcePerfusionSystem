@@ -62,7 +62,7 @@ class Dexcom(object):
   def __init__(self, port):
     self._port_name = port
     self._port = None
-    self._index = 0
+    self._index = 19
 
   def Connect(self):
     if self._port is None:

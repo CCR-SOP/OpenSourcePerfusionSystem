@@ -114,7 +114,12 @@ class TSMDexSensorPlot:
             return
         if data_time is None:
             return
-        self._axes.plot(data_time, data, 'ko')
+        if data > self._valid_range[1]:
+            self._axes.plot_date(data_time, data, 'bo')
+        elif data < self._valid_range[0]:
+            self._axes.plot_date(data_time, data, 'ro')
+        else:
+            self._axes.plot_date(data_time, data, 'ko')
 
     def _configure_plot(self):
         self._axes.set_title(self._plot_name)
