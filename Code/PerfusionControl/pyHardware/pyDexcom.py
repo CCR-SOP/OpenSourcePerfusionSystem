@@ -111,13 +111,13 @@ class DexcomSensor:
         self.__thread_streaming.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(5):  # Will want to read new data every 60 seconds
+        while not self.__evt_halt_streaming.wait(6):  # Will want to try to read new data every 60 seconds
             self.stream()
 
     def stream(self):
         data, new_time, error = self.receiver.get_data()
         self.error = error
-        if not data or self.old_time == new_time:
+        if not data or self.old_time == new_time:  # Don't log data unless it is new data and there is not a sensor error
             return
         else:
             ts_bytes = struct.pack('i', int(perf_counter() * 1000.0))
@@ -176,4 +176,4 @@ class DexcomSensor:
         else:
             time = data_time[-1]
             data = data[-1]
-            return time, data, self.error
+            return time, data
