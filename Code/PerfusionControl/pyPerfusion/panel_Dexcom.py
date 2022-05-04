@@ -19,7 +19,6 @@ from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 from pyHardware.pyDIO import DIODeviceException
 from pyHardware.pyVCS import VCS, VCSPump
-from pyPerfusion.panel_VCS import PanelPump
 
 import pyPerfusion.PerfusionConfig as LP_CFG
 
@@ -116,9 +115,9 @@ class PanelDexcom(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
+        LP_CFG.set_base(basepath='~/Documents/LPTEST')  ###
         LP_CFG.update_stream_folder()
-        utils.setup_default_logging(filename='panel_Dexcom')  ###
+        utils.setup_default_logging(filename='panel_Dexcom')
         self.sensor.open()
         self.sensor.open_stream(LP_CFG.LP_PATH['stream'])
 
@@ -194,7 +193,7 @@ class PanelDexcom(wx.Panel):
         state = self.btn_start.GetLabel()
         if state == 'Start Acquisition':
             self.sensor.start_stream()
-            self.timer_update_plot.Start(2000, wx.TIMER_CONTINUOUS)  # Want to try to update plots every 60 seconds
+            self.timer_update_plot.Start(60000, wx.TIMER_CONTINUOUS)  # Want to try to update plots every 60 seconds
             self.btn_start.SetLabel('Stop Acquisition')
             self._vcs.open_independent_valve(self._valve.name)
             self._vcs._pump.start()
@@ -275,7 +274,7 @@ class TestFrame(wx.Frame):
         dexcom_sizer.Add(panel_PV, 1, wx.EXPAND, border=2)
         dexcom_sizer.Add(panel_IVC, 1, wx.EXPAND, border=2)
 
-        insulin_injection = PHDserial('Insulin')  # Look @ syringe code
+        insulin_injection = PHDserial('Insulin')
         insulin_injection.open('COM12', 9600)
         insulin_injection.ResetSyringe()
         insulin_injection.open_stream(LP_CFG.LP_PATH['stream'])
@@ -290,8 +289,8 @@ class TestFrame(wx.Frame):
         self.sensor = panel_IVC.sensor  # Glucose measurements which inform syringe injections are from the IVC; this is the panel being referenced here
         self._syringes = [insulin_injection, glucagon_unasyn_injection]
 
-        syringe_sizer = wx.GridSizer(cols=2)  # Look @ this code
-        syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Insulin Syringe', insulin_injection), 1, wx.ALL | wx.EXPAND, border=1)  # Check this code
+        syringe_sizer = wx.GridSizer(cols=2)
+        syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Insulin Syringe', insulin_injection), 1, wx.ALL | wx.EXPAND, border=1)
         syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Glucagon (Unasyn) Syringe', glucagon_unasyn_injection), 1, wx.ALL | wx.EXPAND, border=1)
 
         sizer = wx.GridSizer(cols=2)
@@ -303,13 +302,14 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for syringe in self._syringes:  # Look @ this
+        for syringe in self._syringes:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             syringe.stop_stream()
         for sensor in sensors:
             sensor.stop_stream()
             sensor.close_stream()
+        self.pump.stop()
         self._vcs.close()
         self.ao.close()
         self.Destroy()
