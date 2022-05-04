@@ -68,8 +68,8 @@ class DexcomReadout(wx.Panel):
         self.Fit()
 
 class PanelDexcom(wx.Panel):
-    def __init__(self, parent, receiver_class, valve, vcs, name, unit, valid_range):
-        self._logger = logging.getLogger(__name__)  # Check this
+    def __init__(self, parent, receiver_class, valve, vcs, name, unit, valid_range, lgr):
+        self._logger = lgr
         self.parent = parent
         self._receiver_class = receiver_class
         self._valve = valve
@@ -115,9 +115,6 @@ class PanelDexcom(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')  ###
-        LP_CFG.update_stream_folder()
-        utils.setup_default_logging(filename='panel_Dexcom')
         self.sensor.open()
         self.sensor.open_stream(LP_CFG.LP_PATH['stream'])
 
@@ -228,7 +225,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self._lgr = logging.getLogger(__name__)  # Figure out this logging
+        self._lgr = logging.getLogger(__name__)
 
         self._vcs = VCS(clearance_time_ms=None, acq_time_ms=None)
 
@@ -267,8 +264,8 @@ class TestFrame(wx.Frame):
                 dlg.ShowModal()
                 continue
 
-        panel_PV = PanelDexcom(self, Dexcom, valves[0], self._vcs, 'Receiver #1 - Portal Vein', 'mg/dL', [80, 120])
-        panel_IVC = PanelDexcom(self, Dexcom, valves[1], self._vcs, 'Receiver #2 - Inferior Vena Cava', 'mg/dL', [80, 120])
+        panel_PV = PanelDexcom(self, Dexcom, valves[0], self._vcs, 'Receiver #1 - Portal Vein', 'mg/dL', [80, 120], self._lgr)
+        panel_IVC = PanelDexcom(self, Dexcom, valves[1], self._vcs, 'Receiver #2 - Inferior Vena Cava', 'mg/dL', [80, 120], self._lgr)
 
         dexcom_sizer = wx.GridSizer(cols=1)
         dexcom_sizer.Add(panel_PV, 1, wx.EXPAND, border=2)
@@ -321,7 +318,7 @@ class MyTestApp(wx.App):
         frame.Show()
         return True
 
-if __name__ == "__main__":  # Check this logging
+if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
     logger = logging.getLogger()
