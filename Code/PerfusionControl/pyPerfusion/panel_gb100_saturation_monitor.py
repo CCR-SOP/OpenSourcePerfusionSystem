@@ -9,7 +9,7 @@ import logging
 import pyPerfusion.utils as utils
 import os
 from pathlib import Path
-from pyPerfusion.plotting import TSMPanelPlotting, TSMPanelPlotLT, TSMSensorPlot
+from pyPerfusion.plotting import TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot
 from pyHardware.pySaturationMonitor import TSMSerial
 from pyHardware.pyGB100 import GB100
 import pyPerfusion.PerfusionConfig as LP_CFG
@@ -122,15 +122,15 @@ class PanelPGB100SaturationMonitor(wx.Panel):
     def _add_lt(self, plot_name, valid_range):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
-        panel = TSMPanelPlotting(self)
+        panel = TSMDexPanelPlotting(self)
         self._plots_main.append(panel)
-        plotraw = TSMSensorPlot(plot_name, panel.axes, self._labels[plot_name], valid_range)
+        plotraw = TSMDexSensorPlot(plot_name, panel.axes, self._labels[plot_name], valid_range)
         panel.add_plot(plotraw)
         sizer.Add(panel, 9, wx.ALL | wx.EXPAND, border=0)
 
-        panel = TSMPanelPlotLT(self)
+        panel = TSMDexPanelPlotLT(self)
         self._plots_lt.append(panel)
-        plotraw = TSMSensorPlot('', panel.axes, '', valid_range)
+        plotraw = TSMDexSensorPlot('', panel.axes, '', valid_range)
         panel.add_plot(plotraw)
         sizer.Add(panel, 2, wx.ALL | wx.EXPAND, border=0)
 

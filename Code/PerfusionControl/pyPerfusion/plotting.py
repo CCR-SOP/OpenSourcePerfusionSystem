@@ -96,7 +96,7 @@ class SensorPlot:
             self._axes.set_title(f'{self._sensor.name}\n')
             self._axes.set_ylabel(self._sensor.unit_str)
 
-class TSMSensorPlot:
+class TSMDexSensorPlot:
     def __init__(self, plot_name, axes, unit, valid_range):
         self._lgr = logging.getLogger(__name__)
         self._plot_name = plot_name
@@ -114,7 +114,12 @@ class TSMSensorPlot:
             return
         if data_time is None:
             return
-        self._axes.plot(data_time, data, 'ko')
+        if data > self._valid_range[1]:
+            self._axes.plot_date(data_time, data, 'bo')
+        elif data < self._valid_range[0]:
+            self._axes.plot_date(data_time, data, 'ro')
+        else:
+            self._axes.plot_date(data_time, data, 'ko')
 
     def _configure_plot(self):
         self._axes.set_title(self._plot_name)
@@ -233,7 +238,7 @@ class PanelPlotLT(PanelPlotting):
         self.axes.set_yticklabels([])
         self.axes.set_xticklabels([])
 
-class TSMPanelPlotting(wx.Panel):
+class TSMDexPanelPlotting(wx.Panel):
     def __init__(self, parent, with_readout=True):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
@@ -298,9 +303,9 @@ class TSMPanelPlotting(wx.Panel):
         self.Fit()
         self.__parent.Fit()
 
-class TSMPanelPlotLT(TSMPanelPlotting):
+class TSMDexPanelPlotLT(TSMDexPanelPlotting):
     def __init__(self, parent):
-        TSMPanelPlotting.__init__(self, parent, with_readout=False)
+        TSMDexPanelPlotting.__init__(self, parent, with_readout=False)
 
     def _configure_plot(self, sensor):
         self.axes.set_yticklabels([])
