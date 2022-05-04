@@ -96,7 +96,7 @@ class SensorPlot:
             self._axes.set_title(f'{self._sensor.name}\n')
             self._axes.set_ylabel(self._sensor.unit_str)
 
-class TSMSensorPlot:
+class TSMDexSensorPlot:
     def __init__(self, plot_name, axes, unit, valid_range):
         self._lgr = logging.getLogger(__name__)
         self._plot_name = plot_name
@@ -233,7 +233,7 @@ class PanelPlotLT(PanelPlotting):
         self.axes.set_yticklabels([])
         self.axes.set_xticklabels([])
 
-class TSMPanelPlotting(wx.Panel):
+class TSMDexPanelPlotting(wx.Panel):
     def __init__(self, parent, with_readout=True):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
@@ -298,7 +298,7 @@ class TSMPanelPlotting(wx.Panel):
         self.Fit()
         self.__parent.Fit()
 
-class TSMPanelPlotLT(TSMPanelPlotting):
+class TSMDexPanelPlotLT(TSMPanelPlotting):
     def __init__(self, parent):
         TSMPanelPlotting.__init__(self, parent, with_readout=False)
 
