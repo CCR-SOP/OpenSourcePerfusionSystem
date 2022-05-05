@@ -27,8 +27,6 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
         wx.Panel.__init__(self, parent, -1)
 
-        syringe_list = '%s' % injection.name
-
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
@@ -74,9 +72,11 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.choice_1TB_unit.SetSelection(1)
         self.btn_start_1TB = wx.ToggleButton(self, label='Start Bolus')
 
+        syringe_list = '%s' % injection.name
         self.label_syringes = wx.StaticText(self, label='Syringe In Use: %s' % syringe_list)
 
         self.load_info()
+        self.set_syringe()
 
         self.__do_layout()
         self.__set_bindings()
@@ -186,7 +186,7 @@ class PanelTestVasoactiveSyringe(wx.Panel):
 
     def __set_bindings(self):
         self.btn_basal_infusion.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasalInfusion)
-        self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
+        # self.choice_manu.Bind(wx.EVT_CHOICE, self.OnManu)
         self.btn_direction.Bind(wx.EVT_TOGGLEBUTTON, self.OnDirection)
         self.btn_start_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartBasal)
         self.btn_start_timer.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartBolus)
@@ -195,6 +195,16 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         self.btn_update_threshold.Bind(wx.EVT_BUTTON, self.OnUpdateThreshold)
         self.btn_update_tolerance.Bind(wx.EVT_BUTTON, self.OnUpdateTolerance)
 
+    def set_syringe(self):
+        section = LP_CFG.get_hwcfg_section(self._injection.name)
+        manucode = section['manucode']
+        volume = section['volume']
+        self.choice_manu.SetSelection(manucode)
+        self.update_syringe_types()
+        self.choice_types.SetSelection(volume)
+        self.choice_manu.Enable(False)
+        self.choice_types.Enable(False)
+
     def OnBasalInfusion(self, evt):
         state = self.btn_basal_infusion.GetLabel()
         if state == 'Basal Infusion Active':
@@ -202,8 +212,8 @@ class PanelTestVasoactiveSyringe(wx.Panel):
         elif state == 'Basal Infusion Inactive':
             self.btn_basal_infusion.SetLabel('Basal Infusion Active')
 
-    def OnManu(self, evt):
-        self.update_syringe_types()
+ #   def OnManu(self, evt):
+ #       self.update_syringe_types()
 
     def get_selected_code(self):
         sel = self.choice_manu.GetString(self.choice_manu.GetSelection())
@@ -351,14 +361,20 @@ class TestFrame(wx.Frame):
         self.sensor.add_strategy(raw)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name, 'StreamRaw'), 1, wx.ALL | wx.EXPAND, border=1)
 
+        section = LP_CFG.get_hwcfg_section('Phenylephrine')
+        com = section['commport']
+        baud = section['baudrate']
         vasoconstrictor_injection = PHDserial('Phenylephrine')
-        vasoconstrictor_injection.open('COM4', 9600)
+        vasoconstrictor_injection.open(com, baud)
         vasoconstrictor_injection.ResetSyringe()
         vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasoconstrictor_injection.start_stream()
 
+        section = LP_CFG.get_hwcfg_section('Epoprostenol')
+        com = section['commport']
+        baud = section['baudrate']
         vasodilator_injection = PHDserial('Epoprostenol')
-        vasodilator_injection.open('COM11', 9600)
+        vasodilator_injection.open(com, baud)
         vasodilator_injection.ResetSyringe()
         vasodilator_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasodilator_injection.start_stream()
