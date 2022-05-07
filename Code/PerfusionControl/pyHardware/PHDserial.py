@@ -25,13 +25,13 @@ class PHDserial(USBSerial):
         opens USB port of given name with the specified baud rate using given syringe pump address
     open_stream(full_path)
         creates .txt and .dat files for recording syringe data
-    infuse() ###
+    infuse()
         begin infusion of syringe; for both continuous ('infinite') and targeted (will terminate after a certain infusion volume is reached) infusions
-    stop()  ###
+    stop()
         stop infusion of syringe
-    record_infusion()  ###
+    record_infusion()
         record details of latest syringe infusion
-    stop_stream()  ###
+    close_stream()
         stops recording of syringe data
     set_param(param, value)
         sets a syringe pump parameter (param) to (value)
@@ -181,13 +181,13 @@ class PHDserial(USBSerial):
             self._last_idx += buf_len
             self._fid_write.flush()
 
-    def _write_to_file(self, data_buf_vol, data_buf_rate, t):  ###
+    def _write_to_file(self, data_buf_vol, data_buf_rate, t):
         ts_bytes = struct.pack('i', int(t * 1000.0))
         self._fid_write.write(ts_bytes)
         data_buf_vol.tofile(self._fid_write)
         data_buf_rate.tofile(self._fid_write)
 
-    def stop_stream(self):  ###  Add close stream option?
+    def close_stream(self):
         if self._fid_write:
             self._fid_write.close()
         self._fid_write = None

@@ -367,10 +367,11 @@ class TestFrame(wx.Frame):
         vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasoconstrictor_injection.start_stream()
 
-        self._syringes = [vasoconstrictor_injection, vasodilator_injection]
-        sizer.Add(PanelSyringe(self, None, heparin_injection.name, heparin_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        self._syringes = [heparin_injection, vasoconstrictor_injection, vasodilator_injection]
+        self.panels = [PanelSyringe(self, None, heparin_injection.name, heparin_injection), PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]
+        sizer.Add(self.panels[0], 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(self.panels[1], 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(self.panels[2], 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -378,9 +379,13 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        for panel in self.panels:
+            if panel._panel_feedback:
+                panel._panel_feedback._syringe_timer.stop_bolus_injections()
         for syringe in self._syringes:
+            infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
+            syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             syringe.close_stream()
-            # Stop all syringes?
         self.sensor.stop()
         self.Destroy()
 
