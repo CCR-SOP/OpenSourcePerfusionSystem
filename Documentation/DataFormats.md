@@ -42,11 +42,11 @@ Text-based header followed by a stream of timestamp/sample pairs in binary forma
 The timestamp is stored as the number of milliseconds from the start of the acquisition
 Header Lines:
 File Format: 3
-Syringe: {string containing syringe name (e.g. "Insulin Syringe")}
-Volume Unit: {string containing units of infusion volume (e.g. "ml")}
-Rate Unit: {string containing units of infusion rate (e.g. "ml/min")}
+Syringe: {string containing syringe name (e.g. "Insulin")}
+Volume Unit: {string containing units of infusion volume ("ul")}
+Rate Unit: {string containing units of infusion rate ("ul/min")}
 Data Format: {string representing sample format (e.g. "float32")
-Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 2 (infusion volume and infusion rate)}
+Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 2 (infusion volume (uL) and infusion rate (uL/min))}
 Bytes per Timestamp: {number of bytes used to store the timestamp}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format and in milliseconds from start format}
 

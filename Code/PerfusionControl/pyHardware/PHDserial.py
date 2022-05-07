@@ -7,7 +7,7 @@ import numpy as np
 import struct
 from time import perf_counter
 
-DATA_VERSION = 3
+DATA_VERSION = 3  ###
 
 class PHDserial(USBSerial):
 
@@ -19,19 +19,19 @@ class PHDserial(USBSerial):
     ----------
 
 
-    Methods  ###
+    Methods
     -------
     open(port_name, baud, addr)
         opens USB port of given name with the specified baud rate using given syringe pump address
     open_stream(full_path)
         creates .txt and .dat files for recording syringe data
-    infuse()
+    infuse() ###
         begin infusion of syringe; for both continuous ('infinite') and targeted (will terminate after a certain infusion volume is reached) infusions
-    stop()
+    stop()  ###
         stop infusion of syringe
-    record_infusion()
+    record_infusion()  ###
         record details of latest syringe infusion
-    stop_stream()
+    stop_stream()  ###
         stops recording of syringe data
     set_param(param, value)
         sets a syringe pump parameter (param) to (value)
@@ -117,13 +117,13 @@ class PHDserial(USBSerial):
         fid.close()
 
     def _get_stream_info(self):
-        stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')  # Make this in uL instead since that's more common?
+        stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
                   f'Syringe: {self.name}',
-                  f'Volume Unit: ml',
-                  f'Rate Unit: ml/min',
+                  f'Volume Unit: ul',
+                  f'Rate Unit: ul/min',
                   f'Data Format: {str(np.dtype(np.float32))}',
-                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Infusion Volume and Infusion Rate)',
+                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Infusion Volume (uL) and Infusion Rate (uL/min))',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
@@ -134,7 +134,7 @@ class PHDserial(USBSerial):
     def start_stream(self):
         pass
 
-    def get_stream_info(self):
+    def get_stream_info(self):  ###
         infuse_rate = self.get_infusion_rate().split(' ')[0]
         infuse_unit = self.get_infusion_rate().split(' ')[1]
         volume_unit = self.get_target_volume().split(' ')[1]
@@ -147,52 +147,55 @@ class PHDserial(USBSerial):
         print(infuse_rate, ml_min_rate, ml_volume, infuse_unit, volume_unit)
         return infuse_rate, ml_min_rate, ml_volume
 
-    def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
+    def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):  ###
         self.send('irun\r')
         infusion_rate = float(infusion_rate)
-        if not ml_volume:
+        if ml_volume:
             if infusion_volume == -2:
                 pass
             else:
-                infusion_volume = infusion_volume / 1000
-        if not ml_min_rate:
-            infusion_rate = infusion_rate / 1000
+                infusion_volume = infusion_volume * 1000
+        if ml_min_rate:
+            infusion_rate = infusion_rate * 1000
+        print(infusion_volume, infusion_rate)
         self.record_infusion(infusion_volume, infusion_rate)
 
-    def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
+    def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):  ###
         self.send('stop\r')
         infusion_rate = float(infusion_rate)
-        if not ml_volume:
+        if ml_volume:
             if infusion_volume == -1:
                 pass
             else:
-                infusion_volume = infusion_volume / 1000
-        if not ml_min_rate:
-            infusion_rate = infusion_rate / 1000
+                infusion_volume = infusion_volume * 1000
+        if ml_min_rate:
+            infusion_rate = infusion_rate * 1000
+        print(infusion_volume, infusion_rate)
         self.record_infusion(infusion_volume, infusion_rate)
 
-    def record_infusion(self, infusion_volume, infusion_rate):
+    def record_infusion(self, infusion_volume, infusion_rate):  ###
         volume_buffer = np.ones(1, dtype=np.float32) * np.float32(infusion_volume)
         rate_buffer = np.ones(1, dtype=np.float32) * np.float32(infusion_rate)
         t = perf_counter()
+        print(volume_buffer, rate_buffer, t)
         if volume_buffer is not None and rate_buffer is not None and self._fid_write is not None:
             buf_len = len(volume_buffer) + len(rate_buffer)
             self._write_to_file(volume_buffer, rate_buffer, t)
             self._last_idx += buf_len
             self._fid_write.flush()
 
-    def _write_to_file(self, data_buf_vol, data_buf_rate, t):
+    def _write_to_file(self, data_buf_vol, data_buf_rate, t):  ###
         ts_bytes = struct.pack('i', int(t * 1000.0))
         self._fid_write.write(ts_bytes)
         data_buf_vol.tofile(self._fid_write)
         data_buf_rate.tofile(self._fid_write)
 
-    def stop_stream(self):
+    def stop_stream(self):  ###  Add close stream option?
         if self._fid_write:
             self._fid_write.close()
         self._fid_write = None
 
-    def get_data(self, last_ms, samples_needed):
+    def get_data(self, last_ms, samples_needed):  ##
         _fid, tmp = self._open_read()
         cur_time = int(perf_counter() * 1000)
         _fid.seek(0)
@@ -209,12 +212,12 @@ class PHDserial(USBSerial):
         _fid.close()
         return data_time, data
 
-    def _open_read(self):
+    def _open_read(self):  ###
         _fid = open(self.full_path, 'rb')
         data = np.memmap(_fid, dtype=np.float32, mode='r')
         return _fid, data
 
-    def __read_chunk(self, _fid):
+    def __read_chunk(self, _fid):  ###
         ts = 0
         data_buf = []
         ts_bytes = _fid.read(self._bytes_per_ts)
