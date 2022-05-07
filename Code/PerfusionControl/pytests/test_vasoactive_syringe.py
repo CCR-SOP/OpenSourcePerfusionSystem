@@ -306,7 +306,7 @@ class PanelFeedbackSyringe(wx.Panel):
             self.parent.spin_1TB_volume.Enable(True)
             self.parent.choice_1TB_unit.Enable(True)
             self.parent.btn_start_1TB.Enable(True)
-            self.btn_basal_infusion_status.Enable(True)  # Add functionality here so that basal infusions can be stopped mid-run while bolus infusions continue?
+            self.btn_basal_infusion_status.Enable(True)
             if self.btn_basal_infusion_status.GetLabel() == 'Basal Infusion Active':
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.stop(-1, infuse_rate, ml_volume, ml_min_rate)
@@ -378,8 +378,8 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for syringe in self._syringes:  # See if anything else needs to be done here
-            syringe.stop_stream()
+        for syringe in self._syringes:
+            syringe.close_stream()
             # Stop all syringes?
         self.sensor.stop()
         self.Destroy()
