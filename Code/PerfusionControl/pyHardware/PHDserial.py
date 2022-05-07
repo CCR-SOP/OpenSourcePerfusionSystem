@@ -7,7 +7,7 @@ import numpy as np
 import struct
 from time import perf_counter
 
-DATA_VERSION = 3  ###
+DATA_VERSION = 3
 
 class PHDserial(USBSerial):
 
@@ -134,7 +134,7 @@ class PHDserial(USBSerial):
     def start_stream(self):
         pass
 
-    def get_stream_info(self):  ###
+    def get_stream_info(self):
         infuse_rate = self.get_infusion_rate().split(' ')[0]
         infuse_unit = self.get_infusion_rate().split(' ')[1]
         volume_unit = self.get_target_volume().split(' ')[1]
@@ -144,10 +144,9 @@ class PHDserial(USBSerial):
             ml_min_rate = False
         if 'ul' in volume_unit:
             ml_volume = False
-        print(infuse_rate, ml_min_rate, ml_volume, infuse_unit, volume_unit)
         return infuse_rate, ml_min_rate, ml_volume
 
-    def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):  ###
+    def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('irun\r')
         infusion_rate = float(infusion_rate)
         if ml_volume:
@@ -157,10 +156,9 @@ class PHDserial(USBSerial):
                 infusion_volume = infusion_volume * 1000
         if ml_min_rate:
             infusion_rate = infusion_rate * 1000
-        print(infusion_volume, infusion_rate)
         self.record_infusion(infusion_volume, infusion_rate)
 
-    def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):  ###
+    def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('stop\r')
         infusion_rate = float(infusion_rate)
         if ml_volume:
@@ -170,7 +168,6 @@ class PHDserial(USBSerial):
                 infusion_volume = infusion_volume * 1000
         if ml_min_rate:
             infusion_rate = infusion_rate * 1000
-        print(infusion_volume, infusion_rate)
         self.record_infusion(infusion_volume, infusion_rate)
 
     def record_infusion(self, infusion_volume, infusion_rate):  ###
