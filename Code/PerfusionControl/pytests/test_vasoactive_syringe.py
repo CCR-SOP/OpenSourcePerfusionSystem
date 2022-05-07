@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Allen Luna
-Test app for initiating syringe injections based on pressure/flow conditions  ###
+Panel for controlling syringe injections; both basal infusions and feedback-controlled infusions are handled
 """
 import wx
 import pyPerfusion.utils as utils
@@ -53,8 +53,11 @@ class PanelSyringe(wx.Panel):
 
         self.btn_basal_infusion_status = wx.ToggleButton(self, label='Basal Infusion Active')
 
-        if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:  ###
+        if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
             self._panel_feedback = PanelFeedbackSyringe(self, self._sensor, self._name, self._injection)
+
+        self._injection.ResetSyringe()
+        self._injection.set_syringe_manufacturer_size(self.manucode[1:4], self.size)
 
         self.__do_layout()
         self.__set_bindings()
@@ -88,7 +91,7 @@ class PanelSyringe(wx.Panel):
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
-        sizer.Add(self._panel_feedback, 1, wx.EXPAND | wx.ALL, border=5)
+        sizer.Add(self._panel_feedback.sizer, 1, wx.EXPAND | wx.ALL, border=5)
         self.SetSizer(sizer)
         self.Layout()
         self.Fit()
@@ -110,44 +113,44 @@ class PanelSyringe(wx.Panel):
         if state == 'Start Basal Infusion':
             if self.btn_basal_infusion_status.GetLabel() == 'Basal Infusion Active':
                 self._injection.ResetSyringe()
-                self._injection.set_syringe_manufacturer_size(self.manucode[1:4], self.size)
                 rate = self.spin_rate.GetValue()
                 unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
-                self._injection.set_infusion_rate(rate, unit)
+                self._injection.set_infusion_rate(rate, unit)  ###
                 self.spin_rate.Enable(False)
                 self.choice_rate.Enable(False)
-                self.btn_basal_infusion_status.Enable(False)
-                self.btn_start_1TB.Enable(False)
+                self.spin_1TB_volume.Enable(False)
                 self.choice_1TB_unit.Enable(False)
+                self.btn_start_1TB.Enable(False)
+                self.btn_basal_infusion_status.Enable(False)
                 if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
                     self._panel_feedback.btn_update_injection_volume.Enable(False)
                     self._panel_feedback.btn_update_threshold.Enable(False)
                     self._panel_feedback.btn_update_tolerance.Enable(False)
-                    self._panel_feedback.btn_start_timer.Enable(False)
-                infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+                    self._panel_feedback.btn_start_feedback_injections.Enable(False)
+                infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()  ##
                 self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
                 self.btn_start_basal.SetLabel('Stop Basal Infusion')
             elif self.btn_basal_infusion_status.GetLabel() == 'Basal Infusion Inactive':
                 pass
-        else:
-            infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+        elif state == 'Stop Basal Infusion':
+            infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()  ##
             self._injection.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             self.spin_rate.Enable(True)
             self.choice_rate.Enable(True)
-            self.btn_basal_infusion_status.Enable(True)
-            self.btn_start_1TB.Enable(True)
+            self.spin_1TB_volume.Enable(True)
             self.choice_1TB_unit.Enable(True)
+            self.btn_start_1TB.Enable(True)
+            self.btn_basal_infusion_status.Enable(True)
             if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
-                self._panel_feedback.btn_start_timer.Enable(True)
                 self._panel_feedback.btn_update_injection_volume.Enable(True)
                 self._panel_feedback.btn_update_threshold.Enable(True)
                 self._panel_feedback.btn_update_tolerance.Enable(True)
+                self._panel_feedback.btn_start_feedback_injections.Enable(True)
             self.btn_start_basal.SetLabel('Start Basal Infusion')
 
     def OnOneTimeBolus(self, evt):
         self._injection.ResetSyringe()
-        self._injection.set_syringe_manufacturer_size(self.manucode[1:4], self.size)
-        self._injection.set_infusion_rate(25, 'ml/min')
+        self._injection.set_infusion_rate(25, 'ml/min')  ###
         volume = self.spin_1TB_volume.GetValue()
         unit = self.choice_1TB_unit.GetString(self.choice_1TB_unit.GetSelection())
         self._injection.set_target_volume(volume, unit)
@@ -163,7 +166,7 @@ class PanelFeedbackSyringe(wx.Panel):
         self._sensor = sensor
         self._name = name
         self._injection = injection
-        self._syringe_timer = SyringeTimer(self._injection.name, self._sensor, self._injection)
+        self._syringe_timer = SyringeTimer(self._injection.name, self._sensor, self._injection)  ###
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -191,18 +194,18 @@ class PanelFeedbackSyringe(wx.Panel):
         self.btn_update_injection_volume = wx.Button(self, label='Update Injection Volume')
 
         self.label_time_between_checks = wx.StaticText(self, label='Time Between Checks (s): ')
-        self.spin_time_between_checks = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.timebetween), inc=1)
+        self.spin_time_between_checks = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.timebetween), inc=1)  # Need update buttons for these?
 
         self.label_cooldown_time = wx.StaticText(self, label='Cooldown Time (s): ')
         self.spin_cooldown_time = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.cooldown), inc=1)
 
-        self.btn_start_timer = wx.ToggleButton(self, label='Start Bolus Injections')
+        self.btn_start_feedback_injections = wx.ToggleButton(self, label='Start Feedback Injections')
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand()
+        flags = wx.SizerFlags().Expand()  # Look @ panel lay out
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_threshold, flags)
@@ -238,68 +241,63 @@ class PanelFeedbackSyringe(wx.Panel):
         self.sizer.AddSpacer(20)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.btn_start_timer)
+        sizer.Add(self.btn_start_feedback_injections)
         self.sizer.Add(sizer)
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
-        self.SetSizer(sizer)
-        self.Layout()
-        self.Fit()
-
     def __set_bindings(self):
-        self.btn_start_timer.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartBolus)
+        self.btn_start_feedback_injections.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartFeedbackInjection)
         self.btn_update_injection_volume.Bind(wx.EVT_BUTTON, self.OnUpdateInjectionVolume)
         self.btn_update_threshold.Bind(wx.EVT_BUTTON, self.OnUpdateThreshold)
         self.btn_update_tolerance.Bind(wx.EVT_BUTTON, self.OnUpdateTolerance)
 
-    def OnStartBolus(self, evt):
-        state = self.btn_start_timer.GetLabel()
+    def OnStartFeedbackInjection(self, evt):
+        state = self.btn_start_feedback_injections.GetLabel()
         if state == 'Start Bolus Injections':
             self._injection.ResetSyringe()
-            self._injection.set_syringe_manufacturer_size(self.parent.manucode[1:4], self.parent.size)
-            rate = self.parent.spin_rate.GetValue()
-            unit = self.parent.choice_rate.GetString(self.parent.choice_rate.GetSelection())
-            self._injection.set_infusion_rate(rate, unit)
             self.parent.spin_rate.Enable(False)
             self.parent.choice_rate.Enable(False)
-            self.parent.btn_basal_infusion_status.Enable(False)
             self.parent.btn_start_basal.Enable(False)
-            self.parent.btn_start_1TB.Enable(False)
+            self.parent.spin_1TB_volume.Enable(False)
             self.parent.choice_1TB_unit.Enable(False)
-            if self.parent.btn_basal_infusion_status.GetLabel() == 'Basal Infusion Active':
+            self.parent.btn_start_1TB.Enable(False)
+            self.parent.btn_basal_infusion_status.Enable(False)
+            if self.parent.btn_basal_infusion_status.GetLabel() == 'Basal Infusion Active':  ###
+                rate = self.parent.spin_rate.GetValue()
+                unit = self.parent.choice_rate.GetString(self.parent.choice_rate.GetSelection())
+                self._injection.set_infusion_rate(rate, unit)
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
                 self._syringe_timer.basal = True
             else:
                 self._syringe_timer.basal = False
-            self._syringe_timer.threshold_value = self.spin_threshold.GetValue()
+            self._syringe_timer.threshold_value = self.spin_threshold.GetValue()  ##
             self._syringe_timer.tolerance = self.spin_tolerance.GetValue()
             self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
             self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
             self._syringe_timer.cooldown_time = self.spin_cooldown_time.GetValue()
             self._syringe_timer.start_bolus_injections()
-            self.btn_start_timer.SetLabel('Stop Bolus Injections')
+            self.btn_start_feedback_injections.SetLabel('Stop Bolus Injections')
         elif state == 'Stop Bolus Injections':
-            self._syringe_timer.stop_bolus_injections()
+            self._syringe_timer.stop_bolus_injections()  ###
             self.parent.spin_rate.Enable(True)
             self.parent.choice_rate.Enable(True)
-            self.parent.btn_basal_infusion_status.Enable(True)
             self.parent.btn_start_basal.Enable(True)
-            self.parent.btn_start_1TB.Enable(True)
+            self.parent.spin_1TB_volume.Enable(True)
             self.parent.choice_1TB_unit.Enable(True)
-            if self.parent.btn_basal_infusion_status.GetLabel() == 'Basal Infusion Active':
+            self.parent.btn_start_1TB.Enable(True)
+            self.parent.btn_basal_infusion_status.Enable(True)
+            if self.parent.btn_basal_infusion_status.GetLabel() == 'Basal Infusion Active':  ###
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.stop(-1, infuse_rate, ml_volume, ml_min_rate)
-            self.btn_start_timer.SetLabel('Start Bolus Injections')
+            self.btn_start_feedback_injections.SetLabel('Start Bolus Injections')
 
-    def OnUpdateInjectionVolume(self, evt):
+    def OnUpdateInjectionVolume(self, evt):  ###
         self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
 
-    def OnUpdateThreshold(self, evt):
+    def OnUpdateThreshold(self, evt):  ###
         self._syringe_timer.threshold_value = self.spin_threshold.GetValue()
 
-    def OnUpdateTolerance(self, evt):
+    def OnUpdateTolerance(self, evt):  ###
         self._syringe_timer.tolerance = self.spin_tolerance.GetValue()
 
 class TestFrame(wx.Frame):
@@ -307,6 +305,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=3)
+        self._lgr = logging.getLogger(__name__)
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
@@ -332,9 +331,29 @@ class TestFrame(wx.Frame):
         vasodilator_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasodilator_injection.start_stream()
 
+        section = LP_CFG.get_hwcfg_section('TPN/Bile Salts')
+        com = section['commport']
+        baud = section['baudrate']
+        tpn_bilesalts_injection = PHDserial('TPN/Bile Salts')
+        tpn_bilesalts_injection.open(com, baud)
+        tpn_bilesalts_injection.ResetSyringe()
+        tpn_bilesalts_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        tpn_bilesalts_injection.start_stream()
+
+        section = LP_CFG.get_hwcfg_section('Heparin')
+        com = section['commport']
+        baud = section['baudrate']
+        heparin_injection = PHDserial('Heparin')
+        heparin_injection.open(com, baud)
+        heparin_injection.ResetSyringe()
+        heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        heparin_injection.start_stream()
+
         self._syringes = [vasoconstrictor_injection, vasodilator_injection]
-        sizer.Add(PanelSyringe(self, self.sensor, 'Vasoconstrictor Syringe Testing', vasoconstrictor_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelSyringe(self, self.sensor, 'Vasodilator Syringe Testing', vasodilator_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelSyringe(self, None, tpn_bilesalts_injection.name, tpn_bilesalts_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelSyringe(self, None, heparin_injection.name, heparin_injection), 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -342,7 +361,7 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for syringe in self._syringes:
+        for syringe in self._syringes:  # See if anything else needs to be done here
             syringe.stop_stream()
         self.sensor.stop()
         self.Destroy()
@@ -359,6 +378,9 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
     LP_CFG.update_stream_folder()
-    utils.setup_default_logging(filename='test_vasoactive_syringe')
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    utils.setup_stream_logger(logger, logging.DEBUG)
+    utils.setup_default_logging(filename='panel_syringe')
     app = MyTestApp(0)
     app.MainLoop()
