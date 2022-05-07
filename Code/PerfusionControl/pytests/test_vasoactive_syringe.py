@@ -296,10 +296,10 @@ class PanelFeedbackSyringe(wx.Panel):
             self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
             self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
             self._syringe_timer.cooldown_time = self.spin_cooldown_time.GetValue()
-            self._syringe_timer.start_bolus_injections()  ##
+            self._syringe_timer.start_bolus_injections()
             self.btn_start_feedback_injections.SetLabel('Stop Feedback Injections')
         elif state == 'Stop Feedback Injections':
-            self._syringe_timer.stop_bolus_injections()  ###
+            self._syringe_timer.stop_bolus_injections()
             self.parent.spin_rate.Enable(True)
             self.parent.choice_rate.Enable(True)
             self.parent.btn_start_basal.Enable(True)

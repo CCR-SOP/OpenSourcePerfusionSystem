@@ -31,7 +31,7 @@ class SyringeTimer:
         self.__thread_boluses = Thread(target=self.OnBolusLoop)
         self.__thread_boluses.start()
 
-    def stop_bolus_injections(self):  ###
+    def stop_bolus_injections(self):
         if self.__thread_boluses and self.__thread_boluses.is_alive():
             self.__evt_halt_boluses.set()
             self.__thread_boluses.join(2.0)
@@ -41,6 +41,7 @@ class SyringeTimer:
             self.__evt_halt_cooldown.set()
             self.__thread_cooldown.join(2.0)
             self.__thread_cooldown = None
+        self.wait = False
 
     def OnBolusLoop(self):
         while not self.__evt_halt_boluses.wait(self.time_between_checks):
@@ -88,7 +89,7 @@ class SyringeTimer:
 
     def injection(self, syringe, name, parameter_name, parameter, volume_ul, direction):
         self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; injecting {volume_ul:.2f} uL of {name}')
-        if self.basal:  ###
+        if self.basal:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
         syringe.ResetSyringe()
@@ -105,13 +106,12 @@ class SyringeTimer:
             if response >= volume_ul:
                 self.wait = False
         syringe.reset_target_volume()
-        if self.basal:  ###
+        if self.basal:
             if ml_min_rate:
                 unit = 'ml/min'
-                infuse_rate = infuse_rate * 1000 ##
             else:
                 unit = 'ul/min'
-            syringe.set_infusion_rate(infuse_rate, unit)  ###
+            syringe.set_infusion_rate(infuse_rate, unit)
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
         syringe.cooldown = True
