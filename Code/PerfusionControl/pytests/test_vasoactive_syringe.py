@@ -35,9 +35,6 @@ class PanelSyringe(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        syringe_list = '%s' % self._injection.name
-        self.label_syringes = wx.StaticText(self, label='Syringe In Use: %s' % syringe_list)
-
         self.label_rate = wx.StaticText(self, label='Basal Infusion Rate')
         self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
         self.spin_rate.SetValue(float(self.injectionrate))
@@ -66,11 +63,6 @@ class PanelSyringe(wx.Panel):
         flags = wx.SizerFlags().Expand()  # Look at panel structure
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.label_syringes, flags)
-        self.sizer.Add(sizer)
-        self.sizer.AddSpacer(20)
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.label_rate, flags)
         sizer.Add(self.spin_rate, flags)
         sizer.Add(self.choice_rate, flags)
@@ -91,7 +83,8 @@ class PanelSyringe(wx.Panel):
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
-        sizer.Add(self._panel_feedback.sizer, 1, wx.EXPAND | wx.ALL, border=5)
+        if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
+            sizer.Add(self._panel_feedback, 1, wx.EXPAND | wx.ALL, border=5)
         self.SetSizer(sizer)
         self.Layout()
         self.Fit()
@@ -244,6 +237,12 @@ class PanelFeedbackSyringe(wx.Panel):
         sizer.Add(self.btn_start_feedback_injections)
         self.sizer.Add(sizer)
 
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
+        self.SetSizer(sizer)
+        self.Layout()
+        self.Fit()
+
     def __set_bindings(self):
         self.btn_start_feedback_injections.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartFeedbackInjection)
         self.btn_update_injection_volume.Bind(wx.EVT_BUTTON, self.OnUpdateInjectionVolume)
@@ -304,7 +303,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=3)
+        sizer = wx.GridSizer(cols=4)
         self._lgr = logging.getLogger(__name__)
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
@@ -312,33 +311,6 @@ class TestFrame(wx.Frame):
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name, 'StreamRaw'), 1, wx.ALL | wx.EXPAND, border=1)
-
-        section = LP_CFG.get_hwcfg_section('Phenylephrine')
-        com = section['commport']
-        baud = section['baudrate']
-        vasoconstrictor_injection = PHDserial('Phenylephrine')
-        vasoconstrictor_injection.open(com, baud)
-        vasoconstrictor_injection.ResetSyringe()
-        vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
-        vasoconstrictor_injection.start_stream()
-
-        section = LP_CFG.get_hwcfg_section('Epoprostenol')
-        com = section['commport']
-        baud = section['baudrate']
-        vasodilator_injection = PHDserial('Epoprostenol')
-        vasodilator_injection.open(com, baud)
-        vasodilator_injection.ResetSyringe()
-        vasodilator_injection.open_stream(LP_CFG.LP_PATH['stream'])
-        vasodilator_injection.start_stream()
-
-        section = LP_CFG.get_hwcfg_section('TPN/Bile Salts')
-        com = section['commport']
-        baud = section['baudrate']
-        tpn_bilesalts_injection = PHDserial('TPN/Bile Salts')
-        tpn_bilesalts_injection.open(com, baud)
-        tpn_bilesalts_injection.ResetSyringe()
-        tpn_bilesalts_injection.open_stream(LP_CFG.LP_PATH['stream'])
-        tpn_bilesalts_injection.start_stream()
 
         section = LP_CFG.get_hwcfg_section('Heparin')
         com = section['commport']
@@ -349,11 +321,28 @@ class TestFrame(wx.Frame):
         heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
         heparin_injection.start_stream()
 
+        section = LP_CFG.get_hwcfg_section('Epoprostenol')
+        com = section['commport']
+        baud = section['baudrate']
+        vasodilator_injection = PHDserial('Epoprostenol')
+        vasodilator_injection.open(com, baud)
+        vasodilator_injection.ResetSyringe()
+        vasodilator_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        vasodilator_injection.start_stream()
+
+        section = LP_CFG.get_hwcfg_section('Phenylephrine')
+        com = section['commport']
+        baud = section['baudrate']
+        vasoconstrictor_injection = PHDserial('Phenylephrine')
+        vasoconstrictor_injection.open(com, baud)
+        vasoconstrictor_injection.ResetSyringe()
+        vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        vasoconstrictor_injection.start_stream()
+
         self._syringes = [vasoconstrictor_injection, vasodilator_injection]
-        sizer.Add(PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelSyringe(self, None, tpn_bilesalts_injection.name, tpn_bilesalts_injection), 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(PanelSyringe(self, None, heparin_injection.name, heparin_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection), 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()

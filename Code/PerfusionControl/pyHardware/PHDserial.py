@@ -19,7 +19,7 @@ class PHDserial(USBSerial):
     ----------
 
 
-    Methods
+    Methods  ###
     -------
     open(port_name, baud, addr)
         opens USB port of given name with the specified baud rate using given syringe pump address
@@ -117,7 +117,7 @@ class PHDserial(USBSerial):
         fid.close()
 
     def _get_stream_info(self):
-        stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
+        stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')  # Make this in uL instead since that's more common?
         header = [f'File Format: {DATA_VERSION}',
                   f'Syringe: {self.name}',
                   f'Volume Unit: ml',
@@ -144,6 +144,7 @@ class PHDserial(USBSerial):
             ml_min_rate = False
         if 'ul' in volume_unit:
             ml_volume = False
+        print(infuse_rate, ml_min_rate, ml_volume, infuse_unit, volume_unit)
         return infuse_rate, ml_min_rate, ml_volume
 
     def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
