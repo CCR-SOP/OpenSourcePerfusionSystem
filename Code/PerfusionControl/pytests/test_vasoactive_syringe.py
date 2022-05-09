@@ -145,7 +145,6 @@ class PanelSyringe(wx.Panel):
 class PanelFeedbackSyringe(wx.Panel):
     def __init__(self, parent, sensor, name, injection):
         wx.Panel.__init__(self, parent, -1)
-        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
