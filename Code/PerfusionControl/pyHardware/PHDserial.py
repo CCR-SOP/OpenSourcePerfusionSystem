@@ -170,11 +170,10 @@ class PHDserial(USBSerial):
             infusion_rate = infusion_rate * 1000
         self.record_infusion(infusion_volume, infusion_rate)
 
-    def record_infusion(self, infusion_volume, infusion_rate):  ###
+    def record_infusion(self, infusion_volume, infusion_rate):
         volume_buffer = np.ones(1, dtype=np.float32) * np.float32(infusion_volume)
         rate_buffer = np.ones(1, dtype=np.float32) * np.float32(infusion_rate)
         t = perf_counter()
-        print(volume_buffer, rate_buffer, t)
         if volume_buffer is not None and rate_buffer is not None and self._fid_write is not None:
             buf_len = len(volume_buffer) + len(rate_buffer)
             self._write_to_file(volume_buffer, rate_buffer, t)
@@ -192,9 +191,8 @@ class PHDserial(USBSerial):
             self._fid_write.close()
         self._fid_write = None
 
-    def get_data(self, last_ms, samples_needed):  ##
+    def get_data(self):
         _fid, tmp = self._open_read()
-        cur_time = int(perf_counter() * 1000)
         _fid.seek(0)
         chunk = [1]
         data_time = []
@@ -203,18 +201,18 @@ class PHDserial(USBSerial):
             chunk, ts = self.__read_chunk(_fid)
             if type(chunk) is list:
                 break
-            if chunk.any() and (cur_time - ts < last_ms or last_ms == 0):
+            if chunk.any():
                 data.append(chunk)
                 data_time.append(ts / 1000.0)
         _fid.close()
         return data_time, data
 
-    def _open_read(self):  ###
+    def _open_read(self):
         _fid = open(self.full_path, 'rb')
         data = np.memmap(_fid, dtype=np.float32, mode='r')
         return _fid, data
 
-    def __read_chunk(self, _fid):  ###
+    def __read_chunk(self, _fid):
         ts = 0
         data_buf = []
         ts_bytes = _fid.read(self._bytes_per_ts)
