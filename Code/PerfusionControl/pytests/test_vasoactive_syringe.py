@@ -150,7 +150,6 @@ class PanelFeedbackSyringe(wx.Panel):
         self._sensor = sensor
         self._name = name
         self._injection = injection
-        self._syringe_timer = SyringeTimer(self._injection.name, self._sensor, self._injection)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -188,6 +187,8 @@ class PanelFeedbackSyringe(wx.Panel):
         self.btn_basal_infusion_status = wx.ToggleButton(self, label='Basal Infusion Active')
 
         self.btn_start_feedback_injections = wx.ToggleButton(self, label='Start Feedback Injections')
+
+        self._syringe_timer = SyringeTimer(self._injection.name, self._sensor, self._injection, self.btn_start_feedback_injections)
 
         self.__do_layout()
         self.__set_bindings()
@@ -296,6 +297,7 @@ class PanelFeedbackSyringe(wx.Panel):
             self._syringe_timer.injection_volume = self.spin_injection_volume.GetValue()
             self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
             self._syringe_timer.cooldown_time = self.spin_cooldown_time.GetValue()
+            self._syringe_timer.syringe.cooldown = False
             self._syringe_timer.start_bolus_injections()
             self.btn_start_feedback_injections.SetLabel('Stop Feedback Injections')
         elif state == 'Stop Feedback Injections':
