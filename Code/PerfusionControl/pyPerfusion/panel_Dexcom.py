@@ -14,7 +14,7 @@ from dexcom_G6_reader.readdata import Dexcom
 from pyHardware.pyDexcom import DexcomSensor
 from pyPerfusion.plotting import TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot
 from pyHardware.PHDserial import PHDserial
-from pytests.test_vasoactive_syringe import PanelTestVasoactiveSyringe
+from pyPerfusion.panel_Syringe import PanelSyringe
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 from pyHardware.pyDIO import DIODeviceException

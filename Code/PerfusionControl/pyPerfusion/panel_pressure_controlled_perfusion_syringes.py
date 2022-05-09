@@ -13,7 +13,7 @@ from pyPerfusion.panel_AI import PanelAI
 from pyPerfusion.SensorStream import SensorStream
 from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pytests.test_vasoactive_syringe import PanelTestVasoactiveSyringe
+from pyPerfusion.panel_Syringe import PanelSyringe
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 
