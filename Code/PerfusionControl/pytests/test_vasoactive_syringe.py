@@ -382,7 +382,7 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         for panel in self.panels:
-            if panel._panel_feedback:
+            if panel._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
                 panel._panel_feedback._syringe_timer.stop_bolus_injections()
         for syringe in self._syringes:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
