@@ -173,7 +173,7 @@ class TSMSerial(USBSerial):
         # venous_CO2 = data[69:73]
         # venous_O2 = data[74:78]
         # venous_temp = data[79:83]
-        measured_O2_sat = data[84:88]
-        hct = data[89:93]
-        hb = data[94:98]
+        measured_O2_sat = data[84:87]
+        hct = data[89:92]
+        hb = data[94:99]
         return time, arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, K, measured_O2_sat, hct, hb
