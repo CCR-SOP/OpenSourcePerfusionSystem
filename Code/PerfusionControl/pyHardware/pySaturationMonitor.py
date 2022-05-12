@@ -117,15 +117,19 @@ class TSMSerial(USBSerial):
 
     def stream(self):
         if self._USBSerial__serial.inWaiting() > 0:  # Only read data if it is new
-            ts_bytes = struct.pack('i', int(perf_counter() * 1000.0))
             data_raw = self._USBSerial__serial.readline()
-            data_final = ts_bytes + data_raw
-            buf_len = len(data_final)
-            self._write_to_file(data_final)
-            self._last_idx += buf_len
-            self._fid_write.flush()
-            self._USBSerial__serial.flushInput()
-            self._USBSerial__serial.flushOutput()
+            string_data = str(data_raw, 'ascii')
+            if 'ARTERIAL' in string_data or 'TEMP' in string_data or ':' not in string_data:
+                return
+            else:
+                ts_bytes = struct.pack('i', int(perf_counter() * 1000.0))
+                data_final = ts_bytes + data_raw
+                buf_len = len(data_final)
+                self._write_to_file(data_final)
+                self._last_idx += buf_len
+                self._fid_write.flush()
+                self._USBSerial__serial.flushInput()
+                self._USBSerial__serial.flushOutput()
         else:
             pass
 
@@ -149,6 +153,20 @@ class TSMSerial(USBSerial):
         values = data[4:]
         string_data = str(values, 'ascii')[1:]
         return ts, string_data
+
+    def get_all_reads(self):
+        time_list = []
+        data_list = []
+        _fid = open(self.full_path, 'rb')
+        lines = _fid.readlines()
+        for item in lines:
+            time = item[:4]
+            ts, = struct.unpack('i', time)
+            values = item[4:]
+            string_data = str(values, 'ascii')[1:]
+            time_list.append(ts)
+            data_list.append(string_data)
+        return time_list, data_list
 
     def _open_read_latest(self):
         _fid = open(self.full_path, 'rb')
