@@ -355,11 +355,18 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.mixer = GB100('GB100')
+        self.mixer = GB100('Venous Gas Mixer')
         self.mixer.open()
         self.mixer.open_stream(LP_CFG.LP_PATH['stream'])
+
+        section = LP_CFG.get_hwcfg_section('CDI Monitor')
+        com = section['commport']
+        baud = section['baudrate']
+        bytesize = section['bytesize']
+        parity = section['parity']
+        stopbits = section['stopbits']
         self.monitor = TSMSerial('CDI Monitor')
-        self.monitor.open('COM21', 9600, 8, 'N', 1)
+        self.monitor.open(com, int(baud), int(bytesize), parity, int(stopbits))
         self.monitor.open_stream(LP_CFG.LP_PATH['stream'])
         self.labels = {'Time': '', 'Arterial pH': 'units', 'Arterial pCO2': 'mmHg', 'Arterial pO2': 'mmHg', 'Arterial Temperature': 'C', 'Arterial Bicarbonate': 'mmol/L', 'Arterial BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
         self.graphs_ranges = {'Arterial pH': [7.35, 7.45], 'O2 Saturation': [80, 85], 'Arterial pO2': [40, 60], 'Arterial pCO2': [30, 40]}
