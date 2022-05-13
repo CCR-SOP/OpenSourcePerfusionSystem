@@ -39,6 +39,7 @@ class GB100:
     def __init__(self, name):
         self._logger = logging.getLogger(__name__)
         self.name = name
+        self.main = None
         self._fid_write = None
         self._full_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self.name}')
@@ -55,7 +56,7 @@ class GB100:
         return self._full_path / self._filename.with_suffix(self._ext)
 
     def open(self):
-        pass
+        self.main = main.Main(self.name)
 
     def open_stream(self, full_path):
         if not isinstance(full_path, pathlib.Path):
@@ -194,19 +195,19 @@ class GB100:
         return data_buf, ts
 
     def get_working_status(self):  # Gives ON/OFF status of instrument
-        response = main.get_working_status()
+        response = self.main.get_working_status()
         return response
 
     def get_mainboard_total_flow(self):
-        response = main.get_mainboard_total_flow()
+        response = self.main.get_mainboard_total_flow()
         return response
 
     def get_channel_id_gas(self, channel):
-        response = main.get_channel_id_gas(channel)
+        response = self.main.get_channel_id_gas(channel)
         return response
 
     def get_channel_k_factor_gas(self, channel):
-        response = main.get_channel_k_factor_gas(channel)
+        response = self.main.get_channel_k_factor_gas(channel)
         return response
 
     def get_gas_type(self, gasID):  # Returns gas name from gas ID
@@ -217,50 +218,41 @@ class GB100:
         return GAS_TYPES[gas_name]
 
     def get_channel_balance(self):  # Gives channel that automatically changes
-        response = main.get_channel_balance()
+        response = self.main.get_channel_balance()
         return response
 
     def get_channel_target_sccm(self, channel):  # Gives calculated flow
-        response = main.get_channel_target_sccm(channel)
+        response = self.main.get_channel_target_sccm(channel)
         return response
 
     def get_channel_sccm(self, channel):  # Gives actual flow
-        response = main.get_channel_sccm(channel)
+        response = self.main.get_channel_sccm(channel)
         return response
 
     def get_channel_percent_value(self, channel):
-        response = main.get_channel_percent_value(channel)
+        response = self.main.get_channel_percent_value(channel)
         return response
 
     def set_working_status_ON(self):  # Start gas flow
-        main.set_working_status_ON()
+        self.main.set_working_status_ON()
 
     def set_working_status_OFF(self):  # Stop gas flow
-        main.set_working_status_OFF()
+        self.main.set_working_status_OFF()
 
     def set_mainboard_total_flow(self, flow):
-        main.set_mainboard_total_flow(flow)
+        self.main.set_mainboard_total_flow(flow)
 
     def set_channel_enabled(self, channel, status):  # Set channel ON (1) or OFF (2)
-        main.set_channel_enabled(channel, status)
+        self.main.set_channel_enabled(channel, status)
 
     def set_balance_channel(self, channel):
-        main.set_balance_channel(channel)
+        self.main.set_balance_channel(channel)
 
     def set_gas_from_xml_file(self, channel, gasID):
-        main.set_gas_from_xml_file(channel, gasID)
+        self.main.set_gas_from_xml_file(channel, gasID)
 
     def set_channel_percent_value(self, channel, percent):
-        main.set_channel_percent_value(channel, percent)
+        self.main.set_channel_percent_value(channel, percent)
 
     def setup_work(self, ch_balance, total_flow, perc_value=[]):  # Sets balance channel, total flow, and percent values for each channel
-        total_channels = main.get_total_channels()
-        # reset ch balance == 100
-        main.set_balance_channel(ch_balance)
-        main.set_channel_percent_value(ch_balance, 100.0)
-        # set perc_value
-        for i in range(len(perc_value)):
-            if i + 1 != ch_balance and i < total_channels:
-                main.set_channel_percent_value(i + 1, perc_value[i])
-        # set flow
-        main.set_mainboard_total_flow(total_flow)
+        self.main.setup_work(ch_balance, total_flow, perc_value)
