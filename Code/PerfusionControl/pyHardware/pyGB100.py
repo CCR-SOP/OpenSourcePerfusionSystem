@@ -4,6 +4,7 @@ import logging
 import pathlib
 import datetime
 from time import perf_counter
+import time
 import numpy as np
 import struct
 
@@ -102,9 +103,8 @@ class GB100:
     def start_stream(self):
         pass
 
-    def record_change(self, gas_1_percentage, gas_2_percentage, total_flow, working_status):
-        gas_1_ID = self.get_channel_id_gas(1)
-        gas_2_ID = self.get_channel_id_gas(2)
+    def record_change(self, gas_1_ID, gas_2_ID, gas_1_percentage, gas_2_percentage, total_flow, working_status):
+        print(gas_1_percentage, gas_2_percentage, total_flow, working_status)
         gas_1_ID_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_1_ID)
         gas_2_ID_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_2_ID)
         gas_1_percentage_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_1_percentage)
@@ -122,18 +122,24 @@ class GB100:
             self.set_gas_types(gas1, gas2)
         if balance_channel is not None:
             self.set_balance_channel(balance_channel)
+        gas_1_ID = self.get_channel_id_gas(1)
+        gas_2_ID = self.get_channel_id_gas(2)
         self.set_mainboard_total_flow(total_flow)
         self.set_channel_percent_value(1, gas_1_percentage)
         self.set_channel_percent_value(2, gas_2_percentage)
+        time.sleep(0.5)
+        current_status = self.get_working_status()
         if working_status:  # If you want to start the gas flow
-            if not self.get_working_status():  # Only start if mixer is currently off; or else this is redundant
+            while not current_status:
                 self.set_working_status_ON()
+                time.sleep(0.5)
+                current_status = self.get_working_status()
         else:
-            if self.get_working_status():  # If you want to turn off the mixer, only do so if it is already on
+            while current_status:
                 self.set_working_status_OFF()
-            else:  # If the mixer is already off and will remain off, don't record the changes to gases / flows, as the system isn't actually seeing these changes
-                return
-        self.record_change(gas_1_percentage, gas_2_percentage, total_flow, working_status)
+                time.sleep(0.5)
+                current_status = self.get_working_status()
+        self.record_change(gas_1_ID, gas_2_ID, gas_1_percentage, gas_2_percentage, total_flow, working_status)
 
     def _write_to_file(self, gas_1_ID_buffer, gas_2_ID_buffer, gas_1_percentage_buffer, gas_2_percentage_buffer, total_flow_buffer, working_status_buffer, t):
         ts_bytes = struct.pack('i', int(t * 1000.0))
@@ -258,4 +264,3 @@ class GB100:
                 main.set_channel_percent_value(i + 1, perc_value[i])
         # set flow
         main.set_mainboard_total_flow(total_flow)
-        return 0
