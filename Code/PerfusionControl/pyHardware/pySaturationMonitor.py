@@ -27,8 +27,10 @@ class TSMSerial(USBSerial):
         stops thread
     close_stream()
         closes file
+    get_data()
+        returns all reads from monitor
     get_latest()
-        returns latest sample from monitor, in string format
+        returns latest sample from monitor
     """
 
     def __init__(self, name):
@@ -44,7 +46,8 @@ class TSMSerial(USBSerial):
         self._end_of_header = 0
         self._last_idx = 0
         self._datapoints_per_ts = 1
-        self._bytes_per_ts = 105
+        self._bytes_per_ts = 4
+        self._bytes_per_datapoint = 99
 
         self.__thread_streaming = None
         self.__evt_halt_streaming = Event()
@@ -93,15 +96,18 @@ class TSMSerial(USBSerial):
         header = [f'File Format: {DATA_VERSION}',
                   f'Instrument: {self.name}',
                   f'Data Format: {str(np.dtype(np.byte))}',
-                  f'Sample Description: {self._datapoints_per_ts} (Each Sample includes Timestamp in milliseconds from start format, Header, Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
-                  f'Bytes Per Sample: {self._bytes_per_ts}',
+                  f'Sample Description: {self._datapoints_per_ts} (Each Sample includes Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
+                  f'Bytes per Sample: {self._bytes_per_datapoint}'
+                  f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
         end_of_line = '\n'
         hdr_str = f'{end_of_line.join(header)}{end_of_line}'
         return hdr_str
 
-    def _write_to_file(self, data_buf):
+    def _write_to_file(self, data_buf, t):
+        ts_bytes = struct.pack('i', int(t * 1000.0))
+        self._fid_write.write(ts_bytes)
         self._fid_write.write(data_buf)
 
     def start_stream(self):
@@ -112,20 +118,20 @@ class TSMSerial(USBSerial):
         self.__thread_streaming.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(4):  # Read new data every 4 seconds
+        while not self.__evt_halt_streaming.wait(2):  # Read new data every 2 seconds
             self.stream()
 
     def stream(self):
         if self._USBSerial__serial.inWaiting() > 0:  # Only read data if it is new
             data_raw = self._USBSerial__serial.readline()
-            string_data = str(data_raw, 'ascii')
+            data_processed = data_raw[:-2]
+            string_data = str(data_processed, 'ascii')
             if 'ARTERIAL' in string_data or 'TEMP' in string_data or ':' not in string_data:
                 return
             else:
-                ts_bytes = struct.pack('i', int(perf_counter() * 1000.0))
-                data_final = ts_bytes + data_raw
-                buf_len = len(data_final)
-                self._write_to_file(data_final)
+                t = perf_counter()
+                buf_len = len(data_processed)
+                self._write_to_file(data_processed, t)
                 self._last_idx += buf_len
                 self._fid_write.flush()
                 self._USBSerial__serial.flushInput()
@@ -146,33 +152,35 @@ class TSMSerial(USBSerial):
             self._fid_write.close()
         self._fid_write = None
 
+    def get_data(self):
+        _fid = open(self.full_path, 'rb')
+        _fid.seek(0)
+        chunk = [1]
+        data_time = []
+        data = []
+        while chunk:
+            chunk, ts = self.__read_chunk(_fid)
+            if type(chunk) is list:
+                break
+            elif chunk:
+                string_data = str(chunk, 'ascii')[1:]
+                data.append(string_data)
+                data_time.append(ts / 1000.0)
+        _fid.close()
+        return data_time, data
+
+    def __read_chunk(self, _fid):
+        ts = 0
+        data_bytes = []
+        ts_bytes = _fid.read(self._bytes_per_ts)
+        if len(ts_bytes) == 4:
+            ts, = struct.unpack('i', ts_bytes)
+            data_bytes = _fid.read(self._bytes_per_datapoint)
+        return data_bytes, ts
+
     def get_latest(self):
-        _fid, data = self._open_read_latest()
-        time = data[:4]
-        ts, = struct.unpack('i', time)
-        values = data[4:]
-        string_data = str(values, 'ascii')[1:]
-        return ts, string_data
-
-    def get_all_reads(self):
-        time_list = []
-        data_list = []
-        _fid = open(self.full_path, 'rb')
-        lines = _fid.readlines()
-        for item in lines:
-            time = item[:4]
-            ts, = struct.unpack('i', time)
-            values = item[4:]
-            string_data = str(values, 'ascii')[1:]
-            time_list.append(ts)
-            data_list.append(string_data)
-        return time_list, data_list
-
-    def _open_read_latest(self):
-        _fid = open(self.full_path, 'rb')
-        lines = _fid.readlines()
-        data = lines[-1].rstrip()
-        return _fid, data
+        time, data = self.get_data()
+        return time[-1], data[-1]
 
     def get_parsed_data(self):
         time, data = self.get_latest()
