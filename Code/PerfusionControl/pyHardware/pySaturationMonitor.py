@@ -165,7 +165,7 @@ class TSMSerial(USBSerial):
             elif chunk:
                 string_data = str(chunk, 'ascii')[1:]
                 data.append(string_data)
-                data_time.append(ts / 1000.0)
+                data_time.append(ts)
         _fid.close()
         return data_time, data
 
