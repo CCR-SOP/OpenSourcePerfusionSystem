@@ -7,8 +7,6 @@ from enum import Enum
 import wx
 import logging
 import pyPerfusion.utils as utils
-import os
-from pathlib import Path
 from pyPerfusion.plotting import TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot
 from pyHardware.pySaturationMonitor import TSMSerial
 from pyHardware.pyGB100 import GB100
@@ -70,6 +68,18 @@ class PanelPGB100SaturationMonitor(wx.Panel):
         self._name = name
         self.__plot_frame = PlotFrame.LAST_MINUTE
 
+        self.graph_values = {}
+        for key in self._graphs_ranges.keys():
+            self.graph_values[key] = []
+
+        section = LP_CFG.get_hwcfg_section('Venous Gas Mixer')
+        channel1gas = section['channel1gas']
+        channel2gas = section['channel2gas']
+        balancechannel = section['balancechannel']
+        channel1perc = section['channel1perc']
+        channel2perc = section['channel2perc']
+        totalflow = section['totalflow']
+
         wx.Panel.__init__(self, parent, -1)
 
         self.sizer_main = wx.BoxSizer(wx.HORIZONTAL)
@@ -95,23 +105,23 @@ class PanelPGB100SaturationMonitor(wx.Panel):
         self.label_choice_time = wx.StaticText(self, label='Display Window')
 
         self.choice_gas1 = wx.Choice(self, choices=self._gas_parameters)
-        self.choice_gas1.SetStringSelection(self._gas_parameters[2])
+        self.choice_gas1.SetStringSelection(channel1gas)
         self.choice_gas2 = wx.Choice(self, choices=self._gas_parameters)
-        self.choice_gas2.SetStringSelection(self._gas_parameters[1])
+        self.choice_gas2.SetStringSelection(channel2gas)
 
         parameters = ['1', '2']
         self.choice_balance = wx.Choice(self, choices=parameters)
-        self.choice_balance.SetStringSelection(parameters[0])
+        self.choice_balance.SetStringSelection(balancechannel)
 
         self.label_balance = wx.StaticText(self, label='Balance Channel:')
         self.label_gas1 = wx.StaticText(self, label='Channel 1 Gas:')
         self.label_gas1_percentage = wx.StaticText(self, label='Channel 1 Percentage:')
-        self.spin_gas1_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=90, inc=1)
+        self.spin_gas1_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel1perc), inc=1)
         self.label_gas2 = wx.StaticText(self, label='Channel 2 Gas:')
         self.label_gas2_percentage = wx.StaticText(self, label='Channel 2 Percentage:')
-        self.spin_gas2_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=1)
+        self.spin_gas2_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel2perc), inc=1)
         self.label_total_flow = wx.StaticText(self, label='Total Flow:')
-        self.spin_total_flow = wx.SpinCtrlDouble(self, min=0, max=400, initial=100, inc=1)
+        self.spin_total_flow = wx.SpinCtrlDouble(self, min=0, max=400, initial=int(totalflow), inc=1)
 
         self.btn_stream_GB100 = wx.ToggleButton(self, label='Start Gas Mixer')
         self.btn_stream_TSM = wx.ToggleButton(self, label='Start CDI Monitor')
@@ -153,11 +163,11 @@ class PanelPGB100SaturationMonitor(wx.Panel):
 
         self.sizer_main.Add(self.sizer_plot_grid, 1, wx.ALL | wx.EXPAND)
 
-        self.readouts = []
+        self.readouts = {}
         for label in self._labels:
             if label != 'Time':
                 readout = TSMReadout(self, label, self._labels[label])
-                self.readouts.append(readout)
+                self.readouts[label] = readout
                 self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.sizer_config.Add(self.label_choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
@@ -220,7 +230,6 @@ class PanelPGB100SaturationMonitor(wx.Panel):
 
     def OnGB100(self, event):
         label = self.btn_stream_GB100.GetLabel()
-        balance = float(self.choice_balance.GetStringSelection())
         if label == 'Start Gas Mixer':
             self.btn_stream_GB100.SetLabel('Stop Gas Mixer')
             self._mixer.start_stream()
@@ -235,11 +244,12 @@ class PanelPGB100SaturationMonitor(wx.Panel):
             gas1_percentage = self.spin_gas1_percentage.GetValue()
             gas2_percentage = self.spin_gas2_percentage.GetValue()
             flow = int(self.spin_total_flow.GetValue())
+            balance = float(self.choice_balance.GetStringSelection())
             self._mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 1, gas1=gas1, gas2=gas2, balance_channel=balance)
-            self.timer_update_GB100.Start(30000, wx.TIMER_CONTINUOUS)
+            self.timer_update_GB100.Start(10000, wx.TIMER_CONTINUOUS)
         elif label == 'Stop Gas Mixer':
-            self.btn_stream_GB100.SetLabel('Start Gas Mixer')
             self.timer_update_GB100.Stop()
+            self.btn_stream_GB100.SetLabel('Start Gas Mixer')
             gas1_percentage = self._mixer.get_channel_percent_value(1)
             gas2_percentage = self._mixer.get_channel_percent_value(2)
             flow = self._mixer.get_mainboard_total_flow()
@@ -260,11 +270,11 @@ class PanelPGB100SaturationMonitor(wx.Panel):
         if label == 'Start CDI Monitor':
             self.btn_stream_TSM.SetLabel('Stop CDI Monitor')
             self._monitor.start_stream()
-            self.timer_update_CDI.Start(2000, wx.TIMER_CONTINUOUS)
+            self.timer_update_CDI.Start(5000, wx.TIMER_CONTINUOUS)
         elif label == 'Stop CDI Monitor':
-            self.btn_stream_TSM.SetLabel('Start CDI Monitor')
-            self._monitor.stop_stream()
             self.timer_update_CDI.Stop()
+            self._monitor.stop_stream()
+            self.btn_stream_TSM.SetLabel('Start CDI Monitor')
 
     def OnGB100Timer(self, event):
         if event.GetId() == self.timer_update_GB100.GetId():
@@ -275,9 +285,10 @@ class PanelPGB100SaturationMonitor(wx.Panel):
             self.update_plots()
 
     def update_gas_mix(self):
-        values = self.get_label_values()
+        self.get_label_values()
         pH = values[0]
         pCO2 = values[1]
+        pO2 = values[2]
         sO2 = values[3]
         current_flow = self._mixer.get_mainboard_total_flow()
         new_gas_flow = current_flow
@@ -316,39 +327,32 @@ class PanelPGB100SaturationMonitor(wx.Panel):
             print('changing gas mix due to O2 Saturation')
             self._mixer.change_gas_mix(new_channel_1_percentage, new_channel_2_percentage, new_gas_flow, 1)
 
+    def get_label_values(self):
+        for key in self.graph_values.keys():
+            label = self.readouts[key].label_value.GetLabel()
+            self.graph_values[key] = label
+        for key, value in self.graph_values.items():
+            if value == '000':
+                self.graph_values[key] = []
+            else:
+                try:
+                    self.graph_values[key] = float(value)
+                except ValueError:
+                    self.graph_values[key] = []
+
     def update_plots(self):
         data = self._monitor.get_parsed_data()
+        if not data:
+            return
         data_list = list(data)
-        time = data_list[0] / 60000  # Gives time in minutes
-        for num in range(1, len(data_list)):
-            self.readouts[num - 1].label_value.SetLabel(data_list[num])
-        values = self.get_label_values()
-        if values[0]:
-            self._plots_main[0].plot(float(data_list[1]), time)
-            self._plots_lt[0].plot(float(data_list[1]), time)
-        if values[1]:
-            self._plots_main[3].plot(float(data_list[2]), time)
-            self._plots_lt[3].plot(float(data_list[2]), time)
-        if values[2]:
-            self._plots_main[2].plot(float(data_list[3]), time)
-            self._plots_lt[2].plot(float(data_list[3]), time)
-        if values[3]:
-            self._plots_main[1].plot(float(data_list[8]), time)
-            self._plots_lt[1].plot(float(data_list[8]), time)
-
-    def get_label_values(self):
-        str_pH = self.readouts[0].label_value.GetLabel()
-        str_pCO2 = self.readouts[1].label_value.GetLabel()
-        str_pO2 = self.readouts[2].label_value.GetLabel()
-        str_sO2 = self.readouts[7].label_value.GetLabel()
-        strings = [str_pH, str_pCO2, str_pO2, str_sO2]
-        values = []
-        for item in strings:
-            if item == '000' or item == ' ---' or item == ' -- ' or item == ' -.-':
-                values.append([])
-            else:
-                values.append(float(item))
-        return values
+        time_min = data_list[0] / 60000  # Gives time in minutes
+        for key in self.readouts.keys():
+            self.readouts[key].label_value.SetLabel(data_list[list(self._labels).index(key)])
+        self.get_label_values()
+        for key, value in self.graph_values.items():
+            if value:
+                self._plots_main[list(self._graphs_ranges).index(key)].plot(value, time_min)
+                self._plots_lt[list(self._graphs_ranges).index(key)].plot(value, time_min)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
