@@ -180,10 +180,15 @@ class TSMSerial(USBSerial):
 
     def get_latest(self):
         time, data = self.get_data()
-        return time[-1], data[-1]
+        if time and data:
+            return time[-1], data[-1]
+        else:
+            return time, data
 
     def get_parsed_data(self):
         time, data = self.get_latest()
+        if not time and not data:
+            return
         arterial_pH = data[9:13]
         arterial_CO2 = data[14:18]
         arterial_O2 = data[19:23]
