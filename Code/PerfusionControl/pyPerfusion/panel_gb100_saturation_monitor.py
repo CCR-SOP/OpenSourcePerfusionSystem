@@ -246,7 +246,7 @@ class PanelPGB100SaturationMonitor(wx.Panel):
             flow = int(self.spin_total_flow.GetValue())
             balance = float(self.choice_balance.GetStringSelection())
             self._mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 1, gas1=gas1, gas2=gas2, balance_channel=balance)
-            self.timer_update_GB100.Start(10000, wx.TIMER_CONTINUOUS)
+            self.timer_update_GB100.Start(60000, wx.TIMER_CONTINUOUS)
         elif label == 'Stop Gas Mixer':
             self.timer_update_GB100.Stop()
             self.btn_stream_GB100.SetLabel('Start Gas Mixer')
@@ -286,40 +286,43 @@ class PanelPGB100SaturationMonitor(wx.Panel):
 
     def update_gas_mix(self):
         self.get_label_values()
-        pH = values[0]
-        pCO2 = values[1]
-        pO2 = values[2]
-        sO2 = values[3]
+        channel1_gas_ID = self._mixer.get_channel_id_gas(1)
         current_flow = self._mixer.get_mainboard_total_flow()
         new_gas_flow = current_flow
         new_channel_1_percentage = self._mixer.get_channel_percent_value(1)
         new_channel_2_percentage = self._mixer.get_channel_percent_value(2)
-        channel1_gas_ID = self._mixer.get_channel_id_gas(1)
-        if pCO2 and self._monitor._TSMSerial__thread_streaming:  # Check if new data is being streamed by the CDI; if not, don't update gas mix
+        if self.graph_values['Arterial pCO2'] and self._monitor._TSMSerial__thread_streaming:  # Don't update gas mix if no data is being streamed by CDI
+            pCO2 = self.graph_values['Arterial pCO2']
             if pCO2 > 45:
-                new_gas_flow = current_flow + 4
+                new_gas_flow = new_gas_flow + 4
             elif pCO2 < 25:
-                new_gas_flow = current_flow - 4
-        if pH and self._monitor._TSMSerial__thread_streaming:
+                new_gas_flow = new_gas_flow - 4
+        if self.graph_values['Arterial pH'] and self._monitor._TSMSerial__thread_streaming:
+            pH = self.graph_values['Arterial pH']
             if pH < 7.35:
                 new_gas_flow = new_gas_flow + 6
             elif pH > 7.45:
                 new_gas_flow = new_gas_flow - 6
-        if sO2 and self._monitor._TSMSerial__thread_streaming:
+        if self.graph_values['O2 Saturation'] and self._monitor._TSMSerial__thread_streaming:
+            sO2 = self.graph_values['O2 Saturation']
             if sO2 > 85:
                 if channel1_gas_ID == 2:
-                    new_channel_1_percentage = self._mixer.get_channel_percent_value(1) + 1
-                    new_channel_2_percentage = self._mixer.get_channel_percent_value(2) - 1
+                    new_channel_1_percentage = new_channel_1_percentage + 1
+                    new_channel_2_percentage = new_channel_2_percentage - 1
                 elif channel1_gas_ID == 3:
-                    new_channel_1_percentage = self._mixer.get_channel_percent_value(1) - 1
-                    new_channel_2_percentage = self._mixer.get_channel_percent_value(2) + 1
+                    new_channel_1_percentage = new_channel_1_percentage - 1
+                    new_channel_2_percentage = new_channel_2_percentage + 1
+                else:
+                    pass
             elif sO2 < 80:
                 if channel1_gas_ID == 2:
-                    new_channel_1_percentage = self._mixer.get_channel_percent_value(1) - 1
-                    new_channel_2_percentage = self._mixer.get_channel_percent_value(2) + 1
+                    new_channel_1_percentage = new_channel_1_percentage - 1
+                    new_channel_2_percentage = new_channel_2_percentage + 1
                 elif channel1_gas_ID == 3:
-                    new_channel_1_percentage = self._mixer.get_channel_percent_value(1) + 1
-                    new_channel_2_percentage = self._mixer.get_channel_percent_value(2) - 1
+                    new_channel_1_percentage = new_channel_1_percentage + 1
+                    new_channel_2_percentage = new_channel_2_percentage - 1
+                else:
+                    pass
         if new_gas_flow == current_flow and new_channel_1_percentage == self._mixer.get_channel_percent_value(1) and new_channel_2_percentage == self._mixer.get_channel_percent_value(2):
             print('no change in gas mix required; returning')
             return
