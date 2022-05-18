@@ -56,7 +56,7 @@ class SyringeTimer:
         injection = False
         if self.sensor:
             if self.name in ['Insulin', 'Glucagon (Unasyn)']:
-                value = float(self.sensor.get_current())
+                t, value = float(self.sensor.get_latest())
             else:
                 t, value = self.sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
                 value = float(value)

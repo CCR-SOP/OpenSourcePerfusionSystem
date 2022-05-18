@@ -6,7 +6,7 @@ Header Lines:
 File Format: 1
 Sensor: {string containing sensor name (e.g. "HA Flow")}
 Unit: {string containing units of data (e.g. "ml/min")}
-Data Format: {string representing sample format (e.g. "float32")
+Data Format: {string representing sample format (e.g. "float32")}
 Sampling Period (ms): {number represeting the sampling period in milliseconds}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format}
 
@@ -21,7 +21,7 @@ Header Lines:
 File Format: 2
 Sensor: {string containing sensor name (e.g. "HA Flow")}
 Unit: {string containing units of data (e.g. "ml/min")}
-Data Format: {string representing sample format (e.g. "float32")
+Data Format: {string representing sample format (e.g. "float32")}
 Samples Per Timestamp: {number of samples stored per timestamp}
 Bytes per Timestamp: {number of bytes used to store the timestamp}
 Sampling Period (ms): {number represeting the sampling period in milliseconds}
@@ -37,6 +37,7 @@ If "Samples Per Timestamp" is greater than one, data is stored as:
 The samples after each time stamp are assumed to be separated by the "Sampling Period (ms)"
 
 ## Version 3:
+Used for streaming syringe data
 Text-based header followed by a stream of timestamp/sample pairs in binary format
 The timestamp is stored as the number of milliseconds from the start of the acquisition
 Header Lines:
@@ -75,3 +76,16 @@ Data Format: {string representing sample format (e.g. "float32")
 Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 6 (Gas 1 ID, Gas 2 ID, Gas 1 Percentage, Gas 2 Percentage, Total Flow (ml/min), and Working Status (0 for OFF, 1 for ON)}
 Bytes per Timestamp: {number of bytes used to store the timestamp}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}
+
+## Version 6:
+Used for streaming Dexcom data
+Text-based header followed by a stream of timestamp/sample pairs in binary format
+The timestamp is stored as the number of milliseconds from the start of the acquisition
+Header Lines:
+File Format: 6
+Sensor: {string containing name of sensor (e.g. "Portal Vein Glucose")}
+Glucose Unit: {"mg/dL"}
+Data Format: {string representing sample format (e.g. "float32")"
+Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 1 (glucose)}
+Bytes per Timestamp: {number of bytes used to store the timestamp}
+Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format and in milliseconds from start format}
