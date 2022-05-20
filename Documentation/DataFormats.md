@@ -61,7 +61,7 @@ Header Lines:
 File Format: 4
 Instrument: {string containing name for the CDI Instrument}
 Data Format: {string representing sample format (e.g. "int8")
-Sample Description: {Each sample includes Time, Arterial pH, Arterial pC02, Arterial pO2, Arterial Temperature, Arterial HCO3-, Arterial Base Excess, Calculated O2 sat, K, VO2, Pump Flow, BSA, Venous pH, Venous pCO2, Venous pO2, Venous Temperature, Measured O2 sat, Hct, and Hb}
+Sample Description: {Each sample includes Time, "Arterial" pH, "Arterial" pC02, "Arterial" pO2, "Arterial" Temperature, "Arterial" HCO3-, "Arterial" Base Excess, Calculated O2 sat, K, VO2, Pump Flow, BSA, "Venous" pH, "Venous" pCO2, "Venous" pO2, "Venous" Temperature, Measured O2 sat, Hct, and Hb}
 Bytes per Sample: {number of bytes used to store the sample}
 Bytes per Timestamp: {number of bytes used to store the timestamp}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}

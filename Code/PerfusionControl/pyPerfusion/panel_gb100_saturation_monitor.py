@@ -291,14 +291,14 @@ class PanelPGB100SaturationMonitor(wx.Panel):
         new_gas_flow = current_flow
         new_channel_1_percentage = self._mixer.get_channel_percent_value(1)
         new_channel_2_percentage = self._mixer.get_channel_percent_value(2)
-        if self.graph_values['Arterial pCO2'] and self._monitor._TSMSerial__thread_streaming:  # Don't update gas mix if no data is being streamed by CDI
-            pCO2 = self.graph_values['Arterial pCO2']
+        if self.graph_values['Venous pCO2'] and self._monitor._TSMSerial__thread_streaming:  # Don't update gas mix if no data is being streamed by CDI
+            pCO2 = self.graph_values['Venous pCO2']
             if pCO2 > 45:
                 new_gas_flow = new_gas_flow + 4
             elif pCO2 < 25:
                 new_gas_flow = new_gas_flow - 4
-        if self.graph_values['Arterial pH'] and self._monitor._TSMSerial__thread_streaming:
-            pH = self.graph_values['Arterial pH']
+        if self.graph_values['Venous pH'] and self._monitor._TSMSerial__thread_streaming:
+            pH = self.graph_values['Venous pH']
             if pH < 7.35:
                 new_gas_flow = new_gas_flow + 6
             elif pH > 7.45:
@@ -375,8 +375,8 @@ class TestFrame(wx.Frame):
         self.monitor = TSMSerial('CDI Monitor')
         self.monitor.open(com, int(baud), int(bytesize), parity, int(stopbits))
         self.monitor.open_stream(LP_CFG.LP_PATH['stream'])
-        self.labels = {'Time': '', 'Arterial pH': 'units', 'Arterial pCO2': 'mmHg', 'Arterial pO2': 'mmHg', 'Arterial Temperature': 'C', 'Arterial Bicarbonate': 'mmol/L', 'Arterial BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
-        self.graphs_ranges = {'Arterial pH': [7.35, 7.45], 'O2 Saturation': [80, 85], 'Arterial pO2': [40, 60], 'Arterial pCO2': [30, 40]}
+        self.labels = {'Time': '', 'Venous pH': 'units', 'Venous pCO2': 'mmHg', 'Venous pO2': 'mmHg', 'Venous Temperature': 'C', 'Venous Bicarbonate': 'mmol/L', 'Venous BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
+        self.graphs_ranges = {'Venous pH': [7.35, 7.45], 'O2 Saturation': [80, 85], 'Venous pO2': [40, 60], 'Venous pCO2': [30, 40]}
         self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
         self.name = 'GB100 CDI Panel'
 

@@ -96,7 +96,7 @@ class TSMSerial(USBSerial):
         header = [f'File Format: {DATA_VERSION}',
                   f'Instrument: {self.name}',
                   f'Data Format: {str(np.dtype(np.byte))}',
-                  f'Sample Description: {self._datapoints_per_ts} (Each Sample includes Time, Arterial pH, Arterial pCO2 (mmHg), Arterial pO2 (mmHg), Arterial Temperature (Celsius), Arterial HCO3- (mEq/L), Arterial Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), Venous pH, Venous pCO2 (mmHg), Venous pO2 (mmHg), Venous Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
+                  f'Sample Description: {self._datapoints_per_ts} (Each Sample includes Time, "Arterial" pH, "Arterial" pCO2 (mmHg), "Arterial" pO2 (mmHg), "Arterial" Temperature (Celsius), "Arterial" HCO3- (mEq/L), "Arterial" Base Excess (mEq/L), Calculated O2 Sat, K (mmol/L), VO2 (Oxygen Consumption; ml/min), Pump Flow (L/min), BSA (m^2), "Venous" pH, "Venous" pCO2 (mmHg), "Venous" pO2 (mmHg), "Venous" Temperature (Celsius), Measured O2 Sat, Hct, Hb (g/dl))',
                   f'Bytes per Sample: {self._bytes_per_datapoint}'
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
@@ -212,3 +212,7 @@ class TSMSerial(USBSerial):
         hct = data[89:92]
         hb = data[94:99]
         return time, arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, K, measured_O2_sat, hct, hb
+
+    # Our CDI monitor has only one shunt sensor, and thus technically only provides "arterial readings"; the venous readings are always blank due to lack of a second sensor
+    # However, we are configuring the shunt sensor such that it is reading venous values in our circuit; thus, the "arterial" CDI readings returned by this method actually correspond to venous readings in our system
+    # Our CDI system will not read any of the arterial values in our circuit; we will only monitor pO2 in our system's arterial circuit, through the use of a single Presens flow-thru sensor
