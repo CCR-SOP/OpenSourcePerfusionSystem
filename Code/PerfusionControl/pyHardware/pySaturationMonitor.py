@@ -47,7 +47,7 @@ class TSMSerial(USBSerial):
         self._last_idx = 0
         self._datapoints_per_ts = 1
         self._bytes_per_ts = 4
-        self._bytes_per_datapoint = 99
+        self._bytes_per_datapoint = 100
 
         self.__thread_streaming = None
         self.__evt_halt_streaming = Event()
@@ -127,6 +127,10 @@ class TSMSerial(USBSerial):
             data_processed = data_raw[:-2]
             string_data = str(data_processed, 'ascii')
             if 'ARTERIAL' in string_data or 'TEMP' in string_data or ':' not in string_data:
+                return
+            if len(data_processed) == 99:  # Occurs sometimes when Hb is above 10 g/dL
+                data_processed = data_processed + b' '
+            if len(data_processed) != 100:
                 return
             else:
                 t = perf_counter()
