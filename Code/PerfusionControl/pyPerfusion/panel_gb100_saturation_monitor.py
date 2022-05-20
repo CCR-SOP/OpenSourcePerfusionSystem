@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @author: Allen Luna
-Test app for integrating gas mixer with saturation monitor, and for displaying monitor data
+Panel for integrating venous gas mixer with saturation monitor, and for displaying monitor data
 """
 from enum import Enum
 import wx
@@ -54,7 +54,7 @@ class TSMReadout(wx.Panel):
         self.Layout()
         self.Fit()
 
-class PanelPGB100SaturationMonitor(wx.Panel):
+class PanelGB100SaturationMonitor(wx.Panel):
     def __init__(self, parent, mixer, monitor, labels, graphs_ranges, gas_parameters, name):
         self._logger = logging.getLogger(__name__)
         utils.setup_stream_logger(self._logger, logging.DEBUG)
@@ -380,7 +380,7 @@ class TestFrame(wx.Frame):
         self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
         self.name = 'GB100 CDI Panel'
 
-        panel_GB100_CDI = PanelPGB100SaturationMonitor(self, self.mixer, self.monitor, self.labels, self.graphs_ranges, self.gas_parameters, self.name)
+        panel_GB100_CDI = PanelGB100SaturationMonitor(self, self.mixer, self.monitor, self.labels, self.graphs_ranges, self.gas_parameters, self.name)
         sizer = wx.GridSizer(cols=1)
         sizer.Add(panel_GB100_CDI, 1, wx.EXPAND, border=2)
 
