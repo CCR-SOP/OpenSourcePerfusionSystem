@@ -12,6 +12,10 @@ from pyHardware.pySaturationMonitor import TSMSerial
 from pyHardware.pyGB100 import GB100
 import pyPerfusion.PerfusionConfig as LP_CFG
 
+from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
+from pyPerfusion.SensorPoint import SensorPoint
+from pyPerfusion.FileStrategy import PointsToFile
+
 class PlotFrame(Enum):
     FROM_START = 0
     LAST_30_SECONDS = 0.5
@@ -54,31 +58,30 @@ class TSMReadout(wx.Panel):
         self.Layout()
         self.Fit()
 
-class PanelGB100SaturationMonitor(wx.Panel):
-    def __init__(self, parent, mixer, monitor, labels, graphs_ranges, gas_parameters, name):
+class PanelGB100CDIPresens(wx.Panel):
+    def __init__(self, parent, mixer, monitor, sensor, cdi_labels, presens_label, cdi_graphs_ranges, presens_graph_range, gas_parameters, name):
         self._logger = logging.getLogger(__name__)
         utils.setup_stream_logger(self._logger, logging.DEBUG)
         utils.configure_matplotlib_logging()
         self.parent = parent
         self._mixer = mixer
         self._monitor = monitor
-        self._labels = labels
-        self._graphs_ranges = graphs_ranges
+        self._sensor = sensor
+        self._cdi_labels = cdi_labels
+        self._presens_label = presens_label
+        self._cdi_graphs_ranges = cdi_graphs_ranges
+        self._presens_graph_range = presens_graph_range
         self._gas_parameters = gas_parameters
         self._name = name
         self.__plot_frame = PlotFrame.LAST_MINUTE
 
-        self.graph_values = {}
-        for key in self._graphs_ranges.keys():
-            self.graph_values[key] = []
+        self.cdi_graph_values = {}
+        for key in self._cdi_graphs_ranges.keys():
+            self.cdi_graph_values[key] = []
 
-        section = LP_CFG.get_hwcfg_section('Venous Gas Mixer')
-        channel1gas = section['channel1gas']
-        channel2gas = section['channel2gas']
-        balancechannel = section['balancechannel']
-        channel1perc = section['channel1perc']
-        channel2perc = section['channel2perc']
-        totalflow = section['totalflow']
+        self.presens_graph_value = {}
+        for key in self._presens_graphs_ranges.keys():
+            self.presens_graph_value[key] = []
 
         wx.Panel.__init__(self, parent, -1)
 
@@ -88,48 +91,98 @@ class PanelGB100SaturationMonitor(wx.Panel):
         self._plots_main = []
         self._plots_lt = []
 
-        for key, value in self._graphs_ranges.items():
-            self.sizer_plots.append(self._add_lt(key, value))
+        for key, value in self._cdi_graphs_ranges.items():
+            self.sizer_plots.append(self._add_lt_cdi(key, value))
+        for key, value in self._presens_graph_range.items():
+            self.sizer_plots.append(self._add_lt_presens(key, value))
 
         self.sizer_readout = wx.GridSizer(cols=1)
         self.sizer_config = wx.BoxSizer(wx.VERTICAL)
-        self.sizer_gas_config = wx.BoxSizer(wx.VERTICAL)
-        self.sizer_balance = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_gas1_choice = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_gas1_percentage = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_gas2_choice = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_gas2_percentage = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_flow = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_start_streams = wx.BoxSizer(wx.VERTICAL)
         self.choice_time = self._create_choice_time()
         self.label_choice_time = wx.StaticText(self, label='Display Window')
 
-        self.choice_gas1 = wx.Choice(self, choices=self._gas_parameters)
-        self.choice_gas1.SetStringSelection(channel1gas)
-        self.choice_gas2 = wx.Choice(self, choices=self._gas_parameters)
-        self.choice_gas2.SetStringSelection(channel2gas)
+        section = LP_CFG.get_hwcfg_section('Arterial Gas Mixer')
+        channel1gas = section['channel1gas']
+        channel2gas = section['channel2gas']
+        balancechannel = section['balancechannel']
+        channel1perc = section['channel1perc']
+        channel2perc = section['channel2perc']
+        totalflow = section['totalflow']
+
+        self.sizer_arterial_gas_config = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_arterial_balance = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_arterial_gas1_choice = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_arterial_gas1_percentage = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_arterial_gas2_choice = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_arterial_gas2_percentage = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_arterial_flow = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.arterial_choice_gas1 = wx.Choice(self, choices=self._gas_parameters)
+        self.arterial_choice_gas1.SetStringSelection(channel1gas)
+        self.arterial_choice_gas2 = wx.Choice(self, choices=self._gas_parameters)
+        self.arterial_choice_gas2.SetStringSelection(channel2gas)
 
         parameters = ['1', '2']
-        self.choice_balance = wx.Choice(self, choices=parameters)
-        self.choice_balance.SetStringSelection(balancechannel)
+        self.arterial_choice_balance = wx.Choice(self, choices=parameters)
+        self.arterial_choice_balance.SetStringSelection(balancechannel)
 
-        self.label_balance = wx.StaticText(self, label='Balance Channel:')
-        self.label_gas1 = wx.StaticText(self, label='Channel 1 Gas:')
-        self.label_gas1_percentage = wx.StaticText(self, label='Channel 1 Percentage:')
-        self.spin_gas1_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel1perc), inc=1)
-        self.label_gas2 = wx.StaticText(self, label='Channel 2 Gas:')
-        self.label_gas2_percentage = wx.StaticText(self, label='Channel 2 Percentage:')
-        self.spin_gas2_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel2perc), inc=1)
-        self.label_total_flow = wx.StaticText(self, label='Total Flow:')
-        self.spin_total_flow = wx.SpinCtrlDouble(self, min=0, max=400, initial=int(totalflow), inc=1)
+        self.arterial_label_balance = wx.StaticText(self, label='Balance Channel:')
+        self.arterial_label_gas1 = wx.StaticText(self, label='Channel 1 Gas:')
+        self.arterial_label_gas1_percentage = wx.StaticText(self, label='Channel 1 Percentage:')
+        self.arterial_spin_gas1_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel1perc), inc=1)
+        self.arterial_label_gas2 = wx.StaticText(self, label='Channel 2 Gas:')
+        self.arterial_label_gas2_percentage = wx.StaticText(self, label='Channel 2 Percentage:')
+        self.arterial_spin_gas2_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel2perc), inc=1)
+        self.arterial_label_total_flow = wx.StaticText(self, label='Total Flow:')
+        self.arterial_spin_total_flow = wx.SpinCtrlDouble(self, min=0, max=400, initial=int(totalflow), inc=1)
 
-        self.btn_stream_GB100 = wx.ToggleButton(self, label='Start Gas Mixer')
+        self.arterial_btn_stream_GB100 = wx.ToggleButton(self, label='Start Arterial Gas Mixer')
+
+        section = LP_CFG.get_hwcfg_section('Venous Gas Mixer')
+        channel1gas = section['channel1gas']
+        channel2gas = section['channel2gas']
+        balancechannel = section['balancechannel']
+        channel1perc = section['channel1perc']
+        channel2perc = section['channel2perc']
+        totalflow = section['totalflow']
+
+        self.sizer_venous_gas_config = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_venous_balance = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_venous_gas1_choice = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_venous_gas1_percentage = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_venous_gas2_choice = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_venous_gas2_percentage = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_venous_flow = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.venous_choice_gas1 = wx.Choice(self, choices=self._gas_parameters)
+        self.venous_choice_gas1.SetStringSelection(channel1gas)
+        self.venous_choice_gas2 = wx.Choice(self, choices=self._gas_parameters)
+        self.venous_choice_gas2.SetStringSelection(channel2gas)
+
+        parameters = ['1', '2']
+        self.venous_choice_balance = wx.Choice(self, choices=parameters)
+        self.venous_choice_balance.SetStringSelection(balancechannel)
+
+        self.venous_label_balance = wx.StaticText(self, label='Balance Channel:')
+        self.venous_label_gas1 = wx.StaticText(self, label='Channel 1 Gas:')
+        self.venous_label_gas1_percentage = wx.StaticText(self, label='Channel 1 Percentage:')
+        self.venous_spin_gas1_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel1perc), inc=1)
+        self.venous_label_gas2 = wx.StaticText(self, label='Channel 2 Gas:')
+        self.venous_label_gas2_percentage = wx.StaticText(self, label='Channel 2 Percentage:')
+        self.venous_spin_gas2_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel2perc), inc=1)
+        self.venous_label_total_flow = wx.StaticText(self, label='Total Flow:')
+        self.venous_spin_total_flow = wx.SpinCtrlDouble(self, min=0, max=400, initial=int(totalflow), inc=1)
+
+        self.venous_btn_stream_GB100 = wx.ToggleButton(self, label='Start Venous Gas Mixer')
+
         self.btn_stream_TSM = wx.ToggleButton(self, label='Start CDI Monitor')
+        self.btn_stream_presens = wx.ToggleButton(self, label='Start Arterial pO2 Sensor')
 
         self.__do_layout()
         self.__set_bindings()
 
-    def _add_lt(self, plot_name, valid_range):
+    def _add_lt_cdi(self, plot_name, valid_range):
         sizer = wx.BoxSizer(wx.VERTICAL)
 
         panel = TSMDexPanelPlotting(self)
@@ -146,7 +199,14 @@ class PanelGB100SaturationMonitor(wx.Panel):
 
         return sizer
 
-    def _create_choice_time(self):
+    def _add_lt_presens(self, plot_name, valid_range):
+        self._panel_plot = PanelPlotting(self)
+        self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
+        self._panel_plot.add_plot(self._sensorplot)
+        self._sensorplot.set_strategy(self._sensor.get_file_strategy(self._strategy))
+        self._sensor.start()
+
+    def _create_choice_time(self):  ###
         parameters = [item.name for item in PlotFrame]
         choice = wx.Choice(self, choices=parameters)
         choice.SetStringSelection(self.__plot_frame.name)
@@ -164,7 +224,7 @@ class PanelGB100SaturationMonitor(wx.Panel):
         self.sizer_main.Add(self.sizer_plot_grid, 1, wx.ALL | wx.EXPAND)
 
         self.readouts = {}
-        for label in self._labels:
+        for label in self._cdi_labels:
             if label != 'Time':
                 readout = TSMReadout(self, label, self._labels[label])
                 self.readouts[label] = readout
@@ -362,6 +422,29 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
+        self.acq = AI_Finite_NIDAQ(period_ms=100, volts_p2p=5, volts_offset=2.5, samples_per_read=1)
+        self.sensor = SensorPoint('Arterial pO2', 'mmHg', self.acq)
+        section = LP_CFG.get_hwcfg_section(self.sensor.name)
+        self._lgr.debug(f'Reading config for {self.sensor.name}')
+        dev = section['Device']
+        line = section['LineName']
+        low_pt = section['CalPt1_Target']
+        low_read = section['CalPt1_Reading']
+        high_pt = section['CalPt2_Target']
+        high_read = section['CalPt2_Reading']
+        self.acq.open(dev)
+        self.acq.add_channel(line)
+        self.sensor.set_ch_id(line)
+        channel = self._sensor.ch_id
+        self.sensor.hw.set_calibration(channel, low_pt, low_read, high_pt, high_read)
+        raw = PointsToFile('StreamRaw', 1, self.acq.buf_len)
+        raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        self.sensor.add_strategy(raw)
+
+        self.mixer = GB100('Arterial Gas Mixer')
+        self.mixer.open()
+        self.mixer.open_stream(LP_CFG.LP_PATH['stream'])
+
         self.mixer = GB100('Venous Gas Mixer')
         self.mixer.open()
         self.mixer.open_stream(LP_CFG.LP_PATH['stream'])
@@ -375,14 +458,16 @@ class TestFrame(wx.Frame):
         self.monitor = TSMSerial('CDI Monitor')
         self.monitor.open(com, int(baud), int(bytesize), parity, int(stopbits))
         self.monitor.open_stream(LP_CFG.LP_PATH['stream'])
-        self.labels = {'Time': '', 'Venous pH': 'units', 'Venous pCO2': 'mmHg', 'Venous pO2': 'mmHg', 'Venous Temperature': 'C', 'Venous Bicarbonate': 'mmol/L', 'Venous BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
-        self.graphs_ranges = {'Venous pH': [7.35, 7.45], 'O2 Saturation': [80, 85], 'Venous pO2': [40, 60], 'Venous pCO2': [30, 40]}
+        self.cdi_labels = {'Time': '', 'Venous pH': 'units', 'Venous pCO2': 'mmHg', 'Venous pO2': 'mmHg', 'Venous Temperature': 'C', 'Venous Bicarbonate': 'mmol/L', 'Venous BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
+        self.presens_label = {'Arterial pO2': 'mmHg'}
+        self.cdi_graphs_ranges = {'Venous pH': [7.35, 7.45], 'O2 Saturation': [80, 85], 'Venous pCO2': [30, 40]}
+        self.presens_graph_range = {'Arterial pO2': [40, 60]}
         self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
-        self.name = 'GB100 CDI Panel'
+        self.name = 'GB100 CDI Presens Panel'
 
-        panel_GB100_CDI = PanelGB100SaturationMonitor(self, self.mixer, self.monitor, self.labels, self.graphs_ranges, self.gas_parameters, self.name)
+        panel_GB100_CDI_Presens = PanelGB100CDIPresens(self, self.mixer, self.monitor, self.sensor, self.cdi_labels, self.presens_label, self.cdi_graphs_ranges, self.presens_graph_range, self.gas_parameters, self.name)
         sizer = wx.GridSizer(cols=1)
-        sizer.Add(panel_GB100_CDI, 1, wx.EXPAND, border=2)
+        sizer.Add(panel_GB100_CDI_Presens, 1, wx.EXPAND, border=2)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -391,6 +476,10 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        self.sensor.stop()
+        self.sensor.close()
+        self.sensor.hw.stop()
+        self.senosr.hw.close()
         self.monitor.stop_stream()
         self.monitor.close_stream()
         if self.mixer.get_working_status():
