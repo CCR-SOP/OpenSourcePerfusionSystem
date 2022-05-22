@@ -115,9 +115,18 @@ class PanelSyringe(wx.Panel):
         self._injection.set_target_volume(volume, unit)
         if 'ul' in unit:
             volume_unit = False
+            volume_ul = volume
         else:
             volume_unit = True
+            volume_ul = volume * 1000
         self._injection.infuse(volume, 25, volume_unit, True)
+        while True:
+            response = float(self.syringe.get_infused_volume().split(' ')[0])
+            unit = self.syringe.get_infused_volume().split(' ')[1]
+            if 'ml' in unit:
+                response = response * 1000
+            if response >= volume_ul:
+                break
         self.enable_buttons(True)
 
     def enable_buttons(self, state):
@@ -464,16 +473,15 @@ class TestFrame(wx.Frame):
 
         self._syringes = [heparin_injection, vasoconstrictor_injection, vasodilator_injection]
         self.panels = [PanelSyringe(self, None, heparin_injection.name, heparin_injection), PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]
-        sizer.Add(self.panels[0], 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(self.panels[1], 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(self.panels[2], 1, wx.ALL | wx.EXPAND, border=1)
+        for panel in self.panels:
+            sizer.add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
-    def OnClose(self, evt):  ### Look @ this
+    def OnClose(self, evt):
         for panel in self.panels:
             if panel._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
                 panel._panel_feedback._syringe_timer.stop_feedback_injections()
