@@ -181,6 +181,7 @@ class PHDserial(USBSerial):
             self._fid_write.flush()
 
     def _write_to_file(self, data_buf_vol, data_buf_rate, t):
+        print(data_buf_vol, data_buf_rate, t)
         ts_bytes = struct.pack('i', int(t * 1000.0))
         self._fid_write.write(ts_bytes)
         data_buf_vol.tofile(self._fid_write)

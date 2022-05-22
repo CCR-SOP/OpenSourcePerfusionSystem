@@ -19,7 +19,6 @@ from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
 from pyHardware.pyDIO import DIODeviceException
 from pyHardware.pyVCS import VCS, VCSPump
-
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 engaged_COM_list = []
