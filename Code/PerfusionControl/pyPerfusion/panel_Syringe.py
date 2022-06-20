@@ -145,7 +145,7 @@ class PanelSyringe(wx.Panel):
             self._panel_feedback.btn_update_max.Enable(state)
             self._panel_feedback.btn_start_feedback_injections.Enable(state)
             if self._injection.name == 'Insulin':
-                self._panel_feedback.btn_update_basal_rate_threshold.Enable(state)
+                self._panel_feedback.btn_update_upper_glucose_limit.Enable(state)
                 self._panel_feedback.btn_update_basal_rate_tolerance.Enable(state)
                 self._panel_feedback.btn_update_basal_infusion_rate_above_range.Enable(state)
                 self._panel_feedback.btn_update_basal_infusion_rate_in_range.Enable(state)
@@ -208,15 +208,15 @@ class PanelFeedbackSyringe(wx.Panel):
 
         if self._injection.name == 'Insulin':
             section = LP_CFG.get_hwcfg_section(self._injection.name)
-            self.basalratethreshold = section['basalratethreshold']
+            self.upperglucoselimit = section['upperglucoselimit']
             self.basalratetolerance = section['basalratetolerance']
             self.aboverangerate = section['aboverangerate']
             self.inrangerate = section['inrangerate']
             self.lowerglucoselimit = section['lowerglucoselimit']
 
-            self.label_basal_rate_threshold = wx.StaticText(self, label='Reduce Basal Infusion Rate When ' + self.feedback + ' ' + self.feedbackunit + ' is Less Than')
-            self.spin_basal_rate_threshold = wx.SpinCtrlDouble(self, min=0, max=1000, initial=float(self.basalratethreshold), inc=0.1)
-            self.btn_update_basal_rate_threshold = wx.Button(self, label='Update Threshold')
+            self.label_upper_glucose_limit = wx.StaticText(self, label='Reduce Basal Infusion Rate When ' + self.feedback + ' ' + self.feedbackunit + ' is Less Than')
+            self.spin_upper_glucose_limit = wx.SpinCtrlDouble(self, min=0, max=1000, initial=float(self.upperglucoselimit), inc=0.1)
+            self.btn_update_upper_glucose_limit = wx.Button(self, label='Update Upper ' + self.feedback + ' ' + self.feedbackunit + ' Limit:')
 
             self.label_basal_rate_tolerance = wx.StaticText(self, label='Tolerance ' + self.feedbackunit)
             self.spin_basal_rate_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=float(self.basalratetolerance), inc=0.1)
@@ -300,11 +300,11 @@ class PanelFeedbackSyringe(wx.Panel):
 
         if self._injection.name == 'Insulin':
             sizer = wx.BoxSizer(wx.HORIZONTAL)
-            sizer.Add(self.label_basal_rate_threshold, flags)
+            sizer.Add(self.label_upper_glucose_limit, flags)
             sizer.AddSpacer(3)
-            sizer.Add(self.spin_basal_rate_threshold, flags)
+            sizer.Add(self.spin_upper_glucose_limit, flags)
             sizer.AddSpacer(3)
-            sizer.Add(self.btn_update_basal_rate_threshold, flags)
+            sizer.Add(self.btn_update_upper_glucose_limit, flags)
             self.sizer.Add(sizer)
             self.sizer.AddSpacer(20)
 
@@ -361,7 +361,7 @@ class PanelFeedbackSyringe(wx.Panel):
         self.btn_update_cooldown_time.Bind(wx.EVT_BUTTON, self.OnUpdateCooldown)
         self.btn_update_max.Bind(wx.EVT_BUTTON, self.OnUpdateMax)
         if self._injection.name == 'Insulin':
-            self.btn_update_basal_rate_threshold.Bind(wx.EVT_BUTTON, self.OnUpdateBasalRateThreshold)
+            self.btn_update_upper_glucose_limit.Bind(wx.EVT_BUTTON, self.OnUpdateUpperLimit)
             self.btn_update_basal_rate_tolerance.Bind(wx.EVT_BUTTON, self.OnUpdateBasalRateTolerance)
             self.btn_update_basal_infusion_rate_above_range.Bind(wx.EVT_BUTTON, self.OnUpdateBasalInfusionRateAboveRange)
             self.btn_update_basal_infusion_rate_in_range.Bind(wx.EVT_BUTTON, self.OnUpdateBasalInfusionRateInRange)
@@ -384,7 +384,7 @@ class PanelFeedbackSyringe(wx.Panel):
         self._syringe_timer.max = self.spin_max.GetValue()
 
     def OnUpdateBasalRateThreshold(self, evt):
-        self._syringe_timer.insulin_basal_rate_threshold = self.spin_basal_rate_threshold.GetValue()
+        self._syringe_timer.insulin_upper_glucose_limit = self.spin_upper_glucose_limit.GetValue()
 
     def OnUpdateBasalRateTolerance(self, evt):
         self._syringe_timer.insulin_basal_rate_tolerance = self.spin_basal_rate_tolerance.GetValue()
@@ -414,7 +414,7 @@ class PanelFeedbackSyringe(wx.Panel):
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
             elif self._injection.name == 'Insulin':
-                self._syringe_timer.insulin_basal_rate_threshold = self.spin_basal_rate_threshold.GetValue()
+                self._syringe_timer.insulin_upper_glucose_limit = self.spin_upper_glucose_limit.GetValue()
                 self._syringe_timer.insulin_basal_rate_tolerance = self.spin_basal_rate_tolerance.GetValue()
                 self._syringe_timer.insulin_basal_infusion_rate_above_range = self.spin_basal_infusion_rate_above_range.GetValue()
                 self._syringe_timer.insulin_basal_infusion_rate_in_range = self.spin_basal_infusion_rate_in_range.GetValue()
