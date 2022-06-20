@@ -22,7 +22,6 @@ class SyringeTimer:
         self.max = None
         self.wait = None
         self.old_value = None
-        self.original_intervention = None
 
         self.__thread_feedback = None
         self.__evt_halt_feedback = Event()
@@ -38,7 +37,6 @@ class SyringeTimer:
             self.old_glucose = None
 
     def start_feedback_injections(self):
-        self.original_intervention = self.intervention
         self.__evt_halt_feedback.clear()
         self.__thread_feedback = Thread(target=self.OnFeedbackLoop)
         self.__thread_feedback.start()
