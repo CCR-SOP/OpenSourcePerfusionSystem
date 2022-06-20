@@ -16,10 +16,12 @@ class SyringeTimer:
         self.feedback_injection_button = feedback_injection_button
         self.threshold_value = None
         self.tolerance = None
+        self.intervention = None
         self.time_between_checks = None
         self.cooldown_time = None
         self.max = None
         self.wait = None
+        self.old_value = None
 
         self.__thread_feedback = None
         self.__evt_halt_feedback = Event()
@@ -73,39 +75,64 @@ class SyringeTimer:
             return
         if self.name == 'Phenylephrine':
             if value > (self.threshold_value + self.tolerance):
+                new_value = 'Intervention Required'
                 if self.syringe.cooldown:
+                    self.old_value = new_value
                     self._logger.info(f'{self.sensor.name} reads {value:.2f}; a change in {self.name} infusion rate is needed, but is currently frozen')
                 else:
                     change = True
                     direction = 'high'
+                    if new_value == self.old_value:
+                        increment = True
+                    else:
+                        increment = False
+                    self.old_value = new_value
             else:
+                self.old_value = 'Intervention Not Required'
                 self._logger.info(f'No change in {self.name} infusion rate is needed')
         elif self.name in ['Glucagon', 'Epoprostenol']:
             if value < (self.threshold_value - self.tolerance):
+                new_value = 'Intervention Required'
                 if self.syringe.cooldown:
+                    self.old_value = new_value
                     self._logger.info(f'{self.sensor.name} reads {value:.2f}; a change in {self.name} infusion is needed, but is currently frozen')
                 else:
                     change = True
                     direction = 'low'
+                    if new_value == self.old_value:
+                        increment = True
+                    else:
+                        increment = False
+                    self.old_value = new_value
             else:
+                self.old_value = 'Intervention Not Required'
                 self._logger.info(f'No change in {self.name} infusion is needed')
         elif self.name == 'Insulin':
             if value > (self.threshold_value + self.tolerance):
+                new_value = 'Intervention Required'
                 if self.syringe.cooldown:
+                    self.old_value = new_value
                     self._logger.info(f'{self.sensor.name} reads {value:.2f}; a bolus of {self.name} is needed, but is currently frozen')
                 else:
                     change = True
                     direction = 'high'
+                    if new_value == self.old_value:
+                        increment = True
+                    else:
+                        increment = False
+                    self.old_value = new_value
+            else:
+                self.old_value = 'Intervention Not Required'
             insulin_change, rate_intervention = self.check_for_basal_insulin_change(value)
             if not change and not insulin_change:
                 self._logger.info(f'No change in {self.name} infusion is needed')
         if change:
-            self.injection(self.syringe, self.name, self.sensor.name, value, self.intervention, direction)
+            self.injection(self.syringe, self.name, self.sensor.name, value, self.intervention, direction, increment)
             self.__evt_halt_cooldown.clear()
             self.__thread_cooldown = Thread(target=self.OnCooldown)
             self.__thread_cooldown.start()
         if insulin_change:
-            self.insulin_injection(self.syringe, self.name, self.sensor.name, value, self.intervention, rate_intervention)
+            self.insulin_injection(self.syringe, self.name, self.sensor.name, value, rate_intervention)
 
     def check_for_basal_insulin_change(self, value):
         if value > self.insulin_basal_rate_threshold + self.insulin_basal_rate_tolerance:
@@ -116,33 +143,24 @@ class SyringeTimer:
             new_glucose = 'In Range'
         if not self.old_glucose:
             self.old_glucose = new_glucose
-            return False, None
-        if new_glucose == 'In Range':
             if self.old_glucose == 'Above Range':
-                self.old_glucose = new_glucose
-                return True, 0.5
-            elif self.old_glucose == 'Below Range':
-                self.old_glucose = new_glucose
-                return True, 0.5
-            else:
-                self.old_glucose = new_glucose
-                return False, None
-        elif new_glucose == 'Above Range':
-            if self.old_glucose in ['In Range', 'Below Range']:
-                self.old_glucose = new_glucose
                 return True, 4.2
-            else:
-                self.old_glucose = new_glucose
-                return False, None
-        elif new_glucose == 'Below Range':
-            if self.old_glucose is not 'Below Range':
-                self.old_glucose = new_glucose
+            elif self.old_glucose == 'Below Range':
                 return True, 0
-            else:
-                self.old_glucose = new_glucose
-                return False, None
+            elif self.old_glucose == 'In Range':
+                return True, 0.5
+        if self.old_glucose == new_glucose:
+            return False, None  # Check to make sure that this doesn't go @ first
+        else:
+            self.old_glucose = new_glucose
+            if self.old_glucose == 'Above Range':
+                return True, 4.2
+            elif self.old_glucose == 'Below Range':
+                return True, 0
+            elif self.old_glucose == 'In Range':
+                return True, 0.5
 
-    def injection(self, syringe, name, parameter_name, parameter, intervention_ul, direction):
+    def injection(self, syringe, name, parameter_name, parameter, intervention_ul, direction, increment):
         if self.name == 'Glucagon':
             self.feedback_injection_button.Enable(False)
             self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; injecting {intervention_ul:.2f} uL of {name}')
@@ -203,7 +221,7 @@ class SyringeTimer:
             syringe.cooldown = True
             self.feedback_injection_button.Enable(True)
 
-    def insulin_injection(self, syringe, name, parameter_name, parameter, intervention_ul, rate_intervention):
+    def insulin_injection(self, syringe, name, parameter_name, parameter, rate_intervention):
         self.feedback_injection_button.Enable(False)
         self._logger.info(f'{parameter_name} reads {parameter:.2f}; changing {name} infusion rate to {intervention_ul:.2f}')
         #    infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()

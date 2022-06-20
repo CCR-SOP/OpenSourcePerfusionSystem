@@ -427,6 +427,7 @@ class PanelFeedbackSyringe(wx.Panel):
                 pass
             self._syringe_timer.threshold_value = self.spin_threshold.GetValue()
             self._syringe_timer.tolerance = self.spin_tolerance.GetValue()
+            self._syringe_timer.intervention = self.spin_intervention.GetValue()
             self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
             self._syringe_timer.cooldown_time = self.spin_cooldown_time.GetValue()
             self._syringe_timer.max = self.spin_max.GetValue()
