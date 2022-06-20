@@ -22,6 +22,7 @@ class SyringeTimer:
         self.max = None
         self.wait = None
         self.old_value = None
+        self.original_intervention = None
 
         self.__thread_feedback = None
         self.__evt_halt_feedback = Event()
@@ -37,6 +38,7 @@ class SyringeTimer:
             self.old_glucose = None
 
     def start_feedback_injections(self):
+        self.original_intervention = self.intervention
         self.__evt_halt_feedback.clear()
         self.__thread_feedback = Thread(target=self.OnFeedbackLoop)
         self.__thread_feedback.start()
@@ -51,6 +53,7 @@ class SyringeTimer:
             self.__thread_cooldown.join(2.0)
             self.__thread_cooldown = None
             self.syringe.cooldown = False
+        return self.intervention
 
     def OnFeedbackLoop(self):
         while not self.__evt_halt_feedback.wait(self.time_between_checks):
@@ -163,6 +166,10 @@ class SyringeTimer:
     def injection(self, syringe, name, parameter_name, parameter, intervention_ul, direction, increment):
         if self.name == 'Glucagon':
             self.feedback_injection_button.Enable(False)
+            if increment:
+                intervention_ul += 100
+                if intervention_ul > self.max:
+                    intervention_ul = self.max  # See if changing this actually changes self.intervention
             self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; injecting {intervention_ul:.2f} uL of {name}')
             syringe.ResetSyringe()
             syringe.set_target_volume(intervention_ul, 'ul')
@@ -182,18 +189,24 @@ class SyringeTimer:
             self.feedback_injection_button.Enable(True)
         if self.name in ['Epoprostenol', 'Phenylephrine']:
             self.feedback_injection_button.Enable(False)
+            if increment:
+                intervention_ul += 1
+                if intervention_ul > self.max:
+                    intervention_ul = self.max
             self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; changing {name} infusion rate to {intervention_ul:.2f}')
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
         #    syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)  Check to see if I need to stop syringe or if I can just change the rate?
-            if infuse_rate + 1 > self.max:
-                infuse_rate = self.max
-            syringe.set_infusion_rate(infuse_rate + 1, 'ul/min')
+            syringe.set_infusion_rate(intervention_ul, 'ul/min')
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
             syringe.cooldown = True
             self.feedback_injection_button.Enable(True)
         elif self.name == 'Insulin':
             self.feedback_injection_button.Enable(False)
+            if increment:
+                intervention_ul += 1
+                if intervention_ul > self.max:
+                    intervention_ul = self.max
             self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; injecting {intervention_ul:.2f} uL of {name}')
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
@@ -202,7 +215,7 @@ class SyringeTimer:
             syringe.set_infusion_rate(25, 'ml/min')
             syringe.infuse(intervention_ul, 25, False, True)
             self.wait = True
-            time.sleep(60*intervention_ul/25000)
+            time.sleep(60 * intervention_ul / 25000)
             while self.wait:
                 response = float(self.syringe.get_infused_volume().split(' ')[0])
                 unit = self.syringe.get_infused_volume().split(' ')[1]

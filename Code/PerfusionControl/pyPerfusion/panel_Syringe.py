@@ -435,7 +435,8 @@ class PanelFeedbackSyringe(wx.Panel):
             self._syringe_timer.start_feedback_injections()
             self.btn_start_feedback_injections.SetLabel('Stop Feedback Injections')
         elif state == 'Stop Feedback Injections':
-            self._syringe_timer.stop_feedback_injections()
+            latest_intervention = self._syringe_timer.stop_feedback_injections()
+            self.spin_intervention.SetValue(latest_intervention)
             self.parent.spin_rate.Enable(True)
             self.parent.choice_rate.Enable(True)
             self.parent.btn_start_basal.Enable(True)
