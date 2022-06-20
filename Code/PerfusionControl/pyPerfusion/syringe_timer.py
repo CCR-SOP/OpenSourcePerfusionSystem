@@ -16,7 +16,6 @@ class SyringeTimer:
         self.feedback_injection_button = feedback_injection_button
         self.threshold_value = None
         self.tolerance = None
-        self.intervention = None
         self.time_between_checks = None
         self.cooldown_time = None
         self.max = None

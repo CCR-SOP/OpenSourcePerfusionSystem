@@ -29,14 +29,14 @@ class PanelSyringe(wx.Panel):
         section = LP_CFG.get_hwcfg_section(self._injection.name)
         self.manucode = section['manucode']
         self.size = section['size']
-        self.injectionrate = section['injectionrate']
+        self.inject = section['inject']
         self.injectionunit = section['injectionunit']
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
-        self.spin_rate.SetValue(float(self.injectionrate))
+        self.spin_rate.SetValue(float(self.inject))
         self.choice_rate = wx.Choice(self, choices=['ul/min', 'ml/min'])
         self.choice_rate.SetStringSelection(self.injectionunit)
         self.btn_start_basal = wx.ToggleButton(self, label='Start Basal Infusion')
@@ -107,6 +107,7 @@ class PanelSyringe(wx.Panel):
             self.enable_buttons(True)
 
     def OnOneTimeBolus(self, evt):
+        self.btn_start_basal.enable(False)
         self.enable_buttons(False)
         self._injection.ResetSyringe()
         self._injection.set_infusion_rate(25, 'ml/min')
@@ -128,6 +129,7 @@ class PanelSyringe(wx.Panel):
             if response >= volume_ul:
                 break
         self.enable_buttons(True)
+        self.btn_start_basal.enable(True)
 
     def enable_buttons(self, state):
         self.spin_rate.Enable(state)
@@ -138,7 +140,6 @@ class PanelSyringe(wx.Panel):
         if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
             self._panel_feedback.btn_update_threshold.Enable(state)
             self._panel_feedback.btn_update_tolerance.Enable(state)
-            self._panel_feedback.btn_update_intervention.Enable(state)
             self._panel_feedback.btn_update_time_between_checks.Enable(state)
             self._panel_feedback.btn_update_cooldown_time.Enable(state)
             self._panel_feedback.btn_update_max.Enable(state)
@@ -190,9 +191,8 @@ class PanelFeedbackSyringe(wx.Panel):
         self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=float(self.tolerance), inc=0.1)
         self.btn_update_tolerance = wx.Button(self, label='Update Tolerance')
 
-        self.label_intervention = wx.StaticText(self, label=label_intervention)
+        self.label_intervention = wx.StaticText(self, label='Initial ' + label_intervention)
         self.spin_intervention = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.intervention), inc=1)
-        self.btn_update_intervention = wx.Button(self, label='Update ' + label_intervention)
 
         self.label_time_between_checks = wx.StaticText(self, label='Time Between Checks (s): ')
         self.spin_time_between_checks = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.timebetween), inc=1)
@@ -357,7 +357,6 @@ class PanelFeedbackSyringe(wx.Panel):
     def __set_bindings(self):
         self.btn_update_threshold.Bind(wx.EVT_BUTTON, self.OnUpdateThreshold)
         self.btn_update_tolerance.Bind(wx.EVT_BUTTON, self.OnUpdateTolerance)
-        self.btn_update_intervention.Bind(wx.EVT_BUTTON, self.OnUpdateIntervention)
         self.btn_update_time_between_checks.Bind(wx.EVT_BUTTON, self.OnUpdateTimeBetweenChecks)
         self.btn_update_cooldown_time.Bind(wx.EVT_BUTTON, self.OnUpdateCooldown)
         self.btn_update_max.Bind(wx.EVT_BUTTON, self.OnUpdateMax)
@@ -374,9 +373,6 @@ class PanelFeedbackSyringe(wx.Panel):
 
     def OnUpdateTolerance(self, evt):
         self._syringe_timer.tolerance = self.spin_tolerance.GetValue()
-
-    def OnUpdateIntervention(self, evt):
-        self._syringe_timer.intervention = self.spin_intervention.GetValue()
 
     def OnUpdateTimeBetweenChecks(self, evt):
         self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
@@ -431,7 +427,6 @@ class PanelFeedbackSyringe(wx.Panel):
                 pass
             self._syringe_timer.threshold_value = self.spin_threshold.GetValue()
             self._syringe_timer.tolerance = self.spin_tolerance.GetValue()
-            self._syringe_timer.intervention = self.spin_intervention.GetValue()
             self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
             self._syringe_timer.cooldown_time = self.spin_cooldown_time.GetValue()
             self._syringe_timer.max = self.spin_max.GetValue()
