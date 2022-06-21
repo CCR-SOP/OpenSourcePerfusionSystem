@@ -79,10 +79,12 @@ class PanelGB100CDIPresens(wx.Panel):
         self.cdi_graphs_values = {}
         for key in self._cdi_graphs_ranges.keys():
             self.cdi_graphs_values[key] = []
+        print(self.cdi_graphs_values)
 
         self.presens_graph_value = {}
         for key in self._presens_graph_range.keys():
             self.presens_graph_value[key] = []
+        print(self.presens_graph_value)
 
         wx.Panel.__init__(self, parent, -1)
 
@@ -187,7 +189,7 @@ class PanelGB100CDIPresens(wx.Panel):
 
         panel = TSMDexPanelPlotting(self)
         self._plots_main.append(panel)
-        plotraw = TSMDexSensorPlot(plot_name, panel.axes, self._labels[plot_name], valid_range)
+        plotraw = TSMDexSensorPlot(plot_name, panel.axes, self._cdi_labels[plot_name], valid_range)
         panel.add_plot(plotraw)
         sizer.Add(panel, 9, wx.ALL | wx.EXPAND, border=0)
 
@@ -246,12 +248,13 @@ class PanelGB100CDIPresens(wx.Panel):
         self.sizer_main.Add(self.sizer_plot_grid, 1, wx.ALL | wx.EXPAND)
 
         self.readouts = {}
-        for key, value in self._cdi_labels:
+        for key, value in self._cdi_labels.items():
             if key != 'Time':
                 readout = Readout(self, key, value)
                 self.readouts[key] = readout
                 self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
-        for key, value in self._presens_label:
+        for key, value in self._presens_label.items():
+            print(key, value)
             readout = PanelReadout(self, self._sensor)
             self.readouts[key] = readout
             self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
