@@ -604,17 +604,18 @@ class TestFrame(wx.Frame):
         self.acq = AI_Finite_NIDAQ(period_ms=100, volts_p2p=5, volts_offset=2.5, samples_per_read=1)
         self.sensor = SensorPoint('Arterial pO2', 'mmHg', self.acq)
         section = LP_CFG.get_hwcfg_section(self.sensor.name)
-        self._lgr.debug(f'Reading config for {self.sensor.name}')
         dev = section['Device']
         line = section['LineName']
         low_pt = section['CalPt1_Target']
         low_read = section['CalPt1_Reading']
         high_pt = section['CalPt2_Target']
         high_read = section['CalPt2_Reading']
+        lowerrange = section['lowerrange']
+        upperrange = section['upperrange']
         self.acq.open(dev)
         self.acq.add_channel(line)
         self.sensor.set_ch_id(line)
-        channel = self._sensor.ch_id
+        channel = self.sensor.ch_id
         self.sensor.hw.set_calibration(channel, low_pt, low_read, high_pt, high_read)
         raw = PointsToFile('StreamRaw', 1, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
@@ -634,13 +635,19 @@ class TestFrame(wx.Frame):
         bytesize = section['bytesize']
         parity = section['parity']
         stopbits = section['stopbits']
+        phlower = section['phlower']
+        phupper = section['phupper']
+        saturationlower = section['saturationlower']
+        saturationupper = section['saturationupper']
+        co2lower = section['co2lower']
+        co2upper = section['co2upper']
         self.monitor = TSMSerial('CDI Monitor')
         self.monitor.open(com, int(baud), int(bytesize), parity, int(stopbits))
         self.monitor.open_stream(LP_CFG.LP_PATH['stream'])
         self.cdi_labels = {'Time': '', 'Venous pH': 'units', 'Venous pCO2': 'mmHg', 'Venous pO2': 'mmHg', 'Venous Temperature': 'C', 'Venous Bicarbonate': 'mmol/L', 'Venous BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
         self.presens_label = {'Arterial pO2': 'mmHg'}
-        self.cdi_graphs_ranges = {'Venous pH': [7.35, 7.45], 'O2 Saturation': [80, 85], 'Venous pCO2': [30, 40]}
-        self.presens_graph_range = {'Arterial pO2': [40, 60]}
+        self.cdi_graphs_ranges = {'Venous pH': [float(phlower), float(phupper)], 'O2 Saturation': [float(saturationlower), float(saturationupper)], 'Venous pCO2': [float(co2lower), float(co2upper)]}
+        self.presens_graph_range = {'Arterial pO2': [float(lowerrange), float(upperrange)]}
         self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
         self.name = 'GB100 CDI Presens Panel'
 
