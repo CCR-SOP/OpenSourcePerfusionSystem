@@ -25,7 +25,11 @@ class SyringeTimer:
         self.wait = None
         self.reduce = None
         self.old_value = None
-        self.reduction_time = 300
+
+        if self.name in ['Insulin', 'Glucagon']:
+            self.reduction_time = 1200
+        else:
+            self.reduction_time = 300
 
         self.__thread_feedback = None
         self.__evt_halt_feedback = Event()
@@ -286,7 +290,7 @@ class SyringeTimer:
                     unit = 'ml/min'
                 else:
                     unit = 'ul/min'
-            if self.insulin_change:
+            if insulin_change:
                 rate = insulin_rate_intervention
                 unit = 'ul/min'
                 self._logger.info(f'{parameter_name} reads {parameter:.2f}; changing {name} infusion rate to {insulin_rate_intervention:.2f}')
@@ -296,5 +300,3 @@ class SyringeTimer:
             if self.change:
                 syringe.cooldown = True
             self.feedback_injection_button.Enable(True)
-
-
