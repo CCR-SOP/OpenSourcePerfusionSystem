@@ -11,7 +11,7 @@ from serial import SerialException
 from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
 
-class PanelSyringe(wx.Panel):
+class PanelTestSyringe(wx.Panel):
     def __init__(self, parent, syringe, name):
         self.parent = parent
         self._syringe = syringe
@@ -304,7 +304,7 @@ class TestFrame(wx.Frame):
                     }
         sizer = wx.GridSizer(cols=3)
         for key, syringe in syringes.items():
-            sizer.Add(PanelSyringe(self, syringe, name=key), 1, wx.EXPAND, border=2)
+            sizer.Add(PanelTestSyringe(self, syringe, name=key), 1, wx.EXPAND, border=2)
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
