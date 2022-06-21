@@ -270,24 +270,31 @@ class TestFrame(wx.Frame):
         dexcom_sizer.Add(panel_PV, 1, wx.EXPAND, border=2)
         dexcom_sizer.Add(panel_IVC, 1, wx.EXPAND, border=2)
 
+        section = LP_CFG.get_hwcfg_section('Insulin')
+        com = section['commport']
+        baud = section['baudrate']
         insulin_injection = PHDserial('Insulin')
-        insulin_injection.open('COM12', 9600)
+        insulin_injection.open(com, baud)
         insulin_injection.ResetSyringe()
         insulin_injection.open_stream(LP_CFG.LP_PATH['stream'])
         insulin_injection.start_stream()
 
-        glucagon_unasyn_injection = PHDserial('Glucagon (Unasyn)')
-        glucagon_unasyn_injection.open('COM6', 9600)
-        glucagon_unasyn_injection.ResetSyringe()
-        glucagon_unasyn_injection.open_stream(LP_CFG.LP_PATH['stream'])
-        glucagon_unasyn_injection.start_stream()
+        section = LP_CFG.get_hwcfg_section('Glucagon')
+        com = section['commport']
+        baud = section['baudrate']
+        glucagon_injection = PHDserial('Glucagon')
+        glucagon_injection.open(com, baud)
+        glucagon_injection.ResetSyringe()
+        glucagon_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        glucagon_injection.start_stream()
 
         self.sensor = panel_IVC.sensor  # Glucose measurements which inform syringe injections are from the IVC; this is the panel being referenced here
-        self._syringes = [insulin_injection, glucagon_unasyn_injection]
+        self._syringes = [insulin_injection, glucagon_injection]
 
         syringe_sizer = wx.GridSizer(cols=2)
-        syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Insulin Syringe', insulin_injection), 1, wx.ALL | wx.EXPAND, border=1)
-        syringe_sizer.Add(PanelTestVasoactiveSyringe(self, self.sensor, 'Glucagon (Unasyn) Syringe', glucagon_unasyn_injection), 1, wx.ALL | wx.EXPAND, border=1)
+        self.panels = [PanelSyringe(self, None, insulin_injection.name, insulin_injection), PanelSyringe(self, None, glucagon_injection.name, glucagon_injection)]
+        for panel in self.panels:
+            syringe_sizer.add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
         sizer = wx.GridSizer(cols=2)
         sizer.Add(dexcom_sizer, 1, wx.ALL | wx.EXPAND, border=1)
@@ -298,10 +305,12 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        for panel in self.panels:
+            panel._panel_feedback._syringe_timer.stop_feedback_injections()
         for syringe in self._syringes:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
-            syringe.stop_stream()
+            syringe.close_stream()
         for sensor in sensors:
             sensor.stop_stream()
             sensor.close_stream()
