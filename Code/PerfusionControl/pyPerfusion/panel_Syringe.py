@@ -143,6 +143,7 @@ class PanelSyringe(wx.Panel):
             self._panel_feedback.btn_update_time_between_checks.Enable(state)
             self._panel_feedback.btn_update_cooldown_time.Enable(state)
             self._panel_feedback.btn_update_max.Enable(state)
+            self._panel_feedback.btn_update_incrementation.Enable(state)
             self._panel_feedback.btn_start_feedback_injections.Enable(state)
             if self._injection.name == 'Insulin':
                 self._panel_feedback.btn_update_upper_glucose_limit.Enable(state)
@@ -172,6 +173,7 @@ class PanelFeedbackSyringe(wx.Panel):
         self.timebetween = section['timebetween']
         self.cooldown = section['cooldown']
         self.max = section['max']
+        self.incrementation = section['incrementation']
 
         if self._injection.name in ['Insulin', 'Glucagon']:
             label_intervention_description = 'Inject Bolus When '
@@ -205,6 +207,10 @@ class PanelFeedbackSyringe(wx.Panel):
         self.label_max = wx.StaticText(self, label='Maximum ' + label_intervention)
         self.spin_max = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.max), inc=1)
         self.btn_update_max = wx.Button(self, label='Update Maximum' + label_intervention)
+
+        self.label_incrementation = wx.StaticText(self, label='Incrementation Increase in ' + label_intervention)
+        self.spin_incrementation = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.incrementation), inc=1)
+        self.btn_update_incrementation = wx.Button(self, label='Update Incremental Increase in ' + label_intervention)
 
         if self._injection.name == 'Insulin':
             section = LP_CFG.get_hwcfg_section(self._injection.name)
@@ -298,6 +304,15 @@ class PanelFeedbackSyringe(wx.Panel):
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
 
+        sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.label_incrementation, flags)
+        sizer.AddSpacer(3)
+        sizer.Add(self.spin_incrementation, flags)
+        sizer.AddSpacer(3)
+        sizer.Add(self.btn_update_incrementation, flags)
+        self.sizer.Add(sizer)
+        self.sizer.AddSpacer(20)
+
         if self._injection.name == 'Insulin':
             sizer = wx.BoxSizer(wx.HORIZONTAL)
             sizer.Add(self.label_upper_glucose_limit, flags)
@@ -360,6 +375,7 @@ class PanelFeedbackSyringe(wx.Panel):
         self.btn_update_time_between_checks.Bind(wx.EVT_BUTTON, self.OnUpdateTimeBetweenChecks)
         self.btn_update_cooldown_time.Bind(wx.EVT_BUTTON, self.OnUpdateCooldown)
         self.btn_update_max.Bind(wx.EVT_BUTTON, self.OnUpdateMax)
+        self.btn_update_incrementation.Bind(wx.EVT_BUTTON, self.OnUpdateIncrementation)
         if self._injection.name == 'Insulin':
             self.btn_update_upper_glucose_limit.Bind(wx.EVT_BUTTON, self.OnUpdateUpperLimit)
             self.btn_update_basal_rate_tolerance.Bind(wx.EVT_BUTTON, self.OnUpdateBasalRateTolerance)
@@ -382,6 +398,9 @@ class PanelFeedbackSyringe(wx.Panel):
 
     def OnUpdateMax(self, evt):
         self._syringe_timer.max = self.spin_max.GetValue()
+
+    def OnUpdateIncrementation(self, evt):
+        self._syringe_timer.incrementation = self.spin_incrementation.GetValue()
 
     def OnUpdateBasalRateThreshold(self, evt):
         self._syringe_timer.insulin_upper_glucose_limit = self.spin_upper_glucose_limit.GetValue()
@@ -431,6 +450,7 @@ class PanelFeedbackSyringe(wx.Panel):
             self._syringe_timer.time_between_checks = self.spin_time_between_checks.GetValue()
             self._syringe_timer.cooldown_time = self.spin_cooldown_time.GetValue()
             self._syringe_timer.max = self.spin_max.GetValue()
+            self._syringe_timer.incrementation = self.spin_incrementation.GetValue()
             self._syringe_timer.syringe.cooldown = False
             self._syringe_timer.start_feedback_injections()
             self.btn_start_feedback_injections.SetLabel('Stop Feedback Injections')

@@ -20,13 +20,19 @@ class SyringeTimer:
         self.time_between_checks = None
         self.cooldown_time = None
         self.max = None
+        self.increment = None
+        self.incrementation = None
         self.wait = None
+        self.reduce = None
         self.old_value = None
+        self.reduction_time = 300
 
         self.__thread_feedback = None
         self.__evt_halt_feedback = Event()
         self.__thread_cooldown = None
         self.__evt_halt_cooldown = Event()
+        self.__thread_reduce = None
+        self.__evt_halt_reduce = Event()
 
         if self.name == 'Insulin':
             self.insulin_upper_glucose_limit = None
@@ -51,6 +57,10 @@ class SyringeTimer:
             self.__thread_cooldown.join(2.0)
             self.__thread_cooldown = None
             self.syringe.cooldown = False
+        if self.__thread_reduce and self.__thread_reduce.is_alive():
+            self.__evt_halt_reduce.set()
+            self.__thread_reduce.join(2.0)
+            self.__thread_reduce = None
         return self.intervention  # Check to see if this returns correctly
 
     def OnFeedbackLoop(self):
@@ -63,9 +73,16 @@ class SyringeTimer:
         self.__evt_halt_cooldown.set()
         self.__thread_cooldown = None
 
+    def OnReduce(self):
+        self.__evt_halt_reduce.wait(self.reduction_time)  # Make sure if this is canceled none of the below code executes, and make sure this nothing below this runs when its called
+        self.reduce = True
+        self.__evt_halt_reduce.set()
+        self.__thread_reduce = None
+
     def check_for_change(self):
         change = False
         insulin_change = False
+        self.increment = False
         if self.name in ['Insulin', 'Glucagon']:
             t, value = float(self.sensor.get_latest())  # Check what value could be from Dexcom sensor
         elif self.name in ['Epoprostenol', 'Phenylephrine']:
@@ -77,6 +94,9 @@ class SyringeTimer:
         if self.name == 'Phenylephrine':
             if value > (self.threshold_value + self.tolerance):
                 new_value = 'Intervention Required'
+                if self.__evt_halt_reduce:
+                    self.__evt_halt_reduce.set()
+                    self.__thread_reduce = None
                 if self.syringe.cooldown:
                     self.old_value = new_value
                     self._logger.info(f'{self.sensor.name} reads {value:.2f}; a change in {self.name} infusion rate is needed, but is currently frozen')
@@ -84,17 +104,28 @@ class SyringeTimer:
                     change = True
                     direction = 'high'
                     if new_value == self.old_value:
-                        increment = True
+                        self.increment = True
                     else:
-                        increment = False
+                        self.increment = False
                     self.old_value = new_value
             else:
-                self.old_value = 'Intervention Not Required'
-                ## Add timer to do this?
+                new_value = 'Intervention Not Required'
+                if not self.syringe.cooldown:
+                    if new_value == self.old_value:
+                        if not self.__evt_halt_reduce:
+                            self.__evt_halt_reduce.clear()
+                            self.__thread_reduce = Thread(target=self.OnReduce)
+                            self.__thread_reduce.start()
+                        else:
+                            pass
+                self.old_value = new_value
                 self._logger.info(f'No change in {self.name} infusion rate is needed')
         elif self.name in ['Glucagon', 'Epoprostenol']:
             if value < (self.threshold_value - self.tolerance):
                 new_value = 'Intervention Required'
+                if self.__evt_halt_reduce:
+                    self.__evt_halt_reduce.set()
+                    self.__thread_reduce = None
                 if self.syringe.cooldown:
                     self.old_value = new_value
                     self._logger.info(f'{self.sensor.name} reads {value:.2f}; a change in {self.name} infusion is needed, but is currently frozen')
@@ -102,16 +133,28 @@ class SyringeTimer:
                     change = True
                     direction = 'low'
                     if new_value == self.old_value:
-                        increment = True
+                        self.increment = True
                     else:
-                        increment = False
+                        self.increment = False
                     self.old_value = new_value
             else:
-                self.old_value = 'Intervention Not Required'
+                new_value = 'Intervention Not Required'
+                if not self.syringe.cooldown:
+                    if new_value == self.old_value:
+                        if not self.__evt_halt_reduce:
+                            self.__evt_halt_reduce.clear()
+                            self.__thread_reduce = Thread(target=self.OnReduce)
+                            self.__thread_reduce.start()
+                        else:
+                            pass
+                self.old_value = new_value
                 self._logger.info(f'No change in {self.name} infusion is needed')
         elif self.name == 'Insulin':
             if value > (self.threshold_value + self.tolerance):
                 new_value = 'Intervention Required'
+                if self.__evt_halt_reduce:
+                    self.__evt_halt_reduce.set()
+                    self.__thread_reduce = None
                 if self.syringe.cooldown:
                     self.old_value = new_value
                     self._logger.info(f'{self.sensor.name} reads {value:.2f}; a bolus of {self.name} is needed, but is currently frozen')
@@ -119,17 +162,35 @@ class SyringeTimer:
                     change = True
                     direction = 'high'
                     if new_value == self.old_value:
-                        increment = True
+                        self.increment = True
                     else:
-                        increment = False
+                        self.increment = False
                     self.old_value = new_value
             else:
-                self.old_value = 'Intervention Not Required'
+                new_value = 'Intervention Not Required'
+                if not self.syringe.cooldown:
+                    if new_value == self.old_value:
+                        if not self.__evt_halt_reduce:
+                            self.__evt_halt_reduce.clear()
+                            self.__thread_reduce = Thread(target=self.OnReduce)
+                            self.__thread_reduce.start()
+                        else:
+                            pass
+                self.old_value = new_value
             insulin_change, rate_intervention = self.check_for_basal_insulin_change(value)
             if not change and not insulin_change:
                 self._logger.info(f'No change in {self.name} infusion is needed')
-        if change:
-            self.injection(self.syringe, self.name, self.sensor.name, value, self.intervention, direction, increment)
+        if change or self.reduce:
+            if change and self.increment:
+                self.intervention += self.incrementation
+                if self.intervention > self.max:
+                    self.intervention = self.max
+            elif self.reduce:
+                self.intervention -= self.incrementation
+                if self.intervention < 0:
+                    self.intervention = 0
+                self.reduce = False
+            self.injection(self.syringe, self.name, self.sensor.name, value, self.intervention, direction)
             self.__evt_halt_cooldown.clear()
             self.__thread_cooldown = Thread(target=self.OnCooldown)
             self.__thread_cooldown.start()
@@ -162,13 +223,9 @@ class SyringeTimer:
             elif self.old_glucose == 'In Range':
                 return True, 0.5
 
-    def injection(self, syringe, name, parameter_name, parameter, intervention_ul, direction, increment):
+    def injection(self, syringe, name, parameter_name, parameter, intervention_ul, direction):
         if self.name == 'Glucagon':
             self.feedback_injection_button.Enable(False)
-            if increment:
-                intervention_ul += 100
-                if intervention_ul > self.max:
-                    intervention_ul = self.max  # See if changing this actually changes self.intervention
             self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; injecting {intervention_ul:.2f} uL of {name}')
             syringe.ResetSyringe()
             syringe.set_target_volume(intervention_ul, 'ul')
@@ -188,10 +245,6 @@ class SyringeTimer:
             self.feedback_injection_button.Enable(True)
         if self.name in ['Epoprostenol', 'Phenylephrine']:
             self.feedback_injection_button.Enable(False)
-            if increment:
-                intervention_ul += 1
-                if intervention_ul > self.max:
-                    intervention_ul = self.max
             self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; changing {name} infusion rate to {intervention_ul:.2f}')
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
         #    syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)  Check to see if I need to stop syringe or if I can just change the rate?
@@ -202,10 +255,6 @@ class SyringeTimer:
             self.feedback_injection_button.Enable(True)
         elif self.name == 'Insulin':
             self.feedback_injection_button.Enable(False)
-            if increment:
-                intervention_ul += 1
-                if intervention_ul > self.max:
-                    intervention_ul = self.max
             self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; injecting {intervention_ul:.2f} uL of {name}')
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
