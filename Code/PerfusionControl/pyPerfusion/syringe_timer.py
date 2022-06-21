@@ -27,7 +27,7 @@ class SyringeTimer:
         self.old_value = None
 
         if self.name in ['Insulin', 'Glucagon']:
-            self.reduction_time = 1200
+            self.reduction_time = 2400
         else:
             self.reduction_time = 300
 
