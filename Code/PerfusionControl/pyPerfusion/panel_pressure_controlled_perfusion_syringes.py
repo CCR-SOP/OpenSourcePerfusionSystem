@@ -291,7 +291,7 @@ class TestFrame(wx.Frame):
             syringe.close_stream()
         for sensor in self._sensors:
             sensor.stop()
-        self.Destroy()
+        self.Destroy()break
 
 class MyTestApp(wx.App):
     def OnInit(self):
