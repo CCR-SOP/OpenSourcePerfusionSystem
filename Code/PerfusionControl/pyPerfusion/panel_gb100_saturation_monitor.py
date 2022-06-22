@@ -105,35 +105,17 @@ class PanelGB100CDIPresens(wx.Panel):
         self.label_choice_time = wx.StaticText(self, label='Display Window')
 
         section = LP_CFG.get_hwcfg_section('Arterial Gas Mixer')
-        channel1gas = section['channel1gas']
-        channel2gas = section['channel2gas']
-        balancechannel = section['balancechannel']
         channel1perc = section['channel1perc']
         channel2perc = section['channel2perc']
         totalflow = section['totalflow']
 
         self.sizer_arterial_gas_config = wx.BoxSizer(wx.VERTICAL)
-        self.sizer_arterial_balance = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_arterial_gas1_choice = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_arterial_gas1_percentage = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_arterial_gas2_choice = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_arterial_gas2_percentage = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_arterial_flow = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.arterial_choice_gas1 = wx.Choice(self, choices=self._gas_parameters)
-        self.arterial_choice_gas1.SetStringSelection(channel1gas)
-        self.arterial_choice_gas2 = wx.Choice(self, choices=self._gas_parameters)
-        self.arterial_choice_gas2.SetStringSelection(channel2gas)
-
-        parameters = ['1', '2']
-        self.arterial_choice_balance = wx.Choice(self, choices=parameters)
-        self.arterial_choice_balance.SetStringSelection(balancechannel)
-
-        self.arterial_label_balance = wx.StaticText(self, label='Balance Channel (A):')
-        self.arterial_label_gas1 = wx.StaticText(self, label='Channel 1 Gas (A):')
         self.arterial_label_gas1_percentage = wx.StaticText(self, label='Channel 1 Percentage (A):')
         self.arterial_spin_gas1_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel1perc), inc=1)
-        self.arterial_label_gas2 = wx.StaticText(self, label='Channel 2 Gas (A):')
         self.arterial_label_gas2_percentage = wx.StaticText(self, label='Channel 2 Percentage (A):')
         self.arterial_spin_gas2_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel2perc), inc=1)
         self.arterial_label_total_flow = wx.StaticText(self, label='Total Flow (A):')
@@ -142,35 +124,17 @@ class PanelGB100CDIPresens(wx.Panel):
         self.arterial_btn_stream_GB100 = wx.ToggleButton(self, label='Start Arterial Gas Mixer')
 
         section = LP_CFG.get_hwcfg_section('Venous Gas Mixer')
-        channel1gas = section['channel1gas']
-        channel2gas = section['channel2gas']
-        balancechannel = section['balancechannel']
         channel1perc = section['channel1perc']
         channel2perc = section['channel2perc']
         totalflow = section['totalflow']
 
         self.sizer_venous_gas_config = wx.BoxSizer(wx.VERTICAL)
-        self.sizer_venous_balance = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_venous_gas1_choice = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_venous_gas1_percentage = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_venous_gas2_choice = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_venous_gas2_percentage = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_venous_flow = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.venous_choice_gas1 = wx.Choice(self, choices=self._gas_parameters)
-        self.venous_choice_gas1.SetStringSelection(channel1gas)
-        self.venous_choice_gas2 = wx.Choice(self, choices=self._gas_parameters)
-        self.venous_choice_gas2.SetStringSelection(channel2gas)
-
-        parameters = ['1', '2']
-        self.venous_choice_balance = wx.Choice(self, choices=parameters)
-        self.venous_choice_balance.SetStringSelection(balancechannel)
-
-        self.venous_label_balance = wx.StaticText(self, label='Balance Channel (V):')
-        self.venous_label_gas1 = wx.StaticText(self, label='Channel 1 Gas (V):')
         self.venous_label_gas1_percentage = wx.StaticText(self, label='Channel 1 Percentage (V):')
         self.venous_spin_gas1_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel1perc), inc=1)
-        self.venous_label_gas2 = wx.StaticText(self, label='Channel 2 Gas (V):')
         self.venous_label_gas2_percentage = wx.StaticText(self, label='Channel 2 Percentage (V):')
         self.venous_spin_gas2_percentage = wx.SpinCtrlDouble(self, min=0, max=100, initial=int(channel2perc), inc=1)
         self.venous_label_total_flow = wx.StaticText(self, label='Total Flow (V):')
@@ -262,53 +226,29 @@ class PanelGB100CDIPresens(wx.Panel):
         self.sizer_config.Add(self.label_choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
         self.sizer_config.Add(self.choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
 
-        self.sizer_arterial_balance.Add(self.arterial_label_balance)
-        self.sizer_arterial_balance.AddSpacer(3)
-        self.sizer_arterial_balance.Add(self.arterial_choice_balance)
-        self.sizer_arterial_gas1_choice.Add(self.arterial_label_gas1)
-        self.sizer_arterial_gas1_choice.AddSpacer(3)
-        self.sizer_arterial_gas1_choice.Add(self.arterial_choice_gas1)
         self.sizer_arterial_gas1_percentage.Add(self.arterial_label_gas1_percentage)
         self.sizer_arterial_gas1_percentage.AddSpacer(3)
         self.sizer_arterial_gas1_percentage.Add(self.arterial_spin_gas1_percentage)
-        self.sizer_arterial_gas2_choice.Add(self.arterial_label_gas2)
-        self.sizer_arterial_gas2_choice.AddSpacer(3)
-        self.sizer_arterial_gas2_choice.Add(self.arterial_choice_gas2)
         self.sizer_arterial_gas2_percentage.Add(self.arterial_label_gas2_percentage)
         self.sizer_arterial_gas2_percentage.AddSpacer(3)
         self.sizer_arterial_gas2_percentage.Add(self.arterial_spin_gas2_percentage)
         self.sizer_arterial_flow.Add(self.arterial_label_total_flow)
         self.sizer_arterial_flow.AddSpacer(3)
         self.sizer_arterial_flow.Add(self.arterial_spin_total_flow)
-        self.sizer_arterial_gas_config.Add(self.sizer_arterial_balance)
-        self.sizer_arterial_gas_config.Add(self.sizer_arterial_gas1_choice)
         self.sizer_arterial_gas_config.Add(self.sizer_arterial_gas1_percentage)
-        self.sizer_arterial_gas_config.Add(self.sizer_arterial_gas2_choice)
         self.sizer_arterial_gas_config.Add(self.sizer_arterial_gas2_percentage)
         self.sizer_arterial_gas_config.Add(self.sizer_arterial_flow)
 
-        self.sizer_venous_balance.Add(self.venous_label_balance)
-        self.sizer_venous_balance.AddSpacer(3)
-        self.sizer_venous_balance.Add(self.venous_choice_balance)
-        self.sizer_venous_gas1_choice.Add(self.venous_label_gas1)
-        self.sizer_venous_gas1_choice.AddSpacer(3)
-        self.sizer_venous_gas1_choice.Add(self.venous_choice_gas1)
         self.sizer_venous_gas1_percentage.Add(self.venous_label_gas1_percentage)
         self.sizer_venous_gas1_percentage.AddSpacer(3)
         self.sizer_venous_gas1_percentage.Add(self.venous_spin_gas1_percentage)
-        self.sizer_venous_gas2_choice.Add(self.venous_label_gas2)
-        self.sizer_venous_gas2_choice.AddSpacer(3)
-        self.sizer_venous_gas2_choice.Add(self.venous_choice_gas2)
         self.sizer_venous_gas2_percentage.Add(self.venous_label_gas2_percentage)
         self.sizer_venous_gas2_percentage.AddSpacer(3)
         self.sizer_venous_gas2_percentage.Add(self.venous_spin_gas2_percentage)
         self.sizer_venous_flow.Add(self.venous_label_total_flow)
         self.sizer_venous_flow.AddSpacer(3)
         self.sizer_venous_flow.Add(self.venous_spin_total_flow)
-        self.sizer_venous_gas_config.Add(self.sizer_venous_balance)
-        self.sizer_venous_gas_config.Add(self.sizer_venous_gas1_choice)
         self.sizer_venous_gas_config.Add(self.sizer_venous_gas1_percentage)
-        self.sizer_venous_gas_config.Add(self.sizer_venous_gas2_choice)
         self.sizer_venous_gas_config.Add(self.sizer_venous_gas2_percentage)
         self.sizer_venous_gas_config.Add(self.sizer_venous_flow)
 
@@ -358,19 +298,28 @@ class PanelGB100CDIPresens(wx.Panel):
         label = self.arterial_btn_stream_GB100.GetLabel()
         if label == 'Start Arterial Gas Mixer':
             self.arterial_btn_stream_GB100.SetLabel('Stop Arterial Gas Mixer')
+            dlg = wx.SingleChoiceDialog(self, 'Choose Arterial Mixer Balance Channel', 'Balance Channel', ['1', '2'])
+            if dlg.ShowModal() == wx.ID_OK:
+                arterialchoicebalance = dlg.GetStringSelection()
+            dlg.Destroy()
+            dlg = wx.SingleChoiceDialog(self, 'Choose Arterial Mixer Channel 1 Gas', 'Channel 1 Gas', self._gas_parameters)
+            if dlg.ShowModal() == wx.ID_OK:
+                arterialchoicegas1 = dlg.GetStringSelection()
+            dlg.Destroy()
+            dlg = wx.SingleChoiceDialog(self, 'Choose Arterial Mixer Channel 2 Gas', 'Channel 2 Gas', self._gas_parameters)
+            if dlg.ShowModal() == wx.ID_OK:
+                arterialchoicegas2 = dlg.GetStringSelection()
+            dlg.Destroy()
             self._arterial_mixer.start_stream()
-            self.arterial_choice_balance.Enable(False)
-            self.arterial_choice_gas1.Enable(False)
             self.arterial_spin_gas1_percentage.Enable(False)
-            self.arterial_choice_gas2.Enable(False)
             self.arterial_spin_gas2_percentage.Enable(False)
             self.arterial_spin_total_flow.Enable(False)
-            gas1 = self._arterial_mixer.get_gas_ID((self.arterial_choice_gas1.GetStringSelection()))
-            gas2 = self._arterial_mixer.get_gas_ID((self.arterial_choice_gas2.GetStringSelection()))
+            gas1 = self._arterial_mixer.get_gas_ID(arterialchoicegas1)
+            gas2 = self._arterial_mixer.get_gas_ID(arterialchoicegas2)
             gas1_percentage = self.arterial_spin_gas1_percentage.GetValue()
             gas2_percentage = self.arterial_spin_gas2_percentage.GetValue()
             flow = int(self.arterial_spin_total_flow.GetValue())
-            balance = float(self.arterial_choice_balance.GetStringSelection())
+            balance = float(arterialchoicebalance)
             self._arterial_mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 1, gas1=gas1, gas2=gas2, balance_channel=balance)
             self.timer_update_arterial_GB100.Start(60000, wx.TIMER_CONTINUOUS)
         elif label == 'Stop Arterial Gas Mixer':
@@ -381,10 +330,7 @@ class PanelGB100CDIPresens(wx.Panel):
             flow = self._arterial_mixer.get_mainboard_total_flow()
             self._arterial_mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 0)
             self._arterial_mixer.stop_stream()
-            self.arterial_choice_balance.Enable(True)
-            self.arterial_choice_gas1.Enable(True)
             self.arterial_spin_gas1_percentage.Enable(True)
-            self.arterial_choice_gas2.Enable(True)
             self.arterial_spin_gas2_percentage.Enable(True)
             self.arterial_spin_total_flow.Enable(True)
             self.arterial_spin_gas1_percentage.SetValue(gas1_percentage)
@@ -395,19 +341,28 @@ class PanelGB100CDIPresens(wx.Panel):
         label = self.venous_btn_stream_GB100.GetLabel()
         if label == 'Start Venous Gas Mixer':
             self.venous_btn_stream_GB100.SetLabel('Stop Venous Gas Mixer')
+            dlg = wx.SingleChoiceDialog(self, 'Choose Venous Mixer Balance Channel', 'Balance Channel', ['1', '2'])
+            if dlg.ShowModal() == wx.ID_OK:
+                venouschoicebalance = dlg.GetStringSelection()
+            dlg.Destroy()
+            dlg = wx.SingleChoiceDialog(self, 'Choose Venous Mixer Channel 1 Gas', 'Channel 1 Gas', self._gas_parameters)
+            if dlg.ShowModal() == wx.ID_OK:
+                venouschoicegas1 = dlg.GetStringSelection()
+            dlg.Destroy()
+            dlg = wx.SingleChoiceDialog(self, 'Choose Venous Mixer Channel 2 Gas', 'Channel 2 Gas', self._gas_parameters)
+            if dlg.ShowModal() == wx.ID_OK:
+                venouschoicegas2 = dlg.GetStringSelection()
+            dlg.Destroy()
             self._venous_mixer.start_stream()
-            self.venous_choice_balance.Enable(False)
-            self.venous_choice_gas1.Enable(False)
             self.venous_spin_gas1_percentage.Enable(False)
-            self.venous_choice_gas2.Enable(False)
             self.venous_spin_gas2_percentage.Enable(False)
             self.venous_spin_total_flow.Enable(False)
-            gas1 = self._venous_mixer.get_gas_ID((self.venous_choice_gas1.GetStringSelection()))
-            gas2 = self._venous_mixer.get_gas_ID((self.venous_choice_gas2.GetStringSelection()))
+            gas1 = self._venous_mixer.get_gas_ID(venouschoicegas1)
+            gas2 = self._venous_mixer.get_gas_ID(venouschoicegas2)
             gas1_percentage = self.venous_spin_gas1_percentage.GetValue()
             gas2_percentage = self.venous_spin_gas2_percentage.GetValue()
             flow = int(self.venous_spin_total_flow.GetValue())
-            balance = float(self.venous_choice_balance.GetStringSelection())
+            balance = float(venouschoicebalance)
             self._venous_mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 1, gas1=gas1, gas2=gas2, balance_channel=balance)
             self.timer_update_venous_GB100.Start(60000, wx.TIMER_CONTINUOUS)
         elif label == 'Stop Venous Gas Mixer':
@@ -418,10 +373,7 @@ class PanelGB100CDIPresens(wx.Panel):
             flow = self._venous_mixer.get_mainboard_total_flow()
             self._venous_mixer.change_gas_mix(gas1_percentage, gas2_percentage, flow, 0)
             self._venous_mixer.stop_stream()
-            self.venous_choice_balance.Enable(True)
-            self.venous_choice_gas1.Enable(True)
             self.venous_spin_gas1_percentage.Enable(True)
-            self.venous_choice_gas2.Enable(True)
             self.venous_spin_gas2_percentage.Enable(True)
             self.venous_spin_total_flow.Enable(True)
             self.venous_spin_gas1_percentage.SetValue(gas1_percentage)
@@ -443,21 +395,12 @@ class PanelGB100CDIPresens(wx.Panel):
         section = LP_CFG.get_hwcfg_section(self._sensor.name)
         dev = section['Device']
         line = section['LineName']
-        low_pt = section['CalPt1_Target']
-        low_read = section['CalPt1_Reading']
-        high_pt = section['CalPt2_Target']
-        high_read = section['CalPt2_Reading']
         label = self.btn_stream_presens.GetLabel()
         if label == 'Start Arterial pO2 Sensor':
             self.btn_stream_presens.SetLabel('Stop Arterial pO2 Sensor')
-            if self._sensor.hw.is_open():
-                self._sensor.hw.start()
-            else:
-                self._sensor.hw.open(dev=dev)
-                self._sensor.hw.add_channel(line)
-                self._sensor.set_ch_id(line)
-                channel = self._sensor.ch_id
-                self._sensor.hw.set_calibration(channel, low_pt, low_read, high_pt, high_read)
+            self._sensor.hw.open(dev=dev)  ###
+            self._sensor.hw.add_channel(line) ###
+            self._sensor.set_ch_id(line) ###
             self._sensor.open()
             self._sensor.hw.start()
             self._sensor.start()
