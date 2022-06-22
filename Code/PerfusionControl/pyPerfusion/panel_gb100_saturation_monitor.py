@@ -15,6 +15,7 @@ from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyHardware.pyAI import AIDeviceException
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.FileStrategy import StreamToFile
+from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 
 class PlotFrame(Enum):
     FROM_START = 0
@@ -58,7 +59,7 @@ class Readout(wx.Panel):
         self.Fit()
 
 class PanelGB100CDIPresens(wx.Panel):
-    def __init__(self, parent, arterial_mixer, venous_mixer, monitor, sensor, cdi_labels, cdi_graphs_ranges, gas_parameters, name):
+    def __init__(self, parent, arterial_mixer, venous_mixer, monitor, sensor, inflow_pump, outflow_pump, cdi_labels, cdi_graphs_ranges, gas_parameters, name):
         self._logger = logging.getLogger(__name__)
         utils.setup_stream_logger(self._logger, logging.DEBUG)
         utils.configure_matplotlib_logging()
@@ -67,6 +68,8 @@ class PanelGB100CDIPresens(wx.Panel):
         self._venous_mixer = venous_mixer
         self._monitor = monitor
         self._sensor = sensor
+        self._inflow_pump = inflow_pump
+        self._outflow_pump = outflow_pump
         self._cdi_labels = cdi_labels
         self._cdi_graphs_ranges = cdi_graphs_ranges
         self._gas_parameters = gas_parameters
@@ -84,6 +87,18 @@ class PanelGB100CDIPresens(wx.Panel):
         self.saturationupper = float(section['saturationupper'])
         self.co2lower = float(section['co2lower'])
         self.co2upper = float(section['co2upper'])
+
+        section = LP_CFG.get_hwcfg_section(self._inflow_pump.name)
+        dev = section['Device']
+        line = section['LineName']
+        self._inflow_pump.open(period_ms=1000, dev=dev, line=line)
+        self._inflow_pump.set_dc(0)
+
+        section = LP_CFG.get_hwcfg_section(self._outflow_pump.name)
+        dev = section['Device']
+        line = section['LineName']
+        self._outflow_pump.open(period_ms=1000, dev=dev, line=line)
+        self._outflow_pump.set_dc(0)
 
         self.cdi_graphs_values = {}
         for key in self._cdi_graphs_ranges.keys():
@@ -105,6 +120,7 @@ class PanelGB100CDIPresens(wx.Panel):
         self.sizer_config = wx.BoxSizer(wx.VERTICAL)
         self.sizer_start_gas_mixers = wx.BoxSizer(wx.HORIZONTAL)
         self.sizer_start_cdi_presens_sensors = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_start_automated_dialysis = wx.BoxSizer(wx.HORIZONTAL)
         self.choice_time = self._create_choice_time()
         self.label_choice_time = wx.StaticText(self, label='Display Window')
 
@@ -148,6 +164,23 @@ class PanelGB100CDIPresens(wx.Panel):
 
         self.btn_stream_TSM = wx.ToggleButton(self, label='Start CDI Monitor')
         self.btn_stream_presens = wx.ToggleButton(self, label='Start Arterial pO2 Sensor')
+
+        section = LP_CFG.get_hwcfg_section(self._inflow_pump.name)
+        initial_rate_inflow = float(section['initialrate'])
+        self.upper_hct_limit = float(section['hctlimit'])
+        self.upper_k_limit = float(section['kupperlimit'])
+        self.lower_k_limit = float(section['klowerlimit'])
+        self.upper_dialysis_limit = float(section['upperdialysislimit'])
+        self.lower_dialysis_limit = float(section['lowerdialysislimit'])
+        section = LP_CFG.get_hwcfg_section(self._outflow_pump.name)
+        initial_rate_outflow = float(section['initialrate'])
+        self.lower_hct_limit = float(section['hctlimit'])
+
+        self.label_inflow_pump_rate = wx.StaticText(self, label='Inflow (ml/min):')
+        self.spin_inflow_pump_rate = wx.SpinCtrlDouble(self, min=0, max=100, initial=initial_rate_inflow, inc=0.1)
+        self.label_outflow_pump_rate = wx.StaticText(self, label='Outflow (ml/min):')
+        self.spin_outflow_pump_rate = wx.SpinCtrlDouble(self, min=0, max=100, initial=initial_rate_outflow, inc=0.1)
+        self.btn_automated_dialysis = wx.ToggleButton(self, label='Start Automated Dialysis')
 
         self.__do_layout()
         self.__set_bindings()
@@ -243,12 +276,19 @@ class PanelGB100CDIPresens(wx.Panel):
         self.sizer_start_cdi_presens_sensors.Add(self.btn_stream_TSM, 1, wx.ALL | wx.EXPAND, border=1)
         self.sizer_start_cdi_presens_sensors.AddSpacer(1)
         self.sizer_start_cdi_presens_sensors.Add(self.btn_stream_presens, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_start_automated_dialysis.Add(self.label_inflow_pump_rate)
+        self.sizer_start_automated_dialysis.Add(self.spin_inflow_pump_rate)
+        self.sizer_start_automated_dialysis.Add(self.label_outflow_pump_rate)
+        self.sizer_start_automated_dialysis.Add(self.spin_outflow_pump_rate)
+        self.sizer_start_automated_dialysis.Add(self.btn_automated_dialysis)
 
         self.sizer_readout.Add(self.sizer_config, 1, wx.ALL | wx.ALIGN_CENTER)
         self.sizer_readout.Add(self.sizer_arterial_gas_config, 1, wx.ALL)
         self.sizer_readout.Add(self.sizer_venous_gas_config, 1, wx.ALL)
         self.sizer_readout.Add(self.sizer_start_gas_mixers, 1, wx.ALL | wx.EXPAND, border=1)
         self.sizer_readout.Add(self.sizer_start_cdi_presens_sensors, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_readout.AddSpacer(10)
+        self.sizer_readout.Add(self.sizer_start_automated_dialysis, 1, wx.ALL | wx.EXPAND, border=1)
         self.sizer_main.Add(self.sizer_readout)
         self.SetSizer(self.sizer_main)
 
@@ -264,12 +304,16 @@ class PanelGB100CDIPresens(wx.Panel):
         self.timer_update_venous_GB100 = wx.Timer(self, id=3)
         self.Bind(wx.EVT_TIMER, self.OnVenousGB100Timer, id=3)
 
+        self.timer_update_dialysis = wx.Timer(self, id=4)
+        self.Bind(wx.EVT_TIMER, self.OnDialysisTimer, id=4)
+
     def __set_bindings(self):
         self.choice_time.Bind(wx.EVT_CHOICE, self._onchange_plotchoice)
         self.arterial_btn_stream_GB100.Bind(wx.EVT_TOGGLEBUTTON, self.OnArterialGB100)
         self.venous_btn_stream_GB100.Bind(wx.EVT_TOGGLEBUTTON, self.OnVenousGB100)
         self.btn_stream_TSM.Bind(wx.EVT_TOGGLEBUTTON, self.OnTSM)
         self.btn_stream_presens.Bind(wx.EVT_TOGGLEBUTTON, self.OnPresens)
+        self.btn_automated_dialysis.Bind(wx.EVT_TOGGLEBUTTON, self.OnDialysis)
 
     def _onchange_plotchoice(self, event):
         choice_time = PlotFrame[self.choice_time.GetStringSelection()]
@@ -404,6 +448,31 @@ class PanelGB100CDIPresens(wx.Panel):
             self.btn_stream_presens.SetLabel('Start Arterial pO2 Sensor')
             self._sensor.hw.remove_channel(line)
 
+    def OnDialysis(self, event):  # Logging dialysis rates? New file?
+        label = self.btn_automated_dialysis.GetLabel()
+        if label == 'Start Automated Dialysis':
+            inflow = self.spin_inflow_pump_rate.GetValue()
+            outflow = self.spin_outflow_pump_rate.GetValue()
+            self._inflow_pump.start()
+            self._inflow_pump.set_dc(inflow/10.9)  # With the 3.17mm BWB peristaltic pump tubing that we use, 1 V = 10.9 ml/min of flow
+            self._inflow_pump.set_dc(inflow/10.9)
+            self._outflow_pump.start()
+            self._outflow_pump.set_dc(outflow/10.9)
+            self._outflow_pump.set_dc(outflow/10.9)  # For some reason this only works if I give two commands...
+            self.spin_inflow_pump_rate.Enable(False)
+            self.spin_outflow_pump_rate.Enable(False)
+            self.timer_update_dialysis.Start(300000, wx.TIMER_CONTINUOUS)
+            self.btn_automated_dialysis.SetLabel('Stop Automated Dialysis')
+        elif label == 'Stop Automated Dialysis':
+            self.timer_update_dialysis.Stop()
+            self._inflow_pump.set_dc(0)
+            self._inflow_pump.close()
+            self._outflow_pump.set_dc(0)
+            self._outflow_pump.close()
+            self.spin_inflow_pump_rate.Enable(True)
+            self.spin_outflow_pump_rate.Enable(True)
+            self.btn_automated_dialysis.SetLabel('Start Automated Dialysis')
+
     def OnArterialGB100Timer(self, event):
         if event.GetId() == self.timer_update_arterial_GB100.GetId():
             self.update_arterial_gas_mix()
@@ -415,6 +484,10 @@ class PanelGB100CDIPresens(wx.Panel):
     def OnCDITimer(self, event):
         if event.GetId() == self.timer_update_CDI.GetId():
             self.update_cdi_plots()
+
+    def OnDialysisTimer(self, event):
+        if event.GetId() == self.timer_update_dialysis.GetId():
+            self.update_dialysis()
 
     def update_arterial_gas_mix(self):
         channel1_gas_ID = self._arterial_mixer.get_channel_id_gas(1)
@@ -543,6 +616,59 @@ class PanelGB100CDIPresens(wx.Panel):
                 self._plots_main[list(self._cdi_graphs_ranges).index(key)].plot(value, time_min)
                 self._plots_lt[list(self._cdi_graphs_ranges).index(key)].plot(value, time_min)
 
+    def update_dialysis(self):
+        current_inflow = self.spin_inflow_pump_rate.GetValue()
+        new_inflow = current_inflow
+        if self._monitor._TSMSerial__thread_streaming:
+            K = self.readouts['K'].label_value.GetLabel()
+            try:
+                k_value = float(K)
+            except ValueError:
+                k_value = []
+            if k_value and k_value >= self.upper_k_limit:  # Want to run harder dialysis
+                new_inflow = current_inflow + 0.5
+            elif k_value and k_value <= self.lower_k_limit:  # Back off on dialysis
+                new_inflow = current_inflow - 0.5
+            else:
+                pass
+        if new_inflow > self.upper_dialysis_limit:
+            new_inflow = self.upper_dialysis_limit
+        elif new_inflow < self.lower_dialysis_limit:
+            new_inflow = self.lower_dialysis_limit
+        if new_inflow == current_inflow:
+            print('no change in dialysate inflow rate required')
+            adjusted_outflow = self.spin_outflow_pump_rate.GetValue()
+        else:
+            print('changing dialysate inflow rate')
+            self._inflow_pump.set_dc(new_inflow/10.9)
+            self.spin_inflow_pump_rate.SetValue(new_inflow)
+            adjusted_outflow = self.spin_outflow_pump_rate.GetValue() + (new_inflow - current_inflow)
+        current_inflow = self.spin_inflow_pump_rate.GetValue()
+        current_outflow = self.spin_outflow_pump_rate.GetValue()
+        new_outflow = adjusted_outflow
+        if self._monitor._TSMSerial__thread_streaming:
+            Hct = self.readouts['Hct'].label_value.GetLabel()
+            try:
+                hct_value = float(Hct)
+            except ValueError:
+                hct_value = []
+            if hct_value and hct_value >= self.upper_hct_limit:  # Want to dilute
+                new_outflow -= 0.5
+            elif hct_value and hct_value <= self.lower_hct_limit:  # Want to concentrate
+                new_outflow += 0.5
+            else:
+                pass
+        if new_outflow > (current_inflow + 1.5):  # Don't want flow rates to be massively divergent or else we will get significant concentration/dilution in a short period
+            new_outflow = current_inflow + 1.5
+        elif new_outflow < (current_inflow - 1.5):
+            new_outflow = current_inflow - 1.5
+        if new_outflow == current_outflow:
+            print('no change in dialysate outflow rate required')
+        else:
+            print('changing dialysate outflow rate')
+            self._outflow_pump.set_dc(new_outflow/10.9)
+            self.spin_outflow_pump_rate.SetValue(new_outflow)
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -559,6 +685,10 @@ class TestFrame(wx.Frame):
         self.sensor.add_strategy(raw)
         self.sensor.open()
         self.sensor.start()
+
+        self.ao_inflow = NIDAQ_AO('Dialysate Inflow Pump')
+
+        self.ao_outflow = NIDAQ_AO('Dialysate Outflow Pump')
 
         self.arterial_mixer = GB100('Arterial Gas Mixer')
         self.arterial_mixer.open()
@@ -588,7 +718,7 @@ class TestFrame(wx.Frame):
         self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
         self.name = 'GB100 CDI Presens Panel'
 
-        panel_GB100_CDI_Presens = PanelGB100CDIPresens(self, self.arterial_mixer, self.venous_mixer, self.monitor, self.sensor, self.cdi_labels, self.cdi_graphs_ranges, self.gas_parameters, self.name)
+        panel_GB100_CDI_Presens = PanelGB100CDIPresens(self, self.arterial_mixer, self.venous_mixer, self.monitor, self.sensor, self.ao_inflow, self.ao_outflow, self.cdi_labels, self.cdi_graphs_ranges, self.gas_parameters, self.name)
         sizer = wx.GridSizer(cols=1)
         sizer.Add(panel_GB100_CDI_Presens, 1, wx.EXPAND, border=2)
 
@@ -604,6 +734,12 @@ class TestFrame(wx.Frame):
         if self.sensor.hw._task:
             self.sensor.hw.stop()
             self.sensor.hw.close()
+        self.ao_inflow.set_dc(0)
+        self.ao_inflow.close()
+        self.ao_inflow.halt()
+        self.ao_outflow.set_dc(0)
+        self.ao_outflow.close()
+        self.ao_outflow.halt()
         self.monitor.stop_stream()
         self.monitor.close_stream()
         if self.arterial_mixer.get_working_status():
