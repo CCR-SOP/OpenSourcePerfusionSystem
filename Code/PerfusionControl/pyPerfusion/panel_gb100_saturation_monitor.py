@@ -7,14 +7,14 @@ from enum import Enum
 import wx
 import logging
 import pyPerfusion.utils as utils
-from pyPerfusion.plotting import PanelPlotting, PanelPlotLT, TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot, SensorPlot, EventPlot
+from pyPerfusion.plotting import PanelPlotting, TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot, SensorPlot
 from pyHardware.pySaturationMonitor import TSMSerial
 from pyHardware.pyGB100 import GB100
 import pyPerfusion.PerfusionConfig as LP_CFG
-from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
-from pyPerfusion.SensorPoint import SensorPoint
-from pyPerfusion.FileStrategy import PointsToFile
-from pyPerfusion.panel_readout import PanelReadout
+from pyHardware.pyAI_NIDAQ import NIDAQ_AI
+from pyHardware.pyAI import AIDeviceException
+from pyPerfusion.SensorStream import SensorStream
+from pyPerfusion.FileStrategy import StreamToFile
 
 class PlotFrame(Enum):
     FROM_START = 0
@@ -27,7 +27,6 @@ class PlotFrame(Enum):
 
 class Readout(wx.Panel):
     def __init__(self, parent, label, unit):
-        self._logger = logging.getLogger(__name__)
         super().__init__(parent, -1)
         self._parent = parent
         self._label = label
@@ -59,7 +58,7 @@ class Readout(wx.Panel):
         self.Fit()
 
 class PanelGB100CDIPresens(wx.Panel):
-    def __init__(self, parent, arterial_mixer, venous_mixer, monitor, sensor, cdi_labels, presens_label, cdi_graphs_ranges, presens_graph_range, gas_parameters, name):
+    def __init__(self, parent, arterial_mixer, venous_mixer, monitor, sensor, cdi_labels, cdi_graphs_ranges, gas_parameters, name):
         self._logger = logging.getLogger(__name__)
         utils.setup_stream_logger(self._logger, logging.DEBUG)
         utils.configure_matplotlib_logging()
@@ -69,22 +68,26 @@ class PanelGB100CDIPresens(wx.Panel):
         self._monitor = monitor
         self._sensor = sensor
         self._cdi_labels = cdi_labels
-        self._presens_label = presens_label
         self._cdi_graphs_ranges = cdi_graphs_ranges
-        self._presens_graph_range = presens_graph_range
         self._gas_parameters = gas_parameters
         self._name = name
         self.__plot_frame = PlotFrame.LAST_MINUTE
 
+        section = LP_CFG.get_hwcfg_section(self._sensor.name)
+        self.pO2lowerrange = float(section['lowerrange'])
+        self.pO2upperrange = float(section['upperrange'])
+
+        section = LP_CFG.get_hwcfg_section(self._monitor.name)
+        self.phlower = float(section['phlower'])
+        self.phupper = float(section['phupper'])
+        self.saturationlower = float(section['saturationlower'])
+        self.saturationupper = float(section['saturationupper'])
+        self.co2lower = float(section['co2lower'])
+        self.co2upper = float(section['co2upper'])
+
         self.cdi_graphs_values = {}
         for key in self._cdi_graphs_ranges.keys():
             self.cdi_graphs_values[key] = []
-        print(self.cdi_graphs_values)
-
-        self.presens_graph_value = {}
-        for key in self._presens_graph_range.keys():
-            self.presens_graph_value[key] = []
-        print(self.presens_graph_value)
 
         wx.Panel.__init__(self, parent, -1)
 
@@ -100,7 +103,8 @@ class PanelGB100CDIPresens(wx.Panel):
 
         self.sizer_readout = wx.GridSizer(cols=1)
         self.sizer_config = wx.BoxSizer(wx.VERTICAL)
-        self.sizer_start_streams = wx.BoxSizer(wx.VERTICAL)
+        self.sizer_start_gas_mixers = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer_start_cdi_presens_sensors = wx.BoxSizer(wx.HORIZONTAL)
         self.choice_time = self._create_choice_time()
         self.label_choice_time = wx.StaticText(self, label='Display Window')
 
@@ -175,21 +179,7 @@ class PanelGB100CDIPresens(wx.Panel):
         panel.add_plot(plotraw)
         sizer.Add(panel, 9, wx.ALL | wx.EXPAND, border=0)
 
-        panel = PanelPlotLT(self)
-        self._plots_lt.append(panel)
-        plotraw = SensorPlot(self._sensor, panel.axes)
-        plotraw.set_strategy(self._sensor.get_file_strategy('StreamRaw'))
-        panel.add_plot(plotraw)
-        sizer.Add(panel, 2, wx.ALL | wx.EXPAND, border=0)
-
         return sizer
-
-       # for plot in self._plots_main:
-       #     plotevt = EventPlot(evt, plot.axes)
-       #     plotevt.set_strategy(evt.get_file_strategy('Raw'), color='orange', keep_old_title=True)
-       #     plot.add_plot(plotevt)
-       # for plot in self._plots_lt:
-       #     same thing
 
     def _create_choice_time(self):
         parameters = [item.name for item in PlotFrame]
@@ -217,53 +207,48 @@ class PanelGB100CDIPresens(wx.Panel):
                 readout = Readout(self, key, value)
                 self.readouts[key] = readout
                 self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
-        for key, value in self._presens_label.items():
-            print(key, value)
-            readout = PanelReadout(self, self._sensor)
-            self.readouts[key] = readout
-            self.sizer_readout.Add(readout, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.sizer_config.Add(self.label_choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
         self.sizer_config.Add(self.choice_time, 1, wx.ALL | wx.ALIGN_CENTER)
 
         self.sizer_arterial_gas1_percentage.Add(self.arterial_label_gas1_percentage)
-        self.sizer_arterial_gas1_percentage.AddSpacer(3)
+        self.sizer_arterial_gas1_percentage.AddSpacer(10)
         self.sizer_arterial_gas1_percentage.Add(self.arterial_spin_gas1_percentage)
         self.sizer_arterial_gas2_percentage.Add(self.arterial_label_gas2_percentage)
-        self.sizer_arterial_gas2_percentage.AddSpacer(3)
+        self.sizer_arterial_gas2_percentage.AddSpacer(10)
         self.sizer_arterial_gas2_percentage.Add(self.arterial_spin_gas2_percentage)
         self.sizer_arterial_flow.Add(self.arterial_label_total_flow)
-        self.sizer_arterial_flow.AddSpacer(3)
+        self.sizer_arterial_flow.AddSpacer(10)
         self.sizer_arterial_flow.Add(self.arterial_spin_total_flow)
         self.sizer_arterial_gas_config.Add(self.sizer_arterial_gas1_percentage)
         self.sizer_arterial_gas_config.Add(self.sizer_arterial_gas2_percentage)
         self.sizer_arterial_gas_config.Add(self.sizer_arterial_flow)
 
         self.sizer_venous_gas1_percentage.Add(self.venous_label_gas1_percentage)
-        self.sizer_venous_gas1_percentage.AddSpacer(3)
+        self.sizer_venous_gas1_percentage.AddSpacer(10)
         self.sizer_venous_gas1_percentage.Add(self.venous_spin_gas1_percentage)
         self.sizer_venous_gas2_percentage.Add(self.venous_label_gas2_percentage)
-        self.sizer_venous_gas2_percentage.AddSpacer(3)
+        self.sizer_venous_gas2_percentage.AddSpacer(10)
         self.sizer_venous_gas2_percentage.Add(self.venous_spin_gas2_percentage)
         self.sizer_venous_flow.Add(self.venous_label_total_flow)
-        self.sizer_venous_flow.AddSpacer(3)
+        self.sizer_venous_flow.AddSpacer(10)
         self.sizer_venous_flow.Add(self.venous_spin_total_flow)
         self.sizer_venous_gas_config.Add(self.sizer_venous_gas1_percentage)
         self.sizer_venous_gas_config.Add(self.sizer_venous_gas2_percentage)
         self.sizer_venous_gas_config.Add(self.sizer_venous_flow)
 
-        self.sizer_start_streams.Add(self.arterial_btn_stream_GB100, 1, wx.ALL | wx.EXPAND, border=1)
-        self.sizer_start_streams.AddSpacer(5)
-        self.sizer_start_streams.Add(self.venous_btn_stream_GB100, 1, wx.ALL | wx.EXPAND, border=1)
-        self.sizer_start_streams.AddSpacer(5)
-        self.sizer_start_streams.Add(self.btn_stream_TSM, 1, wx.ALL | wx.EXPAND, border=1)
-        self.sizer_start_streams.AddSpacer(5)
-        self.sizer_start_streams.Add(self.btn_stream_presens, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_start_gas_mixers.Add(self.arterial_btn_stream_GB100, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_start_gas_mixers.AddSpacer(1)
+        self.sizer_start_gas_mixers.Add(self.venous_btn_stream_GB100, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_start_cdi_presens_sensors.Add(self.btn_stream_TSM, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_start_cdi_presens_sensors.AddSpacer(1)
+        self.sizer_start_cdi_presens_sensors.Add(self.btn_stream_presens, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.sizer_readout.Add(self.sizer_config, 1, wx.ALL | wx.ALIGN_CENTER)
         self.sizer_readout.Add(self.sizer_arterial_gas_config, 1, wx.ALL)
         self.sizer_readout.Add(self.sizer_venous_gas_config, 1, wx.ALL)
-        self.sizer_readout.Add(self.sizer_start_streams, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_readout.Add(self.sizer_start_gas_mixers, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer_readout.Add(self.sizer_start_cdi_presens_sensors, 1, wx.ALL | wx.EXPAND, border=1)
         self.sizer_main.Add(self.sizer_readout)
         self.SetSizer(self.sizer_main)
 
@@ -292,7 +277,7 @@ class PanelGB100CDIPresens(wx.Panel):
             if type(plot) == TSMDexPanelPlotting:
                 plot._x_range_minutes = choice_time.value
             else:
-                plot.plot_frame_ms = choice_time.value
+                pass
 
     def OnArterialGB100(self, event):
         label = self.arterial_btn_stream_GB100.GetLabel()
@@ -391,57 +376,33 @@ class PanelGB100CDIPresens(wx.Panel):
             self._monitor.stop_stream()
             self.btn_stream_TSM.SetLabel('Start CDI Monitor')
 
-    def OnPresens(self, event):  #
+    def OnPresens(self, event):
+        label = self.btn_stream_presens.GetLabel()
         section = LP_CFG.get_hwcfg_section(self._sensor.name)
         dev = section['Device']
         line = section['LineName']
-        label = self.btn_stream_presens.GetLabel()
+        low_pt = section['CalPt1_Target']
+        low_read = section['CalPt1_Reading']
+        high_pt = section['CalPt2_Target']
+        high_read = section['CalPt2_Reading']
         if label == 'Start Arterial pO2 Sensor':
             self.btn_stream_presens.SetLabel('Stop Arterial pO2 Sensor')
-            self._sensor.hw.open(dev=dev)  ###
-            self._sensor.hw.add_channel(line) ###
-            self._sensor.set_ch_id(line) ###
-            self._sensor.open()
-            self._sensor.hw.start()
-            self._sensor.start()
-            self.timer_update_arterial_GB100.Start(60000, wx.TIMER_CONTINUOUS)
+            try:
+                self._sensor.hw.open(dev=dev)
+                self._sensor.hw.add_channel(line)
+                self._sensor.set_ch_id(line)
+                channel = self._sensor.ch_id
+                self._sensor.hw.set_calibration(channel, float(low_pt), float(low_read), float(high_pt), float(high_read))
+            except AIDeviceException as e:
+                dlg = wx.MessageDialog(parent=self, message=str(e), caption='AI Device Error', style=wx.OK)
+                dlg.ShowModal()
+            if self._sensor.hw.is_open():
+                self._sensor.hw.start()
+            else:
+                self._sensor.hw.remove_channel(line)
         elif label == 'Stop Arterial pO2 Sensor':
             self.btn_stream_presens.SetLabel('Start Arterial pO2 Sensor')
             self._sensor.hw.remove_channel(line)
-            self.timer_update_arterial_GB100.Stop()
-
-    def update_arterial_gas_mix(self):
-        self.get_presens_label_value()
-        channel1_gas_ID = self._arterial_mixer.get_channel_id_gas(1)
-        current_flow = self._venous_mixer.get_mainboard_total_flow()
-        new_channel_1_percentage = self._arterial_mixer.get_channel_percent_value(1)
-        new_channel_2_percentage = self._arterial_mixer.get_channel_percent_value(2)
-        if self.presens_graph_value['Arterial pO2']:
-            pO2 = self.presens_graph_value['Arterial pO2']
-            if pO2 > 145:
-                if channel1_gas_ID == 2:
-                    new_channel_1_percentage = new_channel_1_percentage + 1
-                    new_channel_2_percentage = new_channel_2_percentage - 1
-                elif channel1_gas_ID == 3:
-                    new_channel_1_percentage = new_channel_1_percentage - 1
-                    new_channel_2_percentage = new_channel_2_percentage + 1
-                else:
-                    pass
-            elif pO2 < 100:
-                if channel1_gas_ID == 2:
-                    new_channel_1_percentage = new_channel_1_percentage - 1
-                    new_channel_2_percentage = new_channel_2_percentage + 1
-                elif channel1_gas_ID == 3:
-                    new_channel_1_percentage = new_channel_1_percentage + 1
-                    new_channel_2_percentage = new_channel_2_percentage - 1
-                else:
-                    pass
-        if new_channel_1_percentage == self._arterial_mixer.get_channel_percent_value(1) and new_channel_2_percentage == self._arterial_mixer.get_channel_percent_value(2):
-            print('no change in gas mix required; returning')
-            return
-        else:
-            print('changing gas mix due to Arterial pO2')
-            self._arterial_mixer.change_gas_mix(new_channel_1_percentage, new_channel_2_percentage, current_flow, 1)
 
     def OnArterialGB100Timer(self, event):
         if event.GetId() == self.timer_update_arterial_GB100.GetId():
@@ -455,50 +416,104 @@ class PanelGB100CDIPresens(wx.Panel):
         if event.GetId() == self.timer_update_CDI.GetId():
             self.update_cdi_plots()
 
+    def update_arterial_gas_mix(self):
+        channel1_gas_ID = self._arterial_mixer.get_channel_id_gas(1)
+        channel2_gas_ID = self._arterial_mixer.get_channel_id_gas(2)
+        new_channel_1_percentage = self._arterial_mixer.get_channel_percent_value(1)
+        new_channel_2_percentage = self._arterial_mixer.get_channel_percent_value(2)
+        current_flow = self._arterial_mixer.get_mainboard_total_flow()
+        if self._sensor.hw._AI__thread and self._sensor.hw._AI__thread.is_alive() and self._sensor.hw.active_channels():
+            t, pO2 = self._sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
+            if pO2 > self.pO2upperrange:
+                if channel1_gas_ID == 2 and channel2_gas_ID == 3:
+                    new_channel_1_percentage = new_channel_1_percentage + 1
+                    new_channel_2_percentage = new_channel_2_percentage - 1
+                elif channel1_gas_ID == 3 and channel2_gas_ID == 2:
+                    new_channel_1_percentage = new_channel_1_percentage - 1
+                    new_channel_2_percentage = new_channel_2_percentage + 1
+                else:
+                    pass
+            elif pO2 < self.pO2lowerrange:
+                if channel1_gas_ID == 2 and channel2_gas_ID == 3:
+                    new_channel_1_percentage = new_channel_1_percentage - 1
+                    new_channel_2_percentage = new_channel_2_percentage + 1
+                elif channel1_gas_ID == 3 and channel2_gas_ID == 2:
+                    new_channel_1_percentage = new_channel_1_percentage + 1
+                    new_channel_2_percentage = new_channel_2_percentage - 1
+                else:
+                    pass
+        if new_channel_1_percentage < 0:
+            new_channel_1_percentage = 0
+        if new_channel_1_percentage > 100:
+            new_channel_1_percentage = 100
+        if new_channel_2_percentage < 0:
+            new_channel_2_percentage = 0
+        if new_channel_2_percentage > 100:
+            new_channel_2_percentage = 100
+        if new_channel_1_percentage == self._arterial_mixer.get_channel_percent_value(1) and new_channel_2_percentage == self._arterial_mixer.get_channel_percent_value(2):
+            print('no change in arterial gas mix required')
+            return
+        else:
+            print('changing arterial gas mix due to Arterial pO2')
+            self._arterial_mixer.change_gas_mix(new_channel_1_percentage, new_channel_2_percentage, current_flow, 1)
+
     def update_venous_gas_mix(self):
         self.get_cdi_label_values()
         channel1_gas_ID = self._venous_mixer.get_channel_id_gas(1)
+        channel2_gas_ID = self._venous_mixer.get_channel_id_gas(2)
         current_flow = self._venous_mixer.get_mainboard_total_flow()
         new_gas_flow = current_flow
         new_channel_1_percentage = self._venous_mixer.get_channel_percent_value(1)
         new_channel_2_percentage = self._venous_mixer.get_channel_percent_value(2)
         if self.cdi_graphs_values['Venous pCO2'] and self._monitor._TSMSerial__thread_streaming:  # Don't update gas mix if no data is being streamed by CDI
             pCO2 = self.cdi_graphs_values['Venous pCO2']
-            if pCO2 > 45:
-                new_gas_flow = new_gas_flow + 4
-            elif pCO2 < 25:
-                new_gas_flow = new_gas_flow - 4
+            if pCO2 > self.co2upper:
+                new_gas_flow = new_gas_flow + 2
+            elif pCO2 < self.co2lower:
+                new_gas_flow = new_gas_flow - 2
         if self.cdi_graphs_values['Venous pH'] and self._monitor._TSMSerial__thread_streaming:
             pH = self.cdi_graphs_values['Venous pH']
-            if pH < 7.35:
-                new_gas_flow = new_gas_flow + 6
-            elif pH > 7.45:
-                new_gas_flow = new_gas_flow - 6
+            if pH < self.phlower:
+                new_gas_flow = new_gas_flow + 4
+            elif pH > self.phupper:
+                new_gas_flow = new_gas_flow - 4
         if self.cdi_graphs_values['O2 Saturation'] and self._monitor._TSMSerial__thread_streaming:
             sO2 = self.cdi_graphs_values['O2 Saturation']
-            if sO2 > 85:
-                if channel1_gas_ID == 2:
+            if sO2 > self.saturationupper:
+                if channel1_gas_ID == 2 and channel2_gas_ID == 3:
                     new_channel_1_percentage = new_channel_1_percentage + 1
                     new_channel_2_percentage = new_channel_2_percentage - 1
-                elif channel1_gas_ID == 3:
+                elif channel1_gas_ID == 3 and channel2_gas_ID == 2:
                     new_channel_1_percentage = new_channel_1_percentage - 1
                     new_channel_2_percentage = new_channel_2_percentage + 1
                 else:
                     pass
-            elif sO2 < 80:
-                if channel1_gas_ID == 2:
+            elif sO2 < self.saturationlower:
+                if channel1_gas_ID == 2 and channel2_gas_ID == 3:
                     new_channel_1_percentage = new_channel_1_percentage - 1
                     new_channel_2_percentage = new_channel_2_percentage + 1
-                elif channel1_gas_ID == 3:
+                elif channel1_gas_ID == 3 and channel2_gas_ID == 2:
                     new_channel_1_percentage = new_channel_1_percentage + 1
                     new_channel_2_percentage = new_channel_2_percentage - 1
                 else:
                     pass
+        if new_gas_flow < 0:
+            new_gas_flow = 0
+        if new_gas_flow > 200:  # Gas flow cannot exceed blood flow through the PV oxygenator
+            new_gas_flow = 200
+        if new_channel_1_percentage < 0:
+            new_channel_1_percentage = 0
+        if new_channel_1_percentage > 100:
+            new_channel_1_percentage = 100
+        if new_channel_2_percentage < 0:
+            new_channel_2_percentage = 0
+        if new_channel_2_percentage > 100:
+            new_channel_2_percentage = 100
         if new_gas_flow == current_flow and new_channel_1_percentage == self._venous_mixer.get_channel_percent_value(1) and new_channel_2_percentage == self._venous_mixer.get_channel_percent_value(2):
-            print('no change in gas mix required; returning')
+            print('no change in venous gas mix required')
             return
         else:
-            print('changing gas mix due to O2 Saturation')
+            print('changing venous gas mix')
             self._venous_mixer.change_gas_mix(new_channel_1_percentage, new_channel_2_percentage, new_gas_flow, 1)
 
     def get_cdi_label_values(self):
@@ -514,19 +529,6 @@ class PanelGB100CDIPresens(wx.Panel):
                 except ValueError:
                     self.cdi_graphs_values[key] = []
 
-    def get_presens_label_value(self):
-        for key in self.presens_graph_value.keys():
-            label = self.readouts[key].label_value.GetLabel()
-            self.presens_graph_value[key] = label
-        for key, value in self.presens_graph_value.items():
-            if value == '000':
-                self.presens_graph_value[key] = []
-            else:
-                try:
-                    self.presens_graph_value[key] = float(value)
-                except ValueError:
-                    self.presens_graph_value[key] = []
-
     def update_cdi_plots(self):
         data = self._monitor.get_parsed_data()
         if not data:
@@ -534,10 +536,9 @@ class PanelGB100CDIPresens(wx.Panel):
         data_list = list(data)
         time_min = data_list[0] / 60000  # Gives time in minutes
         for key in self.readouts.keys():
-            if key not in self.presens_graph_value.keys():
-                self.readouts[key].label_value.SetLabel(data_list[list(self._labels).index(key)])
+            self.readouts[key].label_value.SetLabel(data_list[list(self._cdi_labels).index(key)])
         self.get_cdi_label_values()
-        for key, value in self.cdi_graph_values.items():
+        for key, value in self.cdi_graphs_values.items():
             if value:
                 self._plots_main[list(self._cdi_graphs_ranges).index(key)].plot(value, time_min)
                 self._plots_lt[list(self._cdi_graphs_ranges).index(key)].plot(value, time_min)
@@ -547,25 +548,17 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.acq = AI_Finite_NIDAQ(period_ms=100, volts_p2p=5, volts_offset=2.5, samples_per_read=1)
-        self.sensor = SensorPoint('Arterial pO2', 'mmHg', self.acq)
-        section = LP_CFG.get_hwcfg_section(self.sensor.name)
-        dev = section['Device']
-        line = section['LineName']
-        low_pt = section['CalPt1_Target']
-        low_read = section['CalPt1_Reading']
-        high_pt = section['CalPt2_Target']
-        high_read = section['CalPt2_Reading']
-        lowerrange = section['lowerrange']
-        upperrange = section['upperrange']
-        self.acq.open(dev)
-        self.acq.add_channel(line)
-        self.sensor.set_ch_id(line)
-        channel = self.sensor.ch_id
-        self.sensor.hw.set_calibration(channel, low_pt, low_read, high_pt, high_read)
-        raw = PointsToFile('StreamRaw', 1, self.acq.buf_len)
+        sensorname = 'Arterial pO2'
+        section = LP_CFG.get_hwcfg_section(sensorname)
+        pO2lowerrange = section['lowerrange']
+        pO2upperrange = section['upperrange']
+        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
+        self.sensor = SensorStream(sensorname, 'mmHg', self.acq, valid_range=[float(pO2lowerrange), float(pO2upperrange)])
+        raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
+        self.sensor.open()
+        self.sensor.start()
 
         self.arterial_mixer = GB100('Arterial Gas Mixer')
         self.arterial_mixer.open()
@@ -591,13 +584,11 @@ class TestFrame(wx.Frame):
         self.monitor.open(com, int(baud), int(bytesize), parity, int(stopbits))
         self.monitor.open_stream(LP_CFG.LP_PATH['stream'])
         self.cdi_labels = {'Time': '', 'Venous pH': 'units', 'Venous pCO2': 'mmHg', 'Venous pO2': 'mmHg', 'Venous Temperature': 'C', 'Venous Bicarbonate': 'mmol/L', 'Venous BE': 'mmol/L', 'K': 'mmol/L', 'O2 Saturation': '%', 'Hct': '%', 'Hb': 'g/dL'}
-        self.presens_label = {'Arterial pO2': 'mmHg'}
         self.cdi_graphs_ranges = {'Venous pH': [float(phlower), float(phupper)], 'O2 Saturation': [float(saturationlower), float(saturationupper)], 'Venous pCO2': [float(co2lower), float(co2upper)]}
-        self.presens_graph_range = {'Arterial pO2': [float(lowerrange), float(upperrange)]}
         self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
         self.name = 'GB100 CDI Presens Panel'
 
-        panel_GB100_CDI_Presens = PanelGB100CDIPresens(self, self.arterial_mixer, self.venous_mixer, self.monitor, self.sensor, self.cdi_labels, self.presens_label, self.cdi_graphs_ranges, self.presens_graph_range, self.gas_parameters, self.name)
+        panel_GB100_CDI_Presens = PanelGB100CDIPresens(self, self.arterial_mixer, self.venous_mixer, self.monitor, self.sensor, self.cdi_labels, self.cdi_graphs_ranges, self.gas_parameters, self.name)
         sizer = wx.GridSizer(cols=1)
         sizer.Add(panel_GB100_CDI_Presens, 1, wx.EXPAND, border=2)
 
@@ -610,8 +601,9 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         self.sensor.stop()
         self.sensor.close()
-        self.sensor.hw.stop()
-        self.senosr.hw.close()
+        if self.sensor.hw._task:
+            self.sensor.hw.stop()
+            self.sensor.hw.close()
         self.monitor.stop_stream()
         self.monitor.close_stream()
         if self.arterial_mixer.get_working_status():
