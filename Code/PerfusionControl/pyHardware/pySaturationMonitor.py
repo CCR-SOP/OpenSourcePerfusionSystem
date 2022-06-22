@@ -143,7 +143,7 @@ class TSMSerial(USBSerial):
         else:
             pass
 
-    def stop_stream(self):  # Try stopping and restarting
+    def stop_stream(self):
         if self.__thread_streaming and self.__thread_streaming.is_alive():
             self.__evt_halt_streaming.set()
             self.__thread_streaming.join(2.0)
@@ -215,4 +215,4 @@ class TSMSerial(USBSerial):
 
     # Our CDI monitor has only one shunt sensor, and thus technically only provides "arterial readings"; the venous readings are always blank due to lack of a second sensor
     # However, we are configuring the shunt sensor such that it is reading venous values in our circuit; thus, the "arterial" CDI readings returned by this method actually correspond to venous readings in our system
-    # Our CDI system will not read any of the arterial values in our circuit; we will only monitor pO2 in our system's arterial circuit, through the use of a single Presens flow-thru sensor
+    # Our CDI system will not read any of the arterial values in our circuit; we will only monitor pO2 in our system's arterial circuit through the use of a single Presens flow-thru sensor
