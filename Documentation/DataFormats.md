@@ -97,6 +97,6 @@ Header Lines:
 File Format: 7
 Data Source: {string specifying the source of the data, e.g. 'Automated Dialysis Pumps'}
 Data Format: {string representing sample format (e.g. "float32")
-Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 2 (dialysate inflow rate (ml/min) and dialysate outflow rate (ml/min))}
+Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 3 (dialysate inflow rate (ml/min), dialysate outflow rate (ml/min), and working status (0 for Off, 1 for On)}
 Bytes per Timestamp: {number of bytes used to store the timestamp}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}

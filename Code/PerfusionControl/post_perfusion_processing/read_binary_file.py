@@ -225,8 +225,12 @@ class ReadBinaryData:
         inflow_datapoints = []
         outflow_datapoints = []
         for value in range(len(timestamp_matrix)):
-            inflow_datapoints.append(data_matrix[value][0])
-            outflow_datapoints.append(data_matrix[value][1])
+            if data_matrix[value][2] == 1:
+                inflow_datapoints.append(data_matrix[value][0])
+                outflow_datapoints.append(data_matrix[value][1])
+            else:
+                inflow_datapoints.append(0)
+                outflow_datapoints.append(0)
         plt.figure()
         plt.scatter(timestamp_matrix, inflow_datapoints)
         plt.scatter(timestamp_matrix, outflow_datapoints)

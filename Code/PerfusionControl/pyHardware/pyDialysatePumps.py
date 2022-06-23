@@ -16,7 +16,7 @@ class DialysatePumps:
     Methods
     -------
     open_stream(full_path)
-        creates .txt and .dat files for recording pump flow rate data
+        creates .txt and .dat files for recording data
     record()
         records changes to inflow and/or outflow rates in .dat file
     stop_stream()
@@ -36,7 +36,7 @@ class DialysatePumps:
         self._timestamp_perf = None
         self._end_of_header = 0
         self._last_idx = 0
-        self._datapoints_per_ts = 2
+        self._datapoints_per_ts = 3
         self._bytes_per_ts = 4
 
     @property
@@ -59,7 +59,7 @@ class DialysatePumps:
             self._fid_write = None
 
         self._open_write()
-        self._write_to_file(np.array([0]), np.array([0]), np.array([0]))
+        self._write_to_file(np.array([0]), np.array([0]), np.array([0]), np.array([0]))
         self._fid_write.seek(0)
 
         self.print_stream_info()
@@ -81,7 +81,7 @@ class DialysatePumps:
         header = [f'File Format: {DATA_VERSION}',
                   f'Data Source: {self.name}',
                   f'Data Format: {str(np.dtype(np.float32))}',
-                  f'Datapoints per Timestamp: {self._datapoints_per_ts} (Dialysate inflow rate (ml/min) and dialysate outflow rate (ml/min))',
+                  f'Datapoints per Timestamp: {self._datapoints_per_ts} (Dialysate inflow rate (ml/min), dialysate outflow rate (ml/min), and working status (0 for off, 1 for on))',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
@@ -92,20 +92,22 @@ class DialysatePumps:
     def start_stream(self):
         pass
 
-    def record(self, inflow_rate, outflow_rate):
+    def record(self, inflow_rate, outflow_rate, working_status):
         inflow_rate_buffer = np.ones(1, dtype=np.float32) * np.float32(inflow_rate)
         outflow_rate_buffer = np.ones(1, dtype=np.float32) * np.float32(outflow_rate)
+        working_status_buffer = np.ones(1, dtype=np.float32) * np.float32(working_status)
         t = perf_counter()
-        buf_len = len(inflow_rate_buffer) + len(outflow_rate_buffer)
-        self._write_to_file(inflow_rate_buffer, outflow_rate_buffer, t)
+        buf_len = len(inflow_rate_buffer) + len(outflow_rate_buffer) + len(working_status_buffer)
+        self._write_to_file(inflow_rate_buffer, outflow_rate_buffer, working_status_buffer, t)
         self._last_idx += buf_len
         self._fid_write.flush()
 
-    def _write_to_file(self, inflow_rate_buffer, outflow_rate_buffer, t):
+    def _write_to_file(self, inflow_rate_buffer, outflow_rate_buffer, working_status_buffer, t):
         ts_bytes = struct.pack('i', int(t * 1000.0))
         self._fid_write.write(ts_bytes)
         inflow_rate_buffer.tofile(self._fid_write)
         outflow_rate_buffer.tofile(self._fid_write)
+        working_status_buffer.tofile(self._fid_write)
 
     def stop_stream(self):
         pass
