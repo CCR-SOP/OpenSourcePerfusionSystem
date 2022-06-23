@@ -285,8 +285,11 @@ class PanelGB100CDIPresens(wx.Panel):
         self.sizer_start_automated_dialysis.Add(self.btn_automated_dialysis)
 
         self.sizer_readout.Add(self.sizer_config, 1, wx.ALL | wx.ALIGN_CENTER)
+        self.sizer_readout.AddSpacer(10)
         self.sizer_readout.Add(self.sizer_arterial_gas_config, 1, wx.ALL)
+        self.sizer_readout.AddSpacer(10)
         self.sizer_readout.Add(self.sizer_venous_gas_config, 1, wx.ALL)
+        self.sizer_readout.AddSpacer(10)
         self.sizer_readout.Add(self.sizer_start_gas_mixers, 1, wx.ALL | wx.EXPAND, border=1)
         self.sizer_readout.Add(self.sizer_start_cdi_presens_sensors, 1, wx.ALL | wx.EXPAND, border=1)
         self.sizer_readout.AddSpacer(10)
@@ -456,7 +459,7 @@ class PanelGB100CDIPresens(wx.Panel):
             inflow = self.spin_inflow_pump_rate.GetValue()
             outflow = self.spin_outflow_pump_rate.GetValue()
             self._pump_streaming.start_stream()
-            self._pump_streaming.record(inflow, outflow)
+            self._pump_streaming.record(inflow, outflow, 1)
             self._inflow_pump.start()
             self._inflow_pump.set_dc(inflow/10.9)  # With the 3.17mm BWB peristaltic pump tubing that we use, 1 V = 10.9 ml/min of flow
             self._inflow_pump.set_dc(inflow/10.9)
@@ -473,7 +476,7 @@ class PanelGB100CDIPresens(wx.Panel):
             self._inflow_pump.close()
             self._outflow_pump.set_dc(0)
             self._outflow_pump.close()
-            self._pump_streaming.record(0, 0)
+            self._pump_streaming.record(self.spin_inflow_pump_rate.GetValue(), self.spin_outflow_pump_rate.GetValue(), 0)
             self._pump_streaming.stop_stream()
             self.spin_inflow_pump_rate.Enable(True)
             self.spin_outflow_pump_rate.Enable(True)
@@ -679,7 +682,7 @@ class PanelGB100CDIPresens(wx.Panel):
             self.spin_outflow_pump_rate.SetValue(new_outflow)
             change_outflow = True
         if change_inflow or change_outflow:
-            self._pump_streaming.record(self.spin_inflow_pump_rate.GetValue(), self.spin_outflow_pump_rate.GetValue())
+            self._pump_streaming.record(self.spin_inflow_pump_rate.GetValue(), self.spin_outflow_pump_rate.GetValue(), 1)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -732,9 +735,9 @@ class TestFrame(wx.Frame):
         self.gas_parameters = ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide']
         self.name = 'GB100 CDI Presens Panel'
 
-        panel_GB100_CDI_Presens = PanelGB100CDIPresens(self, self.arterial_mixer, self.venous_mixer, self.monitor, self.sensor, self.ao_inflow, self.ao_outflow, self.ao_streaming, self.cdi_labels, self.cdi_graphs_ranges, self.gas_parameters, self.name)
+        self.panel_GB100_CDI_Presens = PanelGB100CDIPresens(self, self.arterial_mixer, self.venous_mixer, self.monitor, self.sensor, self.ao_inflow, self.ao_outflow, self.ao_streaming, self.cdi_labels, self.cdi_graphs_ranges, self.gas_parameters, self.name)
         sizer = wx.GridSizer(cols=1)
-        sizer.Add(panel_GB100_CDI_Presens, 1, wx.EXPAND, border=2)
+        sizer.Add(self.panel_GB100_CDI_Presens, 1, wx.EXPAND, border=2)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -754,7 +757,7 @@ class TestFrame(wx.Frame):
         self.ao_outflow.set_dc(0)
         self.ao_outflow.close()
         self.ao_outflow.halt()
-        self.ao_streaming.record(0, 0)
+        self.ao_streaming.record(self.panel_GB100_CDI_Presens.spin_inflow_pump_rate.GetValue(), self.panel_GB100_CDI_Presens.spin_outflow_pump_rate.GetValue(), 0)
         self.ao_streaming.stop_stream()
         self.ao_streaming.close_stream()
         self.monitor.stop_stream()
