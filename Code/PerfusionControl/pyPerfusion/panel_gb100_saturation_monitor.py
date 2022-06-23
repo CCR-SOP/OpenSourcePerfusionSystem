@@ -10,7 +10,7 @@ import pyPerfusion.utils as utils
 from pyPerfusion.plotting import PanelPlotting, TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot, SensorPlot
 from pyHardware.pySaturationMonitor import TSMSerial
 from pyHardware.pyGB100 import GB100
-from pyHardware.pyDialysatePump import DialysatePumps
+from pyHardware.pyDialysatePumps import DialysatePumps
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyHardware.pyAI import AIDeviceException
