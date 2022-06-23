@@ -127,7 +127,7 @@ class DialysatePumps:
                 break
             elif chunk.any():
                 data.append(chunk)
-                data_time.append(ts / 1000.0)
+                data_time.append(ts)
         _fid.close()
         return data_time, data
 
