@@ -105,7 +105,6 @@ class GB100:
         pass
 
     def record_change(self, gas_1_ID, gas_2_ID, gas_1_percentage, gas_2_percentage, total_flow, working_status):
-        print(gas_1_ID, gas_2_ID, gas_1_percentage, gas_2_percentage, total_flow, working_status)  ###
         gas_1_ID_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_1_ID)
         gas_2_ID_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_2_ID)
         gas_1_percentage_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_1_percentage)
