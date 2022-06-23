@@ -55,6 +55,28 @@ The assumption is that infusion volume and infusion rate data are acquired at th
 {Timestamp[1]}{InfusionVolume[1]}{InfusionRate[1]}{Timestamp[2]}{InfusionVolume[2]}{InfusionRate[2]}
 For targeted infusions (i.e. those which stop after a certain volume of fluid has been delivered), InfusionVolume will be non-zero; for non-targeted (i.e. continuous) infusions, InfusionVolume will be '-2' or '-1'; for these continuous infusions, data will be recorded both when the infusion is started ('-2') and stopped ('-1')
 
+## Version 4:
+Text-based header followed by a stream of timestamp/sample pairs in binary format
+Header Lines:
+File Format: 4
+Instrument: {string containing name for the CDI Instrument}
+Data Format: {string representing sample format (e.g. "int8")
+Sample Description: {Each sample includes Time, "Arterial" pH, "Arterial" pC02, "Arterial" pO2, "Arterial" Temperature, "Arterial" HCO3-, "Arterial" Base Excess, Calculated O2 sat, K, VO2, Pump Flow, BSA, "Venous" pH, "Venous" pCO2, "Venous" pO2, "Venous" Temperature, Measured O2 sat, Hct, and Hb}
+Bytes per Sample: {number of bytes used to store the sample}
+Bytes per Timestamp: {number of bytes used to store the timestamp}
+Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}
+
+## Version 5:
+Text-based header followed by a stream of timestamp/sample pairs in binary format
+The timestamp is stored as the number of milliseconds from the start of the acquisition
+Header Lines:
+File Format: 5
+Instrument: {string containing name for the GB100 mixer}
+Data Format: {string representing sample format (e.g. "float32")
+Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 6 (Gas 1 ID, Gas 2 ID, Gas 1 Percentage, Gas 2 Percentage, Total Flow (ml/min), and Working Status (0 for OFF, 1 for ON)}
+Bytes per Timestamp: {number of bytes used to store the timestamp}
+Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}
+
 ## Version 6:
 Used for streaming Dexcom data
 Text-based header followed by a stream of timestamp/sample pairs in binary format
@@ -67,3 +89,14 @@ Data Format: {string representing sample format (e.g. "float32")"
 Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 1 (glucose)}
 Bytes per Timestamp: {number of bytes used to store the timestamp}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format and in milliseconds from start format}
+
+## Version 7:
+Text-based header followed by a stream of timestamp/sample pairs in binary format
+The timestamp is stored as the number of milliseconds from the start of the acquisition
+Header Lines:
+File Format: 7
+Data Source: {string specifying the source of the data, e.g. 'Automated Dialysis Pumps'}
+Data Format: {string representing sample format (e.g. "float32")
+Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 3 (dialysate inflow rate (ml/min), dialysate outflow rate (ml/min), and working status (0 for Off, 1 for On)}
+Bytes per Timestamp: {number of bytes used to store the timestamp}
+Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}

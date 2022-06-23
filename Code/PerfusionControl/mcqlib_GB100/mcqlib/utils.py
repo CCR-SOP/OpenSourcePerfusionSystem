@@ -79,11 +79,11 @@ def get_gas_type(gas_id):
 
 # rappresentazione binaria di decimale
 def dec_to_bin(x):
-	return int(bin(x)[2:])
+  return int(bin(x)[2:])
 
 # rappresentazione decimale di binario
 def bin_to_dec(x):
-	return int(x,2)
+  return int(x,2)
 		
 #nel file XML i float sono salvati con separatore decimale (,)
 def get_float(x):		

@@ -11,12 +11,13 @@ var searchData=
   ['get_5fchannel_5fk_5ffactor_5fgas_8',['get_channel_k_factor_gas',['../main_8py.html#a200fd06a891bfc3ed3f3cccc575920a7',1,'mcqlib::main']]],
   ['get_5fchannel_5fpercent_5fvalue_9',['get_channel_percent_value',['../main_8py.html#a7bacd473f740271b758f6d14472159c7',1,'mcqlib::main']]],
   ['get_5fchannel_5fsccm_10',['get_channel_sccm',['../main_8py.html#a37b9746f6fdc4997ed2a1f46fe88c400',1,'mcqlib::main']]],
-  ['get_5fchannel_5ftarget_5fsccm_11',['get_channel_target_sccm',['../main_8py.html#a05d102beff1fe6b506056ff13dd2dbda',1,'mcqlib::main']]],
-  ['get_5fmainboard_5falert_12',['get_mainboard_alert',['../main_8py.html#ae896dd59d7484e69f2b8818054fcd1b7',1,'mcqlib::main']]],
-  ['get_5fmainboard_5ffw_5fver_13',['get_mainboard_fw_ver',['../main_8py.html#a14993b0a2389a1e3891ffd78688bf828',1,'mcqlib::main']]],
-  ['get_5fmainboard_5fhw_5fver_14',['get_mainboard_hw_ver',['../main_8py.html#a4b71da9afa68d6e01a40b11c9f5597bd',1,'mcqlib::main']]],
-  ['get_5fmainboard_5fstatus_15',['get_mainboard_status',['../main_8py.html#a713bddd366d1853035b234072363e2f7',1,'mcqlib::main']]],
-  ['get_5fmainboard_5ftotal_5fflow_16',['get_mainboard_total_flow',['../main_8py.html#a4f7ac3a2720533702c3d0f6bf1c16f55',1,'mcqlib::main']]],
-  ['get_5ftotal_5fchannels_17',['get_total_channels',['../main_8py.html#a30f2591032cdb9edd05c212dcb41a71c',1,'mcqlib::main']]],
-  ['get_5fworking_5fstatus_18',['get_working_status',['../main_8py.html#afb0c19b52f3dc6e70f69d5ad0c9a716c',1,'mcqlib::main']]]
+  ['get_5fchannel_5fsccm_5fav_11',['get_channel_sccm_av',['../main_8py.html#aecc4e08c44d94c6035e8051cf7f74bc8',1,'mcqlib::main']]],
+  ['get_5fchannel_5ftarget_5fsccm_12',['get_channel_target_sccm',['../main_8py.html#a05d102beff1fe6b506056ff13dd2dbda',1,'mcqlib::main']]],
+  ['get_5fmainboard_5falert_13',['get_mainboard_alert',['../main_8py.html#ae896dd59d7484e69f2b8818054fcd1b7',1,'mcqlib::main']]],
+  ['get_5fmainboard_5ffw_5fver_14',['get_mainboard_fw_ver',['../main_8py.html#a14993b0a2389a1e3891ffd78688bf828',1,'mcqlib::main']]],
+  ['get_5fmainboard_5fhw_5fver_15',['get_mainboard_hw_ver',['../main_8py.html#a4b71da9afa68d6e01a40b11c9f5597bd',1,'mcqlib::main']]],
+  ['get_5fmainboard_5fstatus_16',['get_mainboard_status',['../main_8py.html#a713bddd366d1853035b234072363e2f7',1,'mcqlib::main']]],
+  ['get_5fmainboard_5ftotal_5fflow_17',['get_mainboard_total_flow',['../main_8py.html#a4f7ac3a2720533702c3d0f6bf1c16f55',1,'mcqlib::main']]],
+  ['get_5ftotal_5fchannels_18',['get_total_channels',['../main_8py.html#a30f2591032cdb9edd05c212dcb41a71c',1,'mcqlib::main']]],
+  ['get_5fworking_5fstatus_19',['get_working_status',['../main_8py.html#afb0c19b52f3dc6e70f69d5ad0c9a716c',1,'mcqlib::main']]]
 ];

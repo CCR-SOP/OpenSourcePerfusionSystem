@@ -1,48 +1,45 @@
+import mcqlib_GB100.mcqlib.main as main
+import mcqlib_GB100.mcqlib.utils as utils
 import logging
-
-import sys, time
-import mcqlib_GB100.mcqlib.main as mcq
 import pathlib
 import datetime
+from time import perf_counter
+import time
 import numpy as np
 import struct
-from time import perf_counter
 
-sys.path.append("/mcqlib_GB100/mcqlib")
+DATA_VERSION = 5
 
-GAS_IDS = {'Air': 1, 'Nitrogen': 2, 'Oxygen': 3, 'Carbon Dioxide': 4}
+GAS_TYPES = {'Air': 1, 'Nitrogen': 2, 'Oxygen': 3, 'Carbon Dioxide': 4}
 
-class GB100(mcq):
+class GB100:
 
     """
-    Class for controlling GB100+ gas mixers using USB/RS485 communication; class also records data about gas mix to a .dat file
+    Class for serial communication over USB using GB100+ command set
     ...
-
-    Attributes
-    ----------
-
 
     Methods
     -------
-    open(port_name, baud, addr)
-        opens USB port of given name with the specified baud rate using given syringe pump address
     open_stream(full_path)
-        creates .txt and .dat files for recording syringe data
-    infuse()
-        begin infusion of syringe; for both continuous ('infinite') and targeted (will terminate after a certain infusion volume is reached) infusions
-    stop()
-        stop infusion of syringe
-    record_infusion()
-        record details of latest syringe infusion
+        creates .txt and .dat files for recording GB100 data
+    start_stream()
+        starts thread for writing streamed data from mixer to file
+    change_gas_mix()
+        changes chosen parameters on gas mixer
+    record_change()
+        records changes to gas mixer in .dat file
+    set_gas_types()
+        sets gas for each channel
     stop_stream()
-        stops recording of syringe data
-    set_param(param, value)
-        sets a syringe pump parameter (param) to (value)
+        stops recording of data
+    close_stream()
+        closes file
     """
+
     def __init__(self, name):
         self._logger = logging.getLogger(__name__)
-
         self.name = name
+        self.main = None
         self._fid_write = None
         self._full_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self.name}')
@@ -51,66 +48,15 @@ class GB100(mcq):
         self._timestamp_perf = None
         self._end_of_header = 0
         self._last_idx = 0
-        self._datapoints_per_ts = 2 ##
+        self._datapoints_per_ts = 6
         self._bytes_per_ts = 4
-
-    def set_gas(self, channel, gas):
-        gas_number = GAS_IDS[gas]
-        mcq.set_channel_id_gas_only(channel, gas)
-
-    def get_total_flow(self):
-            flow = mcq.get_mainboard_total_flow()
-            return flow
-
-    def set_total_flow(self, flow):
-            mcq.set_mainboard_total_flow(flow)
-
-    def get_channel_percentages(self):
-            mcq.get_channel_percent_value(channel): Gives
-            percent
-            mix
-            for each channel
-
-    mcq.get_channel_sccm(channel_nr): Gives
-    actual
-    gas
-    flow
-    from channel
-    mcq.get_channel_target_sccm(channel_nr): Gives
-    target
-    gas
-    flow
-    from channel
-    mcq.set_mainboard_total_flow(flow): Set
-    total
-    gas
-    flow
-    rate
-    mcq.set_channel_percent_value(channel_nr, percentage): Sets
-    certain
-    percentage
-    for that channel; MAKE SURE YOU SET THIS FOR THE CHANNEL THAT ISN'T BEING BALANCED
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     @property
     def full_path(self):
         return self._full_path / self._filename.with_suffix(self._ext)
 
     def open(self):
-        pass
+        self.main = main.Main(self.name)
 
     def open_stream(self, full_path):
         if not isinstance(full_path, pathlib.Path):
@@ -119,15 +65,14 @@ class GB100(mcq):
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
-        self._timestamp_perf = perf_counter()
+        self._timestamp_perf = perf_counter() * 1000
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
 
         self._open_write()
-        self._write_to_file(np.array([0]), np.array([0]), np.array([0]))
+        self._write_to_file(np.array([0]), np.array([0]), np.array([0]), np.array([0]), np.array([0]), np.array([0]), np.array([0]))
         self._fid_write.seek(0)
-        # self._open_read()
 
         self.print_stream_info()
 
@@ -146,11 +91,9 @@ class GB100(mcq):
     def _get_stream_info(self):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
-                  f'Syringe: {self.name}',
-                  f'Volume Unit: ml',
-                  f'Rate Unit: ml/min',
+                  f'Instrument: {self.name}',
                   f'Data Format: {str(np.dtype(np.float32))}',
-                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Infusion Volume and Infusion Rate)',
+                  f'Datapoints per Timestamp: {self._datapoints_per_ts} (Gas 1 ID, Gas 2 ID, Gas 1 Percentage, Gas 2 Percentage, Total Flow (ml/min), Working Status (O for OFF, 1 for ON)',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
@@ -161,66 +104,67 @@ class GB100(mcq):
     def start_stream(self):
         pass
 
-    def get_stream_info(self):
-        infuse_rate = self.get_infusion_rate().split(' ')[0]
-        infuse_unit = self.get_infusion_rate().split(' ')[1]
-        volume_unit = self.get_target_volume().split(' ')[1]
-        ml_min_rate = True
-        ml_volume = True
-        if 'ul' in infuse_unit:
-            ml_min_rate = False
-        if 'ul' in volume_unit:
-            ml_volume = False
-        return infuse_rate, ml_min_rate, ml_volume
-
-    def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
-        self.send('irun\r')
-        infusion_rate = float(infusion_rate)
-        if not ml_volume:
-            if infusion_volume == -2:
-                pass
-            else:
-                infusion_volume = infusion_volume / 1000
-        if not ml_min_rate:
-            infusion_rate = infusion_rate / 1000
-        self.record_infusion(infusion_volume, infusion_rate)
-
-    def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
-        self.send('stop\r')
-        infusion_rate = float(infusion_rate)
-        if not ml_volume:
-            if infusion_volume == -1:
-                pass
-            else:
-                infusion_volume = infusion_volume / 1000
-        if not ml_min_rate:
-            infusion_rate = infusion_rate / 1000
-        self.record_infusion(infusion_volume, infusion_rate)
-
-    def record_infusion(self, infusion_volume, infusion_rate):
-        volume_buffer = np.ones(1, dtype=np.float32) * np.float32(infusion_volume)
-        rate_buffer = np.ones(1, dtype=np.float32) * np.float32(infusion_rate)
+    def record_change(self, gas_1_ID, gas_2_ID, gas_1_percentage, gas_2_percentage, total_flow, working_status):
+        gas_1_ID_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_1_ID)
+        gas_2_ID_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_2_ID)
+        gas_1_percentage_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_1_percentage)
+        gas_2_percentage_buffer = np.ones(1, dtype=np.float32) * np.float32(gas_2_percentage)
+        total_flow_buffer = np.ones(1, dtype=np.float32) * np.float32(total_flow)
+        working_status_buffer = np.ones(1, dtype=np.float32) * np.float32(working_status)
         t = perf_counter()
-        if volume_buffer is not None and rate_buffer is not None and self._fid_write is not None:
-            buf_len = len(volume_buffer) + len(rate_buffer)
-            self._write_to_file(volume_buffer, rate_buffer, t)
-            self._last_idx += buf_len
-            self._fid_write.flush()
+        buf_len = len(gas_1_ID_buffer) + len(gas_2_ID_buffer) + len(gas_1_percentage_buffer) + len(gas_2_percentage_buffer) + len(total_flow_buffer) + len(working_status_buffer)
+        self._write_to_file(gas_1_ID_buffer, gas_2_ID_buffer, gas_1_percentage_buffer, gas_2_percentage_buffer, total_flow_buffer, working_status_buffer, t)
+        self._last_idx += buf_len
+        self._fid_write.flush()
 
-    def _write_to_file(self, data_buf_vol, data_buf_rate, t):
+    def change_gas_mix(self, gas_1_percentage, gas_2_percentage, total_flow, working_status, gas1=None, gas2=None, balance_channel=None):
+        if gas1 is not None and gas2 is not None:
+            self.set_gas_types(gas1, gas2)
+        if balance_channel is not None:
+            self.set_balance_channel(balance_channel)
+        gas_1_ID = self.get_channel_id_gas(1)
+        gas_2_ID = self.get_channel_id_gas(2)
+        self.set_mainboard_total_flow(total_flow)
+        self.set_channel_percent_value(1, gas_1_percentage)
+        self.set_channel_percent_value(2, gas_2_percentage)
+        time.sleep(0.5)
+        current_status = self.get_working_status()
+        if working_status:  # If you want to start the gas flow
+            while not current_status:
+                self.set_working_status_ON()
+                time.sleep(0.5)
+                current_status = self.get_working_status()
+        else:
+            while current_status:
+                self.set_working_status_OFF()
+                time.sleep(0.5)
+                current_status = self.get_working_status()
+        self.record_change(gas_1_ID, gas_2_ID, gas_1_percentage, gas_2_percentage, total_flow, working_status)
+
+    def _write_to_file(self, gas_1_ID_buffer, gas_2_ID_buffer, gas_1_percentage_buffer, gas_2_percentage_buffer, total_flow_buffer, working_status_buffer, t):
         ts_bytes = struct.pack('i', int(t * 1000.0))
         self._fid_write.write(ts_bytes)
-        data_buf_vol.tofile(self._fid_write)
-        data_buf_rate.tofile(self._fid_write)
+        gas_1_ID_buffer.tofile(self._fid_write)
+        gas_2_ID_buffer.tofile(self._fid_write)
+        gas_1_percentage_buffer.tofile(self._fid_write)
+        gas_2_percentage_buffer.tofile(self._fid_write)
+        total_flow_buffer.tofile(self._fid_write)
+        working_status_buffer.tofile(self._fid_write)
+
+    def set_gas_types(self, gas1, gas2):
+        self.set_gas_from_xml_file(1, gas1)
+        self.set_gas_from_xml_file(2, gas2)
 
     def stop_stream(self):
+        pass
+
+    def close_stream(self):
         if self._fid_write:
             self._fid_write.close()
         self._fid_write = None
 
-    def get_data(self, last_ms, samples_needed):
+    def get_data(self):
         _fid, tmp = self._open_read()
-        cur_time = int(perf_counter() * 1000)
         _fid.seek(0)
         chunk = [1]
         data_time = []
@@ -229,9 +173,9 @@ class GB100(mcq):
             chunk, ts = self.__read_chunk(_fid)
             if type(chunk) is list:
                 break
-            if chunk.any() and (cur_time - ts < last_ms or last_ms == 0):
+            elif chunk.any():
                 data.append(chunk)
-                data_time.append(ts / 1000.0)
+                data_time.append(ts)
         _fid.close()
         return data_time, data
 
@@ -248,3 +192,66 @@ class GB100(mcq):
             ts, = struct.unpack('i', ts_bytes)
             data_buf = np.fromfile(_fid, dtype=np.float32, count=self._datapoints_per_ts)
         return data_buf, ts
+
+    def get_working_status(self):  # Gives ON/OFF status of instrument
+        response = self.main.get_working_status()
+        return response
+
+    def get_mainboard_total_flow(self):
+        response = self.main.get_mainboard_total_flow()
+        return response
+
+    def get_channel_id_gas(self, channel):
+        response = self.main.get_channel_id_gas(channel)
+        return response
+
+    def get_channel_k_factor_gas(self, channel):
+        response = self.main.get_channel_k_factor_gas(channel)
+        return response
+
+    def get_gas_type(self, gasID):  # Returns gas name from gas ID
+        response = utils.get_gas_type(gasID)
+        return response
+
+    def get_gas_ID(self, gas_name):
+        return GAS_TYPES[gas_name]
+
+    def get_channel_balance(self):  # Gives channel that automatically changes
+        response = self.main.get_channel_balance()
+        return response
+
+    def get_channel_target_sccm(self, channel):  # Gives calculated flow
+        response = self.main.get_channel_target_sccm(channel)
+        return response
+
+    def get_channel_sccm(self, channel):  # Gives actual flow
+        response = self.main.get_channel_sccm(channel)
+        return response
+
+    def get_channel_percent_value(self, channel):
+        response = self.main.get_channel_percent_value(channel)
+        return response
+
+    def set_working_status_ON(self):  # Start gas flow
+        self.main.set_working_status_ON()
+
+    def set_working_status_OFF(self):  # Stop gas flow
+        self.main.set_working_status_OFF()
+
+    def set_mainboard_total_flow(self, flow):
+        self.main.set_mainboard_total_flow(flow)
+
+    def set_channel_enabled(self, channel, status):  # Set channel ON (1) or OFF (2)
+        self.main.set_channel_enabled(channel, status)
+
+    def set_balance_channel(self, channel):
+        self.main.set_balance_channel(channel)
+
+    def set_gas_from_xml_file(self, channel, gasID):
+        self.main.set_gas_from_xml_file(channel, gasID)
+
+    def set_channel_percent_value(self, channel, percent):
+        self.main.set_channel_percent_value(channel, percent)
+
+    def setup_work(self, ch_balance, total_flow, perc_value=[]):  # Sets balance channel, total flow, and percent values for each channel
+        self.main.setup_work(ch_balance, total_flow, perc_value)
