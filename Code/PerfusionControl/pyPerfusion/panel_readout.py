@@ -64,7 +64,7 @@ class PanelReadout(wx.Panel):
             self.update_value()
 
     def update_value(self):
-        t, val = self._sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
+        t, val = self._sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
         if val is not []:
             val = val[0]
             self.label_value.SetLabel(f'{val:0.3}')

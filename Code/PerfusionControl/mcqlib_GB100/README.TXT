@@ -1,8 +1,8 @@
 **********************************
-******* MCQ PYTHON LIBRARY *******
+***** MCQ PYTHON LIBRARY 0.2 *****
 **********************************
 
-
+-------------------------------------------------------------------------------------
 ## INSTALLATION
 1. Install Python 3.7 or higher
   verify correct installation with command:
@@ -28,17 +28,21 @@
 
   Wait for the program to end, the terminal should output a list of values, eg:
 
-  # python read_sample1.py                             
-    Script Start                                       
-    fw ver 0109                                        
-    hw ver 0100                                        
-    Reading Channels Values...                         
-    Channel 1 - Gas Id: 2, Gas: Nitrogen, K-Factor: 1.0
-    Channel 2 - Gas Id: 3, Gas: Oxygen, K-Factor: 0.872
-    Channel 3 - Gas Id: 7, Gas: Argon, K-Factor: 1.1   
-    Script End
-  
+    # python read_sample1.py                             
+      Script Start                                       
+      fw ver 0109                                        
+      hw ver 0100                                        
+      Reading Channels Values...                         
+      Channel 1 - Gas Id: 2, Gas: Nitrogen, K-Factor: 1.0
+      Channel 2 - Gas Id: 3, Gas: Oxygen, K-Factor: 0.872
+      Channel 3 - Gas Id: 7, Gas: Argon, K-Factor: 1.1   
+      Script End
 
+-------------------------------------------------------------------------------------
+## DOCUMENTATION:
+  Open index.html file inside folder \docs 
+
+-------------------------------------------------------------------------------------
 ## REQUIRED LIBRARIES:
   - minimalmodbus==1.0.2
   - pyserial==3.4

@@ -11,6 +11,7 @@ var main_8py =
     [ "get_channel_k_factor_gas", "main_8py.html#a200fd06a891bfc3ed3f3cccc575920a7", null ],
     [ "get_channel_percent_value", "main_8py.html#a7bacd473f740271b758f6d14472159c7", null ],
     [ "get_channel_sccm", "main_8py.html#a37b9746f6fdc4997ed2a1f46fe88c400", null ],
+    [ "get_channel_sccm_av", "main_8py.html#aecc4e08c44d94c6035e8051cf7f74bc8", null ],
     [ "get_channel_target_sccm", "main_8py.html#a05d102beff1fe6b506056ff13dd2dbda", null ],
     [ "get_mainboard_alert", "main_8py.html#ae896dd59d7484e69f2b8818054fcd1b7", null ],
     [ "get_mainboard_fw_ver", "main_8py.html#a14993b0a2389a1e3891ffd78688bf828", null ],
