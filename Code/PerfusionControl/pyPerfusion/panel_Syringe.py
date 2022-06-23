@@ -107,7 +107,7 @@ class PanelSyringe(wx.Panel):
             self.enable_buttons(True)
 
     def OnOneTimeBolus(self, evt):
-        self.btn_start_basal.enable(False)
+        self.btn_start_basal.Enable(False)
         self.enable_buttons(False)
         self._injection.ResetSyringe()
         self._injection.set_infusion_rate(25, 'ml/min')
@@ -122,14 +122,14 @@ class PanelSyringe(wx.Panel):
             volume_ul = volume * 1000
         self._injection.infuse(volume, 25, volume_unit, True)
         while True:
-            response = float(self.syringe.get_infused_volume().split(' ')[0])
-            unit = self.syringe.get_infused_volume().split(' ')[1]
+            response = float(self._injection.get_infused_volume().split(' ')[0])
+            unit = self._injection.get_infused_volume().split(' ')[1]
             if 'ml' in unit:
                 response = response * 1000
             if response >= volume_ul:
                 break
         self.enable_buttons(True)
-        self.btn_start_basal.enable(True)
+        self.btn_start_basal.Enable(True)
 
     def enable_buttons(self, state):
         self.spin_rate.Enable(state)
@@ -204,13 +204,13 @@ class PanelFeedbackSyringe(wx.Panel):
         self.spin_cooldown_time = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.cooldown), inc=1)
         self.btn_update_cooldown_time = wx.Button(self, label='Update Cooldown Time')
 
-        self.label_max = wx.StaticText(self, label='Maximum ' + label_intervention)
+        self.label_max = wx.StaticText(self, label='Max ' + label_intervention)
         self.spin_max = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.max), inc=1)
-        self.btn_update_max = wx.Button(self, label='Update Maximum' + label_intervention)
+        self.btn_update_max = wx.Button(self, label='Update Max' + label_intervention)
 
-        self.label_incrementation = wx.StaticText(self, label='Incrementation Increase in ' + label_intervention)
+        self.label_incrementation = wx.StaticText(self, label='Incremental Increase in ' + label_intervention)
         self.spin_incrementation = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.incrementation), inc=1)
-        self.btn_update_incrementation = wx.Button(self, label='Update Incremental Increase in ' + label_intervention)
+        self.btn_update_incrementation = wx.Button(self, label='Update Incremental Increase')
 
         if self._injection.name == 'Insulin':
             section = LP_CFG.get_hwcfg_section(self._injection.name)
@@ -272,8 +272,6 @@ class PanelFeedbackSyringe(wx.Panel):
         sizer.Add(self.label_intervention, flags)
         sizer.AddSpacer(3)
         sizer.Add(self.spin_intervention, flags)
-        sizer.AddSpacer(3)
-        sizer.Add(self.btn_update_intervention, flags)
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
 
@@ -402,7 +400,7 @@ class PanelFeedbackSyringe(wx.Panel):
     def OnUpdateIncrementation(self, evt):
         self._syringe_timer.incrementation = self.spin_incrementation.GetValue()
 
-    def OnUpdateBasalRateThreshold(self, evt):
+    def OnUpdateUpperLimit(self, evt):
         self._syringe_timer.insulin_upper_glucose_limit = self.spin_upper_glucose_limit.GetValue()
 
     def OnUpdateBasalRateTolerance(self, evt):
@@ -472,7 +470,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=4)
+        sizer = wx.GridSizer(cols=5)
         self._lgr = logging.getLogger(__name__)
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
@@ -508,10 +506,10 @@ class TestFrame(wx.Frame):
         vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasoconstrictor_injection.start_stream()
 
-        self._syringes = [heparin_injection, vasoconstrictor_injection, vasodilator_injection]
+        self._syringes = [heparin_injection, vasodilator_injection, vasoconstrictor_injection]
         self.panels = [PanelSyringe(self, None, heparin_injection.name, heparin_injection), PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]
         for panel in self.panels:
-            sizer.add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+            sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
