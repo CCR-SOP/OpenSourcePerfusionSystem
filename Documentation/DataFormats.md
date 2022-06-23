@@ -89,3 +89,14 @@ Data Format: {string representing sample format (e.g. "float32")"
 Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 1 (glucose)}
 Bytes per Timestamp: {number of bytes used to store the timestamp}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format and in milliseconds from start format}
+
+## Version 7:
+Text-based header followed by a stream of timestamp/sample pairs in binary format
+The timestamp is stored as the number of milliseconds from the start of the acquisition
+Header Lines:
+File Format: 7
+Data Source: {string specifying the source of the data, e.g. 'Automated Dialysis Pumps'}
+Data Format: {string representing sample format (e.g. "float32")
+Datapoints Per Timestamp: {number of datapoints stored per timestamp; default is 2 (dialysate inflow rate (ml/min) and dialysate outflow rate (ml/min))}
+Bytes per Timestamp: {number of bytes used to store the timestamp}
+Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}
