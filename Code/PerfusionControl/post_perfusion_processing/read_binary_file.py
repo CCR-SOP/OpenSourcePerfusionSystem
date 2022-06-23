@@ -1,8 +1,9 @@
 import os
 from pathlib import Path
 from matplotlib import pyplot as plt
-from pyHardware.pyGB100 import GB100
+import numpy as np
 from pyHardware.pySaturationMonitor import TSMSerial
+from pyHardware.pyGB100 import GB100
 from pyHardware.pyDialysatePumps import DialysatePumps
 
 class ReadBinaryData:
@@ -10,8 +11,22 @@ class ReadBinaryData:
         self.path = Path(os.path.expanduser('~')) / 'Documents/LPTEST/LiverPerfusion/data'
         self.filename = Path(f'{filename}')
 
-    def read_pressure_flow_data(self):  # Data Version 1
-        pass
+    def read_pressure_flow_data(self, sampling_period_ms, title, y_axis):  # Data Version 1
+        _fid = open(self.path / self.filename.with_suffix('.dat'), 'rb')
+        data_type = np.dtype(np.float32)
+        try:
+            data = np.memmap(_fid, dtype=data_type, mode='r')
+        except ValueError:
+            data = []
+        times = []
+        for value in range(len(data)):
+            times.append(value * sampling_period_ms / 1000)
+        plt.figure()
+        plt.plot(times, data)
+        plt.title(title)
+        plt.xlabel('Time (s)')
+        plt.ylabel(y_axis)
+        return data
 
     def read_syringe_data(self):  # Data Version 3
         pass
@@ -220,6 +235,3 @@ class ReadBinaryData:
         plt.xlabel('Time (ms)')
         plt.ylabel('Flow Rate (ml/min)')
         return timestamp_matrix, data_matrix
-
-
-
