@@ -18,14 +18,17 @@ from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 
 class PanelPressureFlowControl(wx.Panel):
-    def __init__(self, parent, sensor, name, dev, line):
+    def __init__(self, parent, sensor, name, pumpname):
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
-        self._dev = dev
-        self._line = line
+        self._pumpname = pumpname
         self._ao = NIDAQ_AO()
+
+        section = LP_CFG.get_hwcfg_section(self._pumpname)
+        dev = section['Device']
+        line = section['LineName']
 
         self._desired = None
         self._tolerance = None
@@ -179,61 +182,6 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.FlexGridSizer(cols=3)
-        self.acq =  NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
-
-        self._sensors = [SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq), SensorStream('Portal Vein Pressure', 'mmHg', self.acq), SensorStream('Hepatic Artery Flow', 'ml/min', self.acq), SensorStream('Portal Vein Flow', 'ml/min', self.acq), SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq)]
-
-        for sensor in self._sensors:
-            raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
-            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
-            sensor.add_strategy(raw)
-            if 'Hepatic Artery' in sensor.name:
-                rms = RMSStrategy('RMS', 50, self.acq.buf_len)
-                save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
-                save_rms.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_rms', sensor.params)
-                sensor.add_strategy(rms)
-                sensor.add_strategy(save_rms)
-
-        HA_pressure = PanelAI(self, self._sensors[0], name=self._sensors[0].name, strategy='StreamRaw')
-        HA_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
-        HA_pressure._panel_cfg.choice_line.SetSelection(0)
-        HA_pressure._panel_cfg.choice_dev.Enable(False)
-        HA_pressure._panel_cfg.choice_line.Enable(False)
-        HA_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
-        sizer.Add(HA_pressure, 1, wx.ALL | wx.EXPAND, border=1)
-        HA_flow = PanelAI(self, self._sensors[2], name=self._sensors[2].name, strategy='StreamRaw')
-        HA_flow._panel_cfg.choice_dev.SetStringSelection('Dev1')
-        HA_flow._panel_cfg.choice_line.SetSelection(3)
-        HA_flow._panel_cfg.choice_dev.Enable(False)
-        HA_flow._panel_cfg.choice_line.Enable(False)
-        HA_flow._panel_cfg.panel_cal.OnLoadCfg(True)
-        sizer.Add(HA_flow, 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelPressureFlowControl(self, self._sensors[0], name=self._sensors[0].name, dev='Dev3', line=1), 1, wx.ALL | wx.EXPAND, border=1)
-
-        PV_pressure = PanelAI(self, self._sensors[1], name=self._sensors[1].name, strategy='StreamRaw')
-        PV_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
-        PV_pressure._panel_cfg.choice_line.SetSelection(1)
-        PV_pressure._panel_cfg.choice_dev.Enable(False)
-        PV_pressure._panel_cfg.choice_line.Enable(False)
-        PV_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
-        sizer.Add(PV_pressure, 1, wx.ALL | wx.EXPAND, border=1)
-        PV_flow = PanelAI(self, self._sensors[3], name=self._sensors[3].name, strategy='StreamRaw')
-        PV_flow._panel_cfg.choice_dev.SetStringSelection('Dev1')
-        PV_flow._panel_cfg.choice_line.SetSelection(4)
-        PV_flow._panel_cfg.choice_dev.Enable(False)
-        PV_flow._panel_cfg.choice_line.Enable(False)
-        PV_flow._panel_cfg.panel_cal.OnLoadCfg(True)
-        sizer.Add(PV_flow, 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(PanelPressureFlowControl(self, self._sensors[3], name=self._sensors[3].name, dev='Dev3', line=0), 1, wx.ALL | wx.EXPAND, border=1)
-
-
-        IVC_pressure = PanelAI(self, self._sensors[4], name=self._sensors[4].name, strategy='StreamRaw')
-        IVC_pressure._panel_cfg.choice_dev.SetStringSelection('Dev1')
-        IVC_pressure._panel_cfg.choice_line.SetSelection(2)
-        IVC_pressure._panel_cfg.choice_dev.Enable(False)
-        IVC_pressure._panel_cfg.choice_line.Enable(False)
-        IVC_pressure._panel_cfg.panel_cal.OnLoadCfg(True)
-        sizer.Add(IVC_pressure, 1, wx.ALL | wx.EXPAND, border=1)
 
         section = LP_CFG.get_hwcfg_section('Heparin')
         com = section['commport']
@@ -253,28 +201,78 @@ class TestFrame(wx.Frame):
         tpn_bile_salts_injection.open_stream(LP_CFG.LP_PATH['stream'])
         tpn_bile_salts_injection.start_stream()
 
-        section = LP_CFG.get_hwcfg_section('Epoprostenol')
-        com = section['commport']
-        baud = section['baudrate']
-        epoprostenol_injection = PHDserial('Epoprostenol')
-        epoprostenol_injection.open(com, baud)
-        epoprostenol_injection.ResetSyringe()
-        epoprostenol_injection.open_stream(LP_CFG.LP_PATH['stream'])
-        epoprostenol_injection.start_stream()
+        self.syringes = [heparin_injection, tpn_bile_salts_injection]
+        self.syringe_panels = [PanelSyringe(self, None, heparin_injection.name, heparin_injection), PanelSyringe(self, None, tpn_bile_salts_injection.name, tpn_bile_salts_injection)]
 
-        section = LP_CFG.get_hwcfg_section('Phenylephrine')
-        com = section['commport']
-        baud = section['baudrate']
-        phenylephrine_injection = PHDserial('Phenylephrine')
-        phenylephrine_injection.open(com, baud)
-        phenylephrine_injection.ResetSyringe()
-        phenylephrine_injection.open_stream(LP_CFG.LP_PATH['stream'])
-        phenylephrine_injection.start_stream()
+        self.acq =  NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
 
-        self._syringes = [heparin_injection, tpn_bile_salts_injection, epoprostenol_injection, phenylephrine_injection]
-        self.panels = [PanelSyringe(self, None, heparin_injection.name, heparin_injection), PanelSyringe(self, None, tpn_bile_salts_injection.name, tpn_bile_salts_injection), PanelSyringe(self, self.sensor, epoprostenol_injection.name, epoprostenol_injection), PanelSyringe(self, self.sensor, phenylephrine_injection.name, phenylephrine_injection)]
-        for panel in self.panels:
-            sizer.add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sensors = [SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq), SensorStream('Portal Vein Pressure', 'mmHg', self.acq), SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq), SensorStream('Hepatic Artery Flow', 'ml/min', self.acq), SensorStream('Portal Vein Flow', 'ml/min', self.acq), SensorStream('Inferior Vena Cava Flow', 'ml/min', self.acq)]
+
+        self.hepatic_artery_pressure_control = None
+        self.portal_vein_flow_control = None
+
+        for sensor in self.sensors:
+            raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
+            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            sensor.add_strategy(raw)
+            if 'Hepatic Artery' in sensor.name:
+                rms = RMSStrategy('RMS', 50, self.acq.buf_len)
+                save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
+                save_rms.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_rms', sensor.params)
+                sensor.add_strategy(rms)
+                sensor.add_strategy(save_rms)
+            panel = PanelAI(self, sensor, name=sensor.name, strategy='StreamRaw')
+            section = LP_CFG.get_hwcfg_section(sensor.name)
+            dev = section['Device']
+            line = section['LineName']
+            calpt1_target = float(section['CalPt1_Target'])
+            calpt1_reading = float(section['CalPt1_Reading'])
+            calpt2_target = float(section['CalPt2_Target'])
+            calpt2_reading = float(section['CalPt2_Reading'])
+            panel._panel_cfg.choice_dev.SetStringSelection(dev)
+            panel._panel_cfg.choice_line.SetSelection(float(line))
+            panel._panel_cfg.choice_dev.Enable(False)
+            panel._panel_cfg.choice_line.Enable(False)
+            panel._panel_cfg.panel_cal.spin_cal_pt1.SetValue(calpt1_target)
+            panel._panel_cfg.panel_cal.label_cal_pt1.SetValue(calpt1_reading)
+            panel._panel_cfg.panel_cal.spin_cal_pt2.SetValue(calpt2_target)
+            panel._panel_cfg.panel_cal.label_cal_pt2.SetValue(calpt2_reading)
+            sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+            if sensor.name == 'Hepatic Artery Flow':
+                section = LP_CFG.get_hwcfg_section('Epoprostenol')
+                com = section['commport']
+                baud = section['baudrate']
+                epoprostenol_injection = PHDserial('Epoprostenol')
+                epoprostenol_injection.open(com, baud)
+                epoprostenol_injection.ResetSyringe()
+                epoprostenol_injection.open_stream(LP_CFG.LP_PATH['stream'])
+                epoprostenol_injection.start_stream()
+                self.syringes.append(epoprostenol_injection)
+                self.syringe_panels.append(PanelSyringe(self, sensor, epoprostenol_injection.name, epoprostenol_injection))
+
+                section = LP_CFG.get_hwcfg_section('Phenylephrine')
+                com = section['commport']
+                baud = section['baudrate']
+                phenylephrine_injection = PHDserial('Phenylephrine')
+                phenylephrine_injection.open(com, baud)
+                phenylephrine_injection.ResetSyringe()
+                phenylephrine_injection.open_stream(LP_CFG.LP_PATH['stream'])
+                phenylephrine_injection.start_stream()
+                self.syringes.append(phenylephrine_injection)
+                self.syringe_panels.append(PanelSyringe(self, sensor, phenylephrine_injection.name, phenylephrine_injection))
+            if sensor.name == 'Hepatic Artery Pressure':
+                self.hepatic_artery_pressure_control = PanelPressureFlowControl(self, sensor, name=sensor.name, pumpname='Hepatic Artery Centrifugal Pump')
+            elif sensor.name == 'Portal Vein Flow':
+                self.portal_vein_flow_control = PanelPressureFlowControl(self, sensor, name=sensor.name, pumpname='Portal Vein Centrifugal Pump')
+
+        if self.hepatic_artery_pressure_control:
+            sizer.Add(self.hepatic_artery_pressure_control, 1, wx.ALL | wx.EXPAND, border=1)
+
+        if self.portal_vein_flow_control:
+            sizer.Add(self.portal_vein_flow_control, 1, wx.ALL | wx.EXPAND, border=1)
+
+        for panel in self.syringe_panels:
+            sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -282,15 +280,19 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for panel in self.panels:
+        for panel in self.syringe_panels:
             if panel._injection.name in ['Epoprostenol', 'Phenylephrine']:
                 panel._panel_feedback._syringe_timer.stop_feedback_injections()
-        for syringe in self._syringes:
+        for syringe in self.syringes:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             syringe.close_stream()
-        for sensor in self._sensors:
+        for sensor in self.sensors:
             sensor.stop()
+            sensor.close()
+            if sensor.hw._task:  # DOes this close all other functionality on this DAQ? Check; also check on gb100
+                sensor.hw.stop()
+                sensor.hw.close()
         self.Destroy()
 
 class MyTestApp(wx.App):
@@ -299,7 +301,6 @@ class MyTestApp(wx.App):
         self.SetTopWindow(frame)
         frame.Show()
         return True
-
 
 if __name__ == "__main__":
     LP_CFG.set_base(basepath='~/Documents/LPTEST')
