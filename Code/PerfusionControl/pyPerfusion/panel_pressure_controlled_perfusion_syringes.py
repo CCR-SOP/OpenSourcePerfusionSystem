@@ -18,22 +18,24 @@ from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 
 class PanelPressureFlowControl(wx.Panel):
-    def __init__(self, parent, sensor, name, pumpname):
+    def __init__(self, parent, sensor, pump, name, pumpname):
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
+        self._pump = pump
         self._name = name
         self._pumpname = pumpname
-        self._ao = NIDAQ_AO()
 
         section = LP_CFG.get_hwcfg_section(self._pumpname)
-        dev = section['Device']
-        line = section['LineName']
-
-        self._desired = None
-        self._tolerance = None
-        self._increment = None
-        self._divisor = None
+        self.dev = section['Device']
+        self.line = section['LineName']
+        self.desired = section['desired']
+        self.tolerance = section['tolerance']
+        self.increment = section['increment']
+        try:
+            self.divisor = section['divisor']
+        except KeyError:
+            self.divisor = None
 
         wx.Panel.__init__(self, parent, -1)
 
@@ -41,28 +43,21 @@ class PanelPressureFlowControl(wx.Panel):
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.label_desired_output = wx.StaticText(self, label='Desired ' + self._name)
-        if 'Pressure' in self._name:
-            desired = 65
-        elif 'Flow' in self._name:
-            desired = 200
-        else:
-            desired = 0
-        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=500, initial=desired, inc=0.1)
+        self.spin_desired_output = wx.SpinCtrlDouble(self, min=0.0, max=500, initial=self.desired, inc=0.1)
         self.btn_update_desired = wx.Button(self, label='Update Desired Parameter')
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance (' + self._sensor._unit_str + ')')
-        self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=0, inc=0.01)
+        self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=self.tolerance, inc=0.1)
         self.btn_update_tolerance = wx.Button(self, label='Update Tolerance')
 
         self.label_increment = wx.StaticText(self, label='Voltage Increment')
-        self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=0.05, inc=0.001)
+        self.spin_increment = wx.SpinCtrlDouble(self, min=0, max=1, initial=self.increment, inc=0.001)
         self.btn_update_increment = wx.Button(self, label='Update Voltage Increment')
 
-        self.label_divisor = wx.StaticText(self, label='Peak-to-Peak Divisor')
-        self.spin_divisor = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
-        self.btn_update_divisor = wx.Button(self, label='Update Divisor')
-        if 'Portal Vein' in self._name:
-            self.btn_update_divisor.Enable(False)
+        if self.divisor:
+            self.label_divisor = wx.StaticText(self, label='Peak-to-Peak Divisor')
+            self.spin_divisor = wx.SpinCtrlDouble(self, min=0, max=100, initial=self.divisor, inc=0.1)
+            self.btn_update_divisor = wx.Button(self, label='Update Divisor')
 
         self.btn_stop = wx.ToggleButton(self, label='Start')
 
@@ -90,17 +85,19 @@ class PanelPressureFlowControl(wx.Panel):
         self.sizer_increment.Add(self.spin_increment, flags)
         self.sizer_increment.Add(self.btn_update_increment, flags)
 
-        self.sizer_divisor = wx.BoxSizer(wx.HORIZONTAL)
-        self.sizer_divisor.Add(self.label_divisor, flags)
-        self.sizer_divisor.Add(self.spin_divisor, flags)
-        self.sizer_divisor.Add(self.btn_update_divisor, flags)
+        if self.divisor:
+            self.sizer_divisor = wx.BoxSizer(wx.HORIZONTAL)
+            self.sizer_divisor.Add(self.label_divisor, flags)
+            self.sizer_divisor.Add(self.spin_divisor, flags)
+            self.sizer_divisor.Add(self.btn_update_divisor, flags)
 
         sizer = wx.GridSizer(cols=1)
         sizer.Add(self.sizer_label)
         sizer.Add(self.sizer_tol)
         sizer.Add(self.sizer_increment, flags)
         sizer.Add(self.btn_stop, flags)
-        sizer.Add(self.sizer_divisor, flags)
+        if self.divisor:
+            sizer.Add(self.sizer_divisor, flags)
         self.sizer.Add(sizer)
 
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -110,41 +107,42 @@ class PanelPressureFlowControl(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.btn_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
         self.btn_update_desired.Bind(wx.EVT_BUTTON, self.OnDesired)
         self.btn_update_tolerance.Bind(wx.EVT_BUTTON, self.OnTolerance)
         self.btn_update_increment.Bind(wx.EVT_BUTTON, self.OnIncrement)
         self.btn_update_divisor.Bind(wx.EVT_BUTTON, self.OnDivisor)
+        self.btn_stop.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartStop)
+
+    def OnDesired(self, evt):
+        self.desired = self.spin_desired_output.GetValue()
+
+    def OnTolerance(self, evt):
+        self.tolerance = self.spin_tolerance.GetValue()
+
+    def OnIncrement(self, evt):
+        self.increment = self.spin_increment.GetValue()
+
+    def OnDivisor(self, evt):
+        self.divisor = self.spin_divisor.GetValue()
 
     def OnStartStop(self, evt):
         state = self.btn_stop.GetLabel()
         if state == 'Start':
-            self._ao.open(period_ms=100, dev=self._dev, line=self._line)
-            self._ao.set_dc(1)
+            self._pump.open(period_ms=100, dev=self.dev, line=self.line)
+            self._pump.set_dc(1.5)
+            self.desired = self.spin_desired_output.GetValue()
+            self.tolerance = self.spin_tolerance.GetValue()
+            self.increment = self.spin_increment.GetValue()
+            if self.divisor:
+                self.divisor = self.spin_divisor.GetValue()
             self.timer_adjust.Start(3000, wx.TIMER_CONTINUOUS)
             self.btn_stop.SetLabel('Stop')
-            self._desired = self.spin_desired_output.GetValue()
-            self._tolerance = self.spin_tolerance.GetValue()
-            self._increment = self.spin_increment.GetValue()
-            self._divisor = self.spin_divisor.GetValue()
         else:
             self.timer_adjust.Stop()
-            self._ao.set_dc(0)
-            self._ao.close()
-            self._ao.halt()
+            self._pump.set_dc(0)
+            self._pump.close()
+            self._pump.halt()
             self.btn_stop.SetLabel('Start')
-
-    def OnDesired(self, evt):
-        self._desired = self.spin_desired_output.GetValue()
-
-    def OnTolerance(self, evt):
-        self._tolerance = self.spin_tolerance.GetValue()
-
-    def OnIncrement(self, evt):
-        self._increment = self.spin_increment.GetValue()
-
-    def OnDivisor(self, evt):
-        self._divisor = self.spin_divisor.GetValue()
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_adjust.GetId():
@@ -155,27 +153,34 @@ class PanelPressureFlowControl(wx.Panel):
             t, value = self._sensor.get_file_strategy('StreamRMS').retrieve_buffer(0, 1)
         else:
             t, value = self._sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
-        dev = abs(self._desired - value)
-      #  print(f'Pressure is {value:.3f}, desired is {desired:.3f}')
-      #  print(f'Deviation is {dev}, tol is {tol}')
-        if dev > self._tolerance:
-            if value < self._desired:
-                new_val = self._ao._volts_offset + self._increment
+        dev = abs(self.desired - value)
+        if dev > self.tolerance:
+            if value < self.desired:
+                new_val = self._pump._volts_offset + self.increment
                 if new_val > 5:
                     new_val = 5
             else:
-                new_val = self._ao._volts_offset - self._increment
+                new_val = self._pump._volts_offset - self.increment
                 if new_val < 0:
                     new_val = 0
             if "Hepatic Artery" in self._sensor.name:
-                peak = (new_val / self._divisor) / 2
-                if 5 < new_val + peak:
-                    peak = (4.9-new_val)
-                elif 0 > new_val - peak:
-                    peak = (new_val - 0.1)
-                self._ao.set_sine(2 * peak, new_val, Hz=1)
+                peak = (new_val / self.divisor) / 2
+                peak_high = None
+                peak_low = None
+                if (new_val + peak) > 5:  # Check and see if going over causes issues
+                    peak_high = (5-new_val)
+                    peak = peak_high
+                elif (new_val - peak) < 0:
+                    peak_low = new_val
+                    peak = peak_low
+                if peak_high and peak_low:
+                    if peak_high > peak_low:
+                        peak = peak_low
+                    elif peak_low > peak_high:
+                        peak = peak_high
+                self._pump.set_sine(2 * peak, new_val, Hz=1)
             else:
-                self._ao.set_dc(new_val)
+                self._pump.set_dc(new_val)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -210,6 +215,7 @@ class TestFrame(wx.Frame):
 
         self.hepatic_artery_pressure_control = None
         self.portal_vein_flow_control = None
+        self.pumps = []
 
         for sensor in self.sensors:
             raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
@@ -261,9 +267,13 @@ class TestFrame(wx.Frame):
                 self.syringes.append(phenylephrine_injection)
                 self.syringe_panels.append(PanelSyringe(self, sensor, phenylephrine_injection.name, phenylephrine_injection))
             if sensor.name == 'Hepatic Artery Pressure':
-                self.hepatic_artery_pressure_control = PanelPressureFlowControl(self, sensor, name=sensor.name, pumpname='Hepatic Artery Centrifugal Pump')
+                self.ao_ha = NIDAQ_AO()
+                self.pumps.append(self.ao_ha)
+                self.hepatic_artery_pressure_control = PanelPressureFlowControl(self, sensor, self.ao_ha, name=sensor.name, pumpname='Hepatic Artery Centrifugal Pump')
             elif sensor.name == 'Portal Vein Flow':
-                self.portal_vein_flow_control = PanelPressureFlowControl(self, sensor, name=sensor.name, pumpname='Portal Vein Centrifugal Pump')
+                self.ao_pv = NIDAQ_AO()
+                self.pumps.append(self.ao_pv)
+                self.portal_vein_flow_control = PanelPressureFlowControl(self, sensor, self.ao_pv, name=sensor.name, pumpname='Portal Vein Centrifugal Pump')
 
         if self.hepatic_artery_pressure_control:
             sizer.Add(self.hepatic_artery_pressure_control, 1, wx.ALL | wx.EXPAND, border=1)
@@ -293,6 +303,10 @@ class TestFrame(wx.Frame):
             if sensor.hw._task:  # DOes this close all other functionality on this DAQ? Check; also check on gb100
                 sensor.hw.stop()
                 sensor.hw.close()
+        for pump in self.pumps:
+            pump.set_dc(0)
+            pump.close()
+            pump.halt()
         self.Destroy()
 
 class MyTestApp(wx.App):
