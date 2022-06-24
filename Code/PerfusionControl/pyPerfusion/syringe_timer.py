@@ -20,14 +20,16 @@ class SyringeTimer:
         self.time_between_checks = None
         self.cooldown_time = None
         self.max = None
+        self.min = None
         self.incrementation = None
 
         self.intervention = None
 
         self.increase = None
         self.direction = None
-        self.wait = None
         self.old_value = None
+
+        self.wait = None
 
         self.insulin_change = None
         self.insulin_rate_intervention = None
@@ -56,7 +58,7 @@ class SyringeTimer:
         self.__thread_feedback = Thread(target=self.OnFeedbackLoop)
         self.__thread_feedback.start()
 
-    def stop_feedback_injections(self):
+    def stop_feedback_injections(self):  # Check what happens with threads here
         if self.__thread_feedback and self.__thread_feedback.is_alive():
             self.__evt_halt_feedback.set()
             self.__thread_feedback.join(2.0)
@@ -71,12 +73,14 @@ class SyringeTimer:
     def OnFeedbackLoop(self):
         while not self.__evt_halt_feedback.wait(self.time_between_checks):
             self.check_for_change()
+            print('checking for change')
 
     def OnCooldown(self):
         self.__evt_halt_cooldown.wait(self.cooldown_time)
         self.syringe.cooldown = False
         self.__evt_halt_cooldown.set()
         self.__thread_cooldown = None
+        print('down with cooldown')
 
     def OnReductionTimer(self):
         print('executing reduction')
@@ -86,10 +90,11 @@ class SyringeTimer:
 
     def check_for_change(self):
         self.increase = False
-        self.insulin_change = False
         self.direction = None
+        self.insulin_change = False
         if self.name in ['Insulin', 'Glucagon']:
             t, value = float(self.sensor.get_latest())  # Check what value could be from Dexcom sensor
+            print(value)
         elif self.name in ['Epoprostenol', 'Phenylephrine']:
             t, value = self.sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
             value = float(value)
@@ -135,8 +140,7 @@ class SyringeTimer:
                     self.reduction_timer = None
                 if self.syringe.cooldown:
                     self.old_value = new_value
-                    self._logger.info(
-                        f'{self.sensor.name} reads {value:.2f}; a change in {self.name} infusion rate is needed, but is currently frozen')
+                    self._logger.info(f'{self.sensor.name} reads {value:.2f}; a change in {self.name} infusion rate is needed, but is currently frozen')
                 else:
                     self.increase = True
                     self.direction = 'high'
@@ -145,7 +149,7 @@ class SyringeTimer:
                 new_value = 'Intervention Not Required'
                 print(new_value)
                 if not self.syringe.cooldown:
-                    if new_value == self.old_value or not self.old_value:  # If an injection hasn't just been given, and if the flow is steadily in range, start / continue thread looking to reduce flow
+                    if new_value == self.old_value or not self.old_value:
                         if not self.reduction_timer:
                             self.reduction_timer = Timer(self.reduction_time, self.OnReductionTimer)
                             self.reduction_timer.start()
@@ -191,22 +195,33 @@ class SyringeTimer:
                     self.reduction_timer = None
             if self.increase:
                 print('increasing infusion')
+                current_intervention = self.intervention
                 self.intervention += self.incrementation
                 if self.intervention > self.max:
                     self.intervention = self.max
-                    self._logger.info(f'{self.name} infusion rate is maxed out')
-                if self.intervention < 0:
-                    self.intervention = 0
+                    if self.intervention == current_intervention:
+                        self._logger.info(f'{self.name} infusion rate is maxed out')
+                        return
+                if self.intervention < self.min:
+                    self.intervention = self.min
+                    if self.intervention == current_intervention:
+                        return
             elif self.reduce:
                 print('reducing infusion')
+                current_intervention = self.intervention
                 self.intervention -= self.incrementation
                 if self.intervention > self.max:
                     self.intervention = self.max
-                if self.intervention < 0:
-                    self.intervention = 0
-                    self._logger.info(f'{self.name} infusion rate is cannot be decreased further')
+                    if self.intervention == current_intervention:
+                        return
+                if self.intervention < self.min:
+                    self.intervention = self.min
+                    if self.intervention == current_intervention:
+                        self._logger.info(f'{self.name} infusion rate is cannot be decreased further')
+                        return
                 self.reduce = False
                 if self.name in ['Insulin, Glucagon'] and not self.insulin_change and not self.increase:
+                    self._logger.info(f'Glucose is stable and in range; future boluses of {self.name} will be decreased to {self.intervention}')
                     return
             self.injection(self.syringe, self.name, self.sensor.name, value, self.intervention, self.direction, self.insulin_change, self.insulin_rate_intervention)
             if self.increase:
@@ -223,24 +238,16 @@ class SyringeTimer:
             new_glucose = 'Below Range'
         else:
             new_glucose = 'In Range'
-        if not self.old_glucose:
-            self.old_glucose = new_glucose
-            if self.old_glucose == 'Above Range':
-                return True, 4.2
-            elif self.old_glucose == 'Below Range':
-                return True, 0
-            elif self.old_glucose == 'In Range':
-                return True, 0.5
-        if self.old_glucose == new_glucose:
+        if self.old_glucose and self.old_glucose == new_glucose:
             return False, None  # Check to make sure that this doesn't go @ first
         else:
             self.old_glucose = new_glucose
             if self.old_glucose == 'Above Range':
-                return True, 4.2
+                return True, self.insulin_basal_infusion_rate_above_range
             elif self.old_glucose == 'Below Range':
                 return True, 0
             elif self.old_glucose == 'In Range':
-                return True, 0.5
+                return True, self.insulin_basal_infusion_rate_in_range
 
     def injection(self, syringe, name, parameter_name, parameter, intervention_ul, direction, insulin_change, insulin_rate_intervention):
         if self.name == 'Glucagon':
@@ -268,7 +275,7 @@ class SyringeTimer:
             if self.increase:
                 self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; changing {name} infusion rate to {intervention_ul:.2f}')
             else:
-                self._logger.info(f'Decreasing {name} infusion rate to {intervention_ul:.2f}')
+                self._logger.info(f'Flow is {direction}; decreasing {name} infusion rate to {intervention_ul:.2f}')
         #    infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
         #    syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)  Check to see if I need to stop syringe or if I can just change the rate?
             syringe.set_infusion_rate(intervention_ul, 'ul/min')
@@ -305,7 +312,7 @@ class SyringeTimer:
             if insulin_change:
                 rate = insulin_rate_intervention
                 unit = 'ul/min'
-                self._logger.info(f'{parameter_name} reads {parameter:.2f}; changing {name} infusion rate to {insulin_rate_intervention:.2f}')
+                self._logger.info(f'{parameter_name} reads {parameter:.2f}; changing {name} basal infusion rate to {insulin_rate_intervention:.2f}')
             syringe.set_infusion_rate(rate, unit)
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
