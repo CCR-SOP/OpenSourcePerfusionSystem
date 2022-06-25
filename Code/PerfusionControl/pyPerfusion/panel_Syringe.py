@@ -18,7 +18,6 @@ from pyHardware.PHDserial import PHDserial
 class PanelSyringe(wx.Panel):
     def __init__(self, parent, sensor, name, injection):
         wx.Panel.__init__(self, parent, -1)
-        self._logger = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
         self._name = name
@@ -216,13 +215,13 @@ class PanelFeedbackSyringe(wx.Panel):
         self.spin_min = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.min), inc=1)
         self.btn_update_min = wx.Button(self, label='Update Minimum' + label_intervention)
 
-        self.label_incrementation = wx.StaticText(self, label='Incremental Increase in ' + label_intervention)
+        self.label_incrementation = wx.StaticText(self, label='Incremental Change in ' + label_intervention)
         self.spin_incrementation = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.incrementation), inc=1)
         self.btn_update_incrementation = wx.Button(self, label='Update Incremental Increase')
 
         self.label_reduction_time = wx.StaticText(self, label='Reduce Intervention after  ' + self.feedback + ' ' + self.feedbackunit + ' is in range for (s)')
         self.spin_reduction_time = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.reductiontime), inc=1)
-        self.btn_update_reduction_time = wx.Button(self, label='Update Reduction Time')
+        self.btn_update_reduction_time = wx.Button(self, label='Update')
 
         if self._injection.name == 'Insulin':
             section = LP_CFG.get_hwcfg_section(self._injection.name)
@@ -489,21 +488,21 @@ class PanelFeedbackSyringe(wx.Panel):
             self._syringe_timer.min = self.spin_min.GetValue()
             self._syringe_timer.incrementation = self.spin_incrementation.GetValue()
             self._syringe_timer.reduction_time = self.spin_reduction_time.GetValue()
-            self._syringe_timer.syringe.cooldown = False  ###
+            self._syringe_timer.syringe.cooldown = False
+            self._syringe_timer.reduce = False
             self._syringe_timer.start_feedback_injections()
             self.btn_start_feedback_injections.SetLabel('Stop Feedback Injections')
         elif state == 'Stop Feedback Injections':
-            latest_intervention = self._syringe_timer.stop_feedback_injections()  ###
-            self.spin_intervention.SetValue(latest_intervention)  ###
+            latest_intervention = self._syringe_timer.stop_feedback_injections()
+            self.spin_intervention.SetValue(latest_intervention)
             self.parent.spin_rate.Enable(True)
             self.parent.choice_rate.Enable(True)
             self.parent.btn_start_basal.Enable(True)
             self.parent.spin_1TB_volume.Enable(True)
             self.parent.choice_1TB_unit.Enable(True)
             self.parent.btn_start_1TB.Enable(True)
-            if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin']:  ### Make sure that all of them stop
-                infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
-                self._injection.stop(-1, infuse_rate, ml_volume, ml_min_rate)
+            infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
+            self._injection.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             self.btn_start_feedback_injections.SetLabel('Start Feedback Injections')
 
 class TestFrame(wx.Frame):
@@ -511,7 +510,6 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=4)
-        self._lgr = logging.getLogger(__name__)
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
