@@ -111,7 +111,7 @@ class DexcomSensor:
         self.__thread_streaming.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(60):
+        while not self.__evt_halt_streaming.wait(1):
             self.stream()
 
     def stream(self):
@@ -151,7 +151,7 @@ class DexcomSensor:
                 break
             elif chunk.any():
                 data.append(chunk)
-                data_time.append(ts / 1000.0)
+                data_time.append(ts)
         _fid.close()
         return data_time, data
 

@@ -15,10 +15,6 @@ from pyHardware.pyDexcom import DexcomSensor
 from pyPerfusion.plotting import TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot
 from pyHardware.PHDserial import PHDserial
 from pyPerfusion.panel_Syringe import PanelSyringe
-from pyHardware.pyAO_NIDAQ import NIDAQ_AO
-from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
-from pyHardware.pyDIO import DIODeviceException
-from pyHardware.pyVCS import VCS, VCSPump
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 engaged_COM_list = []
@@ -67,15 +63,13 @@ class DexcomReadout(wx.Panel):
         self.Fit()
 
 class PanelDexcom(wx.Panel):
-    def __init__(self, parent, receiver_class, valve, vcs, name, unit, valid_range, lgr):
+    def __init__(self, parent, name, unit, valid_range, lgr):
         self._logger = lgr
         self.parent = parent
-        self._receiver_class = receiver_class
-        self._valve = valve
-        self._vcs = vcs
         self._name = name
         self._unit = unit
         self._valid_range = valid_range
+        self._receiver_class = Dexcom
         self._connected_receiver = None
 
         wx.Panel.__init__(self, parent, -1)
@@ -189,28 +183,22 @@ class PanelDexcom(wx.Panel):
         state = self.btn_start.GetLabel()
         if state == 'Start Acquisition':
             self.sensor.start_stream()
-            self.timer_update_plot.Start(60000, wx.TIMER_CONTINUOUS)  # Want to try to update plots every 60 seconds
+            self.timer_update_plot.Start(2000, wx.TIMER_CONTINUOUS)  # Want to try to update plots every 60 seconds
             self.btn_start.SetLabel('Stop Acquisition')
-            self._vcs.open_independent_valve(self._valve.name)
-            self._vcs._pump.start()
         elif state == 'Stop Acquisition':
             self.sensor.stop_stream()
             self.timer_update_plot.Stop()
             self.btn_start.SetLabel('Start Acquisition')
-            self._vcs.close_independent_valve(self._valve.name)
-            for valve in self._vcs._independent.keys():
-                if valve != self._valve.name and not self._vcs._independent[valve].is_active:
-                    self._vcs._pump.stop()
 
     def OnUpdatePlot(self, event):
         if event.GetId() == self.timer_update_plot.GetId():
             self.update_plot()
 
     def update_plot(self):
-        time_seconds, data = self.sensor.get_latest()
+        time_ms, data = self.sensor.get_latest()
         error = self.sensor.error
         if data:
-            time_minutes = time_seconds / 60
+            time_minutes = time_ms / 60000
             self.panel_main.plot(data, time_minutes)
             self.panel_sub.plot(data, time_minutes)
             if not error:
@@ -226,45 +214,8 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self._lgr = logging.getLogger(__name__)
 
-        self._vcs = VCS(clearance_time_ms=None, acq_time_ms=None)
-
-        self.ao = NIDAQ_AO('VCS Pump')
-        section = LP_CFG.get_hwcfg_section(self.ao.name)
-        self._lgr.debug(f'Reading config for {self.ao.name}')
-        dev = section['DevName']
-        line = section['LineName']
-        self.ao.open(period_ms=1000, dev=dev, line=line)
-        self.pump = VCSPump(self.ao)
-        self.pump.set_speed(100)
-        self._vcs.set_pump(self.pump)
-
-        valves = [NIDAQ_DIO('Portal Vein (Glucose)'), NIDAQ_DIO('Inferior Vena Cava (Glucose)')]
-
-        for valve in valves:
-            key = valve.name
-            try:
-                self._lgr.debug(f'opening config section {key}')
-                section = LP_CFG.get_hwcfg_section(key)
-                dev = section['Device']
-                port = section['Port']
-                line = section['Line']
-                active_high_state = (section['Active High'] == 'True')
-                self._lgr.debug(f'active high is {active_high_state}, {section["Active High"]}')
-                read_only_state = (section['Read Only'] == 'True')
-            except KeyError as e:
-                self._lgr.error(f'Could not find configuration info for {key}')
-                self._lgr.error(f'Looking in {LP_CFG.LP_PATH["config"]}')
-                continue
-            try:
-                valve.open(port=port, line=line, active_high=active_high_state, read_only=read_only_state, dev=dev)  # Setting dev/port/line values for DIO
-                self._vcs.add_independent_input(valve)
-            except DIODeviceException as e:
-                dlg = wx.MessageDialog(parent=self, message=str(e), caption='Digital Output Device Error', style=wx.OK)
-                dlg.ShowModal()
-                continue
-
-        panel_PV = PanelDexcom(self, Dexcom, valves[0], self._vcs, 'Receiver #1 - Portal Vein', 'mg/dL', [80, 120], self._lgr)
-        panel_IVC = PanelDexcom(self, Dexcom, valves[1], self._vcs, 'Receiver #2 - Inferior Vena Cava', 'mg/dL', [80, 120], self._lgr)
+        panel_PV = PanelDexcom(self, 'Receiver #1 - Portal Vein', 'mg/dL', [80, 120], self._lgr)
+        panel_IVC = PanelDexcom(self, 'Receiver #2 - Inferior Vena Cava', 'mg/dL', [80, 120], self._lgr)
 
         dexcom_sizer = wx.GridSizer(cols=1)
         dexcom_sizer.Add(panel_PV, 1, wx.EXPAND, border=2)
@@ -289,12 +240,12 @@ class TestFrame(wx.Frame):
         glucagon_injection.start_stream()
 
         self.sensor = panel_IVC.sensor  # Glucose measurements which inform syringe injections are from the IVC; this is the panel being referenced here
-        self._syringes = [insulin_injection, glucagon_injection]
+        self.syringes = [insulin_injection, glucagon_injection]
 
         syringe_sizer = wx.GridSizer(cols=2)
-        self.panels = [PanelSyringe(self, None, insulin_injection.name, insulin_injection), PanelSyringe(self, None, glucagon_injection.name, glucagon_injection)]
+        self.panels = [PanelSyringe(self, self.sensor, insulin_injection.name, insulin_injection), PanelSyringe(self, self.sensor, glucagon_injection.name, glucagon_injection)]
         for panel in self.panels:
-            syringe_sizer.add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+            syringe_sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
         sizer = wx.GridSizer(cols=2)
         sizer.Add(dexcom_sizer, 1, wx.ALL | wx.EXPAND, border=1)
@@ -307,16 +258,13 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         for panel in self.panels:
             panel._panel_feedback._syringe_timer.stop_feedback_injections()
-        for syringe in self._syringes:
+        for syringe in self.syringes:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
             syringe.close_stream()
         for sensor in sensors:
             sensor.stop_stream()
             sensor.close_stream()
-        self.pump.stop()
-        self._vcs.close()
-        self.ao.close()
         self.Destroy()
 
 class MyTestApp(wx.App):
