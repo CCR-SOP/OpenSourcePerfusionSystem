@@ -5,6 +5,7 @@ import numpy as np
 from pyHardware.PHDserial import PHDserial
 from pyHardware.pySaturationMonitor import TSMSerial
 from pyHardware.pyGB100 import GB100
+from pyHardware.pyDexcom import DexcomSensor
 from pyHardware.pyDialysatePumps import DialysatePumps
 
 class ReadBinaryData:
@@ -232,7 +233,17 @@ class ReadBinaryData:
         return timestamp_matrix, data_matrix
 
     def read_dexcom_data(self):  # Data Version 6
-        pass
+        x = DexcomSensor('DexcomSensor', 'Unit', 'Receiver')
+        x._full_path = self.path
+        x._filename = self.filename
+        timestamp_matrix, glucose_matrix = x.get_data()
+        plt.figure()
+        plt.scatter(timestamp_matrix, glucose_matrix)
+        plt.legend(['Glucose'])
+        plt.title('Glucose')
+        plt.xlabel('Time (ms)')
+        plt.ylabel('Glucose (mg/dL)')
+        return timestamp_matrix, glucose_matrix
 
     def read_dialysis_flow_rate_data(self):  # Data Version 7
         x = DialysatePumps('Dialysate Pumps')
