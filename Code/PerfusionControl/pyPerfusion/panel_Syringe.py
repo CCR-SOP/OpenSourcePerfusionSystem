@@ -213,13 +213,13 @@ class PanelFeedbackSyringe(wx.Panel):
 
         self.label_min = wx.StaticText(self, label='Minimum ' + label_intervention)
         self.spin_min = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.min), inc=1)
-        self.btn_update_min = wx.Button(self, label='Update Minimum' + label_intervention)
+        self.btn_update_min = wx.Button(self, label='Update Minimum ' + label_intervention)
 
         self.label_incrementation = wx.StaticText(self, label='Incremental Change in ' + label_intervention)
         self.spin_incrementation = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.incrementation), inc=1)
         self.btn_update_incrementation = wx.Button(self, label='Update Incremental Increase')
 
-        self.label_reduction_time = wx.StaticText(self, label='Reduce Intervention after  ' + self.feedback + ' ' + self.feedbackunit + ' is in range for (s)')
+        self.label_reduction_time = wx.StaticText(self, label='Reduce Intervention when  ' + self.feedback + ' ' + self.feedbackunit + ' is in range for (s)')
         self.spin_reduction_time = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.reductiontime), inc=1)
         self.btn_update_reduction_time = wx.Button(self, label='Update')
 
@@ -233,7 +233,7 @@ class PanelFeedbackSyringe(wx.Panel):
 
             self.label_upper_glucose_limit = wx.StaticText(self, label='Reduce Basal Infusion Rate When ' + self.feedback + ' ' + self.feedbackunit + ' is Less Than')
             self.spin_upper_glucose_limit = wx.SpinCtrlDouble(self, min=0, max=1000, initial=float(self.upperglucoselimit), inc=0.1)
-            self.btn_update_upper_glucose_limit = wx.Button(self, label='Update Upper ' + self.feedback + ' ' + self.feedbackunit + ' Limit:')
+            self.btn_update_upper_glucose_limit = wx.Button(self, label='Update')
 
             self.label_basal_rate_tolerance = wx.StaticText(self, label='Tolerance ' + self.feedbackunit)
             self.spin_basal_rate_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=float(self.basalratetolerance), inc=0.1)
@@ -241,15 +241,15 @@ class PanelFeedbackSyringe(wx.Panel):
 
             self.label_basal_infusion_rate_above_range = wx.StaticText(self, label='Infusion Rate (ul/min) When ' + self.feedback + ' ' + self.feedbackunit + ' is Above Range')
             self.spin_basal_infusion_rate_above_range = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.aboverangerate), inc=1)
-            self.btn_update_basal_infusion_rate_above_range = wx.Button(self, label='Update Infusion Rate')
+            self.btn_update_basal_infusion_rate_above_range = wx.Button(self, label='Update')
 
             self.label_basal_infusion_rate_in_range = wx.StaticText(self, label='Infusion Rate (ul/min) When ' + self.feedback + ' ' + self.feedbackunit + ' is In Range')
             self.spin_basal_infusion_rate_in_range = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.inrangerate), inc=1)
-            self.btn_update_basal_infusion_rate_in_range = wx.Button(self, label='Update Infusion Rate')
+            self.btn_update_basal_infusion_rate_in_range = wx.Button(self, label='Update')
 
             self.label_lower_glucose_limit = wx.StaticText(self, label='Lower ' + self.feedback + ' ' + self.feedbackunit + ' Limit:')
             self.spin_lower_glucose_limit = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.lowerglucoselimit), inc=1)
-            self.btn_update_lower_glucose_limit = wx.Button(self, label='Update Lower ' + self.feedback + ' ' + self.feedbackunit + ' Limit:')
+            self.btn_update_lower_glucose_limit = wx.Button(self, label='Update')
 
         self.btn_start_feedback_injections = wx.ToggleButton(self, label='Start Feedback Injections')
 
@@ -467,7 +467,7 @@ class PanelFeedbackSyringe(wx.Panel):
                 self._injection.set_infusion_rate(rate, 'ul/min')
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
-            elif self._injection.name == 'Insulin':
+            elif self._injection.name == 'Insulin':  ###
                 self._syringe_timer.insulin_upper_glucose_limit = self.spin_upper_glucose_limit.GetValue()
                 self._syringe_timer.insulin_basal_rate_tolerance = self.spin_basal_rate_tolerance.GetValue()
                 self._syringe_timer.insulin_basal_infusion_rate_above_range = self.spin_basal_infusion_rate_above_range.GetValue()
@@ -517,23 +517,23 @@ class TestFrame(wx.Frame):
         self.sensor.add_strategy(raw)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name, 'StreamRaw'), 1, wx.ALL | wx.EXPAND, border=1)
 
-      #  section = LP_CFG.get_hwcfg_section('Heparin')
-      #  com = section['commport']
-      #  baud = section['baudrate']
-      #  heparin_injection = PHDserial('Heparin')
-      #  heparin_injection.open(com, baud)
-      #  heparin_injection.ResetSyringe()
-      #  heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
-      #  heparin_injection.start_stream()
+        section = LP_CFG.get_hwcfg_section('Heparin')
+        com = section['commport']
+        baud = section['baudrate']
+        heparin_injection = PHDserial('Heparin')
+        heparin_injection.open(com, baud)
+        heparin_injection.ResetSyringe()
+        heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        heparin_injection.start_stream()
 
-     #   section = LP_CFG.get_hwcfg_section('Epoprostenol')
-     #   com = section['commport']
-     #   baud = section['baudrate']
-     #   vasodilator_injection = PHDserial('Epoprostenol')
-     #   vasodilator_injection.open(com, baud)
-     #   vasodilator_injection.ResetSyringe()
-     #   vasodilator_injection.open_stream(LP_CFG.LP_PATH['stream'])
-     #   vasodilator_injection.start_stream()
+        section = LP_CFG.get_hwcfg_section('Epoprostenol')
+        com = section['commport']
+        baud = section['baudrate']
+        vasodilator_injection = PHDserial('Epoprostenol')
+        vasodilator_injection.open(com, baud)
+        vasodilator_injection.ResetSyringe()
+        vasodilator_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        vasodilator_injection.start_stream()
 
         section = LP_CFG.get_hwcfg_section('Phenylephrine')
         com = section['commport']
@@ -544,8 +544,8 @@ class TestFrame(wx.Frame):
         vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasoconstrictor_injection.start_stream()
 
-        self._syringes = [vasoconstrictor_injection] #  [heparin_injection, vasodilator_injection, vasoconstrictor_injection]
-        self.panels = [PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]  #   [PanelSyringe(self, None, heparin_injection.name, heparin_injection), PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]
+        self._syringes = [vasoconstrictor_injection, heparin_injection, vasodilator_injection, vasoconstrictor_injection]
+        self.panels = [PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection), PanelSyringe(self, None, heparin_injection.name, heparin_injection), PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]
         for panel in self.panels:
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
@@ -554,7 +554,7 @@ class TestFrame(wx.Frame):
         self.Layout()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
-    def OnClose(self, evt):  ###
+    def OnClose(self, evt):
         for panel in self.panels:
             if panel._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
                 panel._panel_feedback._syringe_timer.stop_feedback_injections()
