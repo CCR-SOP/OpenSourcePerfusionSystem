@@ -5,7 +5,6 @@ General code for initiating syringe injections based on a specific system parame
 """
 from threading import Thread, Event, Timer
 import logging
-import time
 
 class SyringeTimer:
     def __init__(self, name, sensor, syringe, feedback_injection_button):
