@@ -138,7 +138,7 @@ class SyringeTimer:
             elif not self.reduce:
                 self.in_range()
             if self.name == 'Insulin':
-                self.insulin_change, self.insulin_rate_intervention = self.check_for_basal_insulin_change(value)
+                self.insulin_change, self.insulin_rate_intervention = self.check_for_basal_insulin_change(value)  ###
         elif self.name in ['Glucagon', 'Epoprostenol']:
             if value < (self.threshold_value - self.tolerance) and not self.reduce:
                 self.out_of_range(value)
@@ -197,15 +197,21 @@ class SyringeTimer:
             new_glucose = 'Below Range'
         else:
             new_glucose = 'In Range'
+        print(new_glucose)
         if self.old_glucose and self.old_glucose == new_glucose:
+            print('no change in insulin needed')
+            self.old_glucose = new_glucose
             return False, None  # Check to make sure that this doesn't go @ first
         else:
             self.old_glucose = new_glucose
             if self.old_glucose == 'Above Range':
+                print('insulin, above range')
                 return True, self.insulin_basal_infusion_rate_above_range
             elif self.old_glucose == 'Below Range':
+                print('insulin, below range')
                 return True, 0
             elif self.old_glucose == 'In Range':
+                print('insulin, in range')
                 return True, self.insulin_basal_infusion_rate_in_range
 
     def injection(self, syringe, name, parameter_name, parameter, intervention_ul, direction, insulin_change, insulin_rate_intervention):
@@ -217,7 +223,6 @@ class SyringeTimer:
             syringe.set_infusion_rate(25, 'ml/min')
             syringe.infuse(intervention_ul, 25, False, True)
             self.wait = True
-            time.sleep(60 * intervention_ul / 25000)
             while self.wait:
                 response = float(self.syringe.get_infused_volume().split(' ')[0])
                 unit = self.syringe.get_infused_volume().split(' ')[1]
@@ -225,7 +230,7 @@ class SyringeTimer:
                     response = response * 1000
                 if response >= intervention_ul:
                     self.wait = False
-            syringe.reset_target_volume()
+            syringe.ResetSyringe()
             if self.increase:
                 syringe.cooldown = True
             self.feedback_injection_button.Enable(True)
@@ -256,7 +261,6 @@ class SyringeTimer:
                 syringe.set_infusion_rate(25, 'ml/min')
                 syringe.infuse(intervention_ul, 25, False, True)
                 self.wait = True
-                time.sleep(60 * intervention_ul / 25000)
                 while self.wait:
                     response = float(self.syringe.get_infused_volume().split(' ')[0])
                     unit = self.syringe.get_infused_volume().split(' ')[1]
@@ -264,7 +268,7 @@ class SyringeTimer:
                         response = response * 1000
                     if response >= intervention_ul:
                         self.wait = False
-                syringe.reset_target_volume()
+                syringe.ResetSyringe()
                 rate = infuse_rate
                 if ml_min_rate:
                     unit = 'ml/min'
