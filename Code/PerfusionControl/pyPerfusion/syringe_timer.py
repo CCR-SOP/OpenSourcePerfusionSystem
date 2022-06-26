@@ -29,6 +29,7 @@ class SyringeTimer:
         self.increase = None
         self.direction = None
         self.old_value = None
+        self.old_time = None
 
         self.wait = None
 
@@ -116,12 +117,18 @@ class SyringeTimer:
         self.direction = None
         self.insulin_change = False
         if self.name in ['Insulin', 'Glucagon']:
-            t, value = float(self.sensor.get_latest())  # Check what value could be from Dexcom sensor
-            print(value)
+            t, value = self.sensor.get_latest()  # Check what value could be from Dexcom sensor
+            if not t or t == self.old_time or not value:
+                self._logger.error(f'Dexcom Sensor is currently inactive; no change in {self.name} infusion rate')
+                self.old_time = t
+                return
+            else:
+                value = float(value)
+                print(value)
+                self.old_time = t
         elif self.name in ['Epoprostenol', 'Phenylephrine']:
             t, value = self.sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
             value = float(value)
-            print(value)
         else:
             self._logger.error('Perfusion-condition informed syringe injections are not supported for this syringe')
             return
