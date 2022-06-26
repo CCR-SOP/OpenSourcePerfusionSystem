@@ -92,8 +92,13 @@ class SyringeTimer:
             self._logger.info(f'{self.sensor.name} reads {value:.2f}; a change in {self.name} infusion rate is needed, but is currently frozen')
         else:
             self.increase = True
-            self.direction = 'high'
             self.old_value = new_value
+            if self.name in ['Insulin', 'Phenylephrine']:
+                self.direction = 'high'
+            elif self.name in ['Glucagon', 'Epoprostenol']:
+                self.direction = 'low'
+            else:
+                self.direction = None
 
     def in_range(self):
         new_value = 'Intervention Not Required'
