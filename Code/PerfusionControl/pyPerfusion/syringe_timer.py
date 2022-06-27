@@ -41,7 +41,8 @@ class SyringeTimer:
             self.insulin_basal_infusion_rate_above_range = None
             self.insulin_basal_infusion_rate_in_range = None
             self.insulin_lower_glucose_limit = None
-            self.old_glucose = None
+
+        self.old_glucose = None
 
         self.__thread_feedback = None
         self.__evt_halt_feedback = Event()
