@@ -66,6 +66,8 @@ class SyringeTimer:
             self.__thread_cooldown.join(2.0)
             self.__thread_cooldown = None
             self.syringe.cooldown = False
+        if self.old_glucose:
+            self.old_glucose = None
         return self.intervention
 
     def OnFeedbackLoop(self):
@@ -85,7 +87,6 @@ class SyringeTimer:
     def out_of_range(self, value):
         new_value = 'Intervention Required'
         if self.reduction_timer:
-            print('cancelling reduction timer')
             self.reduction_timer.cancel()
             self.reduction_timer = None
         if self.syringe.cooldown:
@@ -109,11 +110,9 @@ class SyringeTimer:
         if not self.syringe.cooldown:
             if new_value == self.old_value or not self.old_value:  # If an injection hasn't just been given, and if the flow is steadily in range, start / continue thread looking to reduce flow
                 if not self.reduction_timer:
-                    print('starting reduction timer')
                     self.reduction_timer = Timer(self.reduction_time, self.OnReductionTimer)
                     self.reduction_timer.start()
                 else:
-                    print('continuing reduction timer')
                     pass
         self.old_value = new_value
 
@@ -138,7 +137,6 @@ class SyringeTimer:
                 return
             else:
                 value = float(value)
-                print(value)
                 self.old_time = t
         elif self.name in ['Epoprostenol', 'Phenylephrine']:
             t, value = self.sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
@@ -152,7 +150,7 @@ class SyringeTimer:
             elif not self.reduce:
                 self.in_range()
             if self.name == 'Insulin':
-                self.insulin_change, self.insulin_rate_intervention = self.check_for_basal_insulin_change(value)  ###
+                self.insulin_change, self.insulin_rate_intervention = self.check_for_basal_insulin_change(value)
         elif self.name in ['Glucagon', 'Epoprostenol']:
             if value < (self.threshold_value - self.tolerance) and not self.reduce:
                 self.out_of_range(value)
@@ -205,9 +203,12 @@ class SyringeTimer:
                             return
                         elif self.name in ['Glucagon', 'Insulin']:
                             self._logger.info(f'Cannot further decrease {self.name} bolus')
-                if self.name in ['Insulin', 'Glucagon'] and not self.insulin_change and not self.increase:  # Check this for insulin
+                if self.name in ['Insulin', 'Glucagon'] and not self.increase:
                     self._logger.info(f'Glucose is stable and in range; future boluses of {self.name} will be at {self.intervention}')
-                    return
+                    if not self.insulin_change:
+                        return
+                    else:
+                        pass
             self.injection(self.syringe, self.name, self.sensor.name, value, self.intervention, self.direction, self.insulin_change, self.insulin_rate_intervention)  # Check this
             if self.increase:
                 self.__evt_halt_cooldown.clear()
@@ -223,21 +224,16 @@ class SyringeTimer:
             new_glucose = 'Below Range'
         else:
             new_glucose = 'In Range'
-        print(new_glucose)
         if self.old_glucose and self.old_glucose == new_glucose:
-            print('no change in insulin needed')
             self.old_glucose = new_glucose
-            return False, None  # Check to make sure that this doesn't go @ first
+            return False, None
         else:
             self.old_glucose = new_glucose
             if self.old_glucose == 'Above Range':
-                print('insulin, above range')
                 return True, self.insulin_basal_infusion_rate_above_range
             elif self.old_glucose == 'Below Range':
-                print('insulin, below range')
                 return True, 0
             elif self.old_glucose == 'In Range':
-                print('insulin, in range')
                 return True, self.insulin_basal_infusion_rate_in_range
 
     def injection(self, syringe, name, parameter_name, parameter, intervention_ul, direction, insulin_change, insulin_rate_intervention):
