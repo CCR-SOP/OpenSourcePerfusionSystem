@@ -183,7 +183,7 @@ class PanelDexcom(wx.Panel):
         state = self.btn_start.GetLabel()
         if state == 'Start Acquisition':
             self.sensor.start_stream()
-            self.timer_update_plot.Start(2000, wx.TIMER_CONTINUOUS)  # Want to try to update plots every 60 seconds
+            self.timer_update_plot.Start(10000, wx.TIMER_CONTINUOUS)  # Want to try to update plots every 10 seconds
             self.btn_start.SetLabel('Stop Acquisition')
         elif state == 'Stop Acquisition':
             self.sensor.stop_stream()
