@@ -239,7 +239,7 @@ class TestFrame(wx.Frame):
         glucagon_injection.open_stream(LP_CFG.LP_PATH['stream'])
         glucagon_injection.start_stream()
 
-        self.sensor = panel_IVC.sensor  # Glucose measurements which inform syringe injections are from the IVC; this is the panel being referenced here
+        self.sensor = panel_PV.sensor  # Glucose measurements which inform syringe injections are from the PV; this is the panel being referenced here
         self.syringes = [insulin_injection, glucagon_injection]
 
         syringe_sizer = wx.GridSizer(cols=2)
