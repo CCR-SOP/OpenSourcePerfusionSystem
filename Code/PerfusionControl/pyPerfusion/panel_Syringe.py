@@ -125,7 +125,7 @@ class PanelSyringe(wx.Panel):
             unit = self._injection.get_infused_volume().split(' ')[1]
             if 'ml' in unit:
                 response = response * 1000
-            if response >= volume_ul:
+            if response >= (volume_ul - 1):
                 break
         self.enable_buttons(True)
         self.btn_start_basal.Enable(True)
@@ -467,7 +467,7 @@ class PanelFeedbackSyringe(wx.Panel):
                 self._injection.set_infusion_rate(rate, 'ul/min')
                 infuse_rate, ml_min_rate, ml_volume = self._injection.get_stream_info()
                 self._injection.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
-            elif self._injection.name == 'Insulin':  ###
+            elif self._injection.name == 'Insulin': ###
                 self._syringe_timer.insulin_upper_glucose_limit = self.spin_upper_glucose_limit.GetValue()
                 self._syringe_timer.insulin_basal_rate_tolerance = self.spin_basal_rate_tolerance.GetValue()
                 self._syringe_timer.insulin_basal_infusion_rate_above_range = self.spin_basal_infusion_rate_above_range.GetValue()
@@ -517,15 +517,6 @@ class TestFrame(wx.Frame):
         self.sensor.add_strategy(raw)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name, 'StreamRaw'), 1, wx.ALL | wx.EXPAND, border=1)
 
-        section = LP_CFG.get_hwcfg_section('Heparin')
-        com = section['commport']
-        baud = section['baudrate']
-        heparin_injection = PHDserial('Heparin')
-        heparin_injection.open(com, baud)
-        heparin_injection.ResetSyringe()
-        heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
-        heparin_injection.start_stream()
-
         section = LP_CFG.get_hwcfg_section('Epoprostenol')
         com = section['commport']
         baud = section['baudrate']
@@ -544,8 +535,8 @@ class TestFrame(wx.Frame):
         vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasoconstrictor_injection.start_stream()
 
-        self._syringes = [vasoconstrictor_injection, heparin_injection, vasodilator_injection, vasoconstrictor_injection]
-        self.panels = [PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection), PanelSyringe(self, None, heparin_injection.name, heparin_injection), PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]
+        self._syringes = [vasodilator_injection, vasoconstrictor_injection]
+        self.panels = [PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]
         for panel in self.panels:
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
