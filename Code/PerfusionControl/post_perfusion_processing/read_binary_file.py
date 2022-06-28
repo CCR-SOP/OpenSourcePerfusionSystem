@@ -2,8 +2,10 @@ import os
 from pathlib import Path
 from matplotlib import pyplot as plt
 import numpy as np
+from pyHardware.PHDserial import PHDserial
 from pyHardware.pySaturationMonitor import TSMSerial
 from pyHardware.pyGB100 import GB100
+from pyHardware.pyDexcom import DexcomSensor
 from pyHardware.pyDialysatePumps import DialysatePumps
 
 class ReadBinaryData:
@@ -29,7 +31,72 @@ class ReadBinaryData:
         return data
 
     def read_syringe_data(self):  # Data Version 3
-        pass
+        x = PHDserial('PHDserial')
+        x._full_path = self.path
+        x._filename = self.filename
+        timestamp_matrix, data_matrix = x.get_data()
+        syringe_datapoints = []
+        time_datapoints = []
+        for value in range(len(timestamp_matrix)):
+            if data_matrix[value][0] > 0:
+                if value - 1 < 0:
+                    syringe_datapoints.append(0)
+                    time_datapoints.append(timestamp_matrix[value])
+                else:
+                    if data_matrix[value-1][0] > 0:
+                        syringe_datapoints.append(0)
+                        time_datapoints.append(timestamp_matrix[value])
+                    elif data_matrix[value-1][0] == -2:
+                        syringe_datapoints.append(data_matrix[value-1][1])
+                        time_datapoints.append(timestamp_matrix[value])
+                    elif data_matrix[value-1][0] == -1:
+                        syringe_datapoints.append(0)
+                        time_datapoints.append(timestamp_matrix[value])
+                syringe_datapoints.append(data_matrix[value][1])
+                time_datapoints.append(timestamp_matrix[value])
+                bolus_infusion_time_minutes = data_matrix[value][0] / data_matrix[value][1]
+                bolus_infusion_time_ms = bolus_infusion_time_minutes * 60 * 1000
+                syringe_datapoints.append(data_matrix[value][1])
+                time_datapoints.append(timestamp_matrix[value] + bolus_infusion_time_ms)
+                syringe_datapoints.append(0)
+                time_datapoints.append(timestamp_matrix[value] + bolus_infusion_time_ms)
+            elif data_matrix[value][0] == -2:
+                if value - 1 < 0:
+                    syringe_datapoints.append(0)
+                    time_datapoints.append(timestamp_matrix[value])
+                else:
+                    if data_matrix[value-1][0] > 0:
+                        syringe_datapoints.append(0)
+                        time_datapoints.append(timestamp_matrix[value])
+                    elif data_matrix[value-1][0] == -2:
+                        syringe_datapoints.append(data_matrix[value-1][1])
+                        time_datapoints.append(timestamp_matrix[value])
+                    elif data_matrix[value-1][0] == -1:
+                        syringe_datapoints.append(0)
+                        time_datapoints.append(timestamp_matrix[value])
+                syringe_datapoints.append(data_matrix[value][1])
+                time_datapoints.append(timestamp_matrix[value])
+            elif data_matrix[value][0] == -1:
+                if value - 1 < 0:
+                    pass
+                else:
+                    if data_matrix[value-1][0] > 0:
+                        pass
+                    elif data_matrix[value-1][0] == -2:
+                        syringe_datapoints.append(data_matrix[value-1][1])
+                        time_datapoints.append(timestamp_matrix[value])
+                    elif data_matrix[value-1][0] == -1:
+                        pass
+                syringe_datapoints.append(0)
+                time_datapoints.append(timestamp_matrix[value])
+        plt.figure()
+        plt.scatter(time_datapoints, syringe_datapoints)
+        plt.plot(time_datapoints, syringe_datapoints)
+        plt.legend(['Infusion Rate'])
+        plt.title('Infusion Rate')
+        plt.xlabel('Time (ms)')
+        plt.ylabel('Infusion Rate (ul/min)')
+        return timestamp_matrix, data_matrix
 
     def read_cdi_data(self):  # Data Version 4
         x = TSMSerial('CDI')
@@ -215,7 +282,17 @@ class ReadBinaryData:
         return timestamp_matrix, data_matrix
 
     def read_dexcom_data(self):  # Data Version 6
-        pass
+        x = DexcomSensor('DexcomSensor', 'Unit', 'Receiver')
+        x._full_path = self.path
+        x._filename = self.filename
+        timestamp_matrix, glucose_matrix = x.get_data()
+        plt.figure()
+        plt.scatter(timestamp_matrix, glucose_matrix)
+        plt.legend(['Glucose'])
+        plt.title('Glucose')
+        plt.xlabel('Time (ms)')
+        plt.ylabel('Glucose (mg/dL)')
+        return timestamp_matrix, glucose_matrix
 
     def read_dialysis_flow_rate_data(self):  # Data Version 7
         x = DialysatePumps('Dialysate Pumps')

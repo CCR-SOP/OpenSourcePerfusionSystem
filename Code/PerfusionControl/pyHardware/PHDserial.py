@@ -31,7 +31,7 @@ class PHDserial(USBSerial):
         stop infusion of syringe
     record_infusion()
         record details of latest syringe infusion
-    stop_stream()
+    close_stream()
         stops recording of syringe data
     set_param(param, value)
         sets a syringe pump parameter (param) to (value)
@@ -93,7 +93,7 @@ class PHDserial(USBSerial):
         if not self._full_path.exists():
             self._full_path.mkdir(parents=True, exist_ok=True)
         self._timestamp = datetime.datetime.now()
-        self._timestamp_perf = perf_counter()
+        self._timestamp_perf = perf_counter() * 1000
         if self._fid_write:
             self._fid_write.close()
             self._fid_write = None
@@ -101,7 +101,6 @@ class PHDserial(USBSerial):
         self._open_write()
         self._write_to_file(np.array([0]), np.array([0]), np.array([0]))
         self._fid_write.seek(0)
-        # self._open_read()
 
         self.print_stream_info()
 
@@ -121,10 +120,10 @@ class PHDserial(USBSerial):
         stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         header = [f'File Format: {DATA_VERSION}',
                   f'Syringe: {self.name}',
-                  f'Volume Unit: ml',
-                  f'Rate Unit: ml/min',
+                  f'Volume Unit: ul',
+                  f'Rate Unit: ul/min',
                   f'Data Format: {str(np.dtype(np.float32))}',
-                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Infusion Volume and Infusion Rate)',
+                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Infusion Volume (uL) and Infusion Rate (uL/min))',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
@@ -150,25 +149,25 @@ class PHDserial(USBSerial):
     def infuse(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('irun\r')
         infusion_rate = float(infusion_rate)
-        if not ml_volume:
+        if ml_volume:
             if infusion_volume == -2:
                 pass
             else:
-                infusion_volume = infusion_volume / 1000
-        if not ml_min_rate:
-            infusion_rate = infusion_rate / 1000
+                infusion_volume = infusion_volume * 1000
+        if ml_min_rate:
+            infusion_rate = infusion_rate * 1000
         self.record_infusion(infusion_volume, infusion_rate)
 
     def stop(self, infusion_volume, infusion_rate, ml_volume, ml_min_rate):
         self.send('stop\r')
         infusion_rate = float(infusion_rate)
-        if not ml_volume:
+        if ml_volume:
             if infusion_volume == -1:
                 pass
             else:
-                infusion_volume = infusion_volume / 1000
-        if not ml_min_rate:
-            infusion_rate = infusion_rate / 1000
+                infusion_volume = infusion_volume * 1000
+        if ml_min_rate:
+            infusion_rate = infusion_rate * 1000
         self.record_infusion(infusion_volume, infusion_rate)
 
     def record_infusion(self, infusion_volume, infusion_rate):
@@ -187,14 +186,13 @@ class PHDserial(USBSerial):
         data_buf_vol.tofile(self._fid_write)
         data_buf_rate.tofile(self._fid_write)
 
-    def stop_stream(self):
+    def close_stream(self):
         if self._fid_write:
             self._fid_write.close()
         self._fid_write = None
 
-    def get_data(self, last_ms, samples_needed):
+    def get_data(self):
         _fid, tmp = self._open_read()
-        cur_time = int(perf_counter() * 1000)
         _fid.seek(0)
         chunk = [1]
         data_time = []
@@ -203,9 +201,9 @@ class PHDserial(USBSerial):
             chunk, ts = self.__read_chunk(_fid)
             if type(chunk) is list:
                 break
-            if chunk.any() and (cur_time - ts < last_ms or last_ms == 0):
+            if chunk.any():
                 data.append(chunk)
-                data_time.append(ts / 1000.0)
+                data_time.append(ts)
         _fid.close()
         return data_time, data
 
