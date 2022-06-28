@@ -65,7 +65,7 @@ class PanelSyringe(wx.Panel):
         sizer.AddSpacer(3)
         sizer.Add(self.btn_start_basal, flags)
         self.sizer.Add(sizer)
-        self.sizer.AddSpacer(20)
+        self.sizer.AddSpacer(10)
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.spin_1TB_volume, flags)
@@ -74,7 +74,7 @@ class PanelSyringe(wx.Panel):
         sizer.AddSpacer(3)
         sizer.Add(self.btn_start_1TB, flags)
         self.sizer.Add(sizer)
-        self.sizer.AddSpacer(20)
+        self.sizer.AddSpacer(10)
 
         sizer = wx.FlexGridSizer(cols=1)
         sizer.AddGrowableCol(0, 1)
