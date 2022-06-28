@@ -76,7 +76,8 @@ class PanelSyringe(wx.Panel):
         self.sizer.Add(sizer)
         self.sizer.AddSpacer(20)
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer = wx.FlexGridSizer(cols=1)
+        sizer.AddGrowableCol(0, 1)
         sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
         if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
             sizer.Add(self._panel_feedback, 1, wx.EXPAND | wx.ALL, border=5)
@@ -190,34 +191,34 @@ class PanelFeedbackSyringe(wx.Panel):
 
         self.label_threshold = wx.StaticText(self, label=label_intervention_description + self.feedback + ' ' + self.feedbackunit + ' is ' + self.direction)
         self.spin_threshold = wx.SpinCtrlDouble(self, min=0, max=1000, initial=float(self.threshold), inc=0.1)
-        self.btn_update_threshold = wx.Button(self, label='Update Threshold')
+        self.btn_update_threshold = wx.Button(self, label='Update')
 
         self.label_tolerance = wx.StaticText(self, label='Tolerance ' + self.feedbackunit)
         self.spin_tolerance = wx.SpinCtrlDouble(self, min=0, max=100, initial=float(self.tolerance), inc=0.1)
-        self.btn_update_tolerance = wx.Button(self, label='Update Tolerance')
+        self.btn_update_tolerance = wx.Button(self, label='Update')
 
         self.label_intervention = wx.StaticText(self, label='Initial ' + label_intervention)
         self.spin_intervention = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.intervention), inc=0.1)
 
         self.label_time_between_checks = wx.StaticText(self, label='Time Between Checks (s): ')
         self.spin_time_between_checks = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.timebetween), inc=1)
-        self.btn_update_time_between_checks = wx.Button(self, label='Update Time Between Checks')
+        self.btn_update_time_between_checks = wx.Button(self, label='Update')
 
         self.label_cooldown_time = wx.StaticText(self, label='Cooldown Time (s): ')
         self.spin_cooldown_time = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.cooldown), inc=1)
-        self.btn_update_cooldown_time = wx.Button(self, label='Update Cooldown Time')
+        self.btn_update_cooldown_time = wx.Button(self, label='Update')
 
         self.label_max = wx.StaticText(self, label='Max ' + label_intervention)
         self.spin_max = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.max), inc=0.1)
-        self.btn_update_max = wx.Button(self, label='Update Max' + label_intervention)
+        self.btn_update_max = wx.Button(self, label='Update')
 
         self.label_min = wx.StaticText(self, label='Minimum ' + label_intervention)
         self.spin_min = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.min), inc=0.1)
-        self.btn_update_min = wx.Button(self, label='Update Minimum ' + label_intervention)
+        self.btn_update_min = wx.Button(self, label='Update')
 
         self.label_incrementation = wx.StaticText(self, label='Incremental Change in ' + label_intervention)
         self.spin_incrementation = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.incrementation), inc=0.1)
-        self.btn_update_incrementation = wx.Button(self, label='Update Incremental Increase')
+        self.btn_update_incrementation = wx.Button(self, label='Update')
 
         self.label_reduction_time = wx.StaticText(self, label='Reduce Intervention when  ' + self.feedback + ' ' + self.feedbackunit + ' is in range for (s)')
         self.spin_reduction_time = wx.SpinCtrlDouble(self, min=0, max=10000, initial=float(self.reductiontime), inc=1)
@@ -510,7 +511,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=4)
+        sizer = wx.GridSizer(cols=3)
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
@@ -555,15 +556,31 @@ class TestFrame(wx.Frame):
         tpn_bilesalts_injection.start_stream()
 
         self._syringes = [vasodilator_injection, vasoconstrictor_injection, heparin_injection, tpn_bilesalts_injection]
-        self.feedback_panels = [PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection), PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)]
-        self.other_panels = [PanelSyringe(self, self.sensor, heparin_injection.name, heparin_injection), PanelSyringe(self, self.sensor, tpn_bilesalts_injection.name, tpn_bilesalts_injection)]
-        sizer_other_panels = wx.GridSizer(cols=1)
-        for panel in self.feedback_panels:
-            sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
-        for panel in self.other_panels:
-            sizer_other_panels.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(sizer_other_panels, 1, wx.ALL | wx.EXPAND, border=1)
+        self.feedback_panels = []
+        self.other_panels = []
+        self.panel_vasodilator = PanelSyringe(self, self.sensor, vasodilator_injection.name, vasodilator_injection)
+        self.feedback_panels.append(self.panel_vasodilator)
+        self.panel_vasoconstrictor = PanelSyringe(self, self.sensor, vasoconstrictor_injection.name, vasoconstrictor_injection)
+        self.feedback_panels.append(self.panel_vasoconstrictor)
+        self.panel_heparin = PanelSyringe(self, self.sensor, heparin_injection.name, heparin_injection)
+        self.other_panels.append(self.panel_heparin)
+        self.panel_tpn_bilesalts = PanelSyringe(self, self.sensor, tpn_bilesalts_injection.name, tpn_bilesalts_injection)
+        self.other_panels.append(self.panel_tpn_bilesalts)
+
+        sizer_first = wx.FlexGridSizer(cols=1)
+        sizer_first.AddGrowableRow(0, 1)
+        sizer_first.AddGrowableCol(0, 1)
+        sizer_first.Add(self.panel_vasodilator, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer_first.Add(self.panel_heparin, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer_second = wx.FlexGridSizer(cols=1)
+        sizer_second.AddGrowableRow(0, 1)
+        sizer_second.AddGrowableCol(0, 1)
+        sizer_second.Add(self.panel_vasoconstrictor, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer_second.Add(self.panel_tpn_bilesalts, 1, wx.ALL | wx.EXPAND, border=1)
+
+        sizer.Add(sizer_first, 1, wx.ALL | wx.EXPAND, border=1)
+        sizer.Add(sizer_second, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
