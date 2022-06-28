@@ -54,7 +54,7 @@ class DexcomReadout(wx.Panel):
 
         self.sizer.Add(self.label_name, wx.SizerFlags().CenterHorizontal())
         self.sizer_value.Add(self.label_value, wx.SizerFlags().CenterVertical())
-        self.sizer_value.AddSpacer(10)
+        self.sizer_value.AddSpacer(1)
         self.sizer_value.Add(self.label_units, wx.SizerFlags().CenterVertical())
         self.sizer.Add(self.sizer_value, wx.SizerFlags().CenterHorizontal())
 
@@ -218,8 +218,8 @@ class TestFrame(wx.Frame):
         panel_IVC = PanelDexcom(self, 'Receiver #2 - Inferior Vena Cava', 'mg/dL', [80, 120], self._lgr)
 
         dexcom_sizer = wx.GridSizer(cols=1)
-        dexcom_sizer.Add(panel_PV, 1, wx.EXPAND, border=2)
-        dexcom_sizer.Add(panel_IVC, 1, wx.EXPAND, border=2)
+        dexcom_sizer.Add(panel_PV, 1, wx.ALL | wx.EXPAND, border=1)
+        dexcom_sizer.Add(panel_IVC, 1, wx.ALL | wx.EXPAND, border=1)
 
         section = LP_CFG.get_hwcfg_section('Insulin')
         com = section['commport']
@@ -239,25 +239,60 @@ class TestFrame(wx.Frame):
         glucagon_injection.open_stream(LP_CFG.LP_PATH['stream'])
         glucagon_injection.start_stream()
 
+        section = LP_CFG.get_hwcfg_section('Heparin')
+        com = section['commport']
+        baud = section['baudrate']
+        heparin_injection = PHDserial('Heparin')
+        heparin_injection.open(com, baud)
+        heparin_injection.ResetSyringe()
+        heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        heparin_injection.start_stream()
+
+        section = LP_CFG.get_hwcfg_section('TPN & Bile Salts')
+        com = section['commport']
+        baud = section['baudrate']
+        tpn_bile_salts_injection = PHDserial('TPN & Bile Salts')
+        tpn_bile_salts_injection.open(com, baud)
+        tpn_bile_salts_injection.ResetSyringe()
+        tpn_bile_salts_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        tpn_bile_salts_injection.start_stream()
+
         self.sensor = panel_PV.sensor  # Glucose measurements which inform syringe injections are from the PV; this is the panel being referenced here
-        self.syringes = [insulin_injection, glucagon_injection]
+        self.syringes = [insulin_injection, glucagon_injection, heparin_injection, tpn_bile_salts_injection]
 
-        syringe_sizer = wx.GridSizer(cols=2)
-        self.panels = [PanelSyringe(self, self.sensor, insulin_injection.name, insulin_injection), PanelSyringe(self, self.sensor, glucagon_injection.name, glucagon_injection)]
-        for panel in self.panels:
-            syringe_sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+        syringe_sizer_first = wx.FlexGridSizer(cols=1)
+        syringe_sizer_first.AddGrowableRow(0, 3)
+        syringe_sizer_second = wx.FlexGridSizer(cols=1)
+        syringe_sizer_second.AddGrowableRow(0, 3)
+        self.panels = []
+        panel_insulin = PanelSyringe(self, self.sensor, insulin_injection.name, insulin_injection)
+        self.panels.append(panel_insulin)
+        panel_glucagon = PanelSyringe(self, self.sensor, glucagon_injection.name, glucagon_injection)
+        self.panels.append(panel_glucagon)
+        panel_heparin = PanelSyringe(self, self.sensor, heparin_injection.name, heparin_injection)
+        self.panels.append(panel_heparin)
+        panel_tpn_bilesalts = PanelSyringe(self, self.sensor, tpn_bile_salts_injection.name, tpn_bile_salts_injection)
+        self.panels.append(panel_tpn_bilesalts)
+        syringe_sizer_first.Add(panel_insulin, 1, wx.ALL | wx.EXPAND, border=1)
+        syringe_sizer_first.Add(panel_heparin, 1, wx.ALL | wx.EXPAND, border=1)
+        syringe_sizer_second.Add(panel_glucagon, 1, wx.ALL | wx.EXPAND, border=1)
+        syringe_sizer_second.Add(panel_tpn_bilesalts, 1, wx.ALL | wx.EXPAND, border=1)
 
-        sizer = wx.GridSizer(cols=2)
-        sizer.Add(dexcom_sizer, 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(syringe_sizer, 1, wx.ALL | wx.EXPAND, border=1)
-        self.SetSizer(sizer)
+        main_sizer = wx.GridSizer(wx.HORIZONTAL)  # For some reason, the panel looks fine initially, but once it is scaled to window size it looks funky; can't figure out a solution; for now, just don't scale to window when running this
+        main_sizer.Add(dexcom_sizer, 1, wx.ALL | wx.EXPAND, border=1)
+        secondary_sizer = wx.FlexGridSizer(cols=2)
+        secondary_sizer.Add(syringe_sizer_first, 1, wx.ALL | wx.EXPAND, border=1)
+        secondary_sizer.Add(syringe_sizer_second, 1, wx.ALL | wx.EXPAND, border=1)
+        main_sizer.Add(secondary_sizer, 1, wx.ALL | wx.EXPAND, border=1)
+        self.SetSizer(main_sizer)
         self.Fit()
         self.Layout()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         for panel in self.panels:
-            panel._panel_feedback._syringe_timer.stop_feedback_injections()
+            if panel._injection.name in ['Insulin', 'Glucagon']:
+                panel._panel_feedback._syringe_timer.stop_feedback_injections()
         for syringe in self.syringes:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
