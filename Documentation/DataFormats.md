@@ -56,6 +56,7 @@ The assumption is that infusion volume and infusion rate data are acquired at th
 For targeted infusions (i.e. those which stop after a certain volume of fluid has been delivered), InfusionVolume will be non-zero; for non-targeted (i.e. continuous) infusions, InfusionVolume will be '-2' or '-1'; for these continuous infusions, data will be recorded both when the infusion is started ('-2') and stopped ('-1')
 
 ## Version 4:
+Used for streaming data from CDI monitor
 Text-based header followed by a stream of timestamp/sample pairs in binary format
 Header Lines:
 File Format: 4
@@ -67,6 +68,7 @@ Bytes per Timestamp: {number of bytes used to store the timestamp}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format, and in "milliseconds from start" format}
 
 ## Version 5:
+Used for streaming GB100 gas mixer data
 Text-based header followed by a stream of timestamp/sample pairs in binary format
 The timestamp is stored as the number of milliseconds from the start of the acquisition
 Header Lines:
@@ -91,6 +93,7 @@ Bytes per Timestamp: {number of bytes used to store the timestamp}
 Start of Acquisition: {timestamp of acquisition in "YYYY-MM-DD_HH:SS" format and in milliseconds from start format}
 
 ## Version 7:
+Used for streaming data from automation of dialysate pumps
 Text-based header followed by a stream of timestamp/sample pairs in binary format
 The timestamp is stored as the number of milliseconds from the start of the acquisition
 Header Lines:

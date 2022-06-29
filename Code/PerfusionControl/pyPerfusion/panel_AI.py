@@ -287,7 +287,8 @@ class TestFrame(wx.Frame):
         self.raw2file = StreamToFile('StreamRMS', None, self.acq.buf_len)
         self.raw2file.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', self.sensor.params)
         self.sensor.add_strategy(self.raw2file)
-        self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRMS')
+        self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRMS')  # For RMS readings
+       # self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRaw')  # For Raw readings
 
         # self.panel = PanelAI_Config(self, self.sensor, 'test', 'test', None)
         # self.panel = PanelAICalibration(self, self.sensor)
