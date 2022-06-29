@@ -225,12 +225,7 @@ class PanelAO_Settings(wx.Panel):
     def OnUpdate(self, evt):
         volts = self.spin_pk2pk.GetValue()
         hz = self.spin_hz.GetValue()
-        if self._name == 'Perfusate Pump':
-            offset = self.spin_offset.GetValue() / 31
-        elif self._name == 'Dialysate Pump':
-            offset = self.spin_offset.GetValue() / 10
-        else:
-            offset = self.spin_offset.GetValue()
+        offset = self.spin_offset.GetValue()
         want_sine = self.check_sine.IsChecked()
 
         if want_sine:
