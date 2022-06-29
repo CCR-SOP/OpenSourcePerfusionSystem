@@ -746,6 +746,24 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        self.panel_GB100_CDI_Presens.timer_update_arterial_GB100.Stop()
+        self.panel_GB100_CDI_Presens.timer_update_venous_GB100.Stop()
+        self.panel_GB100_CDI_Presens.timer_update_CDI.Stop()
+        self.panel_GB100_CDI_Presens.timer_update_dialysis.Stop()
+        if self.arterial_mixer.get_working_status():
+            gas1_percentage = self.arterial_mixer.get_channel_percent_value(1)
+            gas2_percentage = self.arterial_mixer.get_channel_percent_value(2)
+            flow = self.arterial_mixer.get_mainboard_total_flow()
+            self.arterial_mixer.change_gas_mix(gas1_percentage,  gas2_percentage, flow, 0)
+        if self.venous_mixer.get_working_status():
+            gas1_percentage = self.venous_mixer.get_channel_percent_value(1)
+            gas2_percentage = self.venous_mixer.get_channel_percent_value(2)
+            flow = self.venous_mixer.get_mainboard_total_flow()
+            self.venous_mixer.change_gas_mix(gas1_percentage,  gas2_percentage, flow, 0)
+        self.arterial_mixer.stop_stream()
+        self.arterial_mixer.close_stream()
+        self.venous_mixer.stop_stream()
+        self.venous_mixer.close_stream()
         self.sensor.stop()
         self.sensor.close()
         if self.sensor.hw._task:
@@ -762,20 +780,7 @@ class TestFrame(wx.Frame):
         self.ao_streaming.close_stream()
         self.monitor.stop_stream()
         self.monitor.close_stream()
-        if self.arterial_mixer.get_working_status():
-            gas1_percentage = self.arterial_mixer.get_channel_percent_value(1)
-            gas2_percentage = self.arterial_mixer.get_channel_percent_value(2)
-            flow = self.arterial_mixer.get_mainboard_total_flow()
-            self.arterial_mixer.change_gas_mix(gas1_percentage,  gas2_percentage, flow, 0)
-        if self.venous_mixer.get_working_status():
-            gas1_percentage = self.venous_mixer.get_channel_percent_value(1)
-            gas2_percentage = self.venous_mixer.get_channel_percent_value(2)
-            flow = self.venous_mixer.get_mainboard_total_flow()
-            self.venous_mixer.change_gas_mix(gas1_percentage,  gas2_percentage, flow, 0)
-        self.arterial_mixer.stop_stream()
-        self.arterial_mixer.close_stream()
-        self.venous_mixer.stop_stream()
-        self.venous_mixer.close_stream()
+        self.Destroy()
         self.Destroy()
 
 class MyTestApp(wx.App):

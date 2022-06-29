@@ -347,6 +347,10 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        if self.portal_vein_flow_control:
+            self.portal_vein_flow_control.timer_adjust.Stop()
+        if self.hepatic_artery_pressure_control:
+            self.hepatic_artery_pressure_control.timer_adjust.Stop()
         for panel in self.panels:
             if not panel:
                 pass
@@ -359,13 +363,14 @@ class TestFrame(wx.Frame):
         for sensor in self.sensors:
             sensor.stop()
             sensor.close()
-            if sensor.hw._task:  # DOes this close all other functionality on this DAQ? Check; also check on gb100
+            if sensor.hw._task:
                 sensor.hw.stop()
                 sensor.hw.close()
         for pump in self.pumps:
             pump.set_dc(0)
             pump.close()
             pump.halt()
+        self.Destroy()
         self.Destroy()
 
 class MyTestApp(wx.App):
