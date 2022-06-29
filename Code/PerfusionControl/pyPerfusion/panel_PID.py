@@ -8,6 +8,7 @@ Author: John Kakareka
 """
 import wx
 
+import pyPerfusion.PerfusionConfig as LP_CFG
 from simple_pid import PID
 
 class PanelPID(wx.Panel):
@@ -106,5 +107,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
     app = MyTestApp(0)
     app.MainLoop()
