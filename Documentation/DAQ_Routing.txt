@@ -21,7 +21,6 @@ IVC      		Flow 			Dev1/AI5
 
 All			VCS			Dev2/PO.0,PO.1,PO.2,PO.3,PO.4,PO.5
 
-
 As of 2021-02-10
 Dev1 - NI USB-6009
 Dev2 - NI USB-6009
