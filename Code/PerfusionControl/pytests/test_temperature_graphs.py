@@ -17,57 +17,77 @@ import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 import pyPerfusion.utils as utils
+from pyPerfusion.panel_AI import PanelAI, DEV_LIST
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 #acq = AI(100)
-acq = NIDAQ_AI(period_ms=100, volts_p2p=0.3, volts_offset=0.15) #check these values - documentation just said sensitivity is 10 mV
-#going from range of 20C to 50C
-sensor = SensorStream('BAT-12 Temperature', 'deg C', acq, valid_range=[35, 38])
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-
+        sizer = wx.GridSizer(cols=2)
         LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
 
-        sensor.hw.add_channel(2)
-        sensor.set_ch_id(2)
-        sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
+        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=2, volts_offset=1)
+        # check these values - documentation just said sensitivity is 10 mV.
+        # Going from range of 20-50C, green should be 35-38C
+        self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
 
-        strategy = StreamToFile('Raw', 1, 10)
-        strategy.open(LP_CFG.LP_PATH['stream'], 'test', sensor.params)
-        sensor.add_strategy(strategy)
+        #self.sensor.hw.add_channel(0)
+        #self.sensor.set_ch_id(0)
+        #sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
 
-        rms = RMSStrategy('RMS', 10, acq.buf_len)
-        save_rms = StreamToFile('StreamRMS', None, acq.buf_len)
-        save_rms.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_rms', {**sensor.params, **rms.params})
-        sensor.add_strategy(rms)
-        sensor.add_strategy(save_rms)
-        self.panel = PanelPlotting(self)
-        self.panel.plot_frame_ms = 10_000
-        self.plotraw = SensorPlot(sensor, self.panel.axes, readout=True)
-        self.plotrms = SensorPlot(sensor, self.panel.axes, readout=True)
+        raw = StreamToFile('Raw', None, self.acq.buf_len)
+        raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        self.sensor.add_strategy(raw)
 
-        self.plotraw.set_strategy(sensor.get_file_strategy('Raw'), color='b')
-        self.plotrms.set_strategy(sensor.get_file_strategy('StreamRMS'), color='k')
+        dlg = wx.SingleChoiceDialog(self, 'Choose NI Device', 'Device', DEV_LIST)
+        if dlg.ShowModal() == wx.ID_OK:
+            dev = dlg.GetStringSelection()
+        dlg.Destroy()
+        #route around this to always select Dev2?
 
-        self.panel.add_plot(self.plotraw)
-        self.panel.add_plot(self.plotrms)
+        rms = RMSStrategy('RMS', 10, self.acq.buf_len)
+        save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
+        save_rms.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', {**self.sensor.params, **rms.params})
+        self.sensor.add_strategy(rms)
+        self.sensor.add_strategy(save_rms)
 
-        sensor.open()
+        self.panel = PanelAI(self, self.sensor, self.sensor.name, 'Raw')
+        section = LP_CFG.get_hwcfg_section(self.sensor.name)
+        #dev = section['Device']
+        #line = section['LineName']
+        #self.panel._panel_cfg.choice_dev.SetStringSelection(dev)
+        #self.panel._panel_cfg.choice_line.SetSelection(int(line))
+        sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, border=1)
+        self.panel.force_device(dev)
 
-        sensor.hw.open()
-        sensor.hw.start()
-        sensor.start()
+        #self.panel.plot_frame_ms = 10_000
+        #self.plotraw = SensorPlot(self.sensor, self.panel.axes, readout=True)
+        #self.plotrms = SensorPlot(self.sensor, self.panel.axes, readout=True)
 
+        #self.plotraw.set_strategy(self.sensor.get_file_strategy('Raw'), color='b')
+        #self.plotrms.set_strategy(self.sensor.get_file_strategy('StreamRMS'), color='k')
+
+        #self.panel.add_plot(self.plotraw)
+        #self.panel.add_plot(self.plotrms)
+        #self.sensor.open()
+
+        #self.sensor.hw.open()
+        #self.sensor.hw.start()
+        #self.sensor.start()
+
+        self.SetSizer(sizer)
+        self.Fit()
+        self.Layout()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor.stop()
+        self.sensor.stop()
         self.panel.Destroy()
         self.Destroy()
 
@@ -81,6 +101,6 @@ class MyTestApp(wx.App):
 
 app = MyTestApp(0)
 app.MainLoop()
-time.sleep(100)
-sensor.stop()
-acq.stop()
+#time.sleep(100)
+#sensor.stop()
+#acq.stop()
