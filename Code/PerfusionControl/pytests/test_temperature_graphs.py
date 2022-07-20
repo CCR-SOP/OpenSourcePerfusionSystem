@@ -26,35 +26,29 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=1)
+        sizer = wx.GridSizer(cols=2)
         LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
+        self._logger = logging.getLogger(__name__)
 
+        #Set device + channels and open
+        dev = 'Dev2'
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=2, volts_offset=1)
+        self.acq.open(dev)
+        self.acq.add_channel(0)
+        self.acq.start()
         # check these values - documentation just said sensitivity is 10 mV and I wasn't sure how to get this info
         # Want voltage calibration b/w 20-50C. Axes can be in this range. green should be 35-38C as our target temp
         self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
 
-        #what does this chunk do?
-        #self.sensor.hw.add_channel(0)
-        #self.sensor.set_ch_id(0)
+        self.sensor.hw.add_channel(0)
+        self.sensor.set_ch_id(0)
         #sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
 
         raw = StreamToFile('Raw', None, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
         #Biggest issue: we don't seem to be picking up the signal. Thermometer reads 20.8 C externally
-
-        dlg = wx.SingleChoiceDialog(self, 'Choose NI Device', 'Device', DEV_LIST)
-        if dlg.ShowModal() == wx.ID_OK:
-            dev = dlg.GetStringSelection()
-        dlg.Destroy()
-        #route around this to always select Dev2?
-        #copied the following from allen's code but it didn't work here
-        # dev = section['Device']
-        # line = section['LineName']
-        # self.panel._panel_cfg.choice_dev.SetStringSelection(dev)
-        # self.panel._panel_cfg.choice_line.SetSelection(int(line))
 
         rms = RMSStrategy('RMS', 10, self.acq.buf_len)
         save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
