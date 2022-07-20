@@ -34,18 +34,19 @@ class TestFrame(wx.Frame):
         #Set device + channels and open
         dev = 'Dev2'
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=2, volts_offset=1)
-        self.acq.open(dev)
-        self.acq.add_channel(0)
-        self.acq.start()
         # check these values - documentation just said sensitivity is 10 mV and I wasn't sure how to get this info
         # Want voltage calibration b/w 20-50C. Axes can be in this range. green should be 35-38C as our target temp
         self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
+
+        self.acq.open(dev)
+        self.acq.add_channel(0)
+        self.acq.start()
 
         self.sensor.hw.add_channel(0)
         self.sensor.set_ch_id(0)
         #sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
 
-        raw = StreamToFile('Raw', None, self.acq.buf_len)
+        raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
         #Biggest issue: we don't seem to be picking up the signal. Thermometer reads 20.8 C externally
@@ -56,7 +57,7 @@ class TestFrame(wx.Frame):
         self.sensor.add_strategy(rms)
         self.sensor.add_strategy(save_rms)
 
-        self.panel = PanelAI(self, self.sensor, self.sensor.name, 'Raw')
+        self.panel = PanelAI(self, self.sensor, self.sensor.name, strategy='StreamRaw')
         section = LP_CFG.get_hwcfg_section(self.sensor.name)
         sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, border=1)
         self.panel.force_device(dev)
