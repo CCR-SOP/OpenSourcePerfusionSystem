@@ -13,6 +13,7 @@ from pyPerfusion.plotting import SensorPlot, PanelPlotting
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
+from pyHardware.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
@@ -26,14 +27,13 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=2)
         LP_CFG.set_base(basepath='~/Documents/LPTEST')
         LP_CFG.update_stream_folder()
         self._logger = logging.getLogger(__name__)
 
         #Set device + channels and open
-        dev = 'Dev2'
-        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=2, volts_offset=1)
+        dev = 'Dev2' #how do we set line 0?
+        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         # check these values - documentation just said sensitivity is 10 mV and I wasn't sure how to get this info
         # Want voltage calibration b/w 20-50C. Axes can be in this range. green should be 35-38C as our target temp
         self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
@@ -49,7 +49,6 @@ class TestFrame(wx.Frame):
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
-        #Biggest issue: we don't seem to be picking up the signal. Thermometer reads 20.8 C externally
 
         rms = RMSStrategy('RMS', 10, self.acq.buf_len)
         save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
@@ -57,9 +56,27 @@ class TestFrame(wx.Frame):
         self.sensor.add_strategy(rms)
         self.sensor.add_strategy(save_rms)
 
-        self.panel = PanelAI(self, self.sensor, self.sensor.name, strategy='StreamRaw')
+        section = LP_CFG.get_hwcfg_section(self._pumpname)
+        self.dev = section['Device']
+        self.line = section['LineName']
+        self.desired = float(section['desired'])
+        self.tolerance = float(section['tolerance'])
+        self.increment = float(section['increment'])
+        try:
+            self.divisor = float(section['divisor'])
+        except KeyError:
+            self.divisor = None
+
+        calpt1_target = float(section['CalPt1_Target'])
+        calpt1_reading = section['CalPt1_Reading']
+        calpt2_target = float(section['CalPt2_Target'])
+        calpt2_reading = section['CalPt2_Reading']
+
+
+
+        self.panel = PanelAI(self, self.sensor, self.sensor.name, strategy='Converted')
         section = LP_CFG.get_hwcfg_section(self.sensor.name)
-        sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, border=1)
+        #sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, border=1)
         self.panel.force_device(dev)
 
         #This code is not in Panel_AI and is only in plotting
@@ -78,7 +95,7 @@ class TestFrame(wx.Frame):
         #self.sensor.hw.start()
         #self.sensor.start()
 
-        self.SetSizer(sizer)
+        #self.SetSizer(sizer)
         self.Fit()
         self.Layout()
         self.Bind(wx.EVT_CLOSE, self.OnClose)
