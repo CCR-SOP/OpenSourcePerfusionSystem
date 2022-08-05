@@ -9,9 +9,9 @@ import wx
 import time
 import logging
 
-from pyPerfusion.plotting import SensorPlot, PanelPlotting
+# from pyPerfusion.plotting import SensorPlot, PanelPlotting
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
-from pyHardware.pyAI import AI
+# from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
@@ -31,9 +31,11 @@ class TestFrame(wx.Frame):
         LP_CFG.update_stream_folder()
         self._logger = logging.getLogger(__name__)
 
-        #Set device + channels and open
+        # Set device + channels and open
         dev = DEV_LIST[1]
+        self._logger.info(f'{dev}')
         line = LINE_LIST[0]
+        self._logger.info(f'{line}')
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         # check these values - documentation just said sensitivity is 10 mV and I wasn't sure how to get this info
         # Want voltage calibration b/w 0-50C. Axes can be in this range. green should be 35-38C as our target temp
@@ -45,7 +47,7 @@ class TestFrame(wx.Frame):
 
         self.sensor.hw.add_channel(0)
         self.sensor.set_ch_id(0)
-        #sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
+        # sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
 
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
@@ -62,17 +64,17 @@ class TestFrame(wx.Frame):
         sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, border=1)
         self.panel.force_device(dev)
 
-        #This code is not in Panel_AI and is only in plotting
-        #self.panel.plot_frame_ms = 10_000
-        #self.plotraw = SensorPlot(self.sensor, self.panel.axes, readout=True)
-        #self.plotrms = SensorPlot(self.sensor, self.panel.axes, readout=True)
+        # This code is not in Panel_AI and is only in plotting
+        # self.panel.plot_frame_ms = 10_000
+        # self.plotraw = SensorPlot(self.sensor, self.panel.axes, readout=True)
+        # self.plotrms = SensorPlot(self.sensor, self.panel.axes, readout=True)
 
-        #self.plotraw.set_strategy(self.sensor.get_file_strategy('Raw'), color='b')
-        #self.plotrms.set_strategy(self.sensor.get_file_strategy('StreamRMS'), color='k')
+        # self.plotraw.set_strategy(self.sensor.get_file_strategy('Raw'), color='b')
+        # self.plotrms.set_strategy(self.sensor.get_file_strategy('StreamRMS'), color='k')
 
-        #self.panel.add_plot(self.plotraw)
-        #self.panel.add_plot(self.plotrms)
-        #self.sensor.open()
+        # self.panel.add_plot(self.plotraw)
+        # self.panel.add_plot(self.plotrms)
+        # self.sensor.open()
 
         self.sensor.hw.open()
         self.sensor.hw.start()
@@ -87,6 +89,8 @@ class TestFrame(wx.Frame):
         self.sensor.stop()
         self.panel.Destroy()
         self.Destroy()
+        self.acq.stop()
+        time.sleep(100)
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -95,9 +99,6 @@ class MyTestApp(wx.App):
         frame.Show()
         return True
 
-
 app = MyTestApp(0)
 app.MainLoop()
-#time.sleep(100)
-sensor.stop()
-acq.stop()
+
