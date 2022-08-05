@@ -19,7 +19,7 @@ from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 import pyPerfusion.utils as utils
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
-from pyPerfusion.panel_AI import PanelAI_Config
+from pyPerfusion.panel_AI import PanelAI_Config, DEV_LIST, LINE_LIST
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
@@ -37,6 +37,8 @@ class TestFrame(wx.Frame):
 
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
+        dev = DEV_LIST[1]
+        line = LINE_LIST[0]
 
         self.sensor.hw.add_channel(0)
         self.sensor.set_ch_id(0)
