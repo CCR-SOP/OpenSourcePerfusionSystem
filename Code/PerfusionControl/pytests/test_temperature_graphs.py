@@ -45,8 +45,8 @@ class TestFrame(wx.Frame):
         self.acq.add_channel(line)
         self.acq.start()
 
-        self.sensor.hw.add_channel(0)
-        self.sensor.set_ch_id(0)
+        self.sensor.hw.add_channel('0')
+        self.sensor.set_ch_id('0')
         # sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
 
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
@@ -76,9 +76,9 @@ class TestFrame(wx.Frame):
         # self.panel.add_plot(self.plotrms)
         # self.sensor.open()
 
-        self.sensor.hw.open()
+        self.sensor.hw.open('Dev2')
         self.sensor.hw.start()
-        self.sensor.start()
+        self.sensor.open()
 
         self.SetSizer(sizer)
         self.Fit()
