@@ -42,8 +42,6 @@ class TestFrame(wx.Frame):
         self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
 
         self.acq.open(dev)
-        self.acq.add_channel(line)
-        self.acq.start()
 
         self.sensor.hw.add_channel('0')
         self.sensor.set_ch_id('0')
@@ -76,7 +74,6 @@ class TestFrame(wx.Frame):
         # self.panel.add_plot(self.plotrms)
         # self.sensor.open()
 
-        self.sensor.hw.open('Dev2')
         self.sensor.hw.start()
         self.sensor.open()
 
