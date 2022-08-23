@@ -44,7 +44,7 @@ class TestFrame(wx.Frame):
         self.acq.open(dev)
         self.sensor.hw.add_channel('0')
         self.sensor.set_ch_id('0')
-        # Somehow Allen doesn't have these?
+        # Somehow Allen doesn't have these? --> must be because his buttons allow for opening. Ask John. Window is closing now
 
         # Raw streaming + RMS strategy
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
@@ -53,7 +53,7 @@ class TestFrame(wx.Frame):
         rms = RMSStrategy('RMS', 50, self.acq.buf_len)
         save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
         save_rms.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', {**self.sensor.params, **rms.params})
-        self.sensor.add_strategy(rms)
+        self.sensor.add_strategy(rms) # not plotted - need to add this functionality in panel AI
         self.sensor.add_strategy(save_rms)
 
         #Calibration functionality
@@ -94,6 +94,7 @@ class MyTestApp(wx.App):
         frame = TestFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
+        #print('\a') this works as an alarm but very simple and obviously we need some kind of loop
         return True
 
 app = MyTestApp(0)
