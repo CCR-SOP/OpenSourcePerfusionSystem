@@ -31,19 +31,16 @@ class TestFrame(wx.Frame):
         LP_CFG.update_stream_folder()
         self._logger = logging.getLogger(__name__)
 
-        # Set device + channel and print
-        dev = DEV_LIST[1]
-        self._logger.info(f'{dev}')
-        line = LINE_LIST[0]
-        self._logger.info(f'{line}')
-        # Not in Allen code
-
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
         # check these values - documentation just said sensitivity is 10 mV and I wasn't sure how to get this info
         # Want voltage calibration b/w 0-50C. Axes can be in this range. green should be 35-38C as our target temp
 
         # Open device and channel
+        section = LP_CFG.get_hwcfg_section(self.sensor.name)
+        dev = DEV_LIST[1]
+        line = LINE_LIST[0]
+
         self.acq.open(dev)
         self.sensor.hw.add_channel('0')
         self.sensor.set_ch_id('0')
@@ -59,10 +56,22 @@ class TestFrame(wx.Frame):
         self.sensor.add_strategy(rms)
         self.sensor.add_strategy(save_rms)
 
-        self.panel = PanelAI(self, self.sensor, self.sensor.name, strategy='StreamRaw')
-        section = LP_CFG.get_hwcfg_section(self.sensor.name)
-        sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, border=1)
-        self.panel.force_device(dev)
+        #Calibration functionality
+        panel = PanelAI(self, self.sensor, name=self.sensor.name, strategy='StreamRaw')
+        calpt1_target = float(section['CalPt1_Target'])
+        calpt1_reading = section['CalPt1_Reading']
+        calpt2_target = float(section['CalPt2_Target'])
+        calpt2_reading = section['CalPt2_Reading']
+        panel._panel_cfg.choice_dev.SetStringSelection(dev)
+        panel._panel_cfg.choice_line.SetSelection(int(line))
+        panel._panel_cfg.choice_dev.Enable(False)
+        panel._panel_cfg.choice_line.Enable(False)
+        panel._panel_cfg.panel_cal.spin_cal_pt1.SetValue(calpt1_target)
+        panel._panel_cfg.panel_cal.label_cal_pt1_val.SetLabel(calpt1_reading)
+        panel._panel_cfg.panel_cal.spin_cal_pt2.SetValue(calpt2_target)
+        panel._panel_cfg.panel_cal.label_cal_pt2_val.SetLabel(calpt2_reading)
+        sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+        panel.force_device(dev)
 
         self.sensor.hw.start()
         self.sensor.open()
@@ -74,10 +83,11 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.sensor.stop()
-        self.panel.Destroy()
+        self.sensor.close()
+        if self.sensor.hw._task:
+            self.sensor.hw.stop()
+            self.sensor.hw.close()
         self.Destroy()
-        self.acq.stop()
-        time.sleep(100)
 
 class MyTestApp(wx.App):
     def OnInit(self):
