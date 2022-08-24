@@ -46,13 +46,17 @@ class TestFrame(wx.Frame):
         self.sensor.set_ch_id('0')
         # Somehow Allen doesn't have these? --> must be because his buttons allow for opening. Ask John. Window is closing now
 
-        # Raw streaming (RMS strategy removed)
+        # Raw streaming and RMS strategy
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
+        rms = RMSStrategy('RMS', 50, self.acq.buf_len)
+        save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
+        save_rms.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', self.sensor.params)
+        self.sensor.add_strategy(rms)
+        self.sensor.add_strategy(save_rms)
 
-
-        #Calibration functionality
+        # Calibration functionality
         panel = PanelAI(self, self.sensor, name=self.sensor.name, strategy='StreamRaw')
         calpt1_target = float(section['CalPt1_Target'])
         calpt1_reading = section['CalPt1_Reading']
