@@ -24,7 +24,7 @@ import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
 
-dev = 'Dev2'
+dev = 'Dev1'
 
 logger = logging.getLogger()
 LP_CFG.set_base(basepath='~/Documents/LPTEST')

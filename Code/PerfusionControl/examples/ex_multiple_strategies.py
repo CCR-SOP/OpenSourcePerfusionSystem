@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test SensorStream with multiple strategies
+"""Demonstrate SensorStream with multiple strategies
 
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH
