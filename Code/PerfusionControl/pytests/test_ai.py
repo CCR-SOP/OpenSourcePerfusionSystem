@@ -56,6 +56,7 @@ if data is None:
     logger.debug('no data from channel 0')
 else:
     logger.debug(f'Received {len(data)} samples')
+    logger.debug(f'{data}')
 logger.debug('Stopping AI')
 ai.stop()
 logger.debug('Closing AI')
