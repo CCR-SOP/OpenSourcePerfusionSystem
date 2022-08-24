@@ -31,7 +31,7 @@ class TestFrame(wx.Frame):
         LP_CFG.update_stream_folder()
         self._logger = logging.getLogger(__name__)
 
-        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
+        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=1, volts_offset=0.5)
         self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
         # check these values - documentation just said sensitivity is 10 mV and I wasn't sure how to get this info
         # Want voltage calibration b/w 0-50C. Axes can be in this range. green should be 35-38C as our target temp
@@ -46,15 +46,11 @@ class TestFrame(wx.Frame):
         self.sensor.set_ch_id('0')
         # Somehow Allen doesn't have these? --> must be because his buttons allow for opening. Ask John. Window is closing now
 
-        # Raw streaming + RMS strategy
+        # Raw streaming (RMS strategy removed)
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
         raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
-        rms = RMSStrategy('RMS', 50, self.acq.buf_len)
-        save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
-        save_rms.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', {**self.sensor.params, **rms.params})
-        self.sensor.add_strategy(rms) # not plotted - need to add this functionality in panel AI
-        self.sensor.add_strategy(save_rms)
+
 
         #Calibration functionality
         panel = PanelAI(self, self.sensor, name=self.sensor.name, strategy='StreamRaw')
