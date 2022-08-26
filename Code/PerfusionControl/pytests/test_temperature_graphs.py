@@ -38,8 +38,8 @@ class TestFrame(wx.Frame):
 
         # Open device and channel
         section = LP_CFG.get_hwcfg_section(self.sensor.name)
-        # dev = DEV_LIST[0]
-        # line = LINE_LIST[0]
+        dev = DEV_LIST[0]
+        line = LINE_LIST[0]
 
         # Raw streaming and RMS strategy
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
@@ -59,14 +59,14 @@ class TestFrame(wx.Frame):
         calpt2_reading = section['CalPt2_Reading']
         panel._panel_cfg.choice_dev.SetStringSelection(dev)
         panel._panel_cfg.choice_line.SetSelection(int(line))
-        panel._panel_cfg.choice_dev.Enable(False)
-        panel._panel_cfg.choice_line.Enable(False)
+        panel._panel_cfg.choice_dev.Enable(True)
+        panel._panel_cfg.choice_line.Enable(True)
         panel._panel_cfg.panel_cal.spin_cal_pt1.SetValue(calpt1_target)
         panel._panel_cfg.panel_cal.label_cal_pt1_val.SetLabel(calpt1_reading)
         panel._panel_cfg.panel_cal.spin_cal_pt2.SetValue(calpt2_target)
         panel._panel_cfg.panel_cal.label_cal_pt2_val.SetLabel(calpt2_reading)
         sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-        panel.force_device(dev)
+        # panel.force_device(dev)
 
         self.sensor.hw.start()
         self.sensor.open()
