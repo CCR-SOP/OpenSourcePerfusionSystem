@@ -9,6 +9,7 @@ Author: John Kakareka
 """
 import pytest
 import os
+from time import sleep
 
 import pyHardware.pyAI_NIDAQ as pyAI
 from pyHardware.pyAI import AIDeviceException
@@ -96,6 +97,22 @@ def test_isopen_remove(ai):
     assert not ai.is_open()
 
 
+def test_getids(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
+    ai.add_channel('1')
+    assert ai.get_ids() == ['1']
+    ai.add_channel('3')
+    assert ai.get_ids() == ['1', '3']
+
+
+def test_remove_channel(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
+    ai.add_channel('1')
+    ai.add_channel('2')
+    ai.remove_channel('1')
+    assert ai.get_ids() == ['2']
+
+
 def test_is_acquiring(ai):
     ai.open(f'{DEVICE_UNDER_TEST}')
     ai.add_channel('1')
@@ -117,3 +134,13 @@ def test_open2ch_close1(ai):
     ai.start()
     ai.remove_channel('1')
     assert ai.is_acquiring
+
+
+def test_getdata(ai):
+    ai.open(f'{DEVICE_UNDER_TEST}')
+    ai.add_channel('1')
+    ai.start()
+    sleep(1.0)
+    data, t = ai.get_data('1')
+    assert len(data) > 0 and type(t) is float
+    ai.stop()
