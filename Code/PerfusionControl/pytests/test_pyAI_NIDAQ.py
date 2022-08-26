@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Unit test for pyAI_NIDAQ class
+""" Unit test for pyAI_NIDAQ class
+    Requires NI DAQ device
 
 This work was created by an employee of the US Federal Gov
 and under the public domain.
@@ -13,7 +14,7 @@ import pyHardware.pyAI_NIDAQ as pyAI
 from pyHardware.pyAI import AIDeviceException
 
 
-DEVICE_UNDER_TEST = 'Dev4'
+DEVICE_UNDER_TEST = 'Dev1'
 
 @pytest.fixture
 def delete_file(filename):
@@ -48,7 +49,7 @@ def test_default_devname(ai):
 
 
 def test_devname(ai):
-    ai.open('Dev4')
+    ai.open(f'{DEVICE_UNDER_TEST}')
     assert ai.devname == f'{DEVICE_UNDER_TEST}/ai'
 
 
