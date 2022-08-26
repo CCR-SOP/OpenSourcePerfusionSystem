@@ -38,7 +38,7 @@ class TestFrame(wx.Frame):
 
         # Open device and channel
         section = LP_CFG.get_hwcfg_section(self.sensor.name)
-        dev = DEV_LIST[1]
+        dev = DEV_LIST[0]
         line = LINE_LIST[0]
 
         self.acq.open(dev)
@@ -84,9 +84,8 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         self.sensor.stop()
         self.sensor.close()
-        if self.sensor.hw._task:
-            self.sensor.hw.stop()
-            self.sensor.hw.close()
+        self.sensor.hw.stop()
+        self.sensor.hw.close()
         self.Destroy()
 
 class MyTestApp(wx.App):
