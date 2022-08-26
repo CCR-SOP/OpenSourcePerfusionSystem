@@ -157,7 +157,7 @@ def test_getdata(ai):
     ai.stop()
 
 
-def test_getdata(ai_finite):
+def test_getdata_finite(ai_finite):
     ai_finite.open(f'{DEVICE_UNDER_TEST}')
     ai_finite.add_channel('1')
     ai_finite.start()
