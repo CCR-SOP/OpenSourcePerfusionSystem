@@ -153,7 +153,7 @@ class AI:
     def get_data(self, ch_id):
         buf = None
         t = None
-        if self.__thread and self.__thread.is_alive():
+        if self.__thread:
             if ch_id in self._queue_buffer.keys():
                 try:
                     buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
