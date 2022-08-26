@@ -13,9 +13,11 @@ from time import sleep
 
 import pyHardware.pyAI_NIDAQ as pyAI
 from pyHardware.pyAI import AIDeviceException
+import pyHardware.pyAI_Finite_NIDAQ as pyAIFinite
 
 
 DEVICE_UNDER_TEST = 'Dev1'
+SAMPLES_PER_READ = 17
 
 @pytest.fixture
 def delete_file(filename):
@@ -27,6 +29,15 @@ def ai():
     ai = pyAI.NIDAQ_AI(period_ms=10, volts_offset=2.5, volts_p2p=5)
     yield ai
     ai.stop()
+
+
+@pytest.fixture
+def ai_finite():
+    ai_finite = pyAIFinite.AI_Finite_NIDAQ(period_ms=100,
+                                           volts_offset=2.5, volts_p2p=5,
+                                           samples_per_read=SAMPLES_PER_READ)
+    yield ai_finite
+    ai_finite.stop()
 
 
 def setup_module(module):
@@ -144,3 +155,13 @@ def test_getdata(ai):
     data, t = ai.get_data('1')
     assert len(data) > 0 and type(t) is float
     ai.stop()
+
+
+def test_getdata(ai_finite):
+    ai_finite.open(f'{DEVICE_UNDER_TEST}')
+    ai_finite.add_channel('1')
+    ai_finite.start()
+    sleep(2.0)
+    assert ai_finite.is_done()
+    data, t = ai_finite.get_data('1')
+    assert len(data) == 16
