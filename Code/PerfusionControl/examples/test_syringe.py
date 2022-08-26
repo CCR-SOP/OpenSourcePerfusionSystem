@@ -19,7 +19,6 @@ class PanelTestSyringe(wx.Panel):
         self.wait = None
         wx.Panel.__init__(self, parent, -1)
 
-        LP_CFG.set_base()
         self._comm, self._baud = self.get_hardware_info()
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
@@ -64,6 +63,7 @@ class PanelTestSyringe(wx.Panel):
 
     def get_hardware_info(self):
         COMs_bauds = LP_CFG.get_COMs_bauds()
+        print(COMs_bauds)
         for syringe, info in COMs_bauds.items():
             if self._name.lower() == syringe:
                 comm = info[0]
@@ -300,7 +300,7 @@ class TestFrame(wx.Frame):
                     'Phenylephrine (HA)': PHDserial('Phenylephrine'),
                     'Epoprostenol (HA)': PHDserial('Epoprostenol'),
                     'TPN/Bile Salts (PV)': PHDserial('TPN/Bile Salts'),
-                    'Heparin/Methylprednisolone/Ampicillin-Sulbactam (PV)': PHDserial('Heparin/Methylprednisolone/Ampicillin-Sulbactam')
+                    'Heparin (PV)': PHDserial('Heparin/Methylprednisolone/Ampicillin-Sulbactam')
                     }
         sizer = wx.GridSizer(cols=3)
         for key, syringe in syringes.items():
@@ -312,6 +312,7 @@ class TestFrame(wx.Frame):
 
 class MyTestApp(wx.App):
     def OnInit(self):
+        LP_CFG.set_base(basepath='~/Documents/LPTEST')
         frame = TestFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
