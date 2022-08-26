@@ -38,13 +38,8 @@ class TestFrame(wx.Frame):
 
         # Open device and channel
         section = LP_CFG.get_hwcfg_section(self.sensor.name)
-        dev = DEV_LIST[0]
-        line = LINE_LIST[0]
-
-        self.acq.open(dev)
-        self.sensor.hw.add_channel('0')
-        self.sensor.set_ch_id('0')
-        # Somehow Allen doesn't have these? --> must be because his buttons allow for opening. Ask John. Window is closing now
+        # dev = DEV_LIST[0]
+        # line = LINE_LIST[0]
 
         # Raw streaming and RMS strategy
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
