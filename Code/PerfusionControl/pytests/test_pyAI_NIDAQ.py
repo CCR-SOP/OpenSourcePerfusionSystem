@@ -164,4 +164,4 @@ def test_getdata(ai_finite):
     sleep(2.0)
     assert ai_finite.is_done()
     data, t = ai_finite.get_data('1')
-    assert len(data) == 16
+    assert len(data) == 17
