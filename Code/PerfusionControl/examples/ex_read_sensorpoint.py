@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Read a data file created by SensorPoint and report basic stats
+""" Demonstrates how to read a sensor file using Numpy only
+    Filename must be updated to a valid file
+    Report some basic stats and will output each sample
 
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH

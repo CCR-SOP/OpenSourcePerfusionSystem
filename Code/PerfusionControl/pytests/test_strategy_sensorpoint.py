@@ -120,3 +120,22 @@ def test_sensorpoint_getcurrent(ai_finite, sensor_point, strategy_pts2file):
 
     data = strategy_pts2file.get_current()
     assert type(data) == np.float32
+
+
+def test_sensorpoint_read(ai_finite, sensor_point, strategy_pts2file):
+    ai_finite.open(f'{DEVICE_UNDER_TEST}')
+    ai_finite.add_channel('1')
+    # Channel id must be set in order to save data properly
+    sensor_point.set_ch_id('1')
+
+    sensor_point.add_strategy(strategy_pts2file)
+    sensor_point.open()
+    sensor_point.start()
+    ai_finite.start()
+    sleep(2.0)
+    assert ai_finite.is_done()
+
+
+
+    data = strategy_pts2file.get_current()
+    assert type(data) == np.float32
