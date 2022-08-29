@@ -51,8 +51,9 @@ class StreamToFile(ProcessingStrategy):
         data_type = np.dtype(self._sensor_params['Data Format'])
         try:
             data = np.memmap(_fid, dtype=data_type, mode='r')
-        except ValueError:
+        except ValueError as e:
             # cannot mmap an empty file
+            self._lgr.debug(f'in StreamToFile:_open_read: attempt to read from empty file: {e}')
             data = []
         return _fid, data
 
@@ -195,7 +196,8 @@ class PointsToFile(StreamToFile):
         try:
             _fid.seek(-bytes_per_chunk, SEEK_END)
             chunk, ts = self.__read_chunk(_fid)
-        except OSError:
+        except OSError as e:
+            print(e)
             chunk = None
             ts = None
 
