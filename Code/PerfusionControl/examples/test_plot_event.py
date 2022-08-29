@@ -8,7 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import wx
-import time
+import logging
 
 from pyPerfusion.plotting import SensorPlot, EventPlot, PanelPlotting
 from pyHardware.pyAI import AI
@@ -16,7 +16,6 @@ from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
-from pyPerfusion.ProcessingStrategy import RMSStrategy
 import pyPerfusion.utils as utils
 
 
@@ -79,16 +78,19 @@ class TestFrame(wx.Frame):
         self.panel.Destroy()
         self.Destroy()
 
+
 class MyTestApp(wx.App):
     def OnInit(self):
         frame = TestFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
+
         return True
 
-
-app = MyTestApp(0)
-app.MainLoop()
-time.sleep(100)
-sensor.stop()
-
+if __name__ == "__main__":
+    LP_CFG.set_base(basepath='~/Documents/LPTEST')
+    LP_CFG.update_stream_folder()
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
+    app = MyTestApp(0)
+    app.MainLoop()
