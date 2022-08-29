@@ -176,11 +176,14 @@ class PointsToFile(StreamToFile):
         chunk = [1]
         data_time = []
         data = []
+        first_time = None
         while chunk is not None:
             chunk, ts = self.__read_chunk(_fid)
+            if not first_time:
+                first_time = ts
             if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
                 data.append(chunk)
-                data_time.append(ts / 1000.0)
+                data_time.append((ts - first_time) / 1000.0)
         _fid.close()
         return data_time, data
 
