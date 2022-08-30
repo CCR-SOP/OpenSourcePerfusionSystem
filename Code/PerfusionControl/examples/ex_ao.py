@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+""" Simple test program for demonstrating basic use of  AO classes,
+    including pyAO_NIDAQ. Requires NIDAQ hardware with AO
+
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
+"""
 from time import sleep
 import logging
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Simple test script for testing VCS class
-Longer description
+
 
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH

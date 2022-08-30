@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+""" Demonstrate basic interaction with syringe serial ports
+
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
+"""
 from pyHardware.PHDserial import PHDserial
 
 port_name = 'COM6'

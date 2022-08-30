@@ -20,7 +20,7 @@ from pyPerfusion.FileStrategy import StreamToFile
 logger = logging.getLogger()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
-dev = 'Dev2'
+dev = 'Dev1'
 line = '0'
 samples = 5
 period_ms = 1000

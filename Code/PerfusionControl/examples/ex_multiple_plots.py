@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-"""
+""" Demonstrate plotting to multiple plots
 
-@author: John Kakareka
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
 
-test real-time plotting
+This work was created by an employee of the US Federal Gov
+and under the public domain.
 """
 import wx
 import time

@@ -51,8 +51,9 @@ class StreamToFile(ProcessingStrategy):
         data_type = np.dtype(self._sensor_params['Data Format'])
         try:
             data = np.memmap(_fid, dtype=data_type, mode='r')
-        except ValueError:
+        except ValueError as e:
             # cannot mmap an empty file
+            self._lgr.debug(f'in StreamToFile:_open_read: attempt to read from empty file: {e}')
             data = []
         return _fid, data
 
@@ -176,11 +177,14 @@ class PointsToFile(StreamToFile):
         chunk = [1]
         data_time = []
         data = []
+        first_time = None
         while chunk is not None:
             chunk, ts = self.__read_chunk(_fid)
+            if not first_time:
+                first_time = ts
             if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
                 data.append(chunk)
-                data_time.append(ts / 1000.0)
+                data_time.append((ts - first_time) / 1000.0)
         _fid.close()
         return data_time, data
 
@@ -192,7 +196,8 @@ class PointsToFile(StreamToFile):
         try:
             _fid.seek(-bytes_per_chunk, SEEK_END)
             chunk, ts = self.__read_chunk(_fid)
-        except OSError:
+        except OSError as e:
+            print(e)
             chunk = None
             ts = None
 
