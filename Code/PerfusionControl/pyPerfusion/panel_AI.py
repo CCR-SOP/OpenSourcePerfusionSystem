@@ -127,14 +127,25 @@ class PanelAI_Config(wx.Panel):
 
     def __set_bindings(self):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
+        self.btn_open.Bind(wx.EVT_UPDATE_UI, self.OnUpdateOpen)
         self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
 
+    def OnUpdateOpen(self, evt):
+        if self._sensor.hw.is_open():
+            lbl = 'Close'
+            opened = True
+        else:
+            lbl = 'Open'
+            opened = False
+        self.btn_open.SetLabel(lbl)
+        self.btn_open.SetValue(opened)
+
     def OnOpen(self, evt):
-        state = self.btn_open.GetValue()
+        opened = self._sensor.hw.is_open()
         dev = self.choice_dev.GetStringSelection()
         line = self.choice_line.GetStringSelection()
-        if state:
+        if not opened:
             self._logger.debug(f'Opening device {dev}, {line}')
             try:
                 self._sensor.hw.open(dev=dev)
@@ -290,12 +301,14 @@ class TestFrame(wx.Frame):
         self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRMS')  # For RMS readings
        # self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRaw')  # For Raw readings
 
+
         # self.panel = PanelAI_Config(self, self.sensor, 'test', 'test', None)
         # self.panel = PanelAICalibration(self, self.sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.sensor.stop()
+        self.sensor.close()
+        self.sensor.hw.close()
         self.Destroy()
 
 class MyTestApp(wx.App):

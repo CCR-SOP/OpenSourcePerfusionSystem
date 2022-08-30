@@ -181,7 +181,8 @@ class NIDAQ_AI(pyAI.AI):
 
     def close(self):
         self.stop()
-        self._task.ClearTask()
+        if self._task:
+            self._task.ClearTask()
         self._task = None
 
     def start(self):
