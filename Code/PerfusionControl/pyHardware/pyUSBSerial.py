@@ -1,14 +1,19 @@
 # -*- coding: utf-8 -*-
 """ Base class for serial communication over USB
-    Uses pySerial library available on PyPi
 
-@project: LiverPerfusion NIH
-@author: John Kakareka, NIH
+    Uses pySerial library available on PyPi to provide basic serial
+    communication functions such as open/close and send/recv.
+    Device-specific protocols should derive from this class.
 
-This work was created by an employee of the US Federal Gov
-and under the public domain.
+    @project: LiverPerfusion NIH
+    @author: John Kakareka, NIH
+
+    This work was created by an employee of the US Federal Gov
+    and under the public domain.
 """
+
 import logging
+
 import serial
 
 

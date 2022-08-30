@@ -1,41 +1,30 @@
-import logging
+# -*- coding: utf-8 -*-
+""" Class for serial communication over USB using PHD (Pump 11 Elite)
+    command set. Also records data about syringe infusions to a .dat file
 
-from pyHardware.pyUSBSerial import USBSerial
+    Derives from USBSerial class.
+
+    @project: LiverPerfusion NIH
+    @author: John Kakareka, NIH
+
+    This work was created by an employee of the US Federal Gov
+    and under the public domain.
+"""
+
+import logging
 import pathlib
 import datetime
-import numpy as np
 import struct
 from time import perf_counter
 
+import numpy as np
+
+from pyHardware.pyUSBSerial import USBSerial
+
 DATA_VERSION = 3
 
+
 class PHDserial(USBSerial):
-
-    """
-    Class for serial communication over USB using PHD (Pump 11 Elite) command set; class also records data about syringe infusions to a .dat file
-    ...
-
-    Attributes
-    ----------
-
-
-    Methods
-    -------
-    open(port_name, baud, addr)
-        opens USB port of given name with the specified baud rate using given syringe pump address
-    open_stream(full_path)
-        creates .txt and .dat files for recording syringe data
-    infuse()
-        begin infusion of syringe; for both continuous ('infinite') and targeted (will terminate after a certain infusion volume is reached) infusions
-    stop()
-        stop infusion of syringe
-    record_infusion()
-        record details of latest syringe infusion
-    close_stream()
-        stops recording of syringe data
-    set_param(param, value)
-        sets a syringe pump parameter (param) to (value)
-    """
     def __init__(self, name):
         super().__init__()
         self._logger = logging.getLogger(__name__)
