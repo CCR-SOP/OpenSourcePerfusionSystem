@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """Base class for accessing analog inputs
 
+Provides basic interface for accessing analog inputs.
+Used directly only for testing other code without direct access to the hardware
+
+Requires numpy library
+
 
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH
@@ -12,7 +17,6 @@ from threading import Thread, Lock, Event
 from time import perf_counter, sleep, time
 from queue import Queue, Empty
 import logging
-from datetime import datetime
 
 import numpy as np
 
@@ -23,7 +27,7 @@ class AIDeviceException(Exception):
 
 class AI:
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
-        self._logger = logging.getLogger(__name__)
+        self._lgr = logging.getLogger(__name__)
         self.__thread = None
         self._event_halt = Event()
         self._lock_buf = Lock()
@@ -39,7 +43,6 @@ class AI:
         self._read_period_ms = read_period_ms
         self.data_type = data_type
         self.buf_type = buf_type
-        print(f'read period = {self._read_period_ms}, sampliing = {self._period_sampling_ms}')
         self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
 
         self._calibration = {}
@@ -90,7 +93,7 @@ class AI:
     def get_ids(self):
         with self._lock_buf:
             buffer_keys = sorted(self._queue_buffer.keys())
-        # self._logger.debug(f'buffer keys are {buffer_keys}')
+        # self._lgr.debug(f'buffer keys are {buffer_keys}')
         return buffer_keys
 
     def add_channel(self, channel_id):
@@ -98,9 +101,9 @@ class AI:
             buffer_keys = self._queue_buffer.keys()
 
         if channel_id in buffer_keys:
-            self._logger.warning(f'{channel_id} already open')
+            self._lgr.warning(f'{channel_id} already open')
         else:
-            self._logger.debug(f'adding channel {channel_id}')
+            self._lgr.debug(f'adding channel {channel_id}')
             self.stop()
             with self._lock_buf:
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
@@ -113,7 +116,7 @@ class AI:
     def remove_channel(self, channel_id):
         with self._lock_buf:
             if channel_id in self._queue_buffer.keys():
-                self._logger.debug(f'removing channel {channel_id}')
+                self._lgr.debug(f'removing channel {channel_id}')
                 del self._queue_buffer[channel_id]
 
     def open(self):
@@ -159,7 +162,7 @@ class AI:
                     buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
                 except Empty:
                     pass
-                    # self._logger.debug(f'buffer empty for channel {ch_id}')
+                    # self._lgr.debug(f'buffer empty for channel {ch_id}')
         return buf, t
 
     def _acq_samples(self):
@@ -180,5 +183,5 @@ class AI:
                         self._calibration[channel][2] - self._calibration[channel][0]))
                        / (self._calibration[channel][3] - self._calibration[channel][1])) + self._calibration[channel][
                           0]
-         #   self._logger.debug(f'convert {buffer[i]} to {data[i]}')
+         #   self._lgr.debug(f'convert {buffer[i]} to {data[i]}')
         return data
