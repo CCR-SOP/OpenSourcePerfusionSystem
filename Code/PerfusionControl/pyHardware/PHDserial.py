@@ -263,7 +263,7 @@ class PHDserial(USBSerial):
  #       print(self._response)
         return self._response
 
-    def ResetSyringe(self):
+    def reset_syringe(self):
         self.reset_infusion_volume()
         self.reset_target_volume()
 

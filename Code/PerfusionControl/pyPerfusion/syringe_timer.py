@@ -241,7 +241,7 @@ class SyringeTimer:
         if self.name == 'Glucagon':
             self.feedback_injection_button.Enable(False)
             self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; injecting {intervention_ul:.2f} uL of {name}')
-            syringe.ResetSyringe()
+            syringe.reset_syringe()
             syringe.set_target_volume(intervention_ul, 'ul')
             syringe.set_infusion_rate(25, 'ml/min')
             syringe.infuse(intervention_ul, 25, False, True)
@@ -253,7 +253,7 @@ class SyringeTimer:
                     response = response * 1000
                 if response >= (intervention_ul - 1):
                     self.wait = False
-            syringe.ResetSyringe()
+            syringe.reset_syringe()
             if self.increase:
                 syringe.cooldown = True
             self.feedback_injection_button.Enable(True)
@@ -266,7 +266,7 @@ class SyringeTimer:
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             if float(infuse_rate) == 0:
                 syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
-            syringe.ResetSyringe()
+            syringe.reset_syringe()
             syringe.set_infusion_rate(intervention_ul, 'ul/min')
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.infuse(-2, infuse_rate, ml_volume, ml_min_rate)
@@ -277,7 +277,7 @@ class SyringeTimer:
             self.feedback_injection_button.Enable(False)
             infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
             syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
-            syringe.ResetSyringe()
+            syringe.reset_syringe()
             if self.increase:
                 self._logger.info(f'{parameter_name} reads {parameter:.2f} , which is too {direction}; injecting {intervention_ul:.2f} uL of {name}')
                 syringe.set_target_volume(intervention_ul, 'ul')
@@ -291,7 +291,7 @@ class SyringeTimer:
                         response = response * 1000
                     if response >= (intervention_ul - 1):
                         self.wait = False
-                syringe.ResetSyringe()
+                syringe.reset_syringe()
                 rate = infuse_rate
                 if ml_min_rate:
                     unit = 'ml/min'

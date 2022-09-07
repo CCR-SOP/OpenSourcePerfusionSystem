@@ -226,7 +226,7 @@ class TestFrame(wx.Frame):
         baud = section['baudrate']
         insulin_injection = PHDserial('Insulin')
         insulin_injection.open(com, baud)
-        insulin_injection.ResetSyringe()
+        insulin_injection.reset_syringe()
         insulin_injection.open_stream(LP_CFG.LP_PATH['stream'])
         insulin_injection.start_stream()
 
@@ -235,7 +235,7 @@ class TestFrame(wx.Frame):
         baud = section['baudrate']
         glucagon_injection = PHDserial('Glucagon')
         glucagon_injection.open(com, baud)
-        glucagon_injection.ResetSyringe()
+        glucagon_injection.reset_syringe()
         glucagon_injection.open_stream(LP_CFG.LP_PATH['stream'])
         glucagon_injection.start_stream()
 
@@ -244,7 +244,7 @@ class TestFrame(wx.Frame):
         baud = section['baudrate']
         heparin_injection = PHDserial('Heparin')
         heparin_injection.open(com, baud)
-        heparin_injection.ResetSyringe()
+        heparin_injection.reset_syringe()
         heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
         heparin_injection.start_stream()
 
@@ -253,7 +253,7 @@ class TestFrame(wx.Frame):
         baud = section['baudrate']
         tpn_bile_salts_injection = PHDserial('TPN & Bile Salts')
         tpn_bile_salts_injection.open(com, baud)
-        tpn_bile_salts_injection.ResetSyringe()
+        tpn_bile_salts_injection.reset_syringe()
         tpn_bile_salts_injection.open_stream(LP_CFG.LP_PATH['stream'])
         tpn_bile_salts_injection.start_stream()
 
