@@ -54,6 +54,7 @@ class NIDAQ_AO(pyAO.AO):
         if self.__task:
             self.__task.StopTask()
             self.__task = None
+        super().stop()
 
     def _open_task(self, task):
         try:

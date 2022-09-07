@@ -32,7 +32,7 @@ class AODeviceException(Exception):
 
 
 class AO:
-    def __init__(self):
+    def __init__(self, filename=None):
         self._lgr = logging.getLogger(__name__)
         self._period_ms = None
         self._volts_p2p = 0
@@ -40,6 +40,7 @@ class AO:
         self._Hz = 0.0
         self._bits = None
         self._file_id = None
+        self._filename = filename
         self.__thread = None
         self.__ramp2dc = False
 
@@ -53,9 +54,19 @@ class AO:
     def devname(self):
         return 'ao'
 
+    @property
+    def bits(self):
+        return self._bits
+
+    @property
+    def period_ms(self):
+        return self._period_ms
+
     def open(self, period_ms, bits=12):
         self._period_ms = period_ms
         self._bits = bits
+        if self._filename:
+            self._file_id = open(self._filename, 'wb')
         self.set_dc(0)
 
     def close(self):
@@ -81,7 +92,8 @@ class AO:
         self._lgr.debug('halted pyAO')
 
     def _output_samples(self):
-        self._buffer.tofile(self._file_id)
+        if self._file_id:
+            self._buffer.tofile(self._file_id)
 
     def _calc_output_delay(self):
         if self._Hz > 0.0:
