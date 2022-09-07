@@ -48,10 +48,8 @@ class NIDAQ_AO(pyAO.AO):
     def close(self):
         self.stop()
 
-    def start(self):
-        # No explict start, data is written to AO when setting waveform parameters
-        pass
-
+    # no need to override start() as NIDAQ hardware does not require
+    # task to be explicitly started
     def stop(self):
         if self.__task:
             self.__task.StopTask()
