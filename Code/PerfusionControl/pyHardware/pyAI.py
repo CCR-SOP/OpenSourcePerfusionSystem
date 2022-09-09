@@ -9,6 +9,9 @@ Requires numpy library
 Sample buffers are read periodically from the hardware and stored in a Queue for later processing. This helps to ensure
 that no samples are dropped from the hardware due to slow processing. There is one queue per analog input line/channel
 
+All data types use numpy data types. The buf_type parameter should represent the data type as acquired
+from the hardware (e.g., unsigned 16-bit data). The data_type should represent the data after calibration or conversion
+to other units (e.g., ml/min).
 
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH
