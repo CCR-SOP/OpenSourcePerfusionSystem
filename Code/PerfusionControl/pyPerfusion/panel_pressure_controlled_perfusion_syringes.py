@@ -287,7 +287,7 @@ class TestFrame(wx.Frame):
                 baud = section['baudrate']
                 epoprostenol_injection = PHDserial('Epoprostenol')
                 epoprostenol_injection.open(com, baud)
-                epoprostenol_injection.ResetSyringe()
+                epoprostenol_injection.reset_syringe()
                 epoprostenol_injection.open_stream(LP_CFG.LP_PATH['stream'])
                 epoprostenol_injection.start_stream()
                 self.epoprostenol_syringe = epoprostenol_injection
@@ -300,7 +300,7 @@ class TestFrame(wx.Frame):
                 baud = section['baudrate']
                 phenylephrine_injection = PHDserial('Phenylephrine')
                 phenylephrine_injection.open(com, baud)
-                phenylephrine_injection.ResetSyringe()
+                phenylephrine_injection.reset_syringe()
                 phenylephrine_injection.open_stream(LP_CFG.LP_PATH['stream'])
                 phenylephrine_injection.start_stream()
                 self.phenylephrine_syringe = phenylephrine_injection

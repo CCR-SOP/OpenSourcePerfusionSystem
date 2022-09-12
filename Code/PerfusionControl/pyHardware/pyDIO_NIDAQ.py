@@ -10,8 +10,6 @@ import logging
 
 import numpy as np
 import PyDAQmx
-from PyDAQmx import Task
-from PyDAQmx.DAQmxConstants import *
 
 import pyHardware.pyDIO as pyDIO
 
@@ -19,7 +17,7 @@ import pyHardware.pyDIO as pyDIO
 class NIDAQ_DIO(pyDIO.DIO):
     def __init__(self, name: str = None):
         super().__init__(name)
-        self._logger = logging.getLogger(__name__)
+        self._lgr = logging.getLogger(__name__)
         self._dev = None
         self.__timeout = 1.0
         self.__task = None
@@ -34,20 +32,22 @@ class NIDAQ_DIO(pyDIO.DIO):
 
     def open(self, port, line, active_high=True, read_only=True, dev=None):
         self._dev = dev
+        msg = None
         cleanup = True
         super().open(port, line, active_high, read_only)
         if self.__task:
             self.close()
         task = None
         try:
-            task = Task()
+            task = PyDAQmx.Task()
+            ch_names = ''  # do not provide alternate virtual channel names
             if self._read_only:
-                task.CreateDIChan(self.devname, '', DAQmx_Val_ChanPerLine)
+                task.CreateDIChan(self.devname, ch_names, PyDAQmx.DAQmxConstants.DAQmx_Val_ChanPerLine)
             else:
-                task.CreateDOChan(self.devname, '', DAQmx_Val_ChanPerLine)
+                task.CreateDOChan(self.devname, ch_names, PyDAQmx.DAQmxConstants.DAQmx_Val_ChanPerLine)
             cleanup = False
-            self._logger.debug('successfully opened device')
-        except PyDAQmx.DevCannotBeAccessedError as e:
+            self._lgr.debug('successfully opened device')
+        except PyDAQmx.DevCannotBeAccessedError:
             msg = f'Could not access device "{self._dev}". Please ensure device is ' \
                   f'plugged in and assigned the correct device name'
         except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
@@ -59,11 +59,10 @@ class NIDAQ_DIO(pyDIO.DIO):
         finally:
             if cleanup:
                 self.__task = None
-                self._logger.error(msg)
+                self._lgr.error(msg)
                 raise (pyDIO.DIODeviceException(msg))
         self.__task = task
         cleanup = True
-        msg = ''
         try:
             self.__task.StartTask()
             cleanup = False
@@ -74,7 +73,7 @@ class NIDAQ_DIO(pyDIO.DIO):
         finally:
             if cleanup:
                 self.__task = None
-                self._logger.error(msg)
+                self._lgr.error(msg)
                 raise (pyDIO.DIODeviceException(msg))
 
     def close(self):
@@ -85,12 +84,14 @@ class NIDAQ_DIO(pyDIO.DIO):
     def _activate(self):
         data = np.array([self._active_state.ACTIVE], dtype=np.uint8)
         if self.__task:
-            # self._logger.debug(f'activating {self.devname}')
-            self.__task.WriteDigitalLines(1, True, self.__timeout, DAQmx_Val_GroupByChannel, data, None, None)
+            # self._lgr.debug(f'activating {self.devname}')
+            self.__task.WriteDigitalLines(1, True, self.__timeout,
+                                          PyDAQmx.DAQmxConstants.DAQmx_Val_GroupByChannel, data, None, None)
             super()._activate()
 
     def _deactivate(self):
         data = np.array([self._active_state.INACTIVE], dtype=np.uint8)
         if self.__task:
-            self.__task.WriteDigitalLines(1, True, self.__timeout, DAQmx_Val_GroupByChannel, data, None, None)
+            self.__task.WriteDigitalLines(1, True, self.__timeout,
+                                          PyDAQmx.DAQmxConstants.DAQmx_Val_GroupByChannel, data, None, None)
             super()._deactivate()

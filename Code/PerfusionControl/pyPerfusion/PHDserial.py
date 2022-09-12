@@ -1,44 +1,36 @@
-import logging
+# -*- coding: utf-8 -*-
+""" Class for serial communication over USB using PHD (Pump 11 Elite)
+    command set. Also records data about syringe infusions to a .dat file
 
-from pyHardware.pyUSBSerial import USBSerial
+    Derives from USBSerial class.
+
+    @project: LiverPerfusion NIH
+    @author: John Kakareka, NIH
+
+    This work was created by an employee of the US Federal Gov
+    and under the public domain.
+"""
+
+import logging
 import pathlib
 import datetime
-import numpy as np
 import struct
 from time import perf_counter
 
+import numpy as np
+
+from pyHardware.pyUSBSerial import USBSerial
+
 DATA_VERSION = 3
 
+INFUSION_START = -2
+INFUSION_STOP = -1
+
+
 class PHDserial(USBSerial):
-
-    """
-    Class for serial communication over USB using PHD (Pump 11 Elite) command set; class also records data about syringe infusions to a .dat file
-    ...
-
-    Attributes
-    ----------
-
-
-    Methods
-    -------
-    open(port_name, baud, addr)
-        opens USB port of given name with the specified baud rate using given syringe pump address
-    open_stream(full_path)
-        creates .txt and .dat files for recording syringe data
-    infuse()
-        begin infusion of syringe; for both continuous ('infinite') and targeted (will terminate after a certain infusion volume is reached) infusions
-    stop()
-        stop infusion of syringe
-    record_infusion()
-        record details of latest syringe infusion
-    close_stream()
-        stops recording of syringe data
-    set_param(param, value)
-        sets a syringe pump parameter (param) to (value)
-    """
     def __init__(self, name):
         super().__init__()
-        self._logger = logging.getLogger(__name__)
+        self._lgr = logging.getLogger(__name__)
 
         self.__addr = 0
         self._manufacturers = {}
@@ -99,19 +91,21 @@ class PHDserial(USBSerial):
             self._fid_write = None
 
         self._open_write()
+        # write a few dummy lines to the file, then set the write cursor to the start of the file to overwrite
+        # the dummy files are required to properly open the file for memory-mapped reads
         self._write_to_file(np.array([0]), np.array([0]), np.array([0]))
         self._fid_write.seek(0)
 
         self.print_stream_info()
 
     def _open_write(self):
-        self._logger.debug(f'opening {self.full_path}')
+        self._lgr.debug(f'opening {self.full_path}')
         self._fid_write = open(self.full_path, 'w+b')
 
     def print_stream_info(self):
         hdr_str = self._get_stream_info()
         filename = self.full_path.with_suffix('.txt')
-        self._logger.debug(f"printing stream info to {filename}")
+        self._lgr.debug(f"printing stream info to {filename}")
         fid = open(filename, 'wt')
         fid.write(hdr_str)
         fid.close()
@@ -123,7 +117,7 @@ class PHDserial(USBSerial):
                   f'Volume Unit: ul',
                   f'Rate Unit: ul/min',
                   f'Data Format: {str(np.dtype(np.float32))}',
-                  f'Datapoints Per Timestamp: {self._datapoints_per_ts} (Infusion Volume (uL) and Infusion Rate (uL/min))',
+                  f'Datapoints Per Timestamp: {self._datapoints_per_ts}',
                   f'Bytes Per Timestamp: {self._bytes_per_ts}',
                   f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
                   ]
@@ -150,7 +144,7 @@ class PHDserial(USBSerial):
         self.send('irun\r')
         infusion_rate = float(infusion_rate)
         if ml_volume:
-            if infusion_volume == -2:
+            if infusion_volume == INFUSION_START:
                 pass
             else:
                 infusion_volume = infusion_volume * 1000
@@ -162,7 +156,7 @@ class PHDserial(USBSerial):
         self.send('stop\r')
         infusion_rate = float(infusion_rate)
         if ml_volume:
-            if infusion_volume == -1:
+            if infusion_volume == INFUSION_STOP:
                 pass
             else:
                 infusion_volume = infusion_volume * 1000
@@ -257,7 +251,7 @@ class PHDserial(USBSerial):
 
     def get_syringe_info(self):
         self.send('syrm\r')
-        self._logger.info(self._response)
+        self._lgr.info(self._response)
 
     def get_infusion_rate(self):
         self.send('irate\r')
@@ -269,7 +263,7 @@ class PHDserial(USBSerial):
  #       print(self._response)
         return self._response
 
-    def ResetSyringe(self):
+    def reset_syringe(self):
         self.reset_infusion_volume()
         self.reset_target_volume()
 
@@ -289,7 +283,7 @@ class PHDserial(USBSerial):
 
     def print_available_syringes(self):
         for code, name in self._manufacturers.items():
-            self._logger.info(f'{name} ({code})')
+            self._lgr.info(f'{name} ({code})')
             syringes = self._syringes[code]
             for syringe in syringes:
-                self._logger.info(f'\t {syringe}')
+                self._lgr.info(f'\t {syringe}')

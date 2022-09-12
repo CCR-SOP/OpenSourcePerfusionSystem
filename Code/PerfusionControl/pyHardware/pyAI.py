@@ -1,6 +1,17 @@
 # -*- coding: utf-8 -*-
 """Base class for accessing analog inputs
 
+Provides basic interface for accessing analog inputs.
+Used directly only for testing other code without direct access to the hardware
+
+Requires numpy library
+
+Sample buffers are read periodically from the hardware and stored in a Queue for later processing. This helps to ensure
+that no samples are dropped from the hardware due to slow processing. There is one queue per analog input line/channel
+
+All data types use numpy data types. The buf_type parameter should represent the data type as acquired
+from the hardware (e.g., unsigned 16-bit data). The data_type should represent the data after calibration or conversion
+to other units (e.g., ml/min).
 
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH
@@ -12,7 +23,6 @@ from threading import Thread, Lock, Event
 from time import perf_counter, sleep, time
 from queue import Queue, Empty
 import logging
-from datetime import datetime
 
 import numpy as np
 
@@ -23,30 +33,45 @@ class AIDeviceException(Exception):
 
 class AI:
     def __init__(self, period_sample_ms, buf_type=np.uint16, data_type=np.float32, read_period_ms=500):
-        self._logger = logging.getLogger(__name__)
+        """
+        Parameters
+        ----------
+        period_sample_ms: sampling period in milliseconds
+        buf_type: numpy data type of the samples returned by the underlying hardware
+        data_type: numpy data type of the samples returned by this class after calibration/scaling/etc.
+        read_period_ms: time between buffer reads from the underlying hardware in milliseconds
+        """
+        self._lgr = logging.getLogger(__name__)
         self.__thread = None
         self._event_halt = Event()
         self._lock_buf = Lock()
+
         self._period_sampling_ms = period_sample_ms
-        self._demo_amp = {}
-        self._demo_offset = {}
-
-        self._queue_buffer = {}
-
-        self.__epoch = 0
-        self._time = 0
-
         self._read_period_ms = read_period_ms
         self.data_type = data_type
         self.buf_type = buf_type
-        print(f'read period = {self._read_period_ms}, sampliing = {self._period_sampling_ms}')
         self.samples_per_read = int(self._read_period_ms / self._period_sampling_ms)
 
+        self._queue_buffer = {}
+        # stores the perf_counter value at the start of the acquisition which defines the zero-time for all
+        # following samples
+        self.__acq_start_t = 0
+
+        # parameters for randomly generated data when there is no underlying hardware
+        # used for testing and demo purposes
+        self._demo_amp = {}
+        self._demo_offset = {}
+
+        # calibration data consisting of a 4-element array
+        # [low cal point, ADC value at low cal point, high cal point, ADC value at high cal point]
         self._calibration = {}
 
 
     @property
     def devname(self):
+        """
+        Creates a string as required by the hardware to define the analog input device and analog lines used
+        """
         lines = self.get_ids()
         if len(lines) == 0:
             dev_str = 'ai'
@@ -60,7 +85,7 @@ class AI:
 
     @property
     def start_time(self):
-        return self.__epoch
+        return self.__acq_start_t
 
     @property
     def buf_len(self):
@@ -90,7 +115,6 @@ class AI:
     def get_ids(self):
         with self._lock_buf:
             buffer_keys = sorted(self._queue_buffer.keys())
-        # self._logger.debug(f'buffer keys are {buffer_keys}')
         return buffer_keys
 
     def add_channel(self, channel_id):
@@ -98,9 +122,9 @@ class AI:
             buffer_keys = self._queue_buffer.keys()
 
         if channel_id in buffer_keys:
-            self._logger.warning(f'{channel_id} already open')
+            self._lgr.warning(f'{channel_id} already open')
         else:
-            self._logger.debug(f'adding channel {channel_id}')
+            self._lgr.debug(f'adding channel {channel_id}')
             self.stop()
             with self._lock_buf:
                 self._queue_buffer[channel_id] = Queue(maxsize=100)
@@ -113,7 +137,7 @@ class AI:
     def remove_channel(self, channel_id):
         with self._lock_buf:
             if channel_id in self._queue_buffer.keys():
-                self._logger.debug(f'removing channel {channel_id}')
+                self._lgr.debug(f'removing channel {channel_id}')
                 del self._queue_buffer[channel_id]
 
     def open(self):
@@ -126,7 +150,8 @@ class AI:
     def start(self):
         self.stop()
         self._event_halt.clear()
-        self.__epoch = perf_counter()
+        self.__acq_start_t = perf_counter()
+
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyAI {self.devname}'
         self.__thread.start()
@@ -158,8 +183,9 @@ class AI:
                 try:
                     buf, t = self._queue_buffer[ch_id].get(timeout=1.0)
                 except Empty:
+                    # this can occur if there are attempts to read data before it has been acquired
+                    # this is not unusual, so catch the error but do nothing
                     pass
-                    # self._logger.debug(f'buffer empty for channel {ch_id}')
         return buf, t
 
     def _acq_samples(self):
@@ -180,5 +206,5 @@ class AI:
                         self._calibration[channel][2] - self._calibration[channel][0]))
                        / (self._calibration[channel][3] - self._calibration[channel][1])) + self._calibration[channel][
                           0]
-         #   self._logger.debug(f'convert {buffer[i]} to {data[i]}')
+         #   self._lgr.debug(f'convert {buffer[i]} to {data[i]}')
         return data
