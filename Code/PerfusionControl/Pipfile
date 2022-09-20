@@ -16,6 +16,7 @@ simple-pid = "*"
 pytest = "*"
 pika = "*"
 minimalmodbus = "~=1.0.2"
+python-mock = "*"
 
 [requires]
 python_version = "3.8"
