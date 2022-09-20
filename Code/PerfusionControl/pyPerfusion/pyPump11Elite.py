@@ -45,7 +45,7 @@ class Pump11Elite:
             'Syringe': self.name,
             'Volume Unit': 'ul',
             'Rate Unit': 'ul/min',
-            'Data Format': str(np.dtype(np.float32)),
+            'Data Format': str(np.dtype(np.int32)),
             'Datapoints Per Timestamp': 2,
             'Bytes Per Timestamp': 4,
             'Start of Acquisition': 0
@@ -152,7 +152,7 @@ class Pump11Elite:
             self._lgr.error(f'Unknown rate unit in syringe {self.name}: {rate_unit}')
             rate = 0
 
-        buf = np.array([target_vol, rate], np.float32)
+        buf = np.array([target_vol, rate], np.int32)
         if self._queue:
             self._queue.put((buf, t))
 
