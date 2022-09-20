@@ -13,39 +13,15 @@
 import logging
 from time import perf_counter
 from queue import Queue, Empty
-from typing import Protocol
 
 import numpy as np
+import serial
 
 
 DATA_VERSION = 3
 
 INFUSION_START = -2
 INFUSION_STOP = -1
-
-
-class SerialInterface(Protocol):
-    port_name: str  # e.g., 'COM1'
-    baud_rate: int  # e.g., 115200
-
-    def is_open(self) -> bool:
-        """ returns true if serial port interface is opened """
-
-    def open(self, port_name: str, baud_rate: int) -> None:
-        """ opens a serial port interface using the passed parameters
-            port_name and baud parameters will overwrite existing attributes if set """
-
-    def close(self) -> None:
-        """ closing an existing serial port """
-
-    def send(self, str2send: str) -> None:
-        """ sends the specified string over the serial port, if the port is opened"""
-
-    def wait_for_string(self, max_bytes: int = 1, terminator: str = '\r', timeout: float = 1.0) -> str:
-        """ returns a string from the serial port until the terminator is reached or max_bytes has been acquired
-            If no response occurs within the timeout specified in seconds, then '' is returned
-            This should be used when the response is a string with a defined terminator (e.g., CR/LF)
-            """
 
 
 class Pump11Elite:
@@ -56,11 +32,13 @@ class Pump11Elite:
 
         self.name = name
 
-        self._hw = None
+        self._serial = serial.Serial()
         self.__addr = 0
 
         self._queue = None
         self.__acq_start_t = None
+        self.period_sampling_ms = 0
+        self.samples_per_read = 0
 
         self._params = {
             'File Format': DATA_VERSION,
@@ -73,22 +51,43 @@ class Pump11Elite:
             'Start of Acquisition': 0
             }
 
-    def set_hw(self, hw: SerialInterface) -> None:
-        self._hw = hw
+    @property
+    def is_open(self):
+        return self._serial.is_open
 
     def open(self, port_name: str, baud_rate: int, addr: int = 0) -> None:
-        self._hw.open(port_name=port_name, baud_rate=baud_rate, xonoff=True)
+        if self._serial.is_open:
+            self._serial.close()
+
+        self._serial.port = port_name
+        self._serial.baudrate = baud_rate
+        self._serial.xonxoff = True
+        try:
+            self._serial.open()
+        except serial.serialutil.SerialException as e:
+            self._lgr.error(f'Could not open serial port {self._serial.portstr}')
+            self._lgr.error(f'{e}')
         self.__addr = addr
         self._queue = Queue()
 
         # JWK, why do we need to send a blank?
         self.send_wait4response('')
-        self._hw.send(f'address {self.__addr}\r')
-        self._hw.send('poll REMOTE\r')
+        self.send_wait4response(f'address {self.__addr}\r')
+        self.send_wait4response('poll REMOTE\r')
+
+    def close(self):
+        if self._serial:
+            self.stop()
+            self._serial.close()
 
     def send_wait4response(self, str2send: str) -> str:
-        self._hw.send(str2send)
-        response = self._hw.wait_for_string(max_bytes=1000)
+        response = ''
+        if self._serial.is_open:
+            self._serial.write(str2send.encode('UTF-8'))
+            self._serial.flush()
+            response = ''
+            self._serial.timeout = 1.0
+            response = self._serial.read_until('\r', size=1000).decode('UTF-8')
         # JWK, we should be checking error responses
         return response
 
@@ -136,7 +135,7 @@ class Pump11Elite:
         rate, rate_unit = self.get_infusion_rate()
         if target_vol_unit == 'ul':
             pass
-        elif rate_unit == 'ml':
+        elif target_vol_unit == 'ml':
             target_vol = target_vol * 1000
         else:
             self._lgr.error(f'Unknown target volume unit in syringe {self.name}: {target_vol_unit}')
@@ -154,7 +153,8 @@ class Pump11Elite:
             rate = 0
 
         buf = np.array([target_vol, rate], np.float32)
-        self._queue.put((buf, t))
+        if self._queue:
+            self._queue.put((buf, t))
 
     def record_continuous_infusion(self, t: np.float32, start: bool):
         """ targeted infusion actions in ul and ul/min
@@ -174,7 +174,8 @@ class Pump11Elite:
 
         flag = INFUSION_START if start else INFUSION_STOP
         buf = np.array([flag, rate], np.float32)
-        self._queue.put((buf, t))
+        if self._queue:
+            self._queue.put((buf, t))
 
     def infuse_to_target_volume(self):
         """ infuse a set volume. Requires a target volume to be set.
@@ -232,3 +233,14 @@ class Pump11Elite:
             # First and last values of each syringe's volume string are '\n', remove these, then separate by '\n'
             syringes = response[1:-1].split('\n')
         return syringes
+
+    def get_data(self, ch_id=None):
+        buf = None
+        t = None
+        try:
+            buf, t = self._queue.get(timeout=1.0)
+        except Empty:
+            # this can occur if there are attempts to read data before it has been acquired
+            # this is not unusual, so catch the error but do nothing
+            pass
+        return buf, t
