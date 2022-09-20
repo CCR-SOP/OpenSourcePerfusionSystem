@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Class for controlling a Pump 11 Elite syringe pump
 
-    Requires a hardware object implementing the SerialInterface protocol
-
     @project: LiverPerfusion NIH
     @author: John Kakareka, NIH
 
