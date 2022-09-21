@@ -14,12 +14,20 @@ from queue import Queue, Empty
 
 import numpy as np
 import serial
+import serial.tools.list_ports
 
 
 DATA_VERSION = 3
 
 INFUSION_START = -2
 INFUSION_STOP = -1
+
+
+# utility function to return all available comports in a list
+# typically used in a GUI to provide a selection of com ports
+def get_avail_com_ports() -> list:
+    ports = [comport.device for comport in serial.tools.list_ports.comports()]
+    return ports
 
 
 class Pump11Elite:
@@ -38,6 +46,9 @@ class Pump11Elite:
         self.period_sampling_ms = 0
         self.samples_per_read = 0
 
+        # JWK, this should be tied to actual hardware
+        self.is_infusing = False
+
         self._params = {
             'File Format': DATA_VERSION,
             'Syringe': self.name,
@@ -49,7 +60,6 @@ class Pump11Elite:
             'Start of Acquisition': 0
             }
 
-    @property
     def is_open(self):
         return self._serial.is_open
 
@@ -103,7 +113,15 @@ class Pump11Elite:
 
     def get_infusion_rate(self):
         response = self.send_wait4response('irate\r')
-        infuse_rate, infuse_unit = response.split(' ')
+        try:
+            infuse_rate, infuse_unit = response.split(' ')
+        except ValueError as e:
+            # this will happen if com port is not opened or
+            # an error occurred
+            self._lgr.error(f'Error occurred parsing get_infusion_rate response for syringe {self.name}')
+            self._lgr.error(f'Message: {e}')
+            infuse_rate = 0
+            infuse_unit = ''
         return infuse_rate, infuse_unit
 
     def set_target_volume(self, volume_ul):
@@ -111,7 +129,15 @@ class Pump11Elite:
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
-        vol, vol_unit = response.split(' ')
+        try:
+            vol, vol_unit = response.split(' ')
+        except ValueError as e:
+            # this will happen if com port is not opened or
+            # an error occurred
+            self._lgr.error(f'Error occurred parsing get_target_volume response for syringe {self.name}')
+            self._lgr.error(f'Message: {e}')
+            vol = 0
+            vol_unit = ''
         return vol, vol_unit
 
     def clear_target_volume(self):
@@ -190,12 +216,14 @@ class Pump11Elite:
         self.send_wait4response('irun\r')
         t = perf_counter()
         self.record_continuous_infusion(t, start=True)
+        self.is_infusing = True
 
     def stop(self):
         """ stop an infusion. Typically, used to stop a continuous infusion
             but can be used to abort a targeted infusion
         """
         self.send_wait4response('stop\r')
+        self.is_infusing = False
         t = perf_counter()
         # check if targeted volume is 0, if so, then this is a continuous injection
         # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
