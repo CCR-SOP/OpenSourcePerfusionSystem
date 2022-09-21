@@ -23,6 +23,46 @@ INFUSION_START = -2
 INFUSION_STOP = -1
 
 
+DEFAULT_SYRINGES = {
+    'air': '1 ml\n2.5 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml',
+    'bdg': '500 ul\n1 ml\n2.5 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml\n100 ml',
+    'bdp': '1 ml\n3 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml\n60 ml',
+    'cad': '250 ul\n500 ul\n1 ml\n2 ml\n3 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml\n100 ml',
+    'cma': '1 ml\n2.5 ml\n5 ml\n10 ml',
+    'hm1': '5 ul\n10 ul\n25 ul\n50 ul\n100 ul\n250 ul\n500 ul',
+    'hm2': '1 ml\n1.25 ml\n2.5 ml\n5 ml\n10 ml\n25 ml\n50 ml\n100 ml',
+    'hm3': '10 ul\n25 ul\n50 ul\n100 ul\n250 ul\n500 ul',
+    'hm4': '0.5 ul\n1 ul\n2 ul\n5 ul',
+    'has': '2.5 ml\n8 ml\n20 ml\n50 ml\n100 ml',
+    'hos': '1 ml\n2 ml\n3 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml\n100 ml',
+    'ils': '250 ul\n500 ul\n1 ml\n2.5 ml\n5 ml\n10 ml\n25 ml\n50 ml\n100 ml',
+    'nip': '1 ml\n1 ml\n2.5 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml',
+    'sge': '5 ul\n10 ul\n25 ul\n50 ul\n100 ul\n250 ul\n500 ul\n1 ml\n2.5 ml\n5 ml\n10 ml\n25 ml\n50 ml\n100 ml',
+    'smp': '1 ml\n3 ml\n6 ml\n12 ml\n20 ml\n35 ml\n60 ml\n140 ml',
+    'tej': '1 ml\n1 ml\n2.5 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml',
+    'top': '1 ml\n2.5 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml'
+}
+DEFAULT_MANUFACTURERS_STR = \
+"""
+air  Air-Tite, HSW Norm-Ject
+bdg  Becton Dickinson, Glass (all types)
+bdp  Becton Dickinson, Plasti-pak
+cad  Cadence Science, Micro-Mate Glass
+cma  CMA Microdialysis, CMA
+hm1  Hamilton 700, Glass
+hm2  Hamilton 1000, Glass
+hm3  Hamilton 1700, Glass
+hm4  Hamilton 7000, Glass
+has  Harvard Apparatus, Stainless Steel
+hos  Hoshi
+ils  ILS, Glass
+nip  Nipro
+sge  Scientific Glass Engineering
+smp  Sherwood-Monoject, Plastic
+tej  Terumo Japan, Plastic
+top  Top
+"""
+
 # utility function to return all available comports in a list
 # typically used in a GUI to provide a selection of com ports
 def get_avail_com_ports() -> list:
@@ -74,7 +114,7 @@ class Pump11Elite:
             self._serial.open()
         except serial.serialutil.SerialException as e:
             self._lgr.error(f'Could not open serial port {self._serial.portstr}')
-            self._lgr.error(f'{e}')
+            self._lgr.error(f'Message: {e}')
         self.__addr = addr
         self._queue = Queue()
 
@@ -106,7 +146,7 @@ class Pump11Elite:
 
     def set_infusion_rate(self, rate_ul_min: int):
         # can be changed mid-run
-        self._set_param('irate', f'{rate_ul_min} ul/sec\r')
+        self._set_param('irate', f'{int(rate_ul_min)} ul/min\r')
 
     def clear_infusion_volume(self):
         self.send_wait4response('civolume\r')
@@ -125,7 +165,7 @@ class Pump11Elite:
         return infuse_rate, infuse_unit
 
     def set_target_volume(self, volume_ul):
-        self._set_param('tvolume', f'{volume_ul} ul\r')
+        self._set_param('tvolume', f'{int(volume_ul)} ul\r')
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
@@ -249,15 +289,20 @@ class Pump11Elite:
                 syringe_info = resp[i]
                 # Double spaces separate manufacturing code from manufacturing information
                 syringe_info_separation = syringe_info.split('  ')
-                manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
+                try:
+                    manufacturers[syringe_info_separation[0]] = syringe_info_separation[1]
+                except IndexError as e:
+                    self._lgr.error(f'Error parsing manufacturer info from Pump 11 Elite')
+                    self._lgr.error(f'Response: {syringe_info}')
+                    self._lgr.error(f'Msg: {e}')
         return manufacturers
 
-    def get_available_syringes(self, manufacturer_cde: str) -> list:
+    def get_available_syringes(self, manufacturer_code: str) -> list:
         syringes = []
-        response = self.send_wait4response(f'syrmanu {manufacturer_cde} ?\r')
+        response = self.send_wait4response(f'syrmanu {manufacturer_code} ?\r')
         if response:
             # First and last values of each syringe's volume string are '\n', remove these, then separate by '\n'
-            syringes = response[1:-1].split('\n')
+            syringes = response.split('\n')
         return syringes
 
     def get_data(self, ch_id=None):
@@ -270,3 +315,36 @@ class Pump11Elite:
             # this is not unusual, so catch the error but do nothing
             pass
         return buf, t
+
+
+class MockPump11Elite(Pump11Elite):
+    def __init__(self, name):
+        super().__init__(name)
+        self._serial.is_open = False
+        self._values = {'tvolume': '0 ul', 'irate': '0 ul/min'}
+
+    def open(self, port_name: str, baud_rate: int, addr: int = 0) -> None:
+        self.__addr = addr
+        self._queue = Queue()
+        self._serial.is_open = True
+
+    def send_wait4response(self, str2send: str) -> str:
+        response = ''
+        if self._serial.is_open:
+            # strip off trailing \r
+            str2send = str2send[:-1]
+            parts = str2send.split(' ', 1)
+            if parts[0] == 'syrmanu':
+                if parts[1] == '?':
+                    response = DEFAULT_MANUFACTURERS_STR
+                else:
+                    code = parts[1].split(' ')[0]
+                    response = DEFAULT_SYRINGES[code]
+            elif parts[0] in ['tvolume', 'irate']:
+                if len(parts) == 2:
+                    self._values[parts[0]] = parts[1]
+                else:
+                    response = self._values[parts[0]]
+
+        # JWK, we should be checking error responses
+        return response
