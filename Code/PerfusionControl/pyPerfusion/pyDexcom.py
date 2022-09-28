@@ -9,27 +9,10 @@ import numpy as np
 
 DATA_VERSION = 6
 
+
 class DexcomSensor:
-
-    """
-       Class for serial communication with Dexcom Receiver over USB
-       ...
-       Methods
-       -------
-       open_stream(full_path)
-           creates .txt and .dat files for recording Dexcom Sensor data
-       start_stream()
-           starts thread for writing streamed data from Dexcom sensor to file
-       stop_stream()
-           stops recording of data
-       close_stream()
-           closes file
-       get_latest()
-           returns latest glucose reading
-       """
-
     def __init__(self, name, unit, receiver):
-        self._logger = logging.getLogger(__name__)
+        self._lgr = logging.getLogger(__name__)
         self.name = name
         self.unit = unit
         self.receiver = receiver
@@ -44,8 +27,8 @@ class DexcomSensor:
         self._datapoints_per_ts = 1
         self._bytes_per_ts = 4
 
-        self.__thread_streaming = None
-        self.__evt_halt_streaming = Event()
+        self.__thread = None
+        self._lgr_streaming = Event()
 
         self.old_time = None
         self.error = None
@@ -76,13 +59,13 @@ class DexcomSensor:
         self.print_stream_info()
 
     def _open_write(self):
-        self._logger.info(f'opening {self.full_path}')
+        self._lgr.info(f'opening {self.full_path}')
         self._fid_write = open(self.full_path, 'w+b')
 
     def print_stream_info(self):
         hdr_str = self._get_stream_info()
         filename = self.full_path.with_suffix('.txt')
-        self._logger.debug(f"printing stream info to {filename}")
+        self._lgr.debug(f"printing stream info to {filename}")
         fid = open(filename, 'wt')
         fid.write(hdr_str)
         fid.close()
@@ -106,12 +89,12 @@ class DexcomSensor:
         data_buf.tofile(self._fid_write)
 
     def start_stream(self):
-        self.__evt_halt_streaming.clear()
-        self.__thread_streaming = Thread(target=self.OnStreaming)
-        self.__thread_streaming.start()
+        self._lgr_streaming.clear()
+        self.__thread = Thread(target=self.OnStreaming)
+        self.__thread.start()
 
     def OnStreaming(self):
-        while not self.__evt_halt_streaming.wait(30):
+        while not self._lgr_streaming.wait(30):
             self.stream()
 
     def stream(self):
@@ -129,10 +112,10 @@ class DexcomSensor:
             self.old_time = new_time
 
     def stop_stream(self):
-        if self.__thread_streaming and self.__thread_streaming.is_alive():
-            self.__evt_halt_streaming.set()
-            self.__thread_streaming.join(2.0)
-            self.__thread_streaming = None
+        if self.__thread and self.__thread.is_alive():
+            self._lgr_streaming.set()
+            self.__thread.join(2.0)
+            self.__thread = None
 
     def close_stream(self):
         if self._fid_write:

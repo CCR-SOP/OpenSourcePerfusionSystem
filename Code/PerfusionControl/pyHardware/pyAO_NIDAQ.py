@@ -45,6 +45,17 @@ class NIDAQ_AO(pyAO.AO):
         self.__check_hw_clk_support()
         self.__task = PyDAQmx.Task()
 
+    def close(self):
+        self.stop()
+
+    # no need to override start() as NIDAQ hardware does not require
+    # task to be explicitly started
+    def stop(self):
+        if self.__task:
+            self.__task.StopTask()
+            self.__task = None
+        super().stop()
+
     def _open_task(self, task):
         try:
             task.CreateAOVoltageChan(self.devname, None, 0, 5, PyDAQmx.DAQmx_Val_Volts, None)
@@ -86,12 +97,6 @@ class NIDAQ_AO(pyAO.AO):
         if self.__task:
             self.__task.WaitUntilTaskDone(10.0)
 
-    def close(self):
-        self.halt()
-        if self.__task:
-            self.__task.StopTask()
-            self.__task = None
-
     def __clear_and_create_task(self):
         if self.__task:
             self.__task.StopTask()
@@ -103,7 +108,6 @@ class NIDAQ_AO(pyAO.AO):
             self.__task = None
             raise
 
-
     def set_sine(self, volts_p2p, volts_offset, Hz):
         if self.__hw_clk:
             super().set_sine(volts_p2p, volts_offset, Hz)
@@ -111,10 +115,15 @@ class NIDAQ_AO(pyAO.AO):
             self.__clear_and_create_task()
             hz = 1.0 / (self._period_ms / 1000.0)
             if self.__task:
-                self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
-                                            len(self._buffer))
-                self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout, PyDAQmx.DAQmx_Val_GroupByChannel,
-                                            self._buffer, PyDAQmx.byref(written), None)
+                try:
+                    self.__task.CfgSampClkTiming("", hz, PyDAQmx.DAQmx_Val_Rising, PyDAQmx.DAQmx_Val_ContSamps,
+                                                 len(self._buffer))
+                    self.__task.WriteAnalogF64(len(self._buffer), True, self.__timeout,
+                                               PyDAQmx.DAQmx_Val_GroupByChannel,
+                                               self._buffer, PyDAQmx.byref(written), None)
+                except PyDAQmx.DAQmxFunctions.InvalidAttributeValueError as e:
+                    msg = f'{self.devname} does not support hardware sampling {self._dev} required for sine output'
+                    self._lgr.error(msg)
         else:
             msg = f'Attempted to setup up sine wave output which is unsupported on {self.devname}'
             self._logger.error(msg)

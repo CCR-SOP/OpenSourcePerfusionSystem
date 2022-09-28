@@ -1,33 +1,23 @@
+# -*- coding: utf-8 -*-
+""" Base class for serial communication over USB
+
+    Uses pySerial library available on PyPi to provide basic serial
+    communication functions such as open/close and send/recv.
+    Device-specific protocols should derive from this class.
+
+    @project: LiverPerfusion NIH
+    @author: John Kakareka, NIH
+
+    This work was created by an employee of the US Federal Gov
+    and under the public domain.
+"""
+
 import logging
+
 import serial
 
 
-
 class USBSerial:
-    """
-    Base class for serial communication over USB
-
-
-    Attributes
-    ----------
-    _port_name : basestring
-            Name of serial port (e.g. 'COM4')
-    _baud : number
-            Baud rate to be used (e.g. 115_200)
-
-    Methods
-    -------
-    open(port_name, baud)
-        opens USB port of given name with the specified baud rate
-    close()
-        close the USB port
-    send(str)
-        sends a string of data over the port
-    recv()
-        retrieves a string of data over the port
-
-    """
-
     def __init__(self):
         self._logger = logging.getLogger(__name__)
         self._port_name = None
@@ -65,11 +55,10 @@ class USBSerial:
         if self.__serial.is_open:
             self.__serial.timeout = timeout
             response = self.__serial.read_until(eol, size=max_bytes).decode('UTF-8')
-            #
         return response
 
     def recv(self, expected_bytes, timeout=0):
         if self.__serial.is_open:
             self.__serial.timeout = timeout
-            bytes = self.__serial.read(expected_bytes)
-            return bytes
+            recv_bytes = self.__serial.read(expected_bytes)
+            return recv_bytes

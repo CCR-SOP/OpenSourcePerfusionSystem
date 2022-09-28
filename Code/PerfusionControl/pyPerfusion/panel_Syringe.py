@@ -49,7 +49,7 @@ class PanelSyringe(wx.Panel):
         if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
             self._panel_feedback = PanelFeedbackSyringe(self, self._sensor, self._name, self._injection)
 
-        self._injection.ResetSyringe()
+        self._injection.reset_syringe()
         self._injection.set_syringe_manufacturer_size(self.manucode[1:4], self.size)
 
         self.__do_layout()
@@ -93,7 +93,7 @@ class PanelSyringe(wx.Panel):
         state = self.btn_start_basal.GetLabel()
         if state == 'Start Basal Infusion':
             self.enable_buttons(False)
-            self._injection.ResetSyringe()
+            self._injection.reset_syringe()
             rate = self.spin_rate.GetValue()
             unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
             self._injection.set_infusion_rate(rate, unit)
@@ -109,7 +109,7 @@ class PanelSyringe(wx.Panel):
     def OnOneTimeBolus(self, evt):
         self.btn_start_basal.Enable(False)
         self.enable_buttons(False)
-        self._injection.ResetSyringe()
+        self._injection.reset_syringe()
         self._injection.set_infusion_rate(25, 'ml/min')
         volume = self.spin_1TB_volume.GetValue()
         unit = self.choice_1TB_unit.GetString(self.choice_1TB_unit.GetSelection())
@@ -456,7 +456,7 @@ class PanelFeedbackSyringe(wx.Panel):
     def OnStartFeedbackInjection(self, evt):
         state = self.btn_start_feedback_injections.GetLabel()
         if state == 'Start Feedback Injections':
-            self._injection.ResetSyringe()
+            self._injection.reset_syringe()
             self.parent.spin_rate.Enable(False)
             self.parent.choice_rate.Enable(False)
             self.parent.btn_start_basal.Enable(False)
@@ -524,7 +524,7 @@ class TestFrame(wx.Frame):
         baud = section['baudrate']
         vasodilator_injection = PHDserial('Epoprostenol')
         vasodilator_injection.open(com, baud)
-        vasodilator_injection.ResetSyringe()
+        vasodilator_injection.reset_syringe()
         vasodilator_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasodilator_injection.start_stream()
 
@@ -533,7 +533,7 @@ class TestFrame(wx.Frame):
         baud = section['baudrate']
         vasoconstrictor_injection = PHDserial('Phenylephrine')
         vasoconstrictor_injection.open(com, baud)
-        vasoconstrictor_injection.ResetSyringe()
+        vasoconstrictor_injection.reset_syringe()
         vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
         vasoconstrictor_injection.start_stream()
 
@@ -542,7 +542,7 @@ class TestFrame(wx.Frame):
         baud = section['baudrate']
         heparin_injection = PHDserial('Heparin')
         heparin_injection.open(com, baud)
-        heparin_injection.ResetSyringe()
+        heparin_injection.reset_syringe()
         heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
         heparin_injection.start_stream()
 
@@ -551,7 +551,7 @@ class TestFrame(wx.Frame):
         baud = section['baudrate']
         tpn_bilesalts_injection = PHDserial('TPN & Bile Salts')
         tpn_bilesalts_injection.open(com, baud)
-        tpn_bilesalts_injection.ResetSyringe()
+        tpn_bilesalts_injection.reset_syringe()
         tpn_bilesalts_injection.open_stream(LP_CFG.LP_PATH['stream'])
         tpn_bilesalts_injection.start_stream()
 
