@@ -7,17 +7,37 @@
 from enum import Enum
 import wx
 import logging
+import time
 import pyPerfusion.utils as utils
-from pyPerfusion.plotting import PanelPlotting, TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot, SensorPlot
-from pyHardware.pySaturationMonitor import TSMSerial
+from pyPerfusion.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
+
+
+from pyPerfusion.plotting import PanelPlotting, TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot, SensorPlot
+from pyPerfusion.pySaturationMonitor import TSMSerial
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyHardware.pyAI import AIDeviceException
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.FileStrategy import StreamToFile
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 
+utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+utils.configure_matplotlib_logging()
 
+#set up data streaming from USB serial
+class panel(wx.Panel):
+    #com, baud stuff
+    #need to break data out from
+    CDI = PHDserial('CDI500')
+    CDI.open()
+    CDI.open_stream()
+    CDI.start_stream()
+
+
+class TestFrame(wx.Frame):
+    def __init__(self, *args, **kwds):
+         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
+         wx.Frame.__init__(self, *args, **kwds)
 
 class MyTestApp(wx.App):
     def OnInit(self):
