@@ -137,7 +137,8 @@ class Pump11Elite:
             self._serial.timeout = 1.0
             response = self._serial.read_until('\r', size=1000).decode('UTF-8')
         # JWK, we should be checking error responses
-        return response
+        # strip starting \r and ending \r
+        return response[1:-1]
 
     def _set_param(self, param, value) -> str:
         """ helper function to send a properly formatted parameter-value pair"""
@@ -169,6 +170,7 @@ class Pump11Elite:
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
+        self._lgr.debug(f'get_target_volume: response={response}')
         try:
             vol, vol_unit = response.split(' ')
         except ValueError as e:
@@ -213,7 +215,7 @@ class Pump11Elite:
         elif rate_unit == 'ml/sec':
             rate = rate * 60 * 1000
         else:
-            self._lgr.error(f'Unknown rate unit in syringe {self.name}: {rate_unit}')
+            self._lgr.error(f'Unknown rate unit in syringe {self.name}: ++{rate_unit}++')
             rate = 0
 
         buf = np.array([target_vol, rate], np.int32)
