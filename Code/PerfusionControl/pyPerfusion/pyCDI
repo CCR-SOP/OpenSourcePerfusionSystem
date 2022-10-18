@@ -78,7 +78,7 @@ class CDIStreaming:
         # strip starting \r and ending \r
         return response[1:-1]
 
-    def stream_data(self):
+    def stream_data(self): # this is probably wrong
 
         self._serial.flushInput()
         self._serial.flushOutput()
