@@ -14,21 +14,20 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Timer, enumerate
-from datetime import datetime
 import logging
 import time
 
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
 
-dev = 'Dev1'
+dev = 'Dev2'
 
+
+PerfusionConfig.set_test_config()
 logger = logging.getLogger()
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
 utils.setup_stream_logger(logger, logging.DEBUG)
 utils.configure_matplotlib_logging()
 
@@ -39,7 +38,7 @@ sensor = SensorStream('Analog Input 1', 'Volts', acq)
 logger.debug('opening sensor')
 
 strategy = StreamToFile('Raw', 1, 10)
-strategy.open(LP_CFG.LP_PATH['stream'], 'test', sensor.params)
+strategy.open(PerfusionConfig.get_date_folder(), 'test', sensor.params)
 sensor.add_strategy(strategy)
 
 sensor.open()

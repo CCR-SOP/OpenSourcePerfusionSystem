@@ -14,7 +14,7 @@ import wx
 
 from pyHardware.pyAI import AIDeviceException
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.plotting import PanelPlotting, SensorPlot
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
@@ -168,13 +168,13 @@ class PanelAI_Config(wx.Panel):
 
 
     def OnSaveCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         section['DevName'] = self.choice_dev.GetStringSelection()
         section['LineName'] = self.choice_line.GetStringSelection()
-        LP_CFG.update_hwcfg_section(self._name, section)
+        PerfusionConfig.write_section('hardware', self._name, section)
 
     def OnLoadCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         self.choice_dev.SetStringSelection(section['DevName'])
         self.choice_line.SetStringSelection(section['LineName'])
 
@@ -268,15 +268,15 @@ class PanelAICalibration(wx.Panel):
         self.label_cal_pt2_val.SetLabel('1')
 
     def OnSaveCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         section['CalPt1_Target'] = f'{self.spin_cal_pt1.GetValue():.3f}'
         section['CalPt1_Reading'] = self.label_cal_pt1_val.GetLabel()
         section['CalPt2_Target'] = f'{self.spin_cal_pt2.GetValue():.3f}'
         section['CalPt2_Reading'] = self.label_cal_pt2_val.GetLabel()
-        LP_CFG.update_hwcfg_section(self._name, section)
+        PerfusionConfig.write_section('hardware', self._name, section)
 
     def OnLoadCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         self.spin_cal_pt1.SetValue(float(section['CalPt1_Target']))
         self.label_cal_pt1_val.SetLabel(section['CalPt1_Reading'])
         self.spin_cal_pt2.SetValue(float(section['CalPt2_Target']))
@@ -291,12 +291,12 @@ class TestFrame(wx.Frame):
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Analog Input 1', 'Volts', self.acq)
         self.raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
-        self.raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        self.raw.open(PerfusionConfig.get_date_folder(), f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(self.raw)
         self.rms = RMSStrategy('RMS', 50, self.acq.buf_len)
         self.sensor.add_strategy(self.rms)
         self.raw2file = StreamToFile('StreamRMS', None, self.acq.buf_len)
-        self.raw2file.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', self.sensor.params)
+        self.raw2file.open(PerfusionConfig.get_date_folder(), f'{self.sensor.name}_rms', self.sensor.params)
         self.sensor.add_strategy(self.raw2file)
         self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRMS')  # For RMS readings
        # self.panel = PanelAI(self, self.sensor, name=ai_name, strategy='StreamRaw')  # For Raw readings
@@ -320,8 +320,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
     app = MyTestApp(0)

@@ -7,15 +7,16 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+import logging
+
 import wx
-import time
 
 from pyPerfusion.plotting import PanelPlotting, SensorPlot
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.FileStrategy import StreamToFile
-import pyPerfusion.PerfusionConfig as LP_CFG
-
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+import pyPerfusion.utils as utils
 
 
 class TestFrame(wx.Frame):
@@ -24,9 +25,6 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self._plots = []
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
-
         self.hw = AI(period_sample_ms=10)
         self.sensors = [
             SensorStream('HA Flow', 'ml/min', self.hw),
@@ -34,7 +32,7 @@ class TestFrame(wx.Frame):
         ]
         for sensor in self.sensors:
             strategy = StreamToFile('Raw', 1, 10)
-            strategy.open(LP_CFG.LP_PATH['stream'], sensor.name, sensor.params)
+            strategy.open(PerfusionConfig.get_date_folder(), sensor.name, sensor.params)
             sensor.add_strategy(strategy)
             sensor.open()
 
@@ -79,5 +77,9 @@ class MyTestApp(wx.App):
         return True
 
 
-app = MyTestApp(0)
-app.MainLoop()
+if __name__ == "__main__":
+    PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
+    app = MyTestApp(0)
+    app.MainLoop()

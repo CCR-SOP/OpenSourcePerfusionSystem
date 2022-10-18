@@ -13,7 +13,7 @@ import time
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 import pyHardware.pyAO as pyAO
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
@@ -145,13 +145,13 @@ class PanelAO_Config(wx.Panel):
             self.btn_open.SetLabel('Open')
 
     def OnSaveCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         section['DevName'] = self.choice_dev.GetStringSelection()
         section['LineName'] = self.choice_line.GetStringSelection()
-        LP_CFG.update_hwcfg_section(self._name, section)
+        PerfusionConfig.write_section('hardware', self._name, section)
 
     def OnLoadCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         # _period_ms = int(section['SamplingPeriod_ms'])
         # _bits = int(section['SampleDepth'])
         self.choice_dev.SetStringSelection(section['DevName'])
@@ -244,15 +244,15 @@ class PanelAO_Settings(wx.Panel):
         self.spin_pk2pk.Enable(want_sine)
 
     def OnSaveCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         section['VoltsPk2Pk'] = f'{self.spin_pk2pk.GetValue():.3f}'
         section['VoltsOffset'] = f'{self.spin_offset.GetValue():.3f}'
         section['Frequency'] = f'{self.spin_hz.GetValue():.3f}'
         section['SineOutput'] = f'{self.check_sine.IsChecked()}'
-        LP_CFG.update_hwcfg_section(self._name, section)
+        PerfusionConfig.write_section('hardware', self._name, section)
 
     def OnLoadCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         self.spin_pk2pk.SetValue(section.getfloat('VoltsPk2Pk'))
         self.spin_offset.SetValue(section.getfloat('VoltsOffset'))
         self.spin_hz.SetValue(section.getfloat('Frequency'))
@@ -280,8 +280,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
     app = MyTestApp(0)

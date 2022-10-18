@@ -14,9 +14,10 @@ from pyPerfusion.plotting import SensorPlot, EventPlot, PanelPlotting
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
-import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
 import pyPerfusion.utils as utils
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+
 
 # for testing, creating a streaming AI representing "flow"
 acq = AI(100)
@@ -85,11 +86,11 @@ class MyTestApp(wx.App):
         # streaming to file is important as plotting gets it data
         # from the file, not a live stream
         strategy = StreamToFile('Raw', 1, 10)
-        strategy.open(LP_CFG.LP_PATH['stream'], 'test', sensor.params)
+        strategy.open(PerfusionConfig.get_date_folder(), 'test', sensor.params)
         sensor.add_strategy(strategy)
 
         strategy = PointsToFile('Event', 1, 10)
-        strategy.open(LP_CFG.LP_PATH['stream'], 'test_event', evt.params)
+        strategy.open(PerfusionConfig.get_date_folder(), 'test_event', evt.params)
         evt.add_strategy(strategy)
 
         sensor.open()
@@ -104,8 +105,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
     app = MyTestApp(0)

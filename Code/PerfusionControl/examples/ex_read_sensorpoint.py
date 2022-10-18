@@ -13,19 +13,18 @@ import logging
 
 import numpy as np
 
-from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
+
+PerfusionConfig.set_test_config()
 
 logger = logging.getLogger()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
 
 samples = 2
-filename = LP_CFG.LP_PATH['data'] / '2021-07-13/Hepatic Artery Flow.dat'
+filename = PerfusionConfig.get_folder('data')/ '2021-07-13/Hepatic Artery Flow.dat'
 logger.info(f'reading from {filename}')
 stream_type = np.dtype([('timestamp', np.int32), ('samples', np.float32, samples)])
 full_data = np.fromfile(filename, dtype=stream_type)

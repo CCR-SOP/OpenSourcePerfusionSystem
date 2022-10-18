@@ -14,17 +14,10 @@ import logging
 from pyPerfusion.plotting import SensorPlot, PanelPlotting
 from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 import pyPerfusion.utils as utils
-
-
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-utils.configure_matplotlib_logging()
-
-acq = AI(100)
-sensor = SensorStream('test', 'ml/min', acq, valid_range=[15, 20])
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class TestFrame(wx.Frame):
@@ -32,20 +25,17 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
-
         sensor.hw.add_channel(0)
         sensor.set_ch_id(0)
         sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
 
         strategy = StreamToFile('Raw', 1, 10)
-        strategy.open(LP_CFG.LP_PATH['stream'], 'test', sensor.params)
+        strategy.open(PerfusionConfig.get_date_folder(), 'test', sensor.params)
         sensor.add_strategy(strategy)
 
         rms = RMSStrategy('RMS', 10, acq.buf_len)
         save_rms = StreamToFile('StreamRMS', None, acq.buf_len)
-        save_rms.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_rms', {**sensor.params, **rms.params})
+        save_rms.open(PerfusionConfig.get_date_folder(), f'{sensor.name}_rms', {**sensor.params, **rms.params})
         sensor.add_strategy(rms)
         sensor.add_strategy(save_rms)
         self.panel = PanelPlotting(self)
@@ -80,9 +70,14 @@ class MyTestApp(wx.App):
         return True
 
 
-app = MyTestApp(0)
-app.MainLoop()
-time.sleep(100)
-sensor.stop()
-acq.stop()
+if __name__ == "__main__":
+    PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
+
+    acq = AI(100)
+    sensor = SensorStream('test', 'ml/min', acq, valid_range=[15, 20])
+    app = MyTestApp(0)
+    app.MainLoop()
+
 

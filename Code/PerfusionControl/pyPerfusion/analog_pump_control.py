@@ -7,7 +7,7 @@ Basic code for controlling centrifugal and dialysis pumps via Analog Output
 """
 import wx
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyPerfusion.panel_AO import PanelAO
 
@@ -22,7 +22,7 @@ class TestFrame(wx.Frame):
 
         self._panel = []
         HA_panel = PanelAO(self, NIDAQ_AO(), devices[0])
-        section = LP_CFG.get_hwcfg_section(devices[0])
+        section = PerfusionConfig.read_section('hardware', devices[0])
         dev = section['Device']
         line = section['LineName']
         HA_panel._panel_cfg.choice_dev.SetStringSelection(dev)
@@ -33,7 +33,7 @@ class TestFrame(wx.Frame):
         self._panel.append(HA_panel)
 
         PV_panel = PanelAO(self, NIDAQ_AO(), devices[1])
-        section = LP_CFG.get_hwcfg_section(devices[1])
+        section = PerfusionConfig.read_section('hardware', devices[1])
         dev = section['Device']
         line = section['LineName']
         PV_panel._panel_cfg.choice_dev.SetStringSelection(dev)
@@ -44,7 +44,7 @@ class TestFrame(wx.Frame):
         self._panel.append(PV_panel)
 
         Perfusate_panel = PanelAO(self, NIDAQ_AO(), devices[2])
-        section = LP_CFG.get_hwcfg_section(devices[2])
+        section = PerfusionConfig.read_section('hardware', devices[2])
         dev = section['Device']
         line = section['LineName']
         Perfusate_panel._panel_cfg.choice_dev.SetStringSelection(dev)
@@ -55,7 +55,7 @@ class TestFrame(wx.Frame):
         self._panel.append(Perfusate_panel)
 
         Dialysate_inflow_panel = PanelAO(self, NIDAQ_AO(), devices[3])
-        section = LP_CFG.get_hwcfg_section(devices[3])
+        section = PerfusionConfig.read_section('hardware', devices[3])
         dev = section['Device']
         line = section['LineName']
         Dialysate_inflow_panel._panel_cfg.choice_dev.SetStringSelection(dev)
@@ -66,7 +66,7 @@ class TestFrame(wx.Frame):
         self._panel.append(Dialysate_inflow_panel)
 
         Dialysate_outflow_panel = PanelAO(self, NIDAQ_AO(), devices[4])
-        section = LP_CFG.get_hwcfg_section(devices[4])
+        section = PerfusionConfig.read_section('hardware', devices[4])
         dev = section['Device']
         line = section['LineName']
         Dialysate_outflow_panel._panel_cfg.choice_dev.SetStringSelection(dev)
@@ -95,9 +95,7 @@ class MyTestApp(wx.App):
         return True
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     utils.setup_default_logging(filename='panel_gb100_saturation_monitor')
     app = MyTestApp(0)
     app.MainLoop()
-

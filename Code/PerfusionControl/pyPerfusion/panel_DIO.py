@@ -12,7 +12,7 @@ import wx
 
 from pyHardware.pyDIO import DIODeviceException
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 PORT_LIST = [f'port{p}' for p in range(0, 5)]
@@ -161,16 +161,16 @@ class PanelDIOConfig(wx.Panel):
             ctrl.Enable(enable)
 
     def OnSaveConfig(self, evt):
-         section = LP_CFG.get_hwcfg_section(self._name)
+         section = PerfusionConfig.read_section('hardware', self._name)
          section['Device'] = self.choice_dev.GetStringSelection()
          section['Port'] = self.choice_port.GetStringSelection()
          section['Line'] = self.choice_line.GetStringSelection()
          section['Active High'] = str(self.choice_active.GetSelection() == 1)
          section['Read Only'] = str(self.check_read_only.GetValue())
-         LP_CFG.update_hwcfg_section(self._name, section)
+         PerfusionConfig.write_section('hardware', self._name, section)
 
     def OnLoadConfig(self, evt):
-        section = LP_CFG.get_hwcfg_section(self._name)
+        section = PerfusionConfig.read_section('hardware', self._name)
         self.choice_dev.SetStringSelection(section['Device'])
         self.choice_port.SetStringSelection(section['Port'])
         self.choice_line.SetStringSelection(section['Line'])
@@ -311,8 +311,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     utils.setup_stream_logger(logger, logging.DEBUG)

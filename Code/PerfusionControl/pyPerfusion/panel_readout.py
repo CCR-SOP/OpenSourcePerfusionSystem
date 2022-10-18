@@ -8,13 +8,12 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-from pathlib import Path
 import logging
 
 import wx
 
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.SensorStream import SensorStream
 from pyHardware.pyAI import AI
 from pyPerfusion.FileStrategy import StreamToFile
@@ -64,7 +63,7 @@ class PanelReadout(wx.Panel):
             self.update_value()
 
     def update_value(self):
-        t, val = self._sensor.get_file_strategy('StreamRaw').retrieve_buffer(0, 1)
+        t, val = self._sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
         if val is not []:
             val = val[0]
             self.label_value.SetLabel(f'{val:0.3}')
@@ -86,7 +85,7 @@ class TestFrame(wx.Frame):
         self.sensor.set_ch_id('0')
         self.panel = PanelReadout(self, self.sensor)
         self.raw = StreamToFile('Raw', None, self.acq.buf_len)
-        self.raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        self.raw.open(PerfusionConfig.get_date_folder(), f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(self.raw)
         self.sensor.open()
         self.sensor.start()
@@ -103,8 +102,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     app = MyTestApp(0)
     app.MainLoop()
