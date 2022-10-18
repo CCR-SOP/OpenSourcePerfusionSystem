@@ -8,7 +8,7 @@ import logging
 
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyDIO_NIDAQ import NIDAQ_DIO
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.panel_DIO import PanelDIOIndicator
 from pyHardware.pyDIO import DIODeviceException
 import pyPerfusion.utils as utils
@@ -126,7 +126,7 @@ class TestFrame(wx.Frame):
         self._panel_coord = PanelCoordination(self, self._vcs, name='Valve Coordination')
 
         self.ao = NIDAQ_AO('VCS Pump')
-        section = LP_CFG.get_hwcfg_section(self.ao.name)
+        section = PerfusionConfig.read_section('hardware', self.ao.name)
         self._lgr.debug(f'Reading config for {self.ao.name}')
         dev = section['DevName']
         line = section['LineName']
@@ -150,7 +150,7 @@ class TestFrame(wx.Frame):
                 panel = PanelDIOIndicator(self, valve, valve.name)
                 self.sizer_dio.Add(panel, flags)
                 self._lgr.debug(f'opening config section {key}')
-                section = LP_CFG.get_hwcfg_section(key)
+                section = PerfusionConfig.read_section('hardware', key)
                 dev = section['Device']
                 port = section['Port']
                 line = section['Line']
@@ -159,7 +159,7 @@ class TestFrame(wx.Frame):
                 read_only_state = (section['Read Only'] == 'True')
             except KeyError as e:
                 self._lgr.error(f'Could not find configuration info for {key}')
-                self._lgr.error(f'Looking in {LP_CFG.LP_PATH["config"]}')
+                self._lgr.error(f'Looking in {PerfusionConfig.hw_cfg_name()}')
                 continue
             try:
                 valve.open(port=port, line=line, active_high=active_high_state, read_only=read_only_state, dev=dev)  # Setting dev/port/line values for DIO
@@ -205,8 +205,7 @@ class MyTestApp(wx.App):
         return True
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     utils.setup_stream_logger(logger, logging.DEBUG)

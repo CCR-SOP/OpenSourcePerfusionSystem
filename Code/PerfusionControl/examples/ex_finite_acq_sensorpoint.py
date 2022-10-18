@@ -13,20 +13,19 @@ from time import sleep
 from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
 
+
+PerfusionConfig.set_test_config()
 
 logger = logging.getLogger()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
-dev = 'Dev1'
+dev = 'Dev2'
 line = '0'
 samples = 5
 period_ms = 1000
-
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
 
 logger.info(f'Creating AI_Finite_NIDAQ with period_ms of {period_ms}')
 ai = AI_Finite_NIDAQ(period_ms=period_ms, volts_p2p=5, volts_offset=2.5, samples_per_read=samples)
@@ -37,12 +36,12 @@ logger.info(f'Adding channel {line}')
 ai.add_channel(line)
 sensor.set_ch_id(line)
 strategy = StreamToFile('Raw', 1, 10)
-strategy.open(LP_CFG.LP_PATH['stream'], sensor.name, sensor.params)
+strategy.open(PerfusionConfig.get_date_folder(), sensor.name, sensor.params)
 sensor.add_strategy(strategy)
 sensor.open()
 
 logger.info('opening sensor')
-logger.info(f'saving data to {LP_CFG.LP_PATH["stream"]}')
+logger.info(f'saving data to {PerfusionConfig.get_date_folder()}')
 sensor.open()
 
 logger.info('starting acquisition')

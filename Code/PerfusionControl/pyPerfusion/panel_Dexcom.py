@@ -15,7 +15,7 @@ from pyHardware.pyDexcom import DexcomSensor
 from pyPerfusion.plotting import TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot
 from pyHardware.PHDserial import PHDserial
 from pyPerfusion.panel_Syringe import PanelSyringe
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 engaged_COM_list = []
 sensors = []
@@ -109,10 +109,10 @@ class PanelDexcom(wx.Panel):
         self.__set_bindings()
 
         self.sensor.open()
-        self.sensor.open_stream(LP_CFG.LP_PATH['stream'])
+        self.sensor.open_stream(PerfusionConfig.get_date_folder())
 
     def set_receiver(self):
-        receiver_info = LP_CFG.open_receiver_info()
+        receiver_info = PerfusionConfig.open_receiver_info()
         for key, val in receiver_info.items():
             if key in self._name.lower():
                 self.choice_circuit_SN_pair.SetLabel('%s (SN = %s)' % (key, val))
@@ -208,6 +208,7 @@ class PanelDexcom(wx.Panel):
         if error:
             self.readout.label_value.SetLabel('E')
 
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -221,40 +222,40 @@ class TestFrame(wx.Frame):
         dexcom_sizer.Add(panel_PV, 1, wx.ALL | wx.EXPAND, border=1)
         dexcom_sizer.Add(panel_IVC, 1, wx.ALL | wx.EXPAND, border=1)
 
-        section = LP_CFG.get_hwcfg_section('Insulin')
+        section = PerfusionConfig.read_section('syringes', 'Insulin')
         com = section['commport']
         baud = section['baudrate']
         insulin_injection = PHDserial('Insulin')
         insulin_injection.open(com, baud)
         insulin_injection.reset_syringe()
-        insulin_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        insulin_injection.open_stream(PerfusionConfig.get_date_folder())
         insulin_injection.start_stream()
 
-        section = LP_CFG.get_hwcfg_section('Glucagon')
+        section = PerfusionConfig.read_section('syringes', 'Glucagon')
         com = section['commport']
         baud = section['baudrate']
         glucagon_injection = PHDserial('Glucagon')
         glucagon_injection.open(com, baud)
         glucagon_injection.reset_syringe()
-        glucagon_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        glucagon_injection.open_stream(PerfusionConfig.get_date_folder())
         glucagon_injection.start_stream()
 
-        section = LP_CFG.get_hwcfg_section('Heparin')
+        section = PerfusionConfig.read_section('syringes', 'Heparin')
         com = section['commport']
         baud = section['baudrate']
         heparin_injection = PHDserial('Heparin')
         heparin_injection.open(com, baud)
         heparin_injection.reset_syringe()
-        heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        heparin_injection.open_stream(PerfusionConfig.get_date_folder())
         heparin_injection.start_stream()
 
-        section = LP_CFG.get_hwcfg_section('TPN & Bile Salts')
+        section = PerfusionConfig.read_section('syringes', 'TPN & Bile Salts')
         com = section['commport']
         baud = section['baudrate']
         tpn_bile_salts_injection = PHDserial('TPN & Bile Salts')
         tpn_bile_salts_injection.open(com, baud)
         tpn_bile_salts_injection.reset_syringe()
-        tpn_bile_salts_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        tpn_bile_salts_injection.open_stream(PerfusionConfig.get_date_folder())
         tpn_bile_salts_injection.start_stream()
 
         self.sensor = panel_PV.sensor  # Glucose measurements which inform syringe injections are from the PV; this is the panel being referenced here
@@ -310,8 +311,7 @@ class MyTestApp(wx.App):
         return True
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     utils.setup_stream_logger(logger, logging.DEBUG)

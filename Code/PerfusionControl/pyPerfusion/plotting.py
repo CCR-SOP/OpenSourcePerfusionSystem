@@ -19,7 +19,7 @@ import matplotlib.transforms as mtransforms
 import numpy as np
 
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class SensorPlot:
@@ -96,6 +96,7 @@ class SensorPlot:
             self._axes.set_title(f'{self._sensor.name}\n')
             self._axes.set_ylabel(self._sensor.unit_str)
 
+
 class TSMDexSensorPlot:
     def __init__(self, plot_name, axes, unit, valid_range):
         self._lgr = logging.getLogger(__name__)
@@ -127,6 +128,7 @@ class TSMDexSensorPlot:
         if self._valid_range is not None:
             rng = self._valid_range
             self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+
 
 class EventPlot(SensorPlot):
     def __init__(self, sensor, axes, readout=True):
@@ -230,6 +232,7 @@ class PanelPlotting(wx.Panel):
         self.Fit()
         self.__parent.Fit()
 
+
 class PanelPlotLT(PanelPlotting):
     def __init__(self, parent):
         PanelPlotting.__init__(self, parent, with_readout=False)
@@ -237,6 +240,7 @@ class PanelPlotLT(PanelPlotting):
     def _configure_plot(self, sensor):
         self.axes.set_yticklabels([])
         self.axes.set_xticklabels([])
+
 
 class TSMDexPanelPlotting(wx.Panel):
     def __init__(self, parent, with_readout=True):
@@ -303,6 +307,7 @@ class TSMDexPanelPlotting(wx.Panel):
         self.Fit()
         self.__parent.Fit()
 
+
 class TSMDexPanelPlotLT(TSMDexPanelPlotting):
     def __init__(self, parent):
         TSMDexPanelPlotting.__init__(self, parent, with_readout=False)
@@ -310,6 +315,7 @@ class TSMDexPanelPlotLT(TSMDexPanelPlotting):
     def _configure_plot(self, sensor):
         self.axes.set_yticklabels([])
         self.axes.set_xticklabels([])
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -327,8 +333,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
     app = MyTestApp(0)

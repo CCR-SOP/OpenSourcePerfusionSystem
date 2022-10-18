@@ -6,29 +6,23 @@ Immediate needs: figure out input information for temperature sensor, decide on 
 """
 
 import wx
-import time
 import logging
 
-# from pyPerfusion.plotting import SensorPlot, PanelPlotting
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
-# from pyHardware.pyAI import AI
 from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 import pyPerfusion.utils as utils
 from pyPerfusion.panel_AI import PanelAI, DEV_LIST, LINE_LIST
 
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-utils.configure_matplotlib_logging()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=2)
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
+
         self._logger = logging.getLogger(__name__)
 
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=1, volts_offset=0.5)
@@ -37,17 +31,17 @@ class TestFrame(wx.Frame):
         # Want voltage calibration b/w 0-50C. Axes can be in this range. green should be 35-38C as our target temp
 
         # Open device and channel
-        section = LP_CFG.get_hwcfg_section(self.sensor.name)
+        section = PerfusionConfig.read_section('hardware', self.sensor.name)
         dev = DEV_LIST[0]
         line = LINE_LIST[0]
 
         # Raw streaming and RMS strategy
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
-        raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        raw.open(PerfusionConfig.get_date_folder(), f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
         rms = RMSStrategy('RMS', 50, self.acq.buf_len)
         save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
-        save_rms.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', self.sensor.params)
+        save_rms.open(PerfusionConfig.get_date_folder(), f'{self.sensor.name}_rms', self.sensor.params)
         self.sensor.add_strategy(rms)
         self.sensor.add_strategy(save_rms)
 
@@ -91,6 +85,11 @@ class MyTestApp(wx.App):
         #print('\a') this works as an alarm but very simple and obviously we need some kind of loop
         return True
 
-app = MyTestApp(0)
-app.MainLoop()
+
+if __name__ == "__main__":
+    PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
+    app = MyTestApp(0)
+    app.MainLoop()
 
