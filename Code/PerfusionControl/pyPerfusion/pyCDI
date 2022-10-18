@@ -1,108 +1,101 @@
-"""Panel class for configuring CDI saturation monitor
+"""Panel class for streaming data from CDI saturation monitor
 
 @project: Liver Perfusion, NIH
 @author: Stephie Lux, NIH
 
 """
-from enum import Enum
-import wx
 import logging
-import time
-import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
-import serial
-from pyPerfusion.panel_DIO import PanelDIO
+from time import perf_counter
+from queue import Queue, Empty
 
-from pyPerfusion.plotting import PanelPlotting, SensorPlot
+import numpy as np
+import serial
+import serial.tools.list_ports
+
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.FileStrategy import StreamToFile
+
+import pyPerfusion.utils as utils
+import pyPerfusion.PerfusionConfig as LP_CFG
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
-# how to set up pathway?
+class CDIStreaming:
+    def __init__(self, name): # find a good tutorial on this
+        super().__init__()
+        self._lgr = logging.getLogger(__name__)
+        self.data_type = np.float32
 
-class CDIPanel(wx.Panel):
-    # make new panel or access panel DIO? Started making new one below
-    def __init__(self, parent, label, unit):
-        super().__init__(parent, -1)
-        self._parent = parent
-        self._label = label
-        self._unit = unit
+        self.name = name
 
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer_value = wx.BoxSizer(wx.HORIZONTAL)
-        self.label_name = wx.StaticText(self, label=label)
-        self.label_value = wx.StaticText(self, label='000')
-        self.label_units = wx.StaticText(self, label=unit)
-        self.__do_layout()
+        self._serial = serial.Serial()
+        self.__addr = 0
 
-    def __do_layout(self):
-        font = self.label_name.GetFont()
-        font.SetPointSize(10)
-        self.label_name.SetFont(font)
-        font = self.label_value.GetFont()
-        font.SetPointSize(15)
-        self.label_value.SetFont(font)
+        self._queue = None
+        self.__acq_start_t = None
+        self.period_sampling_ms = 0
+        self.samples_per_read = 0
 
-        self.sizer.Add(self.label_name, wx.SizerFlags().CenterHorizontal())
-        self.sizer_value.Add(self.label_value, wx.SizerFlags().CenterVertical())
-        self.sizer_value.AddSpacer(10)
-        self.sizer_value.Add(self.label_units, wx.SizerFlags().CenterVertical())
-        self.sizer.Add(self.sizer_value, wx.SizerFlags().CenterHorizontal())
+        self.is_streaming = False
 
-        self.SetSizer(self.sizer)
-        self.Layout()
-        self.Fit()
+    def is_open(self):
+        return self._serial.is_open
 
-    section = LP_CFG.get_hwcfg_section('CDI Monitor') # what's the real argument that needs to be passed here?
-    com = section['commport']
-    baud = section['baudrate']
-    bytesize = section['bytesize']
-    parity = section['parity']
-    stopbits = section['stopbits']
-    CDI = PHDserial('CDI500')
-    CDI.open(com, baud)
-    CDI.open_stream(LP_CFG.LP_PATH['stream'])
-    CDI.start_stream()
+    def open(self, port_name: str, baud_rate: int, addr: int = 0) -> None: #how do we get port name, baudrate, etc.?
+        if self._serial.is_open:
+            self._serial.close()
 
-    # stream all data and then parse
+        self._serial.port = port_name
+        self._serial.baudrate = baud_rate
+        self._serial.xonxoff = True
+        try:
+            self._serial.open()
+        except serial.serialutil.SerialException as e:
+            self._lgr.error(f'Could not open serial port {self._serial.portstr}')
+            self._lgr.error(f'Message: {e}')
+        self.__addr = addr
+        self._queue = Queue()
 
-    # plot arterial pO2 and pCO2, venous pO2 and pCO2, pH, hemoglobin
+        self.send_wait4response('')
+        self.send_wait4response(f'address {self.__addr}\r')
+        self.send_wait4response('poll REMOTE\r')
 
-    # set physio limits in graphs
+    def close(self):
+        if self._serial:
+            self.stop()
+            self._serial.close()
 
-    # make sure data is accessible
+    def send_wait4response(self, str2send: str) -> str:
+        response = ''
+        if self._serial.is_open:
+            self._serial.write(str2send.encode('UTF-8'))
+            self._serial.flush()
+            response = ''
+            self._serial.timeout = 1.0
+            response = self._serial.read_until('\r', size=1000).decode('UTF-8')
+        # JWK, we should be checking error responses
+        # strip starting \r and ending \r
+        return response[1:-1]
 
-    # add buttons, sizing, titles, etc.
+    def stream_data(self):
 
-class TestFrame(wx.Frame):
-    def __init__(self, *args, **kwds):
-         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-         wx.Frame.__init__(self, *args, **kwds)
-         sizer = wx.GridSizer(cols=3)
-         ArtShunt_sizer = wx.FlexGridSizer(cols=1)
-         ArtShunt_sizer.AddGrowableRow(0, 2)
-         ArtShunt_sizer.AddGrowableRow(1, 2)
-         VenShunt_sizer = wx.FlexGridSizer(cols=1)
-         VenShunt_sizer.AddGrowableRow(0, 2)
-         VenShunt_sizer.AddGrowableRow(1, 2)
-         HSCuvette_sizer = wx.FlexGridSizer(cols=1)
-         HSCuvette_sizer.AddGrowableRow(0, 1)
-         HSCuvette_sizer.AddGrowableRow(1, 1)
+        self._serial.flushInput()
+        self._serial.flushOutput()
+        while True:
+            bytesToRead = self._serial.inWaiting()
+            data = self._serial.read(bytesToRead)
+            return data # need to make this a data frame
+''' 
+methods
 
-        # CONTINUE - call panel class
+open
 
-class MyTestApp(wx.App):
-    def OnInit(self):
-        frame = TestFrame(None, wx.ID_ANY, "")
-        self.SetTopWindow(frame)
-        frame.Show()
-        return True
+stream
 
-if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
-    utils.setup_default_logging(filename='panel_saturation_monitor_data')
-    app = MyTestApp(0)
-    app.MainLoop()
+save as data frame
+
+stop streaming
+
+close
+'''
