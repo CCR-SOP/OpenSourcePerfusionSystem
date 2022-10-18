@@ -9,8 +9,8 @@ import wx
 import logging
 import time
 import pyPerfusion.utils as utils
-from pyPerfusion.PHDserial import PHDserial
 import pyPerfusion.PerfusionConfig as LP_CFG
+import serial
 from pyPerfusion.panel_DIO import PanelDIO
 
 from pyPerfusion.plotting import PanelPlotting, SensorPlot
