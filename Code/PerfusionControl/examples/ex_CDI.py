@@ -11,9 +11,7 @@ import logging
 import serial
 
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG # work this in later not in example code
-
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+utils.setup_stream_logger(logging.getLogger(), logging.DEBUG) # add in debugging comments
 
 class CDIStreaming:
     def __init__(self):
