@@ -8,21 +8,32 @@ Example script to parse single set of float(response_str from CDI saturation mon
 '''
 
 import logging
-from time import perf_counter
-from queue import Queue, Empty
-
-import numpy as np
 import serial
-import serial.tools.list_ports
 
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as LP_CFG # work this in later not in example code
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-utils.configure_matplotlib_logging()
 
 class CDIStreaming:
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
+        self.comport = 'comport name, add later'
+        # should there be something indicating this is for packet mode instead of ASCII here?
+        self.baudrate = 9600
+        self.parity = None
+        self.__serial = serial.Serial()
+        # later add something to account for rate of reading and sampling
+
+    def open(self, comport, baudrate):
+        if self.__serial.is_open:
+            self.__serial.close()
+
+        self.__serial.port = comport
+        self.__serial.baudrate = baudrate
+        self.__serial.open()
+
+
 
 
 class Data:
@@ -52,7 +63,7 @@ class Data:
         print(f'Venous pH is {self.venous_pH}')
         print(f'Hemoglobin is {self.hb}')
 
-cdi = CDSIStreaming()
+cdi = CDIStreaming()
 cdi.open()
 unparsed = cdi.get_data()
 data = Data(unparsed)
