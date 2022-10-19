@@ -67,6 +67,6 @@ class CDIRawData:
 
 cdi = CDIStreaming()
 cdi.open()
-packet = cdi.get_data()
+packet = cdi.get_data(100) # guess on byte number
 data = CDIRawData(packet)
 data.ExampleReturn()
