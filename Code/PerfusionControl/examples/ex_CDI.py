@@ -15,16 +15,14 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 
-from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.FileStrategy import StreamToFile
-
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as LP_CFG
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
-
+class CDIStreaming:
+    def __init__(self):
 
 
 class Data:
@@ -53,3 +51,9 @@ class Data:
         print(f'Arterial pH is {self.arterial_pH}')
         print(f'Venous pH is {self.venous_pH}')
         print(f'Hemoglobin is {self.hb}')
+
+cdi = CDSIStreaming()
+cdi.open()
+unparsed = cdi.get_data()
+data = Data(unparsed)
+data.ExampleReturn()
