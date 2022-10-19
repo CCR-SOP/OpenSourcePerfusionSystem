@@ -12,10 +12,8 @@ import logging
 
 import wx
 
-import pyPerfusion.PerfusionConfig as LP_CFG
-from pyPerfusion.SensorPoint import SensorPoint
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.FileStrategy import PointsToFile
 import pyPerfusion.pyPump11Elite as pyPump11Elite
 
 
@@ -58,8 +56,6 @@ class PanelSyringeConfig(wx.Panel):
         self.parent = parent
         self.syringe = syringe
 
-        self._manufacturers = {}
-
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.label_port = wx.StaticText(self, label='COM Port')
         avail_ports = pyPump11Elite.get_avail_com_ports()
@@ -72,7 +68,7 @@ class PanelSyringeConfig(wx.Panel):
         self.btn_open = wx.ToggleButton(self, label='Open')
 
         self.label_manufacturer = wx.StaticText(self, label='Manufacturer')
-        self.combo_manufacturer = wx.ComboBox(self, wx.ID_ANY, choices=[])
+        self.combo_manufacturer = wx.ComboBox(self, wx.ID_ANY, choices=pyPump11Elite.get_available_manufacturer_names())
         self.label_sizes = wx.StaticText(self, label='Syringe Sizes')
         self.combo_sizes = wx.ComboBox(self, wx.ID_ANY, choices=[])
 
@@ -113,8 +109,8 @@ class PanelSyringeConfig(wx.Panel):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
         self.combo_port.Bind(wx.EVT_COMBOBOX_DROPDOWN, self.OnPortDropDown)
         self.combo_manufacturer.Bind(wx.EVT_COMBOBOX, self.OnManufacturer)
-        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
-        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
+        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
+        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def OnPortDropDown(self, evt):
         ports = pyPump11Elite.get_avail_com_ports()
@@ -125,40 +121,47 @@ class PanelSyringeConfig(wx.Panel):
         if self.syringe.is_open():
             self.syringe.clear_syringe()
             target = self.combo_manufacturer.GetStringSelection()
-            code = [code for code, name in self._manufacturers.items() if name == target]
-            if len(code) > 0:
-                sizes = self.syringe.get_available_syringes(code[0])
+            code = pyPump11Elite.get_code_from_name(target)
+            if code:
+                sizes = self.syringe.get_available_syringes(code)
                 self.combo_sizes.Set(sizes)
 
     def OnOpen(self, evt):
         port = self.combo_port.GetStringSelection()
         baud = int(self.choice_baud.GetStringSelection())
         if not self.syringe.is_open():
-            self.syringe.open(port, baud)
-            self._manufacturers = self.syringe.get_available_manufacturers()
-            self.combo_manufacturer.Set(list(self._manufacturers.values()))
+            self.syringe.cfg.port = port
+            self.syringe.cfg.baud = baud
+            self.syringe.open()
+
             self.btn_open.SetLabel('Close')
         else:
             self._lgr.debug(f'Closing syringe at {port}, {baud}')
             self.syringe.close()
             self.btn_open.SetLabel('Open')
 
+    def update_config_from_controls(self):
+        self.syringe.cfg.com_port = self.combo_port.GetStringSelection()
+        self.syringe.cfg.baud = int(self.choice_baud.GetStringSelection())
+        manu_name = self.combo_manufacturer.GetStringSelection()
+        self.syringe.cfg.manufacturer_code = pyPump11Elite.get_code_from_name(manu_name)
+        self.syringe.cfg.size = self.combo_sizes.GetStringSelection()
 
-    def OnSaveCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self.syringe.name)
-        section['ComPort'] = self.combo_port.GetStringSelection()
-        section['Baud'] = self.choice_baud.GetStringSelection()
-        section['Manufacturer'] = self.combo_manufacturer.GetStringSelection()
-        section['Size'] = self.combo_sizes.GetStringSelection()
-        LP_CFG.update_hwcfg_section(self.syringe.name, section)
-
-    def OnLoadCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self.syringe.name)
-        self.combo_port.SetStringSelection(section['ComPort'])
-        self.choice_baud.SetStringSelection(section['Baud'])
-        self.combo_manufacturer.SetValue(section['Manufacturer'])
+    def update_controls_from_config(self):
+        self.combo_port.SetStringSelection(self.syringe.cfg.com_port)
+        self.choice_baud.SetStringSelection(str(self.syringe.cfg.baud))
+        manu_name = pyPump11Elite.get_name_from_code(self.syringe.cfg.manufacturer_code)
+        self.combo_manufacturer.SetStringSelection(manu_name)
         self.OnManufacturer(None)
-        self.combo_sizes.SetValue(section['Size'])
+        self.combo_sizes.SetStringSelection(self.syringe.cfg.size)
+
+    def on_save_cfg(self, evt):
+        self.update_config_from_controls()
+        self.syringe.write_config()
+
+    def on_load_cfg(self, evt):
+        self.syringe.read_config()
+        self.update_controls_from_config()
 
 
 class PanelSyringeControls(wx.Panel):
@@ -212,8 +215,8 @@ class PanelSyringeControls(wx.Panel):
     def __set_bindings(self):
         self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
         self.btn_bolus.Bind(wx.EVT_BUTTON, self.OnBolus)
-        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.OnSaveCfg)
-        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.OnLoadCfg)
+        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
+        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def OnBasal(self, evt):
         infusion_rate = self.spin_rate.GetValue()
@@ -236,16 +239,22 @@ class PanelSyringeControls(wx.Panel):
         self.syringe.set_target_volume(target_vol)
         self.syringe.infuse_to_target_volume()
 
-    def OnSaveCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self.syringe.name)
-        section['InjectionRate'] = str(int(self.spin_rate.GetValue()))
-        section['TargetVolume'] = str(int(self.spin_volume.GetValue()))
-        LP_CFG.update_hwcfg_section(self.syringe.name, section)
+    def update_config_from_controls(self):
+        self.syringe.cfg.initial_injection_rate = int(self.spin_rate.GetValue())
+        self.syringe.cfg.initial_target_volume = int(self.spin_volume.GetValue())
 
-    def OnLoadCfg(self, evt):
-        section = LP_CFG.get_hwcfg_section(self.syringe.name)
-        self.spin_rate.SetValue(section['InjectionRate'])
-        self.spin_volume.SetValue(section['TargetVolume'])
+    def update_controls_from_config(self):
+        self.spin_volume.SetValue(self.syringe.cfg.initial_target_volume)
+        self.spin_rate.SetValue(self.syringe.cfg.initial_injection_rate)
+
+    def on_save_cfg(self, evt):
+        self.update_config_from_controls()
+        self.syringe.write_config()
+
+    def on_load_cfg(self, evt):
+        self.syringe.read_config()
+        self.update_controls_from_config()
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -275,8 +284,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
     app = MyTestApp(0)

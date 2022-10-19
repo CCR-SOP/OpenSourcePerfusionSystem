@@ -8,13 +8,12 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-from time import sleep
 import logging
 
 import pyPerfusion.pyPump11Elite as pyPump11Elite
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import PointsToFile
 
 
@@ -32,21 +31,21 @@ class MockPump11Elite(pyPump11Elite.Pump11Elite):
         return response
 
 
-dev = 'COM1'
-baud_rate = 9600
+PerfusionConfig.set_test_config()
+cfg = pyPump11Elite.SyringeConfig(com_port='COM1',
+                                  manufacturer='bdp',
+                                  size = '60 ml')
 
 logger = logging.getLogger()
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
 
 utils.setup_stream_logger(logger, logging.DEBUG)
 syringe = MockPump11Elite(name='Example')
-syringe.open(dev, baud_rate)
+syringe.open(cfg=cfg)
 
 sensor0 = SensorPoint('test0', 'ml/min', syringe)
 
 strategy = PointsToFile('Raw', 1, 10)
-strategy.open(LP_CFG.LP_PATH['stream'], sensor0.name, sensor0.params)
+strategy.open(PerfusionConfig.get_date_folder(), sensor0.name, sensor0.params)
 sensor0.add_strategy(strategy)
 sensor0.start()
 

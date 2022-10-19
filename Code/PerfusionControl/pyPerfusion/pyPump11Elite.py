@@ -11,10 +11,13 @@
 import logging
 from time import perf_counter
 from queue import Queue, Empty
+from dataclasses import dataclass, asdict
 
 import numpy as np
 import serial
 import serial.tools.list_ports
+
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 DATA_VERSION = 3
@@ -42,32 +45,65 @@ DEFAULT_SYRINGES = {
     'tej': '1 ml\n1 ml\n2.5 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml',
     'top': '1 ml\n2.5 ml\n5 ml\n10 ml\n20 ml\n30 ml\n50 ml'
 }
-DEFAULT_MANUFACTURERS_STR = \
-"""
-air  Air-Tite, HSW Norm-Ject
-bdg  Becton Dickinson, Glass (all types)
-bdp  Becton Dickinson, Plasti-pak
-cad  Cadence Science, Micro-Mate Glass
-cma  CMA Microdialysis, CMA
-hm1  Hamilton 700, Glass
-hm2  Hamilton 1000, Glass
-hm3  Hamilton 1700, Glass
-hm4  Hamilton 7000, Glass
-has  Harvard Apparatus, Stainless Steel
-hos  Hoshi
-ils  ILS, Glass
-nip  Nipro
-sge  Scientific Glass Engineering
-smp  Sherwood-Monoject, Plastic
-tej  Terumo Japan, Plastic
-top  Top
-"""
+DEFAULT_MANUFACTURERS = {
+    'air':  'Air-Tite, HSW Norm-Ject',
+    'bdg':  'Becton Dickinson, Glass (all types)',
+    'bdp':  'Becton Dickinson, Plasti-pak',
+    'cad':  'Cadence Science, Micro-Mate Glass',
+    'cma':  'CMA Microdialysis, CMA',
+    'hm1':  'Hamilton 700, Glass',
+    'hm2':  'Hamilton 1000, Glass',
+    'hm3':  'Hamilton 1700, Glass',
+    'hm4':  'Hamilton 7000, Glass',
+    'has':  'Harvard Apparatus, Stainless Steel',
+    'hos':  'Hoshi',
+    'ils':  'ILS, Glass',
+    'nip':  'Nipro',
+    'sge':  'Scientific Glass Engineering',
+    'smp':  'Sherwood-Monoject, Plastic',
+    'tej':  'Terumo Japan, Plastic',
+    'top':  'Top'
+    }
+
+
+@dataclass
+class SyringeConfig:
+    com_port: str = ''
+    manufacturer_code: str = ''
+    size: str = ''
+    initial_injection_rate: int = 0
+    initial_target_volume: int = 0
+    baud: int = 9600
+    address: int = 0
+
 
 # utility function to return all available comports in a list
 # typically used in a GUI to provide a selection of com ports
 def get_avail_com_ports() -> list:
     ports = [comport.device for comport in serial.tools.list_ports.comports()]
     return ports
+
+
+def get_available_manufacturer_codes() -> list:
+    return list(DEFAULT_MANUFACTURERS.keys())
+
+
+def get_available_manufacturer_names() -> list:
+    return list(DEFAULT_MANUFACTURERS.values())
+
+
+def get_name_from_code(code: str):
+    manu_str = DEFAULT_MANUFACTURERS.get(code, '')
+    return manu_str
+
+
+def get_code_from_name(desired_name: str):
+    code = [code for code, name in DEFAULT_MANUFACTURERS.items() if name == desired_name]
+    if len(code) > 0:
+        code = code[0]
+    else:
+        code = ''
+    return code
 
 
 class Pump11Elite:
@@ -77,10 +113,9 @@ class Pump11Elite:
         self.data_type = np.float32
 
         self.name = name
+        self.cfg = SyringeConfig()
 
         self._serial = serial.Serial()
-        self.__addr = 0
-
         self._queue = None
         self.__acq_start_t = None
         self.period_sampling_ms = 0
@@ -103,24 +138,33 @@ class Pump11Elite:
     def is_open(self):
         return self._serial.is_open
 
-    def open(self, port_name: str, baud_rate: int, addr: int = 0) -> None:
+    def read_config(self):
+        cfg = SyringeConfig()
+        PerfusionConfig.read_into_dataclass('syringes', self.name, cfg)
+        self.open(cfg)
+
+    def write_config(self):
+        PerfusionConfig.write_from_dataclass('syringes', self.name, self.cfg)
+
+    def open(self, cfg: SyringeConfig = None) -> None:
         if self._serial.is_open:
             self._serial.close()
 
-        self._serial.port = port_name
-        self._serial.baudrate = baud_rate
+        if cfg is not None:
+            self.cfg = cfg
+        self._serial.port = cfg.com_port
+        self._serial.baudrate = cfg.baud
         self._serial.xonxoff = True
         try:
             self._serial.open()
         except serial.serialutil.SerialException as e:
             self._lgr.error(f'Could not open serial port {self._serial.portstr}')
             self._lgr.error(f'Message: {e}')
-        self.__addr = addr
         self._queue = Queue()
 
         # JWK, why do we need to send a blank?
         self.send_wait4response('')
-        self.send_wait4response(f'address {self.__addr}\r')
+        self.send_wait4response(f'address {self.cfg.address}\r')
         self.send_wait4response('poll REMOTE\r')
 
     def close(self):
@@ -170,7 +214,6 @@ class Pump11Elite:
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
-        self._lgr.debug(f'get_target_volume: response={response}')
         try:
             vol, vol_unit = response.split(' ')
         except ValueError as e:
@@ -281,7 +324,7 @@ class Pump11Elite:
         response = self.send_wait4response('syrm\r')
         return response
 
-    def get_available_manufacturers(self) -> dict:
+    def get_manufacturer_info_from_syringe(self):
         manufacturers = {}
         response = self.send_wait4response('syrmanu ?\r')
         if response:
@@ -325,8 +368,8 @@ class MockPump11Elite(Pump11Elite):
         self._serial.is_open = False
         self._values = {'tvolume': '0 ul', 'irate': '0 ul/min'}
 
-    def open(self, port_name: str, baud_rate: int, addr: int = 0) -> None:
-        self.__addr = addr
+    def open(self, cfg: SyringeConfig = None) -> None:
+        self.cfg = cfg
         self._queue = Queue()
         self._serial.is_open = True
 
