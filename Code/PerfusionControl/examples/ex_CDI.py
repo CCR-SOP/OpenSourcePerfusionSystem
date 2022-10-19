@@ -1,6 +1,6 @@
 '''
 
-Example script to parse single set of float(response_str from CDI saturation monitor
+Example script to parse single set of packet mdoe data from CDI saturation monitor
 
 @project: Liver Perfusion, NIH
 @author: Stephie Lux, NIH
@@ -18,25 +18,29 @@ utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 class CDIStreaming:
     def __init__(self):
         self._logger = logging.getLogger(__name__)
-        self.comport = 'comport name, add later'
+        self._comport = 'comport name, add later'
         # should there be something indicating this is for packet mode instead of ASCII here?
-        self.baudrate = 9600
-        self.parity = None
+        self._baudrate = 9600
+        self._parity = None
         self.__serial = serial.Serial()
         # later add something to account for rate of reading and sampling
 
-    def open(self, comport, baudrate):
+    def open(self):
         if self.__serial.is_open:
             self.__serial.close()
 
-        self.__serial.port = comport
-        self.__serial.baudrate = baudrate
+        self.__serial.port = self._comport
+        self.__serial.baudrate = self._baudrate
         self.__serial.open()
 
+    # how many bytes is one set of data in packet mode? does the read function even get the packet correctly? look into this more
+    def get_data(self, expected_bytes, timeout=0):
+        if self.__serial.is_open:
+            self.__serial.timeout = timeout
+            CDIPacket = self.__serial.read(expected_bytes)
+            return CDIPacket
 
-
-
-class Data:
+class CDIRawData:
     def __init__ (self, response_str):
         self.arterial_pH = float(response_str[9:13])
         self.arterial_CO2 = float(response_str[14:18])
@@ -57,7 +61,7 @@ class Data:
         self.hct = float(response_str[89:92])
         self.hb = float(response_str[94:99])
 
-    # SCl test ability to read all 3 sensors on CDI
+    # test ability to read all 3 sensors on CDI
     def ExampleReturn(self):
         print(f'Arterial pH is {self.arterial_pH}')
         print(f'Venous pH is {self.venous_pH}')
@@ -65,6 +69,6 @@ class Data:
 
 cdi = CDIStreaming()
 cdi.open()
-unparsed = cdi.get_data()
-data = Data(unparsed)
+packet = cdi.get_data()
+data = CDIRawData(packet)
 data.ExampleReturn()
