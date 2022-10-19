@@ -31,7 +31,7 @@ class CDIStreaming:
         self.__serial.baudrate = self._baudrate
         self.__serial.open()
 
-    # how many bytes is one set of data in packet mode? does the read function even get the packet correctly? look into this more
+    # how many bytes are in one timestamp's worth of data in packet mode? does the read function even get the packet correctly? look into this more
     def get_data(self, expected_bytes, timeout=0):
         if self.__serial.is_open:
             self.__serial.timeout = timeout
@@ -67,6 +67,6 @@ class CDIRawData:
 
 cdi = CDIStreaming()
 cdi.open()
-packet = cdi.get_data(100) # guess on byte number
+packet = cdi.get_data(1000) # temporary byte number
 data = CDIRawData(packet)
 data.ExampleReturn()
