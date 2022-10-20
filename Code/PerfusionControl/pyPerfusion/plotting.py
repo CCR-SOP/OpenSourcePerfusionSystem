@@ -193,7 +193,7 @@ class PanelPlotting(wx.Panel):
 
     def __do_layout(self):
         self.canvas.SetMinSize(wx.Size(1, 1))
-        self.fig.tight_layout()
+        # self.fig.tight_layout()
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.canvas, 10, wx.ALL | wx.EXPAND, border=1)
