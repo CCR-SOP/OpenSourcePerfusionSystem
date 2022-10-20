@@ -9,31 +9,37 @@ valve control system
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-import logging
-from threading import Event
 import warnings
+from dataclasses import dataclass
 
 import PyDAQmx
 
-from pyHardware.pyAI_NIDAQ import NIDAQ_AI
+import pyHardware.pyAI_NIDAQ as pyAI_NIDAQ
 
 
-class AI_Finite_NIDAQ(NIDAQ_AI):
-    def __init__(self, period_ms, volts_p2p, volts_offset, samples_per_read=None):
-        super().__init__(period_ms, volts_p2p, volts_offset)
-        self._logger = logging.getLogger(__name__)
+@dataclass
+class FiniteNIDAQAIDeviceConfig(pyAI_NIDAQ.AINIDAQDeviceConfig):
+    samples_per_read: int = 1
+
+
+class FiniteNIDAQAIDevice(pyAI_NIDAQ.NIDAQAIDevice):
+    def __init__(self):
+        super().__init__()
         self._sample_mode = PyDAQmx.DAQmxConstants.DAQmx_Val_FiniteSamps
-        self.samples_per_read = samples_per_read
         self._acq_complete = False
         self._notify = None
 
     @property
     def expected_acq_time(self):
-        return self.samples_per_read * self.period_sampling_ms
+        return self.samples_per_read * self.cfg.sampling_period_ms
+
+    @property
+    def samples_per_read(self):
+        return self.cfg.samples_per_read
 
     def start(self, notify=None):
         self._acq_complete = False
-        self._read_period_ms = self.samples_per_read * len(self.get_ids()) * self._period_sampling_ms
+        self.cfg.read_period_ms = self.samples_per_read * len(self.ai_channels) * self.cfg.sampling_period_ms
         self._notify = notify
         super().start()
 
@@ -52,8 +58,8 @@ class AI_Finite_NIDAQ(NIDAQ_AI):
     def run(self):
         self._acq_samples()
         self._acq_complete = True
-        self._logger.debug(f'completed acq')
+        self._lgr.debug(f'completed finite acq for device {self.cfg.name}/{self.cfg.device_name}')
         if self._notify:
-            self._logger.debug(f'notifying {self._notify}')
+            self._lgr.debug(f'notifying {self._notify}')
             self._notify()
             self._notify = None
