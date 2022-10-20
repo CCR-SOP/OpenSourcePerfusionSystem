@@ -19,15 +19,15 @@ to other units (e.g., ml/min).
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-from threading import Thread, Lock, Event
+from threading import Thread, Event
 from time import perf_counter, sleep, time
 from collections import deque
 import logging
 from dataclasses import dataclass, field, asdict
+from typing import List
 
 import numpy as np
 import numpy.typing as npt
-from configparser import ConfigParser
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
@@ -40,10 +40,10 @@ class AIDeviceException(Exception):
 class AIChannelConfig:
     name: str = 'Channel'
     line: int = 0
-    cal_pt1_target: np.float64 = 0
-    cal_pt1_reading: np.float64 = 0
-    cal_pt2_target: np.float64 = 0
-    cal_pt2_reading: np.float64 = 0
+    cal_pt1_target: np.float64 = 0.0
+    cal_pt1_reading: np.float64 = 0.0
+    cal_pt2_target: np.float64 = 0.0
+    cal_pt2_reading: np.float64 = 0.0
 
 
 @dataclass
@@ -54,7 +54,7 @@ class AIDeviceConfig:
     read_period_ms: int = 0
     data_type: npt.DTypeLike = np.dtype(np.float64).name
     buf_type: npt.DTypeLike = np.dtype(np.uint16).name
-    ch_info: dict[str, AIChannelConfig] = field(default_factory=dict)
+    ch_names: List[str] = field(default_factory=list)
 
 
 class AIDevice:
@@ -73,24 +73,16 @@ class AIDevice:
         self.__acq_start_t = 0
 
     def write_config(self):
-        info = asdict(self.cfg)
-        info['data_type'] = np.dtype(self.cfg.data_type).name
-        info['buf_type'] = np.dtype(self.cfg.buf_type).name
-        # remove ch_info as that data will be written to a separate section
-        del info['ch_info']
-        PerfusionConfig.write_section(self.cfg.name, 'General', info)
-        for ch_name, ch_cfg in self.cfg.ch_info.items():
-            PerfusionConfig.write_section(self.cfg.name, ch_name, asdict(ch_cfg))
+        PerfusionConfig.write_from_dataclass(self.cfg.name, 'General', self.cfg)
+        for ch in self.ai_channels.values():
+            PerfusionConfig.write_from_dataclass(self.cfg.name, ch.cfg.name, ch.cfg)
 
     def read_config(self):
-        info = PerfusionConfig.read_section(self.cfg.name, 'General')
-        self._lgr.debug(f'{info}')
-        self.cfg.device_name = info['device_name']
-        self.cfg.sampling_period_ms = int(info['sampling_period_ms'])
-        self.cfg.read_period_ms = int(info['read_period_ms'])
-        self.cfg.data_type = info['data_type']
-        self.cfg.buf_type = info['buf_type']
+        PerfusionConfig.read_into_dataclass(self.cfg.name, 'General', self.cfg)
         channel_names = PerfusionConfig.get_section_names(self.cfg.name)
+        # delete the ch_names variable as this will be recreated as
+        # channels are re-added
+        self.cfg.ch_names = []
         for ch_name in channel_names:
             if ch_name != 'General':
                 ch_cfg = AIChannelConfig(name=ch_name)
@@ -129,23 +121,23 @@ class AIDevice:
         return self.__thread and self.__thread.is_alive()
 
     def is_open(self):
-        channels_valid = [not ch == '' for ch in self.cfg.ch_info.values()]
+        channels_valid = len(self.ai_channels) > 0
         valid_name = self.cfg.device_name != ''
-        return valid_name and any(channels_valid)
+        return valid_name and channels_valid
 
     def add_channel(self, cfg: AIChannelConfig):
         if cfg.name in self.ai_channels.keys():
             self._lgr.warning(f'Channel {cfg.name} already exists. Overwriting with new config')
+        else:
+            self.cfg.ch_names.append(cfg.name)
         self.stop()
-        self.cfg.ch_info[cfg.name] = cfg
         self.ai_channels[cfg.name] = AIChannel(cfg=cfg, device=self)
 
     def remove_channel(self, name: str):
         if name in self.ai_channels.keys():
             self._lgr.info(f'Removing channel {name} from device {self.cfg.device_name}')
             del self.ai_channels[name]
-            del self.cfg.ch_info[name]
-
+            self.cfg.ch_names.remove(name)
         else:
             self._lgr.warning(f'Attempt to remove non-existent channel {name} from device {self.cfg.device_name}')
 
@@ -210,18 +202,12 @@ class AIChannel:
         self._demo_offset = {}
 
     def write_config(self):
-        info = asdict(self.cfg)
-        PerfusionConfig.write_section(self.device.cfg.name, self.cfg.name, info)
+        PerfusionConfig.write_from_dataclass(self.device.cfg.name, self.cfg.name, self.cfg)
 
     def read_config(self, channel_name: str = None):
         if channel_name is None:
             channel_name = self.cfg.name
-        info = PerfusionConfig.read_section(self.device.cfg.name, channel_name)
-        self.cfg.line = int(info['line'])
-        self.cfg.cal_pt1_target = np.float64(info['cal_pt1_target'])
-        self.cfg.cal_pt1_reading = np.float64(info['cal_pt1_reading'])
-        self.cfg.cal_pt2_target = np.float64(info['cal_pt2_target'])
-        self.cfg.cal_pt2_reading = np.float64(info['cal_pt2_reading'])
+        PerfusionConfig.read_into_dataclass(self.device.cfg.name, channel_name, self.cfg)
 
     def put_data(self, buf, t):
         data = self._calibrate(buf)

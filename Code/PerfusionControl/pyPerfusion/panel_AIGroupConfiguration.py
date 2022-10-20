@@ -82,19 +82,15 @@ class PanelAIGroup(wx.Panel):
     def on_load_cfg(self, evt):
         self.device.read_config()
         self.choice_dev.SetStringSelection(self.device.cfg.device_name)
-        self.remove_all_channels()
-        self._lgr.debug(self.device.cfg.ch_info)
-        for ch in self.device.cfg.ch_info.values():
-            self.add_channel_controls(ch)
+        for ch_name in self.device.cfg.ch_names:
+            self.add_channel_controls(ch_name)
 
         self.Layout()
         self.Fit()
         self.parent.Fit()
 
-    def add_channel_controls(self, ch_cfg: pyAI.AIChannelConfig):
-        self.device.add_channel(ch_cfg)
-
-        assignment = PanelAIAssignment(self, ai_channel=self.device.ai_channels[ch_cfg.name])
+    def add_channel_controls(self, ch_name: str):
+        assignment = PanelAIAssignment(self, ai_channel=self.device.ai_channels[ch_name])
         btn_remove = wx.Button(self, label='Remove')
 
         self.sizer_assignments.Add(assignment, wx.SizerFlags().CenterVertical())
@@ -111,7 +107,8 @@ class PanelAIGroup(wx.Panel):
         if dlg.ShowModal() == wx.ID_OK:
             ch_name = dlg.GetValue()
             cfg = pyAI.AIChannelConfig(name=ch_name)
-            self.add_channel_controls(cfg)
+            self.device.add_channel(cfg)
+            self.add_channel_controls(ch_name)
 
             self.Layout()
             self.Fit()
