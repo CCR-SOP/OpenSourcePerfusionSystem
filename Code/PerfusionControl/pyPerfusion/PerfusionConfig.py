@@ -21,6 +21,14 @@ TestConfig = FolderManagement('LPTest')
 ACTIVE_CONFIG = None
 
 
+class MissingConfigFile(Exception):
+    """Exception used to indicate a configuration file is not available"""
+
+
+class MissingConfigSection(Exception):
+    """Exception used to indicate a section within a file is not available"""
+
+
 def set_test_config():
     global ACTIVE_CONFIG, TestConfig
     ACTIVE_CONFIG = TestConfig
@@ -54,6 +62,38 @@ def receiver_cfg_name():
 def syringe_cfg_name():
     global ACTIVE_CONFIG
     return ACTIVE_CONFIG.get_folder('config') / 'syringe.ini'
+
+
+def read_into_dataclass(cfg_name: str, section_name: str, cfg):
+    global ACTIVE_CONFIG
+    parser = ConfigParser()
+    parser.optionxform = str
+    filename = get_cfg_filename(cfg_name)
+    if filename:
+        parser.read(filename)
+    else:
+        raise MissingConfigFile(filename)
+    if parser.has_section(section_name):
+        section = parser[section_name]
+        for key, value in section.items():
+            dummy = getattr(cfg, key)
+            setattr(cfg, key, type(dummy)(value))
+    else:
+        raise MissingConfigSection(f'{section_name} in {filename}')
+
+
+def write_from_dataclass(cfg_name: str, section_name: str, cfg):
+    global ACTIVE_CONFIG
+    parser = ConfigParser()
+    parser.optionxform = str
+    filename = get_cfg_filename(cfg_name)
+    if filename:
+        parser.read(filename)
+    if not parser.has_section(section_name):
+        parser.add_section(section_name)
+    parser[section_name] = asdict(cfg)
+    with open(filename, 'w') as file:
+        parser.write(file)
 
 
 def write_section(cfg_name: str, section_name: str, info: dict):
