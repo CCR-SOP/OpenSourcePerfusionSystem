@@ -18,6 +18,7 @@ from collections import deque
 import numpy as np
 
 from pyPerfusion.ProcessingStrategy import ProcessingStrategy
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class StreamToFile(ProcessingStrategy):
@@ -43,7 +44,7 @@ class StreamToFile(ProcessingStrategy):
         return self._base_path / self._filename.with_suffix(ext)
 
     def _open_write(self):
-        self._logger.info(f'opening for write: {self.fqpn}')
+        self._lgr.info(f'opening for write: {self.fqpn}')
         self._fid = open(self.fqpn, 'w+b')
 
     def _open_read(self):
@@ -53,7 +54,7 @@ class StreamToFile(ProcessingStrategy):
             data = np.memmap(_fid, dtype=data_type, mode='r')
         except ValueError as e:
             # cannot mmap an empty file
-            self._lgr.debug(f'in StreamToFile:_open_read: attempt to read from empty file: {e}')
+            # self._lgr.debug(f'in StreamToFile:_open_read: attempt to read from empty file: {e}')
             data = []
         return _fid, data
 
@@ -77,14 +78,13 @@ class StreamToFile(ProcessingStrategy):
         fid.write(hdr_str)
         fid.close()
 
-    def open(self, base_path=None, filename=None, sensor_params=None):
-        self._filename = pathlib.Path(filename)
-        self._sensor_params = sensor_params
-        if not isinstance(base_path, pathlib.Path):
-            base_path = pathlib.Path(base_path)
-        self._base_path = base_path
-        if not self._base_path.exists():
-            self._base_path.mkdir(parents=True, exist_ok=True)
+    def open(self, sensor=None):
+        if sensor is None:
+            self._lgr.error(f'FileStrategy:open requires a sensor as a parameter')
+            return
+        self._base_path = PerfusionConfig.get_date_folder()
+        self._filename = pathlib.Path(sensor.name)
+        self._sensor_params = sensor.params
         self._timestamp = datetime.datetime.now()
         if self._fid:
             self._fid.close()
@@ -131,7 +131,6 @@ class StreamToFile(ProcessingStrategy):
         data_time = np.linspace(start_t, stop_t, samples_needed,
                                 dtype=data_type)
         _fid.close()
-
         return data_time, data
 
 
@@ -190,14 +189,12 @@ class PointsToFile(StreamToFile):
 
     def get_last_acq(self):
         _fid, tmp = self._open_read()
-        # dtype_size = self.hw.data_type(1).itemsize
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
         bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
         try:
             _fid.seek(-bytes_per_chunk, SEEK_END)
             chunk, ts = self.__read_chunk(_fid)
         except OSError as e:
-            print(e)
             chunk = None
             ts = None
 
@@ -214,9 +211,8 @@ class PointsToFile(StreamToFile):
 
     def get_data_from_last_read(self, timestamp):
         _fid, tmp = self._open_read()
-        # dtype_size = self.hw.data_type(1).itemsize
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
-        bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
+        bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * np.dtype(self._data_type).itemsize)
         ts = timestamp + 1
         data = deque()
         data_t = deque()
@@ -227,7 +223,7 @@ class PointsToFile(StreamToFile):
             offset = bytes_per_chunk * loops
             try:
                 _fid.seek(-offset, SEEK_END)
-            except OSError:
+            except OSError as e:
                 # attempt to read before beginning of file
                 self._lgr.warning(f'Attempted to read from before beginning of file with offset {offset}')
                 break
