@@ -30,8 +30,8 @@ hw = NIDAQAIDevice()
 hw.cfg = AINIDAQDeviceConfig(name='TestAnalogInputDevice')
 hw.read_config()
 
-sensor = SensorStream(hw.ai_channels['Flow'], 'ml/min')
-sensor.add_strategy(strategy = StreamToFile('Raw', 1, 10))
+sensor = SensorStream(hw.ai_channels['HA Flow'], 'ml/min')
+sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
 
 sensor.open()
 hw.start()

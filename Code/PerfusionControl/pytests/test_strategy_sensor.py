@@ -8,24 +8,51 @@ Author: John Kakareka
 """
 import pytest
 from time import sleep
-import os.path
-
-import numpy as np
+from pathlib import Path
+import os
 
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.SensorStream import SensorStream
 import pyHardware.pyAI as pyAI
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+
+
+CHANNEL_NAME = 'Pytest Channel'
+@pytest.fixture
+def data_path():
+    data_path = PerfusionConfig.get_date_folder()
+    files = [data_path / f'{CHANNEL_NAME}.txt', data_path / f'{CHANNEL_NAME}.dat']
+    # if a test fails, the files may not get deleted after the yield
+    # so insure the test starts with the files deleted
+    for file in files:
+        if os.path.exists(file):
+            os.remove(file)
+
+    yield Path(data_path)
+
+    for file in files:
+        if os.path.exists(file):
+            os.remove(file)
 
 
 @pytest.fixture
-def ai():
-    ai = pyAI.AI(period_sample_ms=10)
+def ai(data_path):
+    cfg = pyAI.AIDeviceConfig(name='PyTest AI', sampling_period_ms=1,
+                              read_period_ms=200)
+    dev = pyAI.AIDevice()
+    ch_cfg = pyAI.AIChannelConfig(name=CHANNEL_NAME, line=0)
+    dev.add_channel(ch_cfg)
+    dev.open(cfg)
+    ai = dev.ai_channels[CHANNEL_NAME]
     yield ai
-    ai.stop()
+    dev.stop()
+    dev.close()
+
 
 
 def setup_module(module):
     print("setup_module      module:{}".format(module.__name__))
+    PerfusionConfig.set_test_config()
 
 
 def teardown_module(module):
@@ -40,80 +67,39 @@ def teardown_function(function):
     print("teardown_function      module:{}".format(function.__name__))
 
 
-def test_streamtofile_strategy(tmpdir):
-    strategy = StreamToFile('StreamToFile', 1, 10)
-    strategy.open(tmpdir, 'StreamToFile', {'Sampling Period (ms)': 100, 'Data Format': 'int32'})
-    test_file = tmpdir.join('StreamToFile.txt')
-    expected = f'Algorithm: Raw\nWindow Length: 1\nFile Format: 1\nSampling Period (ms): 100\nData Format: int32\n'
-    file_contents = test_file.read()
-    assert file_contents == expected
-    data = np.array([1]*10 + [2]*10, dtype=np.int32)
-    buf1 = strategy.process_buffer(data[0:10])
-    buf2 = strategy.process_buffer(data[10:20])
-    results = np.append(buf1, buf2)
-    test_file = tmpdir.join('StreamToFile.dat')
-    data = np.fromfile(test_file, dtype=np.int32)
-    assert len(data) == len(results)
-    assert np.array_equal(data, results)
-
-def test_readfromfile(tmpdir):
-    strategy = StreamToFile('StreamToFile', 1, 10)
-    strategy.open(tmpdir, 'StreamToFile',
-                  {'Sampling Period (ms)': 100, 'Data Format': 'int32'})
-    data = np.array([1]*10 + [2]*10, dtype=np.int32)
-    buf1 = strategy.process_buffer(data)
-    t, full_buf = strategy.retrieve_buffer(-1, 20)
-    assert np.array_equal(full_buf, buf1)
-
-def test_sensorstream_to_file_no_strategy(tmpdir, ai):
-    sensor = SensorStream('test', 'units/time', ai)
+def test_sensorstream_to_file_no_strategy(data_path, ai):
+    sensor = SensorStream(ai, 'units/time')
     sensor.open()
-    sensor.set_ch_id('0')
-    ai.open()
-    ai.add_channel('0')
-    ai.start()
     sensor.start()
     sleep(2)
     sensor.stop()
-    ai.stop()
-    assert not os.path.exists(tmpdir.join('test.dat'))
-    assert not os.path.exists(tmpdir.join('test.txt'))
+    assert not os.path.exists(data_path / f'{CHANNEL_NAME}.txt')
+    assert not os.path.exists(data_path / f'{CHANNEL_NAME}.dat')
 
-def test_sensorstream_to_file_not_added(tmpdir, ai):
-    strategy = StreamToFile('StreamToFileRaw', 1, 10)
-    strategy.open(tmpdir, 'test',
-                  {'Sampling Period (ms)': 100, 'Data Format': 'int32'})
 
-    sensor = SensorStream('test', 'units/time', ai)
+def test_sensorstream_to_files_created(data_path, ai):
+    sensor = SensorStream(ai, 'units/time')
+    sensor.add_strategy(StreamToFile('StreamToFileRaw', 1, 10))
     sensor.open()
-    sensor.set_ch_id('0')
-    ai.open()
-    ai.add_channel('0')
-    ai.start()
     sensor.start()
     sleep(1)
     sensor.stop()
-    ai.stop()
-    assert os.path.exists(tmpdir.join('test.dat'))
-    assert os.path.exists(tmpdir.join('test.txt'))
+    assert os.path.exists(data_path / f'{CHANNEL_NAME}.txt')
+    assert os.path.exists(data_path / f'{CHANNEL_NAME}.dat')
 
-def test_sensorstream_to_file(tmpdir, ai):
-    strategy = StreamToFile('StreamToFileRaw', 1, 10)
-    strategy.open(tmpdir, 'test',
-                  {'Sampling Period (ms)': 100, 'Data Format': 'float32'})
 
-    sensor = SensorStream('test', 'units/time', ai)
+def test_sensorstream_to_file(ai, data_path):
+    sensor = SensorStream(ai, 'units/time')
+    sensor.add_strategy(StreamToFile('StreamToFileRaw', 1, 10))
     sensor.open()
-    sensor.add_strategy(strategy)
-    ai.add_channel('0')
-    ai.open()
-    ai.set_demo_properties('0', 2, 1)
-    ai.start()
-    sensor.set_ch_id('0')
     sensor.start()
+    sensor.hw.device.start()
     sleep(1)
     sensor.stop()
-    ai.stop()
+    sensor.hw.device.stop()
 
+    strategy = sensor.get_file_strategy('StreamToFileRaw')
     t, full_buf = strategy.retrieve_buffer(-1, 100)
+    strategy.close()
+
     assert len(full_buf) == 100

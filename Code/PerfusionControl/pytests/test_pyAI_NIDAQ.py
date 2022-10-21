@@ -8,40 +8,62 @@ and under the public domain.
 Author: John Kakareka
 """
 import pytest
-import os
+import logging
 from time import sleep
 
-import pyHardware.pyAI_NIDAQ as pyAI
-from pyHardware.pyAI import AIDeviceException
-import pyHardware.pyAI_Finite_NIDAQ as pyAIFinite
+import pyHardware.pyAI as pyAI
+import pyHardware.pyAI_NIDAQ as pyAI_NIDAQ
+import pyHardware.pyAI_Finite_NIDAQ as pyAI_Finite_NIDAQ
+import pyPerfusion.utils as utils
 
-
-DEVICE_UNDER_TEST = 'Dev1'
+DEVICE_UNDER_TEST = 'Dev2'
 SAMPLES_PER_READ = 17
 
-@pytest.fixture
-def delete_file(filename):
-    os.remove(filename)
-
 
 @pytest.fixture
-def ai():
-    ai = pyAI.NIDAQ_AI(period_ms=10, volts_offset=2.5, volts_p2p=5)
-    yield ai
-    ai.stop()
+def ai_device_cfg():
+    ai_device_cfg = pyAI_NIDAQ.AINIDAQDeviceConfig(name='PyTest AIDevice',
+                                                   device_name=DEVICE_UNDER_TEST,
+                                                   sampling_period_ms=100,
+                                                   read_period_ms=100*17)
+    yield ai_device_cfg
 
 
 @pytest.fixture
-def ai_finite():
-    ai_finite = pyAIFinite.AI_Finite_NIDAQ(period_ms=100,
-                                           volts_offset=2.5, volts_p2p=5,
-                                           samples_per_read=SAMPLES_PER_READ)
+def ai_device(ai_device_cfg):
+    ai_device = pyAI_NIDAQ.NIDAQAIDevice()
+    ai_device.open(ai_device_cfg)
+    yield ai_device
+    ai_device.close()
+
+
+@pytest.fixture
+def ai_channel_config():
+    ai_channel_config = pyAI.AIChannelConfig(name='PyTest AIChannel')
+    yield ai_channel_config
+
+
+@pytest.fixture
+def ai_finite_device_cfg():
+    ai_finite_device_cfg = pyAI_Finite_NIDAQ.FiniteNIDAQAIDeviceConfig(
+        name='PyTest Finite AIDevice',
+        device_name=DEVICE_UNDER_TEST,
+        sampling_period_ms=100,
+        samples_per_read=SAMPLES_PER_READ)
+    yield ai_finite_device_cfg
+
+
+@pytest.fixture
+def ai_finite(ai_finite_device_cfg):
+    ai_finite = pyAI_Finite_NIDAQ.FiniteNIDAQAIDevice()
+    ai_finite.open(ai_finite_device_cfg)
     yield ai_finite
     ai_finite.stop()
 
 
 def setup_module(module):
     print("setup_module      module:{}".format(module.__name__))
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 
 
 def teardown_module(module):
@@ -56,112 +78,95 @@ def teardown_function(function):
     print("teardown_function      module:{}".format(function.__name__))
 
 
-def test_default_devname(ai):
-    assert ai.devname == 'None/ai'
+def test_default_devname(ai_device):
+    assert ai_device.devname == f'{DEVICE_UNDER_TEST}/ai'
 
 
-def test_devname(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai'
+def test_devname_1ch(ai_device, ai_channel_config):
+    ai_device.add_channel(ai_channel_config)
+    assert ai_device.devname == f'{DEVICE_UNDER_TEST}/ai0'
 
 
-def test_devname_1ch(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1'
+def test_devname_2ch_consecutive(ai_device, ai_channel_config):
+    ai_channel_config2 = pyAI.AIChannelConfig(name='2nd AI Channel')
+    ai_channel_config2.line = 1
+    ai_device.add_channel(ai_channel_config)
+    ai_device.add_channel(ai_channel_config2)
+    assert ai_device.devname == f'{DEVICE_UNDER_TEST}/ai0,{DEVICE_UNDER_TEST}/ai1'
+    assert list(ai_device.ai_channels.keys()) == [ai_channel_config.name, ai_channel_config2.name]
 
 
-def test_devname_2ch_consecutive(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    ai.add_channel('2')
-    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1,{DEVICE_UNDER_TEST}/ai2'
+def test_devname_2ch_nonconsecutive(ai_device, ai_channel_config):
+    ai_channel_config2 = pyAI.AIChannelConfig(name='2nd AI Channel')
+    ai_channel_config2.line = 2
+    ai_device.add_channel(ai_channel_config)
+    ai_device.add_channel(ai_channel_config2)
+    assert ai_device.devname == f'{DEVICE_UNDER_TEST}/ai0,{DEVICE_UNDER_TEST}/ai2'
+    assert list(ai_device.ai_channels.keys()) == [ai_channel_config.name, ai_channel_config2.name]
 
 
-def test_devname_2ch_nonconsecutive(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    ai.add_channel('3')
-    assert ai.devname == f'{DEVICE_UNDER_TEST}/ai1,{DEVICE_UNDER_TEST}/ai3'
+def test_is_not_open(ai_device):
+    assert not ai_device.is_open()
 
 
-def test_is_not_open(ai):
-    assert not ai.is_open()
+def test_isopen(ai_device, ai_channel_config):
+    ai_device.add_channel(ai_channel_config)
+    assert ai_device.is_open()
 
 
-def test_isopen_channel_no_call_to_open(ai):
-    with pytest.raises(AIDeviceException):
-        ai.add_channel('1')
+def test_isopen_remove(ai_device, ai_channel_config):
+    ai_device.add_channel(ai_channel_config)
+    ai_device.remove_channel(ai_channel_config.name)
+    assert not ai_device.is_open()
 
 
-def test_isopen_call_to_open(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    assert ai.is_open()
+def test_remove_channel(ai_device, ai_channel_config):
+    ai_channel_config2 = pyAI.AIChannelConfig(name='2nd AI Channel')
+    ai_channel_config2.line = 2
+    ai_device.add_channel(ai_channel_config)
+    ai_device.add_channel(ai_channel_config2)
+    ai_device.remove_channel(ai_channel_config.name)
+    assert list(ai_device.ai_channels.keys()) == [ai_channel_config2.name]
 
 
-def test_isopen_remove(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    assert ai.is_open()
-    ai.remove_channel('1')
-    assert not ai.is_open()
+def test_is_acquiring(ai_device, ai_channel_config):
+    ai_device.add_channel(ai_channel_config)
+    assert not ai_device.is_acquiring
+    ai_device.start()
+    assert ai_device.is_acquiring
+    ai_device.stop()
+    assert not ai_device.is_acquiring
 
 
-def test_getids(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    assert ai.get_ids() == ['1']
-    ai.add_channel('3')
-    assert ai.get_ids() == ['1', '3']
+def test_get_channel(ai_device, ai_channel_config):
+    ai_device.add_channel(ai_channel_config)
+    ch = ai_device.ai_channels[ai_channel_config.name]
+    assert isinstance(ch, pyAI.AIChannel)
+    assert ch.cfg == ai_channel_config
 
 
-def test_remove_channel(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    ai.add_channel('2')
-    ai.remove_channel('1')
-    assert ai.get_ids() == ['2']
+def test_getdata(ai_device, ai_channel_config):
+    ai_channel_config.cal_pt1_reading = 0
+    ai_channel_config.cal_pt1_target = 0
+    ai_channel_config.cal_pt2_reading = 1
+    ai_channel_config.cal_pt2_target = 1
+    ai_device.add_channel(ai_channel_config)
+    ai_device.start()
+    sleep(4.0)
 
-
-def test_is_acquiring(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    assert not ai.is_acquiring
-    ai.start()
-    assert ai.is_acquiring
-    ai.stop()
-    assert not ai.is_acquiring
-
-
-def test_open2ch_close1(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    ai.add_channel('2')
-    assert ai.is_open()
-    ai.remove_channel('1')
-    assert not ai.is_acquiring
-    ai.add_channel('1')
-    ai.start()
-    ai.remove_channel('1')
-    assert ai.is_acquiring
-
-
-def test_getdata(ai):
-    ai.open(f'{DEVICE_UNDER_TEST}')
-    ai.add_channel('1')
-    ai.start()
-    sleep(1.0)
-    data, t = ai.get_data('1')
+    data, t = ai_device.ai_channels[ai_channel_config.name].get_data()
     assert len(data) > 0 and type(t) is float
-    ai.stop()
+    ai_device.stop()
 
 
-def test_getdata_finite(ai_finite):
-    ai_finite.open(f'{DEVICE_UNDER_TEST}')
-    ai_finite.add_channel('1')
+def test_getdata_finite(ai_finite, ai_channel_config):
+    ai_channel_config.cal_pt1_reading = 0
+    ai_channel_config.cal_pt1_target = 0
+    ai_channel_config.cal_pt2_reading = 1
+    ai_channel_config.cal_pt2_target = 1
+    ai_finite.add_channel(ai_channel_config)
     ai_finite.start()
     sleep(2.0)
     assert ai_finite.is_done()
-    data, t = ai_finite.get_data('1')
+    data, t = ai_finite.ai_channels[ai_channel_config.name].get_data()
     assert len(data) == 17

@@ -81,8 +81,10 @@ class NIDAQAIDevice(pyAI.AIDevice):
                 self._task.ReadAnalogF64(self.samples_per_read, 1.05 * self.cfg.read_period_ms / 1000.0,
                                          PyDAQmx.DAQmxConstants.DAQmx_Val_GroupByChannel,
                                          self._acq_buf, len(self._acq_buf), PyDAQmx.byref(samples_read), None)
+
                 offset = 0
                 for ch in self.ai_channels.values():
+                    self._lgr.debug(f'_acq_samples: len(buf) = {len(self._acq_buf)}')
                     buf = self._acq_buf[offset:offset + self.samples_per_read]
                     ch.put_data(buf, buffer_t)
                     offset += self.samples_per_read
