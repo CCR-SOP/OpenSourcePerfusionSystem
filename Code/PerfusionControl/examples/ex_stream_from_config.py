@@ -1,3 +1,15 @@
+# -*- coding: utf-8 -*-
+""" Example to show how to create a sensor stream from a saved config
+
+Assumes that the test configuration folder contains a config
+"TestAnalogInputDevce.ini" with a channel called "Flow"
+
+@project: Project NIH
+@author: John Kakareka, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
+"""
 from time import sleep
 from threading import enumerate
 import logging
@@ -15,19 +27,15 @@ PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
 hw = NIDAQAIDevice()
-hw_cfg = AINIDAQDeviceConfig(name='Example', device_name='Dev2',
-                             sampling_period_ms=100, read_period_ms=500,
-                             pk2pk_volts=5, offset_volts=2.5)
-ch_cfg = pyAI.AIChannelConfig(name='test', line=0)
-hw.open(hw_cfg)
-hw.add_channel(ch_cfg)
+hw.cfg = AINIDAQDeviceConfig(name='TestAnalogInputDevice')
+hw.read_config()
 
-sensor = SensorStream(hw.ai_channels[ch_cfg.name], 'ml/min')
-sensor.add_strategy(StreamToFile('Raw', 1, 10))
+sensor = SensorStream(hw.ai_channels['Flow'], 'ml/min')
+sensor.add_strategy(strategy = StreamToFile('Raw', 1, 10))
 
 sensor.open()
-sensor.start()
 hw.start()
+sensor.start()
 print('Sleeping 4 seconds')
 sleep(4)
 sensor.stop()

@@ -60,7 +60,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
     def devname(self):
         # recreate from scratch so base naming convention does not need
         # to be consistent with actual hardware naming convention
-        lines = [cfg.line for cfg in self.cfg.ch_info.values()]
+        lines = [ch.cfg.line for ch in self.ai_channels.values()]
         if len(lines) == 0:
             dev_str = f'{self.cfg.device_name}/ai'
         else:
