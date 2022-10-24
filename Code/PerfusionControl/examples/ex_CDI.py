@@ -1,6 +1,6 @@
 """
 
-Example script to parse single set of packet mdoe data from CDI saturation monitor
+Example script to parse single set of packet mode data from CDI saturation monitor
 
 @project: Liver Perfusion, NIH
 @author: Stephie Lux, NIH

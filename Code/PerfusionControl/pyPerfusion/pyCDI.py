@@ -51,7 +51,7 @@ class CDIRawData:
 
 
 class CDIStreaming:
-    def __init__(self, name): # find a good tutorial on this
+    def __init__(self, name):
         super().__init__()
         self._lgr = logging.getLogger(__name__)
         self.data_type = np.float32
@@ -92,12 +92,10 @@ class CDIStreaming:
         if self._serial:
             self._serial.close()
 
-    # how many bytes are in one timestamp's worth of data in packet mode? does the read function even get the packet correctly? look into this more
-    def request_data(self, expected_bytes, timeout=0):
-        # send command to request data. see manual page c-5
-        # for packet mode, expected bytes should be a constant value
-        # so no need for this to be a parameter
-        CDIPacket = self.__serial.read(expected_bytes)
+    def request_data(self, timeout=0):
+        # set output interval to 0 on CDI500 in order to request data
+        self._serial.write('<X08Z36>')
+        CDIPacket = self.__serial.read(self._serial.bytesize)
         return CDIPacket
 
 ''' 
