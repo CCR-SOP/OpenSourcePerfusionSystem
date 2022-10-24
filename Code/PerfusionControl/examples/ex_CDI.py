@@ -14,7 +14,7 @@ import pyPerfusion.pyCDI as pyCDI
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG) # add in debugging comments
 
-COMPORT = 'COM1'
+COMPORT = 'COM13'
 
 cdi = pyCDI.CDIStreaming('Test CDI')
 cdi.open()
