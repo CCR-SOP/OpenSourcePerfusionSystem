@@ -17,7 +17,8 @@ utils.setup_stream_logger(logging.getLogger(), logging.DEBUG) # add in debugging
 COMPORT = 'COM13'
 
 cdi = pyCDI.CDIStreaming('Test CDI')
-cdi.open()
+cdi.open(COMPORT, 9600)
 packet = cdi.request_data()
+cdi.print_raw_results(packet)
 data = pyCDI.CDIRawData(packet)
 data.print_results()

@@ -24,30 +24,31 @@ utils.configure_matplotlib_logging()
 
 class CDIRawData:
     def __init__(self, response_str):
-        self.arterial_pH = float(response_str[9:13])
-        self.arterial_CO2 = float(response_str[14:18])
-        self.arterial_O2 = float(response_str[19:23])
-        self.arterial_temp = float(response_str[24:28])
-        self.arterial_bicarb = float(response_str[29:33])
-        self.arterial_BE = float(response_str[34:38])
-        self.calculated_O2_sat = float(response_str[39:43])
-        self.K = float(response_str[44:48])
-        self.VO2 = float(response_str[49:53])
-        self.Q = float(response_str[54:58])
-        self.BSA = float(response_str[59:63])
-        self.venous_pH = float(response_str[64:68])
-        self.venous_CO2 = float(response_str[69:73])
-        self.venous_O2 = float(response_str[74:78])
-        self.venous_temp = float(response_str[79:83])
-        self.measured_O2_sat = float(response_str[84:87])
-        self.hct = float(response_str[89:92])
-        self.hb = float(response_str[94:99])
+        self.arterial_pH = float(response_str[23:27])
+        # self.arterial_CO2 = float(response_str[32:35]
+        # self.arterial_O2 = float(response_str[40:43])
+        self.arterial_temp = float(response_str[48:52])
+        # self.arterial_bicarb = float(response_str[57:60])  # finish parsing out numbers with blood running through to accurately see values
+        # self.arterial_BE = float(response_str[65:67])
+        # self.calculated_O2_sat = float(response_str[72:74])
+        # self.K = float(response_str[79:82])
+        # self.VO2 = float(response_str[87:90])
+        # self.Q = float(response_str[95:99])
+        # self.BSA = float(response_str[50:53])
+        # self.venous_pH = float(response_str[54:57])
+        # self.venous_CO2 = float(response_str[58:61])
+        # self.venous_O2 = float(response_str[61:64])
+        # self.venous_temp = float(response_str[65:68])
+        # self.measured_O2_sat = float(response_str[69:72])
+        # self.hct = float(response_str[73:76])
+        # self.hb = float(response_str[77:80])
 
     # test ability to read all 3 sensors on CDI
     def print_results(self):
         print(f'Arterial pH is {self.arterial_pH}')
-        print(f'Venous pH is {self.venous_pH}')
-        print(f'Hemoglobin is {self.hb}')
+        print(f'Temperature is {self.arterial_temp}')
+        # print(f'Venous pH is {self.venous_pH}')
+        # print(f'Hemoglobin is {self.hb}')
 
 
 class CDIStreaming:
@@ -58,7 +59,7 @@ class CDIStreaming:
 
         self.name = name
 
-        self._serial = serial.Serial()
+        self.__serial = serial.Serial()
         self._baud = 9600
 
         self._queue = None
@@ -69,34 +70,39 @@ class CDIStreaming:
         self.is_streaming = False
 
     def is_open(self):
-        return self._serial.is_open
+        return self.__serial.is_open
 
-    def open(self, port_name: str, baud_rate: int) -> None:
-        if self._serial.is_open:
-            self._serial.close()
+    def open(self, port_name: str, baud_rate: int) -> None:  # do we need baudrate as an input when we already know what it is?
+        if self.__serial.is_open:
+            self.__serial.close()
 
-        self._serial.port = port_name
-        self._serial.baudrate = baud_rate
-        self._serial.stopbits = serial.STOPBITS_ONE
-        self._serial.parity = serial.PARITY_NONE
-        self._serial.bytesize = serial.EIGHTBITS
+        self.__serial.port = port_name
+        self.__serial.baudrate = baud_rate
+        self.__serial.stopbits = serial.STOPBITS_ONE
+        self.__serial.parity = serial.PARITY_NONE
+        self.__serial.bytesize = serial.EIGHTBITS
 
         try:
-            self._serial.open()
+            self.__serial.open()
         except serial.serialutil.SerialException as e:
-            self._lgr.error(f'Could not open serial port {self._serial.portstr}')
+            self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
             self._lgr.error(f'Message: {e}')
         self._queue = Queue()
 
     def close(self):
-        if self._serial:
-            self._serial.close()
+        if self.__serial:
+            self.__serial.close()
 
     def request_data(self, timeout=0):
         # set output interval to 0 on CDI500 in order to request data
-        self._serial.write('<X08Z36>')
-        CDIPacket = self.__serial.read(self._serial.bytesize)
+        # actually it works without this? Not sure why. Accidentally kept it set to
+        expected_bytes = 160
+        self.__serial.write('<X08Z36>'.encode())
+        CDIPacket = self.__serial.read(expected_bytes)
         return CDIPacket
+
+    def print_raw_results(self, CDIPacket):
+        print({CDIPacket})
 
 ''' 
 methods
