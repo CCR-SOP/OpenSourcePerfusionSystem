@@ -22,34 +22,57 @@ utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 
-class CDIRawData:
-    def __init__(self, response_str):
-        self.arterial_pH = float(response_str[23:27])
-        # self.arterial_CO2 = float(response_str[32:35]
-        # self.arterial_O2 = float(response_str[40:43])
-        self.arterial_temp = float(response_str[48:52])
-        # self.arterial_bicarb = float(response_str[57:60])  # finish parsing out numbers with blood running through to accurately see values
-        # self.arterial_BE = float(response_str[65:67])
-        # self.calculated_O2_sat = float(response_str[72:74])
-        # self.K = float(response_str[79:82])
-        # self.VO2 = float(response_str[87:90])
-        # self.Q = float(response_str[95:99])
-        # self.BSA = float(response_str[50:53])
-        # self.venous_pH = float(response_str[54:57])
-        # self.venous_CO2 = float(response_str[58:61])
-        # self.venous_O2 = float(response_str[61:64])
-        # self.venous_temp = float(response_str[65:68])
-        # self.measured_O2_sat = float(response_str[69:72])
-        # self.hct = float(response_str[73:76])
-        # self.hb = float(response_str[77:80])
+class CDIParsedData:
+    def __init__(self, response):
+        # parse raw ASCII output
+        self.response_str = str(response)
+        self.fields = self.response_str.split(sep="\\t")
+        # check analyte codes and if correct assign analyte data
+        # not a perfect solution
+            # only checks one element in the list for each analyte
+            # doesn't have way of saving a blank - currently causing an error since the CDI is outputting blanks
+        if self.fields[1][0:2] == "00":
+            self.arterial_pH = float(self.fields[1][4:])
+        if self.fields[2][0:2] == "01":
+            self.arterial_CO2 = float(self.fields[2][4:])
+        if self.fields[3][0:2] == "02":
+            self.arterial_O2 = float(self.fields[3][4:])
+        if self.fields[4][0:2] == "03":
+            self.arterial_temp = float(self.fields[4][4:])
+        if self.fields[5][0:2] == "04":
+            self.arterial_sO2 = float(self.fields[5][4:])
+        if self.fields[6][0:2] == "05":
+            self.arterial_bicarb = float(self.fields[6][4:])
+        if self.fields[7][0:2] == "06":
+            self.arterial_BE = float(self.fields[7][4:])
+        if self.fields[8][0:2] == "07":
+            self.K = float(self.fields[8][4:])
+        if self.fields[9][0:2] == "08":
+            self.VO2 = float(self.fields[9][4:])
+        if self.fields[10][0:2] == "09":
+            self.venous_pH = float(self.fields[10][4:])
+        if self.fields[11][0:2] == "0A":
+            self.venous_CO2 = float(self.fields[11][4:])
+        if self.fields[12][0:2] == "0B":
+            self.venous_O2 = float(self.fields[12][4:])
+        if self.fields[13][0:2] == "0C":
+            self.venous_temp = float(self.fields[13][4:])
+        if self.fields[14][0:2] == "0D":
+            self.venous_sO2 = float(self.fields[14][4:])
+        if self.fields[15][0:2] == "0E":
+            self.venous_bicarb = float(self.fields[15][4:])
+        if self.fields[16][0:2] == "0F":
+            self.venous_BE = float(self.fields[16][4:])
+        if self.fields[17][0:2] == "10":
+            self.hct = float(self.fields[17][4:])
+        if self.fields[18][0:2] == "11":
+            self.hgb = float(self.fields[18][4:])
 
     # test ability to read all 3 sensors on CDI
     def print_results(self):
         print(f'Arterial pH is {self.arterial_pH}')
-        print(f'Temperature is {self.arterial_temp}')
-        # print(f'Venous pH is {self.venous_pH}')
-        # print(f'Hemoglobin is {self.hb}')
-
+        print(f'Venous pH is {self.venous_pH}')
+        print(f'Hemoglobin is {self.hgb}')
 
 class CDIStreaming:
     def __init__(self, name):
@@ -94,15 +117,10 @@ class CDIStreaming:
             self.__serial.close()
 
     def request_data(self, timeout=0):
-        # set output interval to 0 on CDI500 in order to request data
-        # actually it works without this? Not sure why. Accidentally kept it set to
-        expected_bytes = 160
-        self.__serial.write('<X08Z36>'.encode())
-        CDIPacket = self.__serial.read(expected_bytes)
+        # self.__serial.write('X08Z36'.encode(encoding='ascii'))
+        self.__serial.timeout = 30.0  # if we set this higher will we get multiple packets?
+        CDIPacket = self.__serial.readline()
         return CDIPacket
-
-    def print_raw_results(self, CDIPacket):
-        print({CDIPacket})
 
 ''' 
 methods
