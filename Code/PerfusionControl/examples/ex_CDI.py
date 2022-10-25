@@ -12,14 +12,12 @@ import logging
 import pyPerfusion.utils as utils
 import pyPerfusion.pyCDI as pyCDI
 
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG) # add in debugging comments
+utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)  # add in debugging comments
 
 COMPORT = 'COM13'
 
 cdi = pyCDI.CDIStreaming('Test CDI')
 cdi.open(COMPORT, 9600)
 packet = cdi.request_data()
-# cdi.print_raw_results(packet)
 data = pyCDI.CDIParsedData(packet)
 data.print_results()
-# print(f'{type(packet)}')
