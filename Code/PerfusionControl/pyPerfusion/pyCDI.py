@@ -27,46 +27,94 @@ class CDIParsedData:
         # parse raw ASCII output
         self.response_str = str(response)
         self.fields = self.response_str.split(sep="\\t")
-        # check analyte codes and if correct assign analyte data
-        # not a perfect solution
-            # only checks one element in the list for each analyte
-            # doesn't have way of saving a blank - currently causing an error since the CDI is outputting blanks
-        if self.fields[1][0:2] == "00":
-            self.arterial_pH = float(self.fields[1][4:])
-        if self.fields[2][0:2] == "01":
-            self.arterial_CO2 = float(self.fields[2][4:])
-        if self.fields[3][0:2] == "02":
-            self.arterial_O2 = float(self.fields[3][4:])
-        if self.fields[4][0:2] == "03":
-            self.arterial_temp = float(self.fields[4][4:])
-        if self.fields[5][0:2] == "04":
-            self.arterial_sO2 = float(self.fields[5][4:])
-        if self.fields[6][0:2] == "05":
-            self.arterial_bicarb = float(self.fields[6][4:])
-        if self.fields[7][0:2] == "06":
-            self.arterial_BE = float(self.fields[7][4:])
-        if self.fields[8][0:2] == "07":
-            self.K = float(self.fields[8][4:])
-        if self.fields[9][0:2] == "08":
-            self.VO2 = float(self.fields[9][4:])
-        if self.fields[10][0:2] == "09":
-            self.venous_pH = float(self.fields[10][4:])
-        if self.fields[11][0:2] == "0A":
-            self.venous_CO2 = float(self.fields[11][4:])
-        if self.fields[12][0:2] == "0B":
-            self.venous_O2 = float(self.fields[12][4:])
-        if self.fields[13][0:2] == "0C":
-            self.venous_temp = float(self.fields[13][4:])
-        if self.fields[14][0:2] == "0D":
-            self.venous_sO2 = float(self.fields[14][4:])
-        if self.fields[15][0:2] == "0E":
-            self.venous_bicarb = float(self.fields[15][4:])
-        if self.fields[16][0:2] == "0F":
-            self.venous_BE = float(self.fields[16][4:])
-        if self.fields[17][0:2] == "10":
-            self.hct = float(self.fields[17][4:])
-        if self.fields[18][0:2] == "11":
-            self.hgb = float(self.fields[18][4:])
+        
+        self.analyte_codes = ("00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "0A", "0B", "0C", "0D", "0E",
+                              "0F", "10", "11")
+        self.arterial_pH = None
+        self.arterial_CO2 = None
+        self.arterial_O2 = None
+        self.arterial_temp = None
+        self.arterial_sO2 = None
+        self.arterial_bicarb = None
+        self.arterial_BE = None
+        self.K = None
+        self.VO2 = None
+        self.venous_pH = None
+        self.venous_CO2 = None
+        self.venous_O2 = None
+        self.venous_temp = None
+        self.venous_sO2 = None
+        self.venous_bicarb = None
+        self.venous_BE = None
+        self.hct = None
+        self.hgb = None
+
+        grouping = {self.arterial_pH,
+                    self.arterial_CO2,
+                    self.arterial_O2,
+                    self.arterial_temp,
+                    self.arterial_sO2,
+                    self.arterial_bicarb,
+                    self.arterial_BE,
+                    self.K,
+                    self.VO2,
+                    self.venous_pH,
+                    self.venous_CO2,
+                    self.venous_O2,
+                    self.venous_temp,
+                    self.venous_sO2,
+                    self.venous_bicarb,
+                    self.venous_BE,
+                    self.hct,
+                    self.hgb}
+
+        for n in range(17):
+            if self.fields[n][0:2] == self.analyte_codes[n]:
+                try:
+                    grouping[n] = float(self.fields[n][4:])  # not sure how we can correctly assign the attributes: this is definitely wrong but this was the concept I wanted to achieve
+                except self.fields[n][4] == "-":
+                    print(f'Cannot read {grouping[n]}')
+            else:
+                print('Analyte code order not correct')
+                # better way of handling this? test other n's or not worth it?
+        #if self.fields[2][0:2] == "01":
+            #try:
+               # self.arterial_CO2 = float(self.fields[2][4:])
+           # except self.fields[2][4] == "-":
+              #  print("Cannot read arterial CO2")
+               # self.arterial_CO2 = None
+        #if self.fields[3][0:2] == "02":
+           # self.arterial_O2 = float(self.fields[3][4:])
+       # if self.fields[4][0:2] == "03":
+            #self.arterial_temp = float(self.fields[4][4:])
+       # if self.fields[5][0:2] == "04":
+           # self.arterial_sO2 = float(self.fields[5][4:])
+       # if self.fields[6][0:2] == "05":
+           # self.arterial_bicarb = float(self.fields[6][4:])
+       # if self.fields[7][0:2] == "06":
+            #self.arterial_BE = float(self.fields[7][4:])
+       # if self.fields[8][0:2] == "07":
+          #  self.K = float(self.fields[8][4:])
+       # if self.fields[9][0:2] == "08":
+          #  self.VO2 = float(self.fields[9][4:])
+       # if self.fields[10][0:2] == "09":
+          #  self.venous_pH = float(self.fields[10][4:])
+        #if self.fields[11][0:2] == "0A":
+            #self.venous_CO2 = float(self.fields[11][4:])
+       # if self.fields[12][0:2] == "0B":
+          # self.venous_O2 = float(self.fields[12][4:])
+       # if self.fields[13][0:2] == "0C":
+          #  self.venous_temp = float(self.fields[13][4:])
+       # if self.fields[14][0:2] == "0D":
+          #  self.venous_sO2 = float(self.fields[14][4:])
+        #if self.fields[15][0:2] == "0E":
+           # self.venous_bicarb = float(self.fields[15][4:])
+      #  if self.fields[16][0:2] == "0F":
+         #   self.venous_BE = float(self.fields[16][4:])
+       # if self.fields[17][0:2] == "10":
+        #    self.hct = float(self.fields[17][4:])
+      #  if self.fields[18][0:2] == "11":
+            #self.hgb = float(self.fields[18][4:])
 
     # test ability to read all 3 sensors on CDI
     def print_results(self):
