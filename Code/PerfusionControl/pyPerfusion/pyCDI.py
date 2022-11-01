@@ -5,8 +5,8 @@
 
 """
 import logging
-from time import perf_counter
-import time
+from threading import Thread, Lock, Event
+from time import perf_counter, sleep, time
 from queue import Queue, Empty
 
 import numpy as np
@@ -62,6 +62,7 @@ class CDIStreaming:
         self.__acq_start_t = None
         self.period_sampling_ms = 30000
         self.samples_per_read = 0
+        self._event_halt = Event()
 
         self.is_streaming = False
 
@@ -95,18 +96,23 @@ class CDIStreaming:
         CDIpacket = self.__serial.readline()
         return CDIpacket
 
-    def stream_data(self, timeout=30):  # continuous data stream
+    def run(self, timeout=30):  # continuous data stream
         self.is_streaming = True
+        self._event_halt.clear()
         self.__serial.timeout = timeout
-        while self.is_streaming:
-            one_cdi_packet = self.__serial.readline()
-            self._queue.put(one_cdi_packet)
-        time.sleep(self.period_sampling_ms)
+        while not self._event_halt.is_set():
+            if serial.in_waiting > 0:
+                one_cdi_packet = self.__serial.readline()
+                self._queue.put(one_cdi_packet)
+            else:
+                time.sleep(5)
 
-    def stop_stream_data(self):
-        self.is_streaming = False
+    def stop(self):
+        if self.is_streaming:
+            self._event_halt.set()
+            self.is_streaming = False
 
-    def retrieve_data_from_queue(self, timeout=0):  # from Pump11Elite. Might make sense so have this in the CDIParsedData class?
+    def get_data(self, timeout=0):  # from Pump11Elite. Might make sense so have this in the CDIParsedData class?
         buf = None  # not sure what buf and t do?
         t = None
         try:
