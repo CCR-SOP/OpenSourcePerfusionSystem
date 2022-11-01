@@ -6,6 +6,7 @@
 """
 import logging
 from time import perf_counter
+import time
 from queue import Queue, Empty
 
 import numpy as np
@@ -88,20 +89,34 @@ class CDIStreaming:
         if self.__serial:
             self.__serial.close()
 
-    def request_data(self, timeout=0):
+    def request_data(self, timeout=30):  # request single data packet
         # self.__serial.write('X08Z36'.encode(encoding='ascii'))
-        self.__serial.timeout = 30.0  # if we set this higher will we get multiple packets?
-        CDIPacket = self.__serial.readline()
-        return CDIPacket
+        self.__serial.timeout = timeout
+        CDIpacket = self.__serial.readline()
+        return CDIpacket
+
+    def stream_data(self, timeout=30):  # continuous data stream
+        self.is_streaming = True
+        while(self.is_streaming):
+            one_cdi_packet = self.__serial.readline()
+            self._queue.put(one_cdi_packet)
+
+    def stop_stream_data(self):
+        self.is_streaming = False
+
+    def retrieve_data(self, timeout=0):  # from Pump11Elite
+        buf = None
+        t = None
+        try:
+            buf, t = self._queue.get(timeout)
+        except Empty:
+            pass
+        return buf, t
 
 ''' 
 methods
 
-open
 
-stream
-
-save as data frame
 
 stop streaming
 
