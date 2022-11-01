@@ -25,7 +25,6 @@ code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', 
                 '04': 'arterial_sO2', '05': 'arterial_bicarb', '06': 'arterial_BE', '07': 'K', '08': 'VO2',
                 '09': 'venous_pH', '0A': 'venous_CO2', '0B': 'venous_O2', '0C': 'venous_temp', '0D': 'venous_sO2',
                 '0E': 'venous_bicarb', '0F': 'venous_BE', '10': 'hct', '11': 'hgb'}
-code_mapping['00']
 
 
 class CDIParsedData:
