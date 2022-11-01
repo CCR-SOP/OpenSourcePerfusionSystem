@@ -40,7 +40,7 @@ class CDIParsedData:
             except fields[n][4] == "-":
                 print(f'Cannot read {code_mapping[n]}')
 
-    # test ability to read all 3 sensors on CDI
+    # test ability to read all 3 sensors on CDI - delete eventually
     def print_results(self):
         print(f'Arterial pH is {self.arterial_pH}')
         print(f'Venous pH is {self.venous_pH}')
@@ -60,7 +60,7 @@ class CDIStreaming:
 
         self._queue = None
         self.__acq_start_t = None
-        self.period_sampling_ms = 0
+        self.period_sampling_ms = 30000
         self.samples_per_read = 0
 
         self.is_streaming = False
@@ -68,7 +68,7 @@ class CDIStreaming:
     def is_open(self):
         return self.__serial.is_open
 
-    def open(self, port_name: str, baud_rate: int) -> None:  # do we need baudrate as an input when we already know what it is?
+    def open(self, port_name: str, baud_rate: int) -> None:
         if self.__serial.is_open:
             self.__serial.close()
 
@@ -97,28 +97,20 @@ class CDIStreaming:
 
     def stream_data(self, timeout=30):  # continuous data stream
         self.is_streaming = True
-        while(self.is_streaming):
+        self.__serial.timeout = timeout
+        while self.is_streaming:
             one_cdi_packet = self.__serial.readline()
             self._queue.put(one_cdi_packet)
+        time.sleep(self.period_sampling_ms)
 
     def stop_stream_data(self):
         self.is_streaming = False
 
-    def retrieve_data(self, timeout=0):  # from Pump11Elite
-        buf = None
+    def retrieve_data_from_queue(self, timeout=0):  # from Pump11Elite. Might make sense so have this in the CDIParsedData class?
+        buf = None  # not sure what buf and t do?
         t = None
         try:
             buf, t = self._queue.get(timeout)
         except Empty:
             pass
         return buf, t
-
-''' 
-methods
-
-
-
-stop streaming
-
-close
-'''
