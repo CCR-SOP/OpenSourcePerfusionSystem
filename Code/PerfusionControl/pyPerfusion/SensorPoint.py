@@ -27,3 +27,8 @@ class SensorPoint(SensorStream):
                 buf = data_buf
                 for strategy in self._strategies:
                     buf = strategy.process_buffer(buf, t)
+
+
+class ReadOnlySensorPoint(SensorPoint):
+    def run(self):
+        pass

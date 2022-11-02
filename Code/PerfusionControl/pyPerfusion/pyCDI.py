@@ -31,14 +31,17 @@ code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', 
 class CDIParsedData:
     def __init__(self, response):
         # parse raw ASCII output
-        self.response_str = str(response)
-        fields = self.response_str.split(sep="\\t")
+        response_str = str(response)
+        fields = response_str.split(sep="\\t")
+        if len(fields) == len(code_mapping):
+            for field in fields:
+                try:
+                    setattr(self, code_mapping[field[0:2]], float(field[4:]))
+                except ValueError:
+                    logging.getLogger(__name__).error(f'Field {code_mapping[field[0:2]]} is out-of-range')
 
-        for n in range(17):
-            try:
-                setattr(self, code_mapping[fields[n][0:2]], float(fields[n][4:]))
-            except fields[n][4] == "-":
-                print(f'Cannot read {code_mapping[n]}')
+    def get_array(self):
+        return list(self.__dict__.values())
 
     # test ability to read all 3 sensors on CDI - delete eventually
     def print_results(self):

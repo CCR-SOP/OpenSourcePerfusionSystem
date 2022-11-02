@@ -159,7 +159,7 @@ class PointsToFile(StreamToFile):
         self._fid.write(ts_bytes)
         data_buf.tofile(self._fid)
 
-    def __read_chunk(self, _fid):
+    def _read_chunk(self, _fid):
         ts = 0
         data_buf = None
         ts_bytes = _fid.read(self._bytes_per_ts)
@@ -179,7 +179,7 @@ class PointsToFile(StreamToFile):
         data = []
         first_time = None
         while chunk is not None:
-            chunk, ts = self.__read_chunk(_fid)
+            chunk, ts = self._read_chunk(_fid)
             if not first_time:
                 first_time = ts
             if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
@@ -195,7 +195,7 @@ class PointsToFile(StreamToFile):
         bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
         try:
             _fid.seek(-bytes_per_chunk, SEEK_END)
-            chunk, ts = self.__read_chunk(_fid)
+            chunk, ts = self._read_chunk(_fid)
         except OSError as e:
             print(e)
             chunk = None
@@ -232,9 +232,26 @@ class PointsToFile(StreamToFile):
                 self._lgr.warning(f'Attempted to read from before beginning of file with offset {offset}')
                 break
             else:
-                chunk, ts = self.__read_chunk(_fid)
+                chunk, ts = self._read_chunk(_fid)
                 if ts and ts > timestamp:
                     data_t.extendleft([ts])
                     data.extendleft(chunk)
         _fid.close()
         return data_t, data
+
+
+class MultiVarToFile(PointsToFile):
+    def _write_to_file(self, data_buf, t=None):
+        buf = np.ndarray(data_buf.get_array(), np.float32)
+        super()._write_to_file(buf, t)
+
+
+class MultiVarFromFile(PointsToFile):
+    def __init__(self, name, window_len, expected_buffer_len, index):
+        super().__init__(name, window_len, expected_buffer_len)
+        self._index = index
+
+    def _read_chunk(self, _fid):
+        data_buf, ts = super()._read_chunk(_fid)
+        data = data_buf[self._index]
+        return data, ts
