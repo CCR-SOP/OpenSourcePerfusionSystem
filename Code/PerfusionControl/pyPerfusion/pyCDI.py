@@ -65,7 +65,9 @@ class CDIStreaming:
         self.__acq_start_t = None
         self.period_sampling_ms = 30000
         self.samples_per_read = 0
+        self._timeout = 30
         self._event_halt = Event()
+        self.buf_len = 17
 
         self.is_streaming = False
 
@@ -75,18 +77,19 @@ class CDIStreaming:
     def open(self, port_name: str, baud_rate: int) -> None:
         if self.__serial.is_open:
             self.__serial.close()
-
-        self.__serial.port = port_name
-        self.__serial.baudrate = baud_rate
-        self.__serial.stopbits = serial.STOPBITS_ONE
-        self.__serial.parity = serial.PARITY_NONE
-        self.__serial.bytesize = serial.EIGHTBITS
-
-        try:
-            self.__serial.open()
-        except serial.serialutil.SerialException as e:
-            self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
-            self._lgr.error(f'Message: {e}')
+        if isinstance(port_name, str):
+            self.__serial.port = port_name
+            self.__serial.baudrate = baud_rate
+            self.__serial.stopbits = serial.STOPBITS_ONE
+            self.__serial.parity = serial.PARITY_NONE
+            self.__serial.bytesize = serial.EIGHTBITS
+            try:
+                self.__serial.open()
+            except serial.serialutil.SerialException as e:
+                self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
+                self._lgr.error(f'Message: {e}')
+        else:
+            self.__serial = port_name
         self._queue = Queue()
 
     def close(self):
@@ -99,10 +102,10 @@ class CDIStreaming:
         CDIpacket = self.__serial.readline()
         return CDIpacket
 
-    def run(self, timeout=30):  # continuous data stream
+    def run(self):  # continuous data stream
         self.is_streaming = True
         self._event_halt.clear()
-        self.__serial.timeout = timeout
+        self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
             if serial.in_waiting > 0:
                 one_cdi_packet = self.__serial.readline()
