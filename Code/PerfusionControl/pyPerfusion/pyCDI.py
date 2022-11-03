@@ -31,14 +31,23 @@ code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', 
 class CDIParsedData:
     def __init__(self, response):
         # parse raw ASCII output
-        response_str = str(response)
-        fields = response_str.split(sep="\\t")
+        fields = response.strip('\n').split(sep="\t")
         if len(fields) == len(code_mapping):
-            for field in fields:
+            # skip first field which is SN
+            for field in fields[1:]:
+                code = field[0:2].upper()
                 try:
-                    setattr(self, code_mapping[field[0:2]], float(field[4:]))
+                    value = float(field[4:])
                 except ValueError:
-                    logging.getLogger(__name__).error(f'Field {code_mapping[field[0:2]]} is out-of-range')
+                    logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
+                else:
+                    if code in code_mapping.keys():
+                        setattr(self, code_mapping[code], value)
+        else:
+            logging.getLogger(__name__).error(f'Could parse CDI data, '
+                                              f'expected {len(code_mapping)} fields, '
+                                              f'found {len(fields)}')
+
 
     def get_array(self):
         return list(self.__dict__.values())
@@ -64,9 +73,10 @@ class CDIStreaming:
         self._queue = None
         self.__acq_start_t = None
         self.period_sampling_ms = 30000
-        self.samples_per_read = 0
-        self._timeout = 30
+        self.samples_per_read = 17
+        self._timeout = 0.5
         self._event_halt = Event()
+        self.__thread = None
         self.buf_len = 17
 
         self.is_streaming = False
@@ -107,11 +117,21 @@ class CDIStreaming:
         self._event_halt.clear()
         self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
-            if serial.in_waiting > 0:
-                one_cdi_packet = self.__serial.readline()
-                self._queue.put(one_cdi_packet)
+            if self.__serial.in_waiting > 0:
+                resp = self.__serial.readline().decode('ascii')
+                one_cdi_packet = CDIParsedData(resp)
+                # self._lgr.debug(f'one_cdi_packet = {one_cdi_packet.arterial_pH}')
+                self._queue.put((one_cdi_packet, 0))
             else:
-                time.sleep(5)
+                sleep(5)
+
+    def start(self):
+        self.stop()
+        self._event_halt.clear()
+
+        self.__thread = Thread(target=self.run)
+        self.__thread.name = f'pyCDI'
+        self.__thread.start()
 
     def stop(self):
         if self.is_streaming:

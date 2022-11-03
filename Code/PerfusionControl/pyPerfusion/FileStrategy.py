@@ -47,13 +47,16 @@ class StreamToFile(ProcessingStrategy):
         self._fid = open(self.fqpn, 'w+b')
 
     def _open_read(self):
-        _fid = open(self.fqpn, 'rb')
+        try:
+            _fid = open(self.fqpn, 'rb')
+        except FileNotFoundError as e:
+            logging.exception(e)
+            return None, None
         data_type = np.dtype(self._sensor_params['Data Format'])
         try:
             data = np.memmap(_fid, dtype=data_type, mode='r')
         except ValueError as e:
             # cannot mmap an empty file
-            self._lgr.debug(f'in StreamToFile:_open_read: attempt to read from empty file: {e}')
             data = []
         return _fid, data
 
@@ -161,13 +164,14 @@ class PointsToFile(StreamToFile):
 
     def _read_chunk(self, _fid):
         ts = 0
-        data_buf = None
+        data_buf = []
         ts_bytes = _fid.read(self._bytes_per_ts)
         data_type = self._sensor_params['Data Format']
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
         if len(ts_bytes) == 4:
             ts, = struct.unpack('i', ts_bytes)
             data_buf = np.fromfile(_fid, dtype=data_type, count=samples_per_ts)
+
         return data_buf, ts
 
     def retrieve_buffer(self, last_ms, samples_needed):
@@ -178,12 +182,13 @@ class PointsToFile(StreamToFile):
         data_time = []
         data = []
         first_time = None
-        while chunk is not None:
+        while len(chunk) > 0:
             chunk, ts = self._read_chunk(_fid)
+            self._lgr.debug(f'chunk is {chunk}')
             if not first_time:
                 first_time = ts
             if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
-                data.append(chunk)
+                data.extend(chunk)
                 data_time.append((ts - first_time) / 1000.0)
         _fid.close()
         return data_time, data
@@ -197,7 +202,7 @@ class PointsToFile(StreamToFile):
             _fid.seek(-bytes_per_chunk, SEEK_END)
             chunk, ts = self._read_chunk(_fid)
         except OSError as e:
-            print(e)
+            logging.exception(e)
             chunk = None
             ts = None
 
@@ -242,8 +247,11 @@ class PointsToFile(StreamToFile):
 
 class MultiVarToFile(PointsToFile):
     def _write_to_file(self, data_buf, t=None):
-        buf = np.ndarray(data_buf.get_array(), np.float32)
+        buf = np.array(data_buf.get_array(), dtype=np.float32)
         super()._write_to_file(buf, t)
+        # ts_bytes = struct.pack('i', int(t * 1000.0))
+        # self._fid.write(ts_bytes)
+        # buf.tofile(self._fid)
 
 
 class MultiVarFromFile(PointsToFile):
@@ -251,7 +259,13 @@ class MultiVarFromFile(PointsToFile):
         super().__init__(name, window_len, expected_buffer_len)
         self._index = index
 
+    def run(self):
+        pass
+
     def _read_chunk(self, _fid):
         data_buf, ts = super()._read_chunk(_fid)
-        data = data_buf[self._index]
+        if len(data_buf) > 0:
+            data = [data_buf[self._index]]
+        else:
+            data = np.array([])
         return data, ts
