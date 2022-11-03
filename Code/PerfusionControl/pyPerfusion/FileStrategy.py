@@ -182,14 +182,15 @@ class PointsToFile(StreamToFile):
         data_time = []
         data = []
         first_time = None
-        while len(chunk) > 0:
+        samples_collected = 0
+        while len(chunk) > 0 and samples_collected < samples_needed:
             chunk, ts = self._read_chunk(_fid)
-            self._lgr.debug(f'chunk is {chunk}')
             if not first_time:
                 first_time = ts
             if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
                 data.extend(chunk)
                 data_time.append((ts - first_time) / 1000.0)
+                samples_collected += 1
         _fid.close()
         return data_time, data
 

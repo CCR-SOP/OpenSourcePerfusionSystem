@@ -43,19 +43,21 @@ def main():
     cdi.start()
 
     data = list(range(17))
-    for i in range(5):
+    for i in range(10):
         cdi_str = 'abc\t' + '\t'.join(f'{d:02x}{d+i:04d}' for d in data)
         print(f'writing {cdi_str}')
         fake_port.write(bytes(cdi_str + '\n', 'ascii'))
-        time.sleep(1)
+        time.sleep(0.1)
         # print(cdi.request_data(timeout=1))
         #print(f'Last acq is : {read_strategy.get_last_acq()}')
     # print(f'Last 5 samples are {read_strategy.get_data_from_last_read(timestamp=0)}')
-    print(f'Last 5 samples are {read_strategy.retrieve_buffer(last_ms=-1, samples_needed=5)}')
+    time.sleep(5.0)
+    print(f'Last 5 samples are {read_strategy.get_last_acq()}')
 
     cdi.stop()
     sensorpt.stop()
     ro_sensorpt.stop()
+
 
 if __name__ == '__main__':
     # utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
