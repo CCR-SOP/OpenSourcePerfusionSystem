@@ -14,6 +14,7 @@ import struct
 from time import perf_counter
 from os import SEEK_END
 from collections import deque
+from datetime import datetime
 
 import numpy as np
 
@@ -88,7 +89,7 @@ class StreamToFile(ProcessingStrategy):
         self._base_path = base_path
         if not self._base_path.exists():
             self._base_path.mkdir(parents=True, exist_ok=True)
-        self._timestamp = datetime.datetime.now()
+        self._timestamp = datetime.now()
         if self._fid:
             self._fid.close()
             self._fid = None
@@ -182,15 +183,24 @@ class PointsToFile(StreamToFile):
         data_time = []
         data = []
         first_time = None
-        samples_collected = 0
-        while len(chunk) > 0 and samples_collected < samples_needed:
+        samples_per_ts = self._sensor_params['Samples Per Timestamp']
+        bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
+
+        # start by assuming file contains only full chunks
+        sampling_period_ms = self._sensor_params['Sampling Period (ms)']
+        expected_chunks = int(last_ms / sampling_period_ms)
+        jump_back = bytes_per_chunk * expected_chunks*2
+        try:
+            _fid.seek(-jump_back, SEEK_END)
+        except OSError:
+            _fid.seek(0)
+        while len(chunk) > 0:
             chunk, ts = self._read_chunk(_fid)
             if not first_time:
                 first_time = ts
             if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
-                data.extend(chunk)
+                data.append(chunk)
                 data_time.append((ts - first_time) / 1000.0)
-                samples_collected += 1
         _fid.close()
         return data_time, data
 
@@ -248,11 +258,20 @@ class PointsToFile(StreamToFile):
 
 class MultiVarToFile(PointsToFile):
     def _write_to_file(self, data_buf, t=None):
-        buf = np.array(data_buf.get_array(), dtype=np.float32)
-        super()._write_to_file(buf, t)
-        # ts_bytes = struct.pack('i', int(t * 1000.0))
+        data = data_buf.get_array()
+        buf = np.array(data, dtype=np.float32)
+
+        # h = int(ts[0:2])
+        # m = int(ts[3:5])
+        # s = int(ts[6:8])
+        # timestamp = datetime.strptime(f'{h:02d}:{m:02d}:{s:02d}', '%H:%M:%S').replace(year=self._timestamp.year,
+        #                                                                               month=self._timestamp.month,
+        #                                                                               day=self._timestamp.day)
+        # ts = (timestamp - self._timestamp).total_seconds() * 1000
+        # ts_bytes = struct.pack('i', int(ts* 1000.0))
         # self._fid.write(ts_bytes)
         # buf.tofile(self._fid)
+        super()._write_to_file(buf, t)
 
 
 class MultiVarFromFile(PointsToFile):
@@ -260,13 +279,7 @@ class MultiVarFromFile(PointsToFile):
         super().__init__(name, window_len, expected_buffer_len)
         self._index = index
 
+        self._bytes_per_ts = 4
+
     def run(self):
         pass
-
-    def _read_chunk(self, _fid):
-        data_buf, ts = super()._read_chunk(_fid)
-        if len(data_buf) > 0:
-            data = [data_buf[self._index]]
-        else:
-            data = np.array([])
-        return data, ts

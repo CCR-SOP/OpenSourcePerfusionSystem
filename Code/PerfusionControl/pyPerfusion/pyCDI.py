@@ -6,7 +6,7 @@
 """
 import logging
 from threading import Thread, Lock, Event
-from time import perf_counter, sleep, time
+from time import perf_counter, sleep
 from queue import Queue, Empty
 
 import numpy as np
@@ -32,8 +32,10 @@ class CDIParsedData:
     def __init__(self, response):
         # parse raw ASCII output
         fields = response.strip('\n').split(sep="\t")
-        if len(fields) == len(code_mapping):
-            # skip first field which is SN
+        if len(fields) == len(code_mapping) + 1:
+            # skip first field which is SN and timestamp
+            # timestamp will be ignored and will use the timestamp when the response arrives
+            # self.timestamp = fields[0][-8:]
             for field in fields[1:]:
                 code = field[0:2].upper()
                 try:
@@ -50,7 +52,8 @@ class CDIParsedData:
 
 
     def get_array(self):
-        return list(self.__dict__.values())
+        data = [getattr(self, value) for value in code_mapping.values()]
+        return data
 
     # test ability to read all 3 sensors on CDI - delete eventually
     def print_results(self):
@@ -72,8 +75,8 @@ class CDIStreaming:
 
         self._queue = None
         self.__acq_start_t = None
-        self.period_sampling_ms = 30000
-        self.samples_per_read = 17
+        self.period_sampling_ms = 1000
+        self.samples_per_read = 18
         self._timeout = 0.5
         self._event_halt = Event()
         self.__thread = None
@@ -121,9 +124,10 @@ class CDIStreaming:
                 resp = self.__serial.readline().decode('ascii')
                 one_cdi_packet = CDIParsedData(resp)
                 # self._lgr.debug(f'one_cdi_packet = {one_cdi_packet.arterial_pH}')
-                self._queue.put((one_cdi_packet, 0))
+                ts = perf_counter()
+                self._queue.put((one_cdi_packet, ts))
             else:
-                sleep(5)
+                sleep(0.5)
 
     def start(self):
         self.stop()
