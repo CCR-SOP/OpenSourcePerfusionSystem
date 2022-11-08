@@ -13,7 +13,7 @@ from pyPerfusion.syringe_timer import SyringeTimer
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
-from pyHardware.PHDserial import PHDserial
+from pyPerfusion.PHDserial import PHDserial
 
 class PanelSyringe(wx.Panel):
     def __init__(self, parent, sensor, name, injection):
@@ -25,7 +25,7 @@ class PanelSyringe(wx.Panel):
 
         self._inc = 0.1
 
-        section = PerfusionConfig.read_section('syringes', self._injection.name)
+        section = PerfusionConfig.read_section('hardware', self._injection.name)
         self.manucode = section['manucode']
         self.size = section['size']
         self.inject = section['inject']
@@ -165,7 +165,7 @@ class PanelFeedbackSyringe(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        section = PerfusionConfig.read_section('syringes', self._injection.name)
+        section = PerfusionConfig.read_section('hardware', self._injection.name)
         self.feedback = section['feedback']
         self.feedbackunit = section['feedbackunit']
         self.direction = section['direction']
@@ -225,7 +225,7 @@ class PanelFeedbackSyringe(wx.Panel):
         self.btn_update_reduction_time = wx.Button(self, label='Update')
 
         if self._injection.name == 'Insulin':
-            section = PerfusionConfig.read_section('syringes', self._injection.name)
+            section = PerfusionConfig.read_section('hardware', self._injection.name)
             self.upperglucoselimit = section['upperglucoselimit']
             self.basalratetolerance = section['basalratetolerance']
             self.aboverangerate = section['aboverangerate']
@@ -519,7 +519,7 @@ class TestFrame(wx.Frame):
         self.sensor.add_strategy(raw)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name, 'StreamRaw'), 1, wx.ALL | wx.EXPAND, border=1)
 
-        section = PerfusionConfig.read_section('syringes', 'Epoprostenol')
+        section = PerfusionConfig.read_section('hardware', 'Epoprostenol')
         com = section['commport']
         baud = section['baudrate']
         vasodilator_injection = PHDserial('Epoprostenol')
@@ -528,7 +528,7 @@ class TestFrame(wx.Frame):
         vasodilator_injection.open_stream(PerfusionConfig.get_date_folder())
         vasodilator_injection.start_stream()
 
-        section = PerfusionConfig.read_section('syringes', 'Phenylephrine')
+        section = PerfusionConfig.read_section('hardware', 'Phenylephrine')
         com = section['commport']
         baud = section['baudrate']
         vasoconstrictor_injection = PHDserial('Phenylephrine')
@@ -537,7 +537,7 @@ class TestFrame(wx.Frame):
         vasoconstrictor_injection.open_stream(PerfusionConfig.get_date_folder())
         vasoconstrictor_injection.start_stream()
 
-        section = PerfusionConfig.read_section('syringes', 'Heparin')
+        section = PerfusionConfig.read_section('hardware', 'Heparin')
         com = section['commport']
         baud = section['baudrate']
         heparin_injection = PHDserial('Heparin')
@@ -546,7 +546,7 @@ class TestFrame(wx.Frame):
         heparin_injection.open_stream(PerfusionConfig.get_date_folder())
         heparin_injection.start_stream()
 
-        section = PerfusionConfig.read_section('syringes', 'TPN & Bile Salts')
+        section = PerfusionConfig.read_section('hardware', 'TPN & Bile Salts')
         com = section['commport']
         baud = section['baudrate']
         tpn_bilesalts_injection = PHDserial('TPN & Bile Salts')

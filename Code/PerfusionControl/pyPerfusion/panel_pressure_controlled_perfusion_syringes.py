@@ -11,8 +11,8 @@ from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI
 from pyPerfusion.SensorStream import SensorStream
-from pyHardware.PHDserial import PHDserial
-import pyPerfusion.PerfusionConfig as LP_CFG
+from pyPerfusion.PHDserial import PHDserial
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.panel_Syringe import PanelSyringe
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
@@ -27,7 +27,7 @@ class PanelPressureFlowControl(wx.Panel):
         self._name = name
         self._pumpname = pumpname
 
-        section = LP_CFG.get_hwcfg_section(self._pumpname)
+        section = PerfusionConfig.read_section('hardware', self._pumpname)
         self.dev = section['Device']
         self.line = section['LineName']
         self.desired = float(section['desired'])
@@ -39,7 +39,7 @@ class PanelPressureFlowControl(wx.Panel):
             self.divisor = None
 
         try:
-            section = LP_CFG.get_hwcfg_section(self._corresponding_sensor.name)
+            section = PerfusionConfig.read_section('hardware', self._corresponding_sensor.name)
             self.upperlimit = float(section['upperlimit'])
         except KeyError:
             self.upperlimit = None
@@ -251,16 +251,16 @@ class TestFrame(wx.Frame):
 
         for sensor in self.sensors:
             raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
-            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            raw.open(PerfusionConfig.get_date_folder(), f'{sensor.name}_raw', sensor.params)
             sensor.add_strategy(raw)
             if 'Hepatic Artery' in sensor.name:
                 rms = RMSStrategy('RMS', 50, self.acq.buf_len)
                 save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
-                save_rms.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_rms', sensor.params)
+                save_rms.open(PerfusionConfig.get_date_folder(), f'{sensor.name}_rms', sensor.params)
                 sensor.add_strategy(rms)
                 sensor.add_strategy(save_rms)
             panel = PanelAI(self, sensor, name=sensor.name, strategy='StreamRaw')
-            section = LP_CFG.get_hwcfg_section(sensor.name)
+            section = PerfusionConfig.read_section('hardware', sensor.name)
             dev = section['Device']
             line = section['LineName']
             calpt1_target = float(section['CalPt1_Target'])
@@ -282,26 +282,26 @@ class TestFrame(wx.Frame):
             elif 'Inferior Vena Cava' in sensor.name:
                 ivc_sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
             if sensor.name == 'Hepatic Artery Flow':
-                section = LP_CFG.get_hwcfg_section('Epoprostenol')
+                section = PerfusionConfig.read_section('hardware', 'Epoprostenol')
                 com = section['commport']
                 baud = section['baudrate']
                 epoprostenol_injection = PHDserial('Epoprostenol')
                 epoprostenol_injection.open(com, baud)
                 epoprostenol_injection.reset_syringe()
-                epoprostenol_injection.open_stream(LP_CFG.LP_PATH['stream'])
+                epoprostenol_injection.open_stream(PerfusionConfig.get_date_folder())
                 epoprostenol_injection.start_stream()
                 self.epoprostenol_syringe = epoprostenol_injection
                 self.syringes.append(self.epoprostenol_syringe)
                 self.epoprostenol_syringe_panel = PanelSyringe(self, sensor, epoprostenol_injection.name, epoprostenol_injection)
                 self.panels.append(self.epoprostenol_syringe_panel)
 
-                section = LP_CFG.get_hwcfg_section('Phenylephrine')
+                section = PerfusionConfig.read_section('hardware', 'Phenylephrine')
                 com = section['commport']
                 baud = section['baudrate']
                 phenylephrine_injection = PHDserial('Phenylephrine')
                 phenylephrine_injection.open(com, baud)
                 phenylephrine_injection.reset_syringe()
-                phenylephrine_injection.open_stream(LP_CFG.LP_PATH['stream'])
+                phenylephrine_injection.open_stream(PerfusionConfig.get_date_folder())
                 phenylephrine_injection.start_stream()
                 self.phenylephrine_syringe = phenylephrine_injection
                 self.syringes.append(self.phenylephrine_syringe)
@@ -381,8 +381,7 @@ class MyTestApp(wx.App):
         return True
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     utils.setup_default_logging(filename='panel_pressure_controlled_perfusion_syringes')
     app = MyTestApp(0)
     app.MainLoop()
