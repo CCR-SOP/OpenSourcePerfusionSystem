@@ -21,7 +21,6 @@ TestConfig = FolderManagement('LPTest')
 ACTIVE_CONFIG = None
 
 
-<<<<<<< HEAD
 def set_test_config():
     global ACTIVE_CONFIG, TestConfig
     ACTIVE_CONFIG = TestConfig
@@ -32,7 +31,6 @@ def set_study_config():
     ACTIVE_CONFIG = StudyConfig
 
 
-=======
 class MissingConfigFile(Exception):
     """Exception used to indicate a configuration file is not available"""
 
@@ -51,7 +49,6 @@ def set_study_config():
     ACTIVE_CONFIG = StudyConfig
 
 
->>>>>>> feature/refactor_syringe_and_serial
 def get_date_folder():
     global ACTIVE_CONFIG
     return ACTIVE_CONFIG.get_folder('date')
