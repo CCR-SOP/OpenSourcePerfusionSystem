@@ -23,10 +23,8 @@ class SensorStream:
         self.hw = hw
         self._ch_id = None
         self._evt_halt = Event()
-        self.data = None
         self.name = name
         self._timestamp = None
-        self.data = np.array(self.hw.buf_len, dtype=self.hw.data_type)
         self._strategies = []
         self._params = {'Sensor': self.name,
                         'Unit': self._unit_str,

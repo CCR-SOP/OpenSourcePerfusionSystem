@@ -34,6 +34,7 @@ def setup_file_logger(lgr, level, filename=None):
         filename = lgr.name
     lgr.setLevel(level)
     ch = logging.FileHandler(PerfusionConfig.ACTIVE_CONFIG.get_folder('logs') / f'{filename}.log')
+
     ch.setLevel(level)
     formatter = logging.Formatter('%(asctime) s: %(name) s - %(levelname) s - %(message) s')
     ch.setFormatter(formatter)
