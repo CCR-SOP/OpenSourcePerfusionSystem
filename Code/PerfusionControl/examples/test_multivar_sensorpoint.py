@@ -23,9 +23,9 @@ COMPORT = 'COM13'
 
 
 def main():
-    fake_port = serial.serial_for_url('loop://')
+    # fake_port = serial.serial_for_url('loop://')
     cdi = pyCDI.CDIStreaming('Test CDI')
-    cdi.open(fake_port, 9600)
+    cdi.open('COM13', 9600)
 
     sensorpt = SensorPoint('multi_var', 'na', cdi)
     write_strategy = MultiVarToFile('write', 1, 17)
@@ -44,18 +44,19 @@ def main():
     cdi.start()
 
     data = list(range(18))
-    for i in range(10):
-        now = datetime.now().strftime('%H:%M:%S')
-        cdi_str = f'abc{now}\t' + '\t'.join(f'{d:02x}{d+i:04d}' for d in data)
-        print(f'writing {cdi_str}')
-        fake_port.write(bytes(cdi_str + '\n', 'ascii'))
-        time.sleep(1)
+    #for i in range(10):
+        #now = datetime.now().strftime('%H:%M:%S')
+        #cdi_str = f'abc{now}\t' + '\t'.join(f'{d:02x}{d+i:04d}' for d in data)
+        #print(f'writing {cdi_str}')
+        #fake_port.write(bytes(cdi_str + '\n', 'ascii'))
+        #time.sleep(1)
         # print(cdi.request_data(timeout=1))
         #print(f'Last acq is : {read_strategy.get_last_acq()}')
     # print(f'Last 5 samples are {read_strategy.get_data_from_last_read(timestamp=0)}')
     # time.sleep(5.0)
     # print(f'Last 5 samples are {read_strategy.get_last_acq()}')
-    ts, last_samples = read_strategy.retrieve_buffer(10000, 5)
+    time.sleep(60.0)
+    ts, last_samples = read_strategy.retrieve_buffer(60000, 5)
     print(last_samples)
     print(type(last_samples))
     for ts, samples in zip(ts, last_samples):

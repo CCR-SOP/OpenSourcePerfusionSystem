@@ -31,20 +31,23 @@ code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', 
 class CDIParsedData:
     def __init__(self, response):
         # parse raw ASCII output
-        fields = response.strip('\n').split(sep="\t")
-        if len(fields) == len(code_mapping) + 1:
+        fields = response.strip('\r\n').split(sep="\t")
+        # in addition to codes, there is a header packet
+        # CRC and end packet
+        if len(fields) == len(code_mapping) + 2:
             # skip first field which is SN and timestamp
             # timestamp will be ignored and will use the timestamp when the response arrives
             # self.timestamp = fields[0][-8:]
-            for field in fields[1:]:
+            for field in fields[1:-1]:
                 code = field[0:2].upper()
                 try:
+                    # logging.getLogger(__name__).debug(f'code is {code}')
                     value = float(field[4:])
                 except ValueError:
-                    logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
-                else:
-                    if code in code_mapping.keys():
-                        setattr(self, code_mapping[code], value)
+                    # logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
+                    value = -1
+                if code in code_mapping.keys():
+                    setattr(self, code_mapping[code], value)
         else:
             logging.getLogger(__name__).error(f'Could parse CDI data, '
                                               f'expected {len(code_mapping)} fields, '
@@ -122,6 +125,7 @@ class CDIStreaming:
         while not self._event_halt.is_set():
             if self.__serial.in_waiting > 0:
                 resp = self.__serial.readline().decode('ascii')
+                # self._lgr.debug(f'response is {resp}')
                 one_cdi_packet = CDIParsedData(resp)
                 # self._lgr.debug(f'one_cdi_packet = {one_cdi_packet.arterial_pH}')
                 ts = perf_counter()
