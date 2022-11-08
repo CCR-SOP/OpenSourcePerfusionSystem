@@ -11,9 +11,9 @@ from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI
 from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.PHDserial import PHDserial
+from pyPerfusion.pyPump11Elite import Pump11Elite
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.panel_Syringe import PanelSyringe
+from pyPerfusion.panel_auto_syringe_injections import PanelSyringe
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 
@@ -285,11 +285,14 @@ class TestFrame(wx.Frame):
                 section = PerfusionConfig.read_section('hardware', 'Epoprostenol')
                 com = section['commport']
                 baud = section['baudrate']
-                epoprostenol_injection = PHDserial('Epoprostenol')
-                epoprostenol_injection.open(com, baud)
-                epoprostenol_injection.reset_syringe()
-                epoprostenol_injection.open_stream(PerfusionConfig.get_date_folder())
-                epoprostenol_injection.start_stream()
+                epoprostenol_injection = Pump11Elite('Epoprostenol')
+                epoprostenol_injection.cfg.com_port = com
+                epoprostenol_injection.cfg.baud = baud
+                epoprostenol_injection.open(epoprostenol_injection.cfg)
+
+                epoprostenol_injection.clear_syringe()
+                # epoprostenol_injection.open_stream(PerfusionConfig.get_date_folder())
+                # epoprostenol_injection.start_stream()
                 self.epoprostenol_syringe = epoprostenol_injection
                 self.syringes.append(self.epoprostenol_syringe)
                 self.epoprostenol_syringe_panel = PanelSyringe(self, sensor, epoprostenol_injection.name, epoprostenol_injection)
@@ -298,11 +301,14 @@ class TestFrame(wx.Frame):
                 section = PerfusionConfig.read_section('hardware', 'Phenylephrine')
                 com = section['commport']
                 baud = section['baudrate']
-                phenylephrine_injection = PHDserial('Phenylephrine')
-                phenylephrine_injection.open(com, baud)
-                phenylephrine_injection.reset_syringe()
-                phenylephrine_injection.open_stream(PerfusionConfig.get_date_folder())
-                phenylephrine_injection.start_stream()
+                phenylephrine_injection = Pump11Elite('Phenylephrine')
+                phenylephrine_injection.cfg.com_port = com
+                phenylephrine_injection.cfg.baud = baud
+                phenylephrine_injection.open(phenylephrine_injection.cfg)
+
+                phenylephrine_injection.clear_syringe()
+                # phenylephrine_injection.open_stream(PerfusionConfig.get_date_folder())
+                # phenylephrine_injection.start_stream()
                 self.phenylephrine_syringe = phenylephrine_injection
                 self.syringes.append(self.phenylephrine_syringe)
                 self.phenylephrine_syringe_panel = PanelSyringe(self, sensor, phenylephrine_injection.name, phenylephrine_injection)

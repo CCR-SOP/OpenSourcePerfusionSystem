@@ -13,7 +13,7 @@ from pyPerfusion.syringe_timer import SyringeTimer
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
-from pyPerfusion.PHDserial import PHDserial
+from pyPerfusion.pyPump11Elite import Pump11Elite
 
 class PanelSyringe(wx.Panel):
     def __init__(self, parent, sensor, name, injection):
@@ -49,8 +49,8 @@ class PanelSyringe(wx.Panel):
         if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
             self._panel_feedback = PanelFeedbackSyringe(self, self._sensor, self._name, self._injection)
 
-        self._injection.reset_syringe()
-        self._injection.set_syringe_manufacturer_size(self.manucode[1:4], self.size)
+        self._injection.clear_syringe()
+        # self._injection.set_syringe_manufacturer_size(self.manucode[1:4], self.size)
 
         self.__do_layout()
         self.__set_bindings()
@@ -93,7 +93,7 @@ class PanelSyringe(wx.Panel):
         state = self.btn_start_basal.GetLabel()
         if state == 'Start Basal Infusion':
             self.enable_buttons(False)
-            self._injection.reset_syringe()
+            self._injection.clear_syringe()
             rate = self.spin_rate.GetValue()
             unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
             self._injection.set_infusion_rate(rate, unit)
@@ -109,7 +109,7 @@ class PanelSyringe(wx.Panel):
     def OnOneTimeBolus(self, evt):
         self.btn_start_basal.Enable(False)
         self.enable_buttons(False)
-        self._injection.reset_syringe()
+        self._injection.clear_syringe()
         self._injection.set_infusion_rate(25, 'ml/min')
         volume = self.spin_1TB_volume.GetValue()
         unit = self.choice_1TB_unit.GetString(self.choice_1TB_unit.GetSelection())
@@ -456,7 +456,7 @@ class PanelFeedbackSyringe(wx.Panel):
     def OnStartFeedbackInjection(self, evt):
         state = self.btn_start_feedback_injections.GetLabel()
         if state == 'Start Feedback Injections':
-            self._injection.reset_syringe()
+            self._injection.clear_syringe()
             self.parent.spin_rate.Enable(False)
             self.parent.choice_rate.Enable(False)
             self.parent.btn_start_basal.Enable(False)
@@ -522,36 +522,36 @@ class TestFrame(wx.Frame):
         section = PerfusionConfig.read_section('hardware', 'Epoprostenol')
         com = section['commport']
         baud = section['baudrate']
-        vasodilator_injection = PHDserial('Epoprostenol')
+        vasodilator_injection = Pump11Elite('Epoprostenol')
         vasodilator_injection.open(com, baud)
-        vasodilator_injection.reset_syringe()
+        vasodilator_injection.clear_syringe()
         vasodilator_injection.open_stream(PerfusionConfig.get_date_folder())
         vasodilator_injection.start_stream()
 
         section = PerfusionConfig.read_section('hardware', 'Phenylephrine')
         com = section['commport']
         baud = section['baudrate']
-        vasoconstrictor_injection = PHDserial('Phenylephrine')
+        vasoconstrictor_injection = Pump11Elite('Phenylephrine')
         vasoconstrictor_injection.open(com, baud)
-        vasoconstrictor_injection.reset_syringe()
+        vasoconstrictor_injection.clear_syringe()
         vasoconstrictor_injection.open_stream(PerfusionConfig.get_date_folder())
         vasoconstrictor_injection.start_stream()
 
         section = PerfusionConfig.read_section('hardware', 'Heparin')
         com = section['commport']
         baud = section['baudrate']
-        heparin_injection = PHDserial('Heparin')
+        heparin_injection = Pump11Elite('Heparin')
         heparin_injection.open(com, baud)
-        heparin_injection.reset_syringe()
+        heparin_injection.clear_syringe()
         heparin_injection.open_stream(PerfusionConfig.get_date_folder())
         heparin_injection.start_stream()
 
         section = PerfusionConfig.read_section('hardware', 'TPN & Bile Salts')
         com = section['commport']
         baud = section['baudrate']
-        tpn_bilesalts_injection = PHDserial('TPN & Bile Salts')
+        tpn_bilesalts_injection = Pump11Elite('TPN & Bile Salts')
         tpn_bilesalts_injection.open(com, baud)
-        tpn_bilesalts_injection.reset_syringe()
+        tpn_bilesalts_injection.clear_syringe()
         tpn_bilesalts_injection.open_stream(PerfusionConfig.get_date_folder())
         tpn_bilesalts_injection.start_stream()
 
