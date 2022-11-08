@@ -21,6 +21,14 @@ TestConfig = FolderManagement('LPTest')
 ACTIVE_CONFIG = None
 
 
+class MissingConfigFile(Exception):
+    """Exception used to indicate a configuration file is not available"""
+
+
+class MissingConfigSection(Exception):
+    """Exception used to indicate a section within a file is not available"""
+
+
 def set_test_config():
     global ACTIVE_CONFIG, TestConfig
     ACTIVE_CONFIG = TestConfig
