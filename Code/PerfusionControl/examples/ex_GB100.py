@@ -14,8 +14,11 @@ for channel in range(total_channels):
     kFactor = mixer.get_channel_k_factor_gas(channel_nr)
     gasType = mcq.mcq_utils.get_gas_type(idGas)
     channelPercentage = mixer.get_channel_percent_value(channel_nr)
+    targetFlow = mixer.get_channel_target_sccm(channel_nr)
+    actualFlow = mixer.get_channel_sccm_av(channel_nr)
 
-    channel_info = "Channel {0} - Gas Id: {1}, Gas: {2}, K-Factor: {3}, Channel Percentage {4}".format(channel_nr, idGas, gasType, kFactor, channelPercentage)
+    channel_info = "Channel {0} - Gas Id: {1}, Gas: {2}, K-Factor: {3}, Channel Percentage: {4}, Target Flow: {5}, " \
+                   "Actual Flow: {6}".format(channel_nr, idGas, gasType, kFactor, channelPercentage, targetFlow,  actualFlow)
 
     print(channel_info)
 
