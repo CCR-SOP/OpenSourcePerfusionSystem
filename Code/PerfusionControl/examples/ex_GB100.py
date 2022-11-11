@@ -1,3 +1,12 @@
+"""Test program to control GB_100 Gas Mixer (configured for HA)
+
+@project: LiverPerfusion NIH
+@author: Stephie Lux, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
+"""
+
 import mcqlib_GB100.mcqlib.main as mcq
 import time
 
@@ -24,7 +33,7 @@ for channel in range(total_channels):
     targetFlow = mixer.get_channel_target_sccm(channel_nr)
     actualFlow = mixer.get_channel_sccm_av(channel_nr)
 
-   channel_info = "Channel {0} - Gas Id: {1}, Gas: {2}, K-Factor: {3}, Target Flow: {4}, " \
+    channel_info = "Channel {0} - Gas Id: {1}, Gas: {2}, K-Factor: {3}, Target Flow: {4}, " \
                    "Actual Flow: {5}".format(channel_nr, idGas, gasType, kFactor, targetFlow,  actualFlow)
 
     print(channel_info)
