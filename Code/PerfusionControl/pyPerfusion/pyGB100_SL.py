@@ -14,9 +14,9 @@ from datetime import datetime
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import pyPerfusion.pyCDI as pyCDI
-from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
-from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
+#  import pyPerfusion.pyCDI as pyCDI
+#  from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
+#  from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 
 import mcqlib_GB100.mcqlib.main as mcq
 
@@ -79,15 +79,17 @@ class GB100_shift:
         self.mixer = mixer    # can you put an attribute that's really an object like this?
 
         # determine channels and gases
-        id_gases = []  # numeric IDs
-        gas_types = []  # gas compounds (oxygen, nitrogen, etc.)
+        gas_types = []
         total_channels = self.mixer.get_total_channels()
-        for channel in total_channels:
-            id_gas = mixer.get_channel_id_gas(channel)
-            gas_type = mcq.mcq_utils.get_gas_type(id_gas)
-            id_gases += id_gas
+        for channel in range(total_channels):
+            channel = channel + 1
+            print(f'{channel}')
+            id_gas = mixer.get_channel_id_gas(channel)  # numeric ID
+            gas_type = mcq.mcq_utils.get_gas_type(id_gas)  # gas compounds (oxygen, nitrogen, etc.)
+            print(gas_type)
             gas_types += gas_type
-        self.gas_dict = {gas_types[0]: id_gases[0], gas_types[1]: id_gases[1]}  # CHECK THIS OUTPUT
+            print(f' {gas_types}')
+        self.gas_dict = {gas_types[0]: 1, gas_types[1]: 2}
 
     def check_pH(self):
         if self.vessel == 'HA':
@@ -126,7 +128,7 @@ class GB100_shift:
         if self.vessel == 'HA':
             target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Oxygen'])
             if self.CDI_input[2] < physio_ranges['arterial_O2_lower']:
-                new_target_flow = target_flow + 3
+                new_target_flow = target_flow + 3  # changing by 3% should change pO2 by 4.65 mmHg
             elif self.CDI_input[2] > physio_ranges['arterial_O2_upper']:
                 new_target_flow = target_flow - 3
             self.mixer.set_channel_percent_value(self.gas_dict['Oxygen'], new_target_flow)
