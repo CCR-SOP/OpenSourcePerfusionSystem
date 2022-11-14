@@ -79,7 +79,7 @@ class GB100_shift:
         self.mixer = mixer    # can you put an object in an object like this?
 
         # determine channels and gases
-        id_gases = []
+        id_gases = []  # numeric IDs
         gas_types = []
         total_channels = self.mixer.get_total_channels()
         for channel in total_channels:
@@ -91,32 +91,49 @@ class GB100_shift:
 
     def check_pH(self):
         if self.vessel == 'HA':
+            total_flow = self.mixer.get_mainboard_total_flow()
             if self.CDI_input[0] < physio_ranges['pH_lower']:
-                total_flow = self.mixer.get_mainboard_total_flow()
                 new_flow = total_flow + 10
-                self.mixer.set_mainboard_total_flow(new_flow)
             elif self.CDI_input[0] > physio_ranges['pH_upper']:
-                total_flow = self.mixer.get_mainboard_total_flow()
                 new_flow = total_flow - 10
-                self.mixer.set_mainboard_total_flow(new_flow)
+            self.mixer.set_mainboard_total_flow(new_flow)
         elif self.vessel == 'PV':
+            total_flow = self.mixer.get_mainboard_total_flow()
             if self.CDI_input[9] < physio_ranges['pH_lower']:
-                total_flow = self.mixer.get_mainboard_total_flow()
                 new_flow = total_flow + 10
-                self.mixer.set_mainboard_total_flow(new_flow)
             elif self.CDI_input[9] > physio_ranges['pH_upper']:
-                total_flow = self.mixer.get_mainboard_total_flow()
                 new_flow = total_flow - 10
-                self.mixer.set_mainboard_total_flow(new_flow)
+            self.mixer.set_mainboard_total_flow(new_flow)
 
     def check_CO2(self):
         if self.vessel == 'HA':
+            target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Carbon Dioxide'])
             if self.CDI_input[1] < physio_ranges['arterial_CO2_lower']:
-                target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Carbon Dioxide'])
                 new_target_flow = target_flow + 3
-                self.mixer.set_channel_percent_value(self.gas_dict['Carbon Dioxide'], new_target_flow)
             elif self.CDI_input[1] > physio_ranges['arterial_CO2_upper']:
-                target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Carbon Dioxide'])
-                if target_flow > 0:
-                    new_target_flow = target_flow - 3
-                    self.mixer.set_channel_percent_value(self.gas_dict['Carbon Dioxide'], new_target_flow)
+                new_target_flow = target_flow - 3
+            self.mixer.set_channel_percent_value(self.gas_dict['Carbon Dioxide'], new_target_flow)
+        elif self.vessel == 'PV':
+            target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Nitrogen'])
+            if self.CDI_input[10] < physio_ranges['venous_CO2_lower']:
+                new_target_flow = target_flow + 3
+            elif self.CDI_input[10] > physio_ranges['venous_CO2_upper']:
+                new_target_flow = target_flow - 3
+            # error cases!!!!!!!!
+            self.mixer.set_channel_percent_value(self.gas_dict['Nitrogen'], new_target_flow)
+
+    def check_O2(self):
+        if self.vessel == 'HA':
+            target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Oxygen'])
+            if self.CDI_input[2] < physio_ranges['arterial_O2_lower']:
+                new_target_flow = target_flow + 3
+            elif self.CDI_input[2] > physio_ranges['arterial_O2_upper']:
+                new_target_flow = target_flow - 3
+            self.mixer.set_channel_percent_value(self.gas_dict['Oxygen'], new_target_flow)
+        elif self.vessel == 'PV':
+            target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Oxygen'])
+            if self.CDI_input[11] < physio_ranges['venous_O2_lower']:
+                new_target_flow = target_flow + 3
+            elif self.CDI_input[11] > physio_ranges['venous_O2_upper']:
+                new_target_flow = target_flow - 3
+            self.mixer.set_channel_percent_value(self.gas_dict['Oxygen'], new_target_flow)
