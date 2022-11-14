@@ -68,7 +68,7 @@ physio_ranges = {'pH_lower': 7.35, 'pH_upper': 7.45,
                  'venous_O2_lower': 100, 'venous_O2_upper': 450}
 
 HA_mixer = mcq.Main('Arterial Gas Mixer')
-PV_mixer = mcq.Main('Venous Gas Mixer')  # Main is not configured to do this
+PV_mixer = mcq.Main('Venous Gas Mixer')  # Main is not configured to do this, can only do HA mixer rn
 
 # code to turn on both mixers - or do we need this if starting manually?
 
@@ -76,11 +76,11 @@ class GB100_shift:
     def __init__(self, vessel, last_samples, mixer):
         self.vessel = vessel  # vessel = 'HA' or 'PV'
         self.CDI_input = last_samples  # assumes this will be input but not sure this is best design choice
-        self.mixer = mixer    # can you put an object in an object like this?
+        self.mixer = mixer    # can you put an attribute that's really an object like this?
 
         # determine channels and gases
         id_gases = []  # numeric IDs
-        gas_types = []
+        gas_types = []  # gas compounds (oxygen, nitrogen, etc.)
         total_channels = self.mixer.get_total_channels()
         for channel in total_channels:
             id_gas = mixer.get_channel_id_gas(channel)
