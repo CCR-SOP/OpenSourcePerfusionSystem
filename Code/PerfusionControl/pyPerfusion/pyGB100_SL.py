@@ -60,12 +60,12 @@ if __name__ == '__main__':
 
 # start of new GB100 code
 
-# dictionary of acceptable value ranges - double check values against how we set CDI
-physio_ranges = {'pH_lower': 7.35, 'pH_upper': 7.45,
-                 'arterial_CO2_lower': 20, 'arterial_CO2_upper': 45,
-                 'arterial_O2_lower': 100, 'arterial_O2_upper': 450,
-                 'venous_CO2_lower': 20, 'venous_CO2_upper': 45,
-                 'venous_O2_lower': 100, 'venous_O2_upper': 450}
+# dictionary of acceptable value ranges
+physio_ranges = {'pH_lower': 7.3, 'pH_upper': 7.5,
+                 'arterial_CO2_lower': 20, 'arterial_CO2_upper': 60,
+                 'arterial_O2_lower': 50, 'arterial_O2_upper': 300,
+                 'venous_CO2_lower': 20, 'venous_CO2_upper': 80,
+                 'venous_O2_lower': 20, 'venous_O2_upper': 150}
 
 HA_mixer = mcq.Main('Arterial Gas Mixer')
 PV_mixer = mcq.Main('Venous Gas Mixer')  # Main is not configured to do this, can only do HA mixer rn
