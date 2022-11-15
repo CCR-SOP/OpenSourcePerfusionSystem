@@ -23,11 +23,7 @@ physio_ranges = {'pH_lower': 7.3, 'pH_upper': 7.5,
                  'venous_CO2_lower': 20, 'venous_CO2_upper': 80,
                  'venous_O2_lower': 20, 'venous_O2_upper': 150}
 
-HA_mixer = mcq.Main('Arterial Gas Mixer')
-PV_mixer = mcq.Main('Venous Gas Mixer')  # Main is not configured to do this, can only do HA mixer rn
-
 # code to turn on both mixers - or do we need this if starting manually?
-
 
 class GB100_shift:
     def __init__(self, vessel, mixer):
@@ -55,16 +51,13 @@ class GB100_shift:
         self.flow_adjust = 10  # mL/min
 
         # determine channels and gases
-        gas_types = []
+        gas_types = list()
         total_channels = self.mixer.get_total_channels()
         for channel in range(total_channels):
             channel = channel + 1
-            print(f'{channel}')
             id_gas = mixer.get_channel_id_gas(channel)  # numeric ID
             gas_type = mcq.mcq_utils.get_gas_type(id_gas)  # gas compound names (oxygen, nitrogen, etc.)
-            print(gas_type)
-            gas_types += gas_type
-            print(f' {gas_types}')
+            gas_types.append(gas_type)
         self.gas_dict = {gas_types[0]: 1, gas_types[1]: 2}
 
     def check_pH(self, CDI_input):
@@ -76,7 +69,7 @@ class GB100_shift:
              new_flow = total_flow - self.flow_adjust
         self.mixer.set_mainboard_total_flow(new_flow)
 
-    def check_CO2(self, CDI_input):
+    def check_CO2(self, CDI_input):  # can only adjust CO2 in HA
         new_target_flow = []
         target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Carbon Dioxide'])
         if CDI_input[1] < self.CO2_lower:
@@ -95,5 +88,4 @@ class GB100_shift:
         self.mixer.set_channel_percent_value(self.gas_dict['Oxygen'], new_target_flow)
 
 
-# fix type problem with OXYGEN etc.
 # work on error cases - you have no fixes rn
