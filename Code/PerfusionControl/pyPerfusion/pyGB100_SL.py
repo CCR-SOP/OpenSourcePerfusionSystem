@@ -36,16 +36,22 @@ class GB100_shift:
             self.pH_index = 0
             self.CO2_index = 1
             self.O2_index = 2
+            self.CO2_lower = physio_ranges['arterial_CO2_lower']
+            self.CO2_upper = physio_ranges['arterial_CO2_upper']
+            self.O2_lower = physio_ranges['arterial_O2_lower']
+            self.O2_upper = physio_ranges['arterial_O2_upper']
         elif self.vessel == "PV":
             self.pH_index = 9
             self.CO2_index = 10
             self.O2_index = 11
-        else:
-            # handle error
-            pass
-        self.mixer = mixer    # can you put an attribute that's really an object like this?
+            self.CO2_lower = physio_ranges['venous_CO2_lower']
+            self.CO2_upper = physio_ranges['venous_CO2_upper']
+            self.O2_lower = physio_ranges['venous_O2_lower']
+            self.O2_upper = physio_ranges['venous_O2_upper']
+
+        self.mixer = mixer  # can you put an attribute that's really an object like this?
         self.co2_adjust = 3  # mmHg
-        self.o2_adjust = 3  # mmHg
+        self.o2_adjust = 3  # mmHg. Changing by 3% should change pO2 by 4.65 mmHg
         self.flow_adjust = 10  # mL/min
 
         # determine channels and gases
@@ -63,56 +69,31 @@ class GB100_shift:
 
     def check_pH(self, CDI_input):
         new_flow = []
-        if self.vessel == 'HA':
-            total_flow = self.mixer.get_mainboard_total_flow()
-            if CDI_input[0] < physio_ranges['pH_lower']:
-                new_flow = total_flow + self.flow_adjust
-            elif CDI_input[0] > physio_ranges['pH_upper']:
-                new_flow = total_flow - self.flow_adjust
-            self.mixer.set_mainboard_total_flow(new_flow)
-        elif self.vessel == 'PV':
-            total_flow = self.mixer.get_mainboard_total_flow()
-            if CDI_input[9] < physio_ranges['pH_lower']:
-                new_flow = total_flow + self.flow_adjust
-            elif CDI_input[9] > physio_ranges['pH_upper']:
-                new_flow = total_flow - self.flow_adjust
-            self.mixer.set_mainboard_total_flow(new_flow)
+        total_flow = self.mixer.get_mainboard_total_flow()
+        if CDI_input[self.pH_index] < physio_ranges['pH_lower']:
+            new_flow = total_flow + self.flow_adjust
+        elif CDI_input[self.pH_index] > physio_ranges['pH_upper']:
+             new_flow = total_flow - self.flow_adjust
+        self.mixer.set_mainboard_total_flow(new_flow)
 
     def check_CO2(self, CDI_input):
         new_target_flow = []
-        if self.vessel == 'HA':
-            target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Carbon Dioxide'])
-            if CDI_input[1] < physio_ranges['arterial_CO2_lower']:
-                new_target_flow = target_flow + self.co2_adjust
-            elif CDI_input[1] > physio_ranges['arterial_CO2_upper']:
-                new_target_flow = target_flow - self.co2_adjust
-            self.mixer.set_channel_percent_value(self.gas_dict['Carbon Dioxide'], new_target_flow)
-        elif self.vessel == 'PV':
-            target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Nitrogen'])
-            if CDI_input[10] < physio_ranges['venous_CO2_lower']:
-                new_target_flow = target_flow + self.co2_adjust
-            elif CDI_input[10] > physio_ranges['venous_CO2_upper']:
-                new_target_flow = target_flow - self.co2_adjust
-            self.mixer.set_channel_percent_value(self.gas_dict['Nitrogen'], new_target_flow)
+        target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Carbon Dioxide'])
+        if CDI_input[1] < self.CO2_lower:
+            new_target_flow = target_flow + self.co2_adjust
+        elif CDI_input[1] > self.CO2_upper:
+            new_target_flow = target_flow - self.co2_adjust
+        self.mixer.set_channel_percent_value(self.gas_dict['Carbon Dioxide'], new_target_flow)
 
     def check_O2(self, CDI_input):
         new_target_flow = []
-        if self.vessel == 'HA':
-            target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Oxygen'])
-            if CDI_input[2] < physio_ranges['arterial_O2_lower']:
-                new_target_flow = target_flow + self.o2_adjust  # changing by 3% should change pO2 by 4.65 mmHg
-            elif CDI_input[2] > physio_ranges['arterial_O2_upper']:
-                new_target_flow = target_flow - self.o2_adjust
-            self.mixer.set_channel_percent_value(self.gas_dict['Oxygen'], new_target_flow)
-        elif self.vessel == 'PV':
-            target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Oxygen'])
-            if CDI_input[11] < physio_ranges['venous_O2_lower']:
-                new_target_flow = target_flow + self.o2_adjust
-            elif CDI_input[11] > physio_ranges['venous_O2_upper']:
-                new_target_flow = target_flow - self.o2_adjust
-            self.mixer.set_channel_percent_value(self.gas_dict['Oxygen'], new_target_flow)
+        target_flow = self.mixer.get_channel_target_sccm(self.gas_dict['Oxygen'])
+        if CDI_input[2] < self.O2_lower:
+            new_target_flow = target_flow + self.o2_adjust
+        elif CDI_input[2] > self.O2_upper:
+            new_target_flow = target_flow - self.o2_adjust
+        self.mixer.set_channel_percent_value(self.gas_dict['Oxygen'], new_target_flow)
 
-# still need code to adjust self.O2_adjust etc.
-# fix if/elif statements for HA and PV with saving indices
+
 # fix type problem with OXYGEN etc.
 # work on error cases - you have no fixes rn
