@@ -1,4 +1,5 @@
 """Test program to control GB_100 Gas Mixer (configured for HA)
+Tests classes provided by mcq
 
 @project: LiverPerfusion NIH
 @author: Stephie Lux, NIH

@@ -1,3 +1,11 @@
+"""Test program to control GB_100 Gas Mixer based on CDI input
+
+@project: LiverPerfusion NIH
+@author: Stephie Lux, NIH
+
+This work was created by an employee of the US Federal Gov
+and under the public domain.
+"""
 
 from pyPerfusion.pyGB100_SL import GB100_shift
 import mcqlib_GB100.mcqlib.main as mcq
