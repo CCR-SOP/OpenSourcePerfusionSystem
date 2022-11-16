@@ -77,14 +77,14 @@ class GB100_shift:
         if self.vessel == "HA":
             new_percentage_mix = []
             percentage_mix = self.mixer.get_channel_percent_value(self.gas_dict['Carbon Dioxide'])
-            if percentage_mix > 0 or percentage_mix < 100:
+            if 0 < percentage_mix < 100:
                 if CDI_input[1] < self.CO2_lower:
                     new_percentage_mix = percentage_mix + self.co2_adjust
                 elif CDI_input[1] > self.CO2_upper:
                     new_percentage_mix = percentage_mix - self.co2_adjust
                 self.mixer.set_channel_percent_value(self.gas_dict['Carbon Dioxide'], new_percentage_mix)
             else:
-                self._logger.debug(f'CO2 % is at {percentage_mix} and cannot be changed automatically')
+                self._logger.debug(f'CO2 % is at {percentage_mix} and cannot be changed automatically')  # should this be printing in Git? It's not
         else:
             self._logger.debug(f'Cannot update CO2 in PV - gas mix only contains N2 and O2. Increasing total flow by '
                                f'10 mL/min to blow off more CO2. Adjust total flow for continued changes')
@@ -95,7 +95,7 @@ class GB100_shift:
     def check_O2(self, CDI_input):
         new_percentage_mix = []
         percentage_mix = self.mixer.get_channel_percent_value(self.gas_dict['Oxygen'])
-        if percentage_mix > 0 or percentage_mix < 100:
+        if 0 < percentage_mix < 100:
             if CDI_input[2] < self.O2_lower:
                 new_percentage_mix = percentage_mix + self.o2_adjust
             elif CDI_input[2] > self.O2_upper:
