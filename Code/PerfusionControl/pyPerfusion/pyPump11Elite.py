@@ -152,13 +152,13 @@ class Pump11Elite:
 
         if cfg is not None:
             self.cfg = cfg
-        self._serial.port = cfg.com_port
-        self._serial.baudrate = cfg.baud
+        self._serial.port = self.cfg.com_port
+        self._serial.baudrate = self.cfg.baud
         self._serial.xonxoff = True
         try:
             self._serial.open()
         except serial.serialutil.SerialException as e:
-            self._lgr.error(f'Could not open serial port {self._serial.portstr}')
+            self._lgr.error(f'Could not open serial port {self._serial.port}')
             self._lgr.error(f'Message: {e}')
         self._queue = Queue()
 
@@ -214,15 +214,21 @@ class Pump11Elite:
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
-        try:
-            vol, vol_unit = response.split(' ')
-        except ValueError as e:
-            # this will happen if com port is not opened or
-            # an error occurred
-            self._lgr.error(f'Error occurred parsing get_target_volume response for syringe {self.name}')
-            self._lgr.error(f'Message: {e}')
+        if response == 'Target volume not set':
             vol = 0
             vol_unit = ''
+            self._lgr.warning(f'Attempt to read target volume before it was set')
+        else:
+            try:
+                vol, vol_unit = response.split(' ')
+            except ValueError as e:
+                # this will happen if com port is not opened or
+                # an error occurred
+                self._lgr.error(f'Error occurred parsing get_target_volume response for syringe {self.name}')
+                self._lgr.error(f'Message: {e}')
+                self._lgr.error(f'Response: {response}')
+                vol = 0
+                vol_unit = ''
         return vol, vol_unit
 
     def clear_target_volume(self):

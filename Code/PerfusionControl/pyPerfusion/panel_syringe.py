@@ -130,9 +130,10 @@ class PanelSyringeConfig(wx.Panel):
         port = self.combo_port.GetStringSelection()
         baud = int(self.choice_baud.GetStringSelection())
         if not self.syringe.is_open():
-            self.syringe.cfg.port = port
+
+            self.syringe.cfg.com_port = port
             self.syringe.cfg.baud = baud
-            self.syringe.open()
+            self.syringe.open(self.syringe.cfg)
 
             self.btn_open.SetLabel('Close')
         else:
