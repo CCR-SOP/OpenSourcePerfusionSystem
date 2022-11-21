@@ -33,7 +33,7 @@ class MockPump11Elite(pyPump11Elite.Pump11Elite):
 
 PerfusionConfig.set_test_config()
 cfg = pyPump11Elite.SyringeConfig(com_port='COM1',
-                                  manufacturer='bdp',
+                                  manufacturer_code='bdp',
                                   size = '60 ml')
 
 logger = logging.getLogger()
