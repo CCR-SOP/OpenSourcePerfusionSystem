@@ -11,22 +11,12 @@ import wx
 import logging
 
 from pyPerfusion.plotting import SensorPlot, EventPlot, PanelPlotting
-from pyHardware.pyAI import AI
+import pyHardware.pyAI as pyAI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as PerfusionConfig
-
-
-# for testing, creating a streaming AI representing "flow"
-acq = AI(100)
-sensor = SensorStream('flow', 'ml/min', acq)
-
-# create an event "insulin injection" which will trigger
-# every 1 second.
-evt_acq = AI(1000, read_period_ms=1000)
-evt = SensorPoint('Insulin Injection', 'ml', evt_acq)
 
 
 class TestFrame(wx.Frame):
@@ -34,79 +24,79 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
+        self.hw = pyAI.AIDevice()
+        dev_cfg = pyAI.AIDeviceConfig(name='Test', device_name='FakeDev',
+                                      sampling_period_ms=25, read_period_ms=250)
+        ch_cfg = pyAI.AIChannelConfig(name='flow', line=0)
+        self.hw.open(dev_cfg)
+        self.hw.add_channel(ch_cfg)
+        self.sensor = SensorStream(self.hw.ai_channels[ch_cfg.name], 'ml/min')
+
+        # create an event "insulin injection" which will trigger
+        # every 1 second.
+        evt_acq_cfg = pyAI.AIDeviceConfig(name='Test Events', device_name='FakeDevEvents',
+                                          sampling_period_ms=1_000, read_period_ms=2_000)
+        ch_cfg_evt = pyAI.AIChannelConfig(name='insulin injection', line=1)
+        self.evt_acq = pyAI.AIDevice()
+        self.evt_acq.open(evt_acq_cfg)
+        self.evt_acq.add_channel(ch_cfg_evt)
+        self.evt = SensorPoint(self.evt_acq.ai_channels[ch_cfg_evt.name], 'ml')
+
+        # streaming to file is important as plotting gets it data
+        # from the file, not a live stream
+        strategy = StreamToFile('Raw', 1, 10)
+        strategy.open(self.sensor)
+        self.sensor.add_strategy(strategy)
+
+        strategy = StreamToFile('Event', 1, 10)
+        strategy.open(self.sensor)
+        self.evt.add_strategy(strategy)
+
         # create two plots: one a Sensor plot for streaming data
         # the other a EventPlot
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
-        self.plotevt = EventPlot(evt, self.panel.axes)
-        self.plotraw = SensorPlot(sensor, self.panel.axes)
+        self.plotevt = EventPlot(self.evt, self.panel.axes)
+        self.plotraw = SensorPlot(self.sensor, self.panel.axes)
+
+        # the streaming data will be blue, the events will be a red line
+        self.plotevt.set_strategy(self.evt.get_file_strategy('Event'), color='r')
+        self.plotraw.set_strategy(self.sensor.get_file_strategy('Raw'), color='b')
 
         # add the two plots to the main plotting panel
         # the two plots will be superimposed on each other
         self.panel.add_plot(self.plotevt)
         self.panel.add_plot(self.plotraw)
 
+        self.sensor.open()
+        self.evt.open()
+        self.sensor.hw.device.start()
+        self.evt.hw.device.start()
+        self.sensor.start()
+        self.evt.start()
+
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor.stop()
+        self.sensor.stop()
+        self.sensor.hw.device.stop()
+        self.sensor.close()
+        self.sensor.hw.device.close()
         self.panel.Destroy()
         self.Destroy()
 
 
 class MyTestApp(wx.App):
     def OnInit(self):
-        self.configure_hw()
-        frame = TestFrame(None, wx.ID_ANY, "")
-
-        # this is where we associate the plots with the actual data
-        # where this is done depends on the app design. This could also be
-        # done in the frame class if the hw is passed through the constructor
-        # or in function
-        # the streaming data will be blue, the events will be a red line
-        frame.plotevt.set_strategy(evt.get_file_strategy('Event'), color='r')
-        frame.plotraw.set_strategy(sensor.get_file_strategy('Raw'), color='b')
-
+        frame = TestFrame(None, wx.ID_ANY)
         self.SetTopWindow(frame)
         frame.Show()
-
         return True
-
-    def configure_hw(self):
-        # for testing purposes, add the hardware here
-        # in a more sophisticated app, this may done elsehwere
-        sensor.hw.add_channel(0)
-        sensor.set_ch_id(0)
-        sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
-
-        evt.hw.add_channel(0)
-        evt.set_ch_id(0)
-        evt.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
-
-        # streaming to file is important as plotting gets it data
-        # from the file, not a live stream
-        strategy = StreamToFile('Raw', 1, 10)
-        strategy.open(PerfusionConfig.get_date_folder(), 'test', sensor.params)
-        sensor.add_strategy(strategy)
-
-        strategy = PointsToFile('Event', 1, 10)
-        strategy.open(PerfusionConfig.get_date_folder(), 'test_event', evt.params)
-        evt.add_strategy(strategy)
-
-        sensor.open()
-        evt.open()
-
-        sensor.hw.open()
-        evt.hw.open()
-        sensor.hw.start()
-        evt.hw.start()
-        sensor.start()
-        evt.start()
 
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
-    app = MyTestApp(0)
+    app = MyTestApp()
     app.MainLoop()

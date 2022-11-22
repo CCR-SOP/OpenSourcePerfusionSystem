@@ -7,12 +7,11 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+import wx
 import logging
 
-import wx
-
 from pyPerfusion.plotting import PanelPlotting, SensorPlot
-from pyHardware.pyAI import AI
+import pyHardware.pyAI as pyAI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.FileStrategy import StreamToFile
 import pyPerfusion.PerfusionConfig as PerfusionConfig
@@ -25,34 +24,17 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self._plots = []
 
-        self.hw = AI(period_sample_ms=10)
-        self.sensors = [
-            SensorStream('HA Flow', 'ml/min', self.hw),
-            SensorStream('PV Flow', 'ml/min', self.hw)
-        ]
-        for sensor in self.sensors:
-            strategy = StreamToFile('Raw', 1, 10)
-            strategy.open(PerfusionConfig.get_date_folder(), sensor.name, sensor.params)
-            sensor.add_strategy(strategy)
-            sensor.open()
-
         sizer_plots = wx.GridSizer(cols=2)
-        for idx, sensor in enumerate(self.sensors):
+        for idx, sensor in enumerate(sensors):
             panel = PanelPlotting(self)
             self._plots.append(panel)
-            sensor.hw.add_channel(idx)
-            sensor.set_ch_id(idx)
             plot = SensorPlot(sensor, panel.axes, readout=True)
             plot.set_strategy(sensor.get_file_strategy('Raw'))
             sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
             panel.add_plot(plot)
             sensor.start()
 
-        self.sensors[0].hw.set_demo_properties(0, demo_amp=80, demo_offset=0)
-        self.sensors[1].hw.set_demo_properties(1, demo_amp=40, demo_offset=20)
-
-        self.hw.open()
-        self.hw.start()
+        hw.start()
 
         self.SetSizer(sizer_plots)
         self.Fit()
@@ -61,12 +43,13 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for sensor in self.sensors:
+        for sensor in sensors:
             sensor.stop()
-        self.hw.close()
+        hw.close()
         for plot in self._plots:
             plot.Destroy()
         self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -81,5 +64,26 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
+
+    hw = pyAI.AIDevice()
+    dev_cfg = pyAI.AIDeviceConfig(name='HighSpeed',
+                                  device_name='FakeDev',
+                                  sampling_period_ms=25,
+                                  read_period_ms=250)
+    ha_cfg = pyAI.AIChannelConfig(name='HA Flow', line=0)
+    pv_cfg = pyAI.AIChannelConfig(name='PV Flow', line=2)
+    hw.open(dev_cfg)
+    hw.add_channel(ha_cfg)
+    hw.add_channel(pv_cfg)
+    sensors = [
+        SensorStream(hw.ai_channels[ha_cfg.name], 'ml/min'),
+        SensorStream(hw.ai_channels[pv_cfg.name], 'ml/min')
+    ]
+    for sensor in sensors:
+        strategy = StreamToFile('Raw', 1, 10)
+        strategy.open(sensor)
+        sensor.add_strategy(strategy)
+        sensor.open()
+
     app = MyTestApp(0)
     app.MainLoop()

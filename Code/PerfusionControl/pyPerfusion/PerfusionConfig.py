@@ -82,6 +82,7 @@ def syringe_cfg_name():
     return ACTIVE_CONFIG.get_folder('config') / 'syringe.ini'
 
 
+""" In order to properly parse """
 def read_into_dataclass(cfg_name: str, section_name: str, cfg):
     global ACTIVE_CONFIG
     parser = ConfigParser()
@@ -95,7 +96,11 @@ def read_into_dataclass(cfg_name: str, section_name: str, cfg):
         section = parser[section_name]
         for key, value in section.items():
             dummy = getattr(cfg, key)
-            setattr(cfg, key, type(dummy)(value))
+            try:
+                setattr(cfg, key, type(dummy)(value))
+            except ValueError:
+                logging.getLogger(__name__).error(f'Error reading {filename}[{section_name}]:{key} = {value}')
+                logging.getLogger(__name__).error(f'Expected value type is {type(dummy)}')
     else:
         raise MissingConfigSection(f'{section_name} in {filename}')
 
