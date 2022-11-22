@@ -57,9 +57,9 @@ class SensorStream:
 
     def add_strategy(self, strategy: ProcessingStrategy):
         if isinstance(strategy, StreamToFile):
-            strategy.open()
+            strategy.open(self)
         else:
-            strategy.open()
+            strategy.open(self)
         self._strategies.append(strategy)
 
     def get_all_file_strategies(self):

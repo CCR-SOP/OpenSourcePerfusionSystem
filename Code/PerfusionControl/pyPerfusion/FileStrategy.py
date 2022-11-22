@@ -90,7 +90,7 @@ class StreamToFile(ProcessingStrategy):
         self._base_path = PerfusionConfig.get_date_folder()
         self._filename = pathlib.Path(sensor.name)
         self._sensor_params = sensor.params
-        self._timestamp = datetime.datetime.now()
+        self._timestamp = datetime.now()
         if self._fid:
             self._fid.close()
             self._fid = None
