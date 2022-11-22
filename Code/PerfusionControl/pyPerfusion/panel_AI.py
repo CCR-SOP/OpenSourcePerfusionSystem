@@ -142,7 +142,9 @@ class PanelAI_Config(wx.Panel):
         self.btn_open.SetValue(opened)
 
     def OnOpen(self, evt):
+        self._logger.debug('in OnOpen')
         opened = self._sensor.hw.is_open()
+        self._logger.debug(f'opened is {opened}')
         dev = self.choice_dev.GetStringSelection()
         line = self.choice_line.GetStringSelection()
         if not opened:

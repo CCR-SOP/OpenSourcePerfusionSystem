@@ -220,9 +220,10 @@ class PanelPressureFlowControl(wx.Panel):
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
+        self._lgr = logging.getLogger(__name__)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=4)
+        sizer = wx.GridSizer(cols=3)
         ha_sizer = wx.FlexGridSizer(cols=1)
         ha_sizer.AddGrowableRow(0, 2)
         ha_sizer.AddGrowableRow(1, 2)
@@ -232,16 +233,12 @@ class TestFrame(wx.Frame):
         ivc_sizer = wx.FlexGridSizer(cols=1)
         ivc_sizer.AddGrowableRow(0, 1)
         ivc_sizer.AddGrowableRow(1, 1)
-        syringe_sizer = wx.GridSizer(cols=1)
 
-        self.epoprostenol_syringe = None
-        self.epoprostenol_syringe_panel = None
-        self.phenylephrine_syringe = None
-        self.phenylephrine_syringe_panel = None
-        self.syringes = []
         self.panels = []
 
         self.acq =  NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
+        self.acq.open(dev='Dev1')
+        self.acq.start()
 
         self.sensors = [SensorStream('Hepatic Artery Pressure', 'mmHg', self.acq), SensorStream('Portal Vein Pressure', 'mmHg', self.acq), SensorStream('Inferior Vena Cava Pressure', 'mmHg', self.acq), SensorStream('Hepatic Artery Flow', 'ml/min', self.acq), SensorStream('Portal Vein Flow', 'ml/min', self.acq), SensorStream('Inferior Vena Cava Flow', 'ml/min', self.acq)]
 
@@ -263,6 +260,7 @@ class TestFrame(wx.Frame):
             section = PerfusionConfig.read_section('hardware', sensor.name)
             dev = section['Device']
             line = section['LineName']
+            self._lgr.debug(f'From {sensor.name}, line is {line}')
             calpt1_target = float(section['CalPt1_Target'])
             calpt1_reading = section['CalPt1_Reading']
             calpt2_target = float(section['CalPt2_Target'])
@@ -281,54 +279,8 @@ class TestFrame(wx.Frame):
                 pv_sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
             elif 'Inferior Vena Cava' in sensor.name:
                 ivc_sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-            if sensor.name == 'Hepatic Artery Flow':
-                section = PerfusionConfig.read_section('hardware', 'Epoprostenol')
-                com = section['commport']
-                baud = section['baudrate']
-                epoprostenol_injection = Pump11Elite('Epoprostenol')
-                epoprostenol_injection.cfg.com_port = com
-                epoprostenol_injection.cfg.baud = baud
-                epoprostenol_injection.open(epoprostenol_injection.cfg)
-
-                epoprostenol_injection.clear_syringe()
-                # epoprostenol_injection.open_stream(PerfusionConfig.get_date_folder())
-                # epoprostenol_injection.start_stream()
-                self.epoprostenol_syringe = epoprostenol_injection
-                self.syringes.append(self.epoprostenol_syringe)
-                self.epoprostenol_syringe_panel = PanelSyringe(self, sensor, epoprostenol_injection.name, epoprostenol_injection)
-                self.panels.append(self.epoprostenol_syringe_panel)
-
-                section = PerfusionConfig.read_section('hardware', 'Phenylephrine')
-                com = section['commport']
-                baud = section['baudrate']
-                phenylephrine_injection = Pump11Elite('Phenylephrine')
-                phenylephrine_injection.cfg.com_port = com
-                phenylephrine_injection.cfg.baud = baud
-                phenylephrine_injection.open(phenylephrine_injection.cfg)
-
-                phenylephrine_injection.clear_syringe()
-                # phenylephrine_injection.open_stream(PerfusionConfig.get_date_folder())
-                # phenylephrine_injection.start_stream()
-                self.phenylephrine_syringe = phenylephrine_injection
-                self.syringes.append(self.phenylephrine_syringe)
-                self.phenylephrine_syringe_panel = PanelSyringe(self, sensor, phenylephrine_injection.name, phenylephrine_injection)
-                self.panels.append(self.phenylephrine_syringe_panel)
-            if sensor.name == 'Hepatic Artery Pressure':
-                self.ao_ha = NIDAQ_AO()
-                self.pumps.append(self.ao_ha)
-                corresponding_sensor = None
-                for sens in self.sensors:
-                    if sens.name == 'Hepatic Artery Flow':
-                        corresponding_sensor = sens
-                self.hepatic_artery_pressure_control = PanelPressureFlowControl(self, sensor, corresponding_sensor, self.ao_ha, name=sensor.name, pumpname='Hepatic Artery Centrifugal Pump')
-            elif sensor.name == 'Portal Vein Flow':
-                self.ao_pv = NIDAQ_AO()
-                self.pumps.append(self.ao_pv)
-                corresponding_sensor = None
-                for sens in self.sensors:
-                    if sens.name == 'Portal Vein Pressure':
-                        corresponding_sensor = sens
-                self.portal_vein_flow_control = PanelPressureFlowControl(self, sensor, corresponding_sensor, self.ao_pv, name=sensor.name, pumpname='Portal Vein Centrifugal Pump')
+            sensor.open()
+            sensor.start()
 
         if self.hepatic_artery_pressure_control:
             ha_sizer.Add(self.hepatic_artery_pressure_control, 1, wx.ALL | wx.EXPAND, border=1)
@@ -345,7 +297,7 @@ class TestFrame(wx.Frame):
         sizer.Add(ha_sizer, 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(pv_sizer, 1, wx.ALL | wx.EXPAND, border=1)
         sizer.Add(ivc_sizer, 1, wx.ALL | wx.EXPAND, border=1)
-        sizer.Add(syringe_sizer, 1, wx.ALL | wx.EXPAND, border=1)
+        #sizer.Add(syringe_sizer, 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -363,21 +315,19 @@ class TestFrame(wx.Frame):
             else:
                 panel._panel_feedback._syringe_timer.stop_feedback_injections()
         for syringe in self.syringes:
-            infuse_rate, ml_min_rate, ml_volume = syringe.get_stream_info()
-            syringe.stop(-1, infuse_rate, ml_volume, ml_min_rate)
-            syringe.close_stream()
+            syringe.stop()
+            syringe.close()
         for sensor in self.sensors:
             sensor.stop()
             sensor.close()
-            if sensor.hw._task:
-                sensor.hw.stop()
-                sensor.hw.close()
+            sensor.hw.stop()
+            sensor.hw.close()
         for pump in self.pumps:
             pump.set_dc(0)
             pump.close()
-            pump.halt()
+            # pump.halt()
         self.Destroy()
-        self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
