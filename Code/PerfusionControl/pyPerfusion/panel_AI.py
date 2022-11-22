@@ -209,11 +209,11 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
     acq = NIDAQAI.NIDAQAIDevice()
-    acq.cfg = NIDAQAI.AINIDAQDeviceConfig(name='TestAnalogInputDevice')
+    acq.cfg = NIDAQAI.AINIDAQDeviceConfig(name='Dev1')
     acq.read_config()
 
-    ai_channel = acq.ai_channels['HA Flow']
-    sensor = SensorStream(ai_channel, 'Volts')
+    ai_channel = acq.ai_channels['Hepatic Artery Flow']
+    sensor = SensorStream(ai_channel, '')
     raw = StreamToFile('StreamRaw', None, acq.buf_len)
     sensor.add_strategy(raw)
 
