@@ -31,7 +31,7 @@ code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', 
 class CDIParsedData:
     def __init__(self, response):
         # parse raw ASCII output
-        fields = response.strip('\r\n').split(sep="\t")
+        fields = response.strip(b'\r\n').split(sep=b'\t')
         # in addition to codes, there is a header packet
         # CRC and end packet
         if len(fields) == len(code_mapping) + 2:
@@ -39,7 +39,7 @@ class CDIParsedData:
             # timestamp will be ignored and will use the timestamp when the response arrives
             # self.timestamp = fields[0][-8:]
             for field in fields[1:-1]:
-                code = field[0:2].upper()
+                code = field[0:2].upper().decode('ascii')
                 try:
                     # logging.getLogger(__name__).debug(f'code is {code}')
                     value = float(field[4:])
