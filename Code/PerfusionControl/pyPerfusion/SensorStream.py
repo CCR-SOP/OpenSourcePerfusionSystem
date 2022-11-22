@@ -7,7 +7,7 @@ from typing import Type
 import numpy as np
 
 from pyPerfusion.ProcessingStrategy import ProcessingStrategy
-from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
 
 
 DATA_VERSION = 1
@@ -58,8 +58,10 @@ class SensorStream:
     def add_strategy(self, strategy: ProcessingStrategy):
         if isinstance(strategy, StreamToFile):
             strategy.open(self)
-        else:
+        elif isinstance(strategy, PointsToFile):
             strategy.open(self)
+        else:
+            strategy.open()
         self._strategies.append(strategy)
 
     def get_all_file_strategies(self):

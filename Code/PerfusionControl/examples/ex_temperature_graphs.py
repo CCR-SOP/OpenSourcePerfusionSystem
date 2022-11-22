@@ -60,10 +60,10 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
     hw = NIDAQAIDevice()
-    hw.cfg = AINIDAQDeviceConfig(name='TestAnalogInputDevice')
+    hw.cfg = AINIDAQDeviceConfig(name='Dev2')
     hw.read_config()
 
-    sensor = SensorStream(hw.ai_channels['BAT-12 Temperature'], 'deg C', valid_range=[35, 38])
+    sensor = SensorStream(hw.ai_channels['BAT-12 Temperature'], 'deg C')
 
     # Raw streaming and RMS strategy
     raw = StreamToFile('StreamRaw', None, hw.buf_len)
