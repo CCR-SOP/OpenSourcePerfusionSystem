@@ -10,39 +10,39 @@ and under the public domain.
 import logging
 from time import sleep
 
-from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
+from pyHardware.pyAI_Finite_NIDAQ import FiniteNIDAQAIDevice, FiniteNIDAQAIDeviceConfig
+import pyHardware.pyAI as pyAI
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
 
 
 logger = logging.getLogger()
 utils.setup_stream_logger(logger, logging.DEBUG)
+PerfusionConfig.set_test_config()
 
-dev = 'Dev1'
-line = '0'
-samples = 5
-period_ms = 1000
+dev_cfg = FiniteNIDAQAIDeviceConfig(name='FiniteAcqSensorPoint test',
+                                    device_name='Dev2',
+                                    samples_per_read=5,
+                                    sampling_period_ms=1000)
+ch_cfg = pyAI.AIChannelConfig(name='TestChannel', line=0)
 
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
+logger.info(f'Creating AI_Finite_NIDAQ with sampling_period_ms of {dev_cfg.sampling_period_ms}')
+ai = FiniteNIDAQAIDevice()
+logger.info(f'Opening {dev_cfg.device_name}')
+ai.open(dev_cfg)
+logger.info(f'Adding channel {ch_cfg.line}')
+ai.add_channel(ch_cfg)
 
-logger.info(f'Creating AI_Finite_NIDAQ with period_ms of {period_ms}')
-ai = AI_Finite_NIDAQ(period_ms=period_ms, volts_p2p=5, volts_offset=2.5, samples_per_read=samples)
-sensor = SensorPoint('FiniteAcq', 'counts', ai)
-logger.info(f'Opening {dev}')
-ai.open(dev)
-logger.info(f'Adding channel {line}')
-ai.add_channel(line)
-sensor.set_ch_id(line)
+sensor = SensorPoint(ai.ai_channels[ch_cfg.name], 'counts')
+
 strategy = StreamToFile('Raw', 1, 10)
-strategy.open(LP_CFG.LP_PATH['stream'], sensor.name, sensor.params)
+strategy.open(sensor)
 sensor.add_strategy(strategy)
 sensor.open()
 
 logger.info('opening sensor')
-logger.info(f'saving data to {LP_CFG.LP_PATH["stream"]}')
 sensor.open()
 
 logger.info('starting acquisition')
@@ -51,7 +51,7 @@ sensor.start()
 done = False
 logger.info('acquisition started')
 while not done:
-    logger.info(f'waiting for {samples} to be acquired')
+    logger.info(f'waiting for {dev_cfg.samples_per_read} to be acquired')
     sleep(1.0)
     done = ai.is_done()
 
@@ -60,7 +60,7 @@ ai.start()
 logger.info('acquisition started')
 done = False
 while not done:
-    logger.info(f'waiting for {samples} to be acquired')
+    logger.info(f'waiting for {dev_cfg.samples_per_read} to be acquired')
     sleep(1.0)
     done = ai.is_done()
 logger.info('stopping sensors')

@@ -12,7 +12,7 @@ import wx
 from pyPerfusion.panel_AI import PanelAI, DEV_LIST
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.FileStrategy import StreamToFile
 
@@ -22,8 +22,6 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=2)
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
         utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
         utils.configure_matplotlib_logging()
 
@@ -38,7 +36,7 @@ class TestFrame(wx.Frame):
         ]
         for sensor in self.sensors:
             raw = StreamToFile('Raw', None, self.acq.buf_len)
-            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            raw.open(PerfusionConfig.get_date_folder(), f'{sensor.name}_raw', sensor.params)
             sensor.add_strategy(raw)
 
         dlg = wx.SingleChoiceDialog(self, 'Choose NI Device', 'Device', DEV_LIST)
@@ -74,5 +72,6 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    PerfusionConfig.set_test_config()
     app = MyTestApp(0)
     app.MainLoop()

@@ -16,7 +16,7 @@ from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.plotting import PanelPlotting, SensorPlot
 from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.panel_PID import PanelPID
 from pyPerfusion.FileStrategy import StreamToFile
 
@@ -31,8 +31,6 @@ class PanelTestMaintainFlow(wx.Panel):
         self.panel_pid = PanelPID(self)
         self.panel_pid.set_pid(self.pid)
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
 
         try:
             self._ai = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
@@ -57,11 +55,10 @@ class PanelTestMaintainFlow(wx.Panel):
 
         self._sensor = SensorStream('Flow sensor', 'ml/min', self._ai)
         self.raw = StreamToFile('Raw', None, self._ai.buf_len)
-        self.raw.open(LP_CFG.LP_PATH['stream'], f'{self._sensor.name}_raw', self._sensor.params)
+        self.raw.open(PerfusionConfig.get_date_folder(), f'{self._sensor.name}_raw', self._sensor.params)
         self._sensor.add_strategy(self.raw)
 
         self.panel_plot = PanelPlotting(self)
-        LP_CFG.update_stream_folder()
         self._sensor.open()
         self._sensorplot = SensorPlot(self._sensor, self.panel_plot.axes)
         self._sensorplot.set_strategy(self._sensor.get_file_strategy('Raw'))
@@ -145,6 +142,7 @@ class PanelTestMaintainFlow(wx.Panel):
             self._ao.set_dc(new_val)
             self.label_output.SetLabel(f'Analog output is {new_val:.3f}')
 
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -165,5 +163,6 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    PerfusionConfig.set_test_config()
     app = MyTestApp(0)
     app.MainLoop()

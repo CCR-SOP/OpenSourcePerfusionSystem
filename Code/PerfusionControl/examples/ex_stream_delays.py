@@ -14,48 +14,44 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Timer, enumerate
-from datetime import datetime
 import logging
 import time
 
-from pyHardware.pyAI_NIDAQ import NIDAQ_AI
+import pyHardware.pyAI as pyAI
+from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
 
-dev = 'Dev1'
+
+PerfusionConfig.set_test_config()
 
 logger = logging.getLogger()
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
 utils.setup_stream_logger(logger, logging.DEBUG)
 utils.configure_matplotlib_logging()
 
-ai_name = 'Analog Input'
-logger.debug('creating NIDAQ_AI')
-acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
-sensor = SensorStream('Analog Input 1', 'Volts', acq)
-logger.debug('opening sensor')
+hw = NIDAQAIDevice()
+hw_cfg = AINIDAQDeviceConfig(name='Example', device_name='Dev2',
+                             sampling_period_ms=100, read_period_ms=500,
+                             pk2pk_volts=5, offset_volts=2.5)
+ch_cfg = pyAI.AIChannelConfig(name='test', line=0)
+hw.open(hw_cfg)
+hw.add_channel(ch_cfg)
 
-strategy = StreamToFile('Raw', 1, 10)
-strategy.open(LP_CFG.LP_PATH['stream'], 'test', sensor.params)
-sensor.add_strategy(strategy)
+sensor = SensorStream(hw.ai_channels[ch_cfg.name], 'ml/min')
+sensor.add_strategy(StreamToFile('Raw', 1, 10))
 
 sensor.open()
-acq.open(dev=dev)
-acq.add_channel('0')
-sensor.set_ch_id('0')
-logger.debug('starting acquisition')
 sensor.start()
-acq.start()
+hw.start()
 
 STOP_PROGRAM = False
 
 
 def get_last_sample():
     global strategy, last_acq
-    t, sample = strategy.retrieve_buffer(0, 1)
+    t, sample = sensor.get_file_strategy('Raw').retrieve_buffer(0, 1)
     logger.debug(f'Acquired {sample}')
 
 
@@ -83,7 +79,7 @@ timer.cancel()
 # timer_stop.cancel()
 logger.debug('stopping sensor')
 sensor.stop()
-acq.stop()
+hw.stop()
 logger.debug('ending program')
 for thread in enumerate():
     print(thread.name)

@@ -6,7 +6,7 @@ import minimalmodbus, configparser
 from . import utils as mcq_utils
 from . import modbus_helper as mb
 from serial import PARITY_NONE
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 # config = configparser.ConfigParser()
 # config.read('./mcqlib_GB100/mcqlib/config.ini')
@@ -19,9 +19,7 @@ class Main:
   def __init__(self, name):
       self.name = name
 
-      LP_CFG.set_base(basepath='~/Documents/LPTEST')
-      LP_CFG.update_stream_folder()
-      section = LP_CFG.get_hwcfg_section(self.name)
+      section = PerfusionConfig.read_section('hardware', self.name)
       com = str(section['commport'])
       baud = int(section['baudrate'])
       timeout = int(section['timeout'])

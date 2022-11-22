@@ -1,3 +1,25 @@
+"""
+Class for serial communication over USB using Terumo CDI500 Saturation Monitor (TSM) command set
+...
+
+Methods
+-------
+open(port_name, baud, bytesize, parity, stopbits)
+    opens USB port of given name with the specified baud rate, bytesize, parity, and stopbits which correspond to the TSM
+open_stream(full_path)
+    creates .txt and .dat files for recording CDI data
+start_stream()
+    starts thread for writing streamed data from CDI monitor to file
+stop_stream()
+    stops thread
+close_stream()
+    closes file
+get_data()
+    returns all reads from monitor
+get_latest()
+    returns latest sample from monitor
+"""
+
 from pyHardware.pyUSBSerial import USBSerial
 import logging
 import pathlib
@@ -10,28 +32,6 @@ from threading import Thread, Event
 DATA_VERSION = 4
 
 class TSMSerial(USBSerial):
-
-    """
-    Class for serial communication over USB using Terumo CDI500 Saturation Monitor (TSM) command set
-    ...
-
-    Methods
-    -------
-    open(port_name, baud, bytesize, parity, stopbits)
-        opens USB port of given name with the specified baud rate, bytesize, parity, and stopbits which correspond to the TSM
-    open_stream(full_path)
-        creates .txt and .dat files for recording CDI data
-    start_stream()
-        starts thread for writing streamed data from CDI monitor to file
-    stop_stream()
-        stops thread
-    close_stream()
-        closes file
-    get_data()
-        returns all reads from monitor
-    get_latest()
-        returns latest sample from monitor
-    """
 
     def __init__(self, name):
         super().__init__()
@@ -201,18 +201,15 @@ class TSMSerial(USBSerial):
         arterial_BE = data[34:38]
         # calculated_O2_sat = data[39:43]  # Only calculated if sat can't be measured directly
         K = data[44:48]
-        # VO2 = data[49:53]
-        # Q = data[54:58]
-        # BSA = data[59:63]
-        # venous_pH = data[64:68]
-        # venous_CO2 = data[69:73]
-        # venous_O2 = data[74:78]
-        # venous_temp = data[79:83]
+        VO2 = data[49:53]
+        Q = data[54:58]
+        BSA = data[59:63]
+        venous_pH = data[64:68]
+        venous_CO2 = data[69:73]
+        venous_O2 = data[74:78]
+        venous_temp = data[79:83]
         measured_O2_sat = data[84:87]
         hct = data[89:92]
         hb = data[94:99]
-        return time, arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, K, measured_O2_sat, hct, hb
+        return time, arterial_pH, arterial_CO2, arterial_O2, arterial_temp, arterial_bicarb, arterial_BE, K, VO2, Q,BSA, venous_pH, venous_CO2, venous_O2, venous_temp, measured_O2_sat, hct, hb
 
-    # Our CDI monitor has only one shunt sensor, and thus technically only provides "arterial readings"; the venous readings are always blank due to lack of a second sensor
-    # However, we are configuring the shunt sensor such that it is reading venous values in our circuit; thus, the "arterial" CDI readings returned by this method actually correspond to venous readings in our system
-    # Our CDI system will not read any of the arterial values in our circuit; we will only monitor pO2 in our system's arterial circuit through the use of a single Presens flow-thru sensor

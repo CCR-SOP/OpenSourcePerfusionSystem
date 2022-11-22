@@ -6,70 +6,32 @@ Immediate needs: figure out input information for temperature sensor, decide on 
 """
 
 import wx
-import time
 import logging
 
-# from pyPerfusion.plotting import SensorPlot, PanelPlotting
-from pyHardware.pyAI_NIDAQ import NIDAQ_AI
-# from pyHardware.pyAI import AI
+from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
+import pyHardware.pyAI as pyAI
 from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as LP_CFG
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 import pyPerfusion.utils as utils
-from pyPerfusion.panel_AI import PanelAI, DEV_LIST, LINE_LIST
+from pyPerfusion.panel_AI import PanelAI
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-utils.configure_matplotlib_logging()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=2)
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
         self._logger = logging.getLogger(__name__)
 
-        self.acq = NIDAQ_AI(period_ms=100, volts_p2p=1, volts_offset=0.5)
-        self.sensor = SensorStream('BAT-12 Temperature', 'deg C', self.acq, valid_range=[35, 38])
-        # check these values - documentation just said sensitivity is 10 mV and I wasn't sure how to get this info
-        # Want voltage calibration b/w 0-50C. Axes can be in this range. green should be 35-38C as our target temp
-
-        # Open device and channel
-        section = LP_CFG.get_hwcfg_section(self.sensor.name)
-        dev = DEV_LIST[0]
-        line = LINE_LIST[0]
-
-        # Raw streaming and RMS strategy
-        raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
-        raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
-        self.sensor.add_strategy(raw)
-        rms = RMSStrategy('RMS', 50, self.acq.buf_len)
-        save_rms = StreamToFile('StreamRMS', None, self.acq.buf_len)
-        save_rms.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_rms', self.sensor.params)
-        self.sensor.add_strategy(rms)
-        self.sensor.add_strategy(save_rms)
-
         # Calibration functionality
-        panel = PanelAI(self, self.sensor, name=self.sensor.name, strategy='StreamRaw')
-        calpt1_target = float(section['CalPt1_Target'])
-        calpt1_reading = section['CalPt1_Reading']
-        calpt2_target = float(section['CalPt2_Target'])
-        calpt2_reading = section['CalPt2_Reading']
-        panel._panel_cfg.choice_dev.SetStringSelection(dev)
-        panel._panel_cfg.choice_line.SetSelection(int(line))
-        panel._panel_cfg.choice_dev.Enable(True)
-        panel._panel_cfg.choice_line.Enable(True)
-        panel._panel_cfg.panel_cal.spin_cal_pt1.SetValue(calpt1_target)
-        panel._panel_cfg.panel_cal.label_cal_pt1_val.SetLabel(calpt1_reading)
-        panel._panel_cfg.panel_cal.spin_cal_pt2.SetValue(calpt2_target)
-        panel._panel_cfg.panel_cal.label_cal_pt2_val.SetLabel(calpt2_reading)
+        panel = PanelAI(self, sensor=sensor, strategy='StreamRaw')
         sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-        # panel.force_device(dev)
 
-        self.sensor.hw.start()
-        self.sensor.open()
+        sensor.hw.device.start()
+        sensor.start()
+        sensor.open()
 
         self.SetSizer(sizer)
         self.Fit()
@@ -77,20 +39,41 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.sensor.stop()
-        self.sensor.close()
-        self.sensor.hw.stop()
-        self.sensor.hw.close()
+        sensor.stop()
+        sensor.close()
+        sensor.hw.device.stop()
+        sensor.hw.device.close()
         self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
         frame = TestFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
-        #print('\a') this works as an alarm but very simple and obviously we need some kind of loop
         return True
 
-app = MyTestApp(0)
-app.MainLoop()
 
+if __name__ == "__main__":
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
+    PerfusionConfig.set_test_config()
+
+    hw = NIDAQAIDevice()
+    hw.cfg = AINIDAQDeviceConfig(name='TestAnalogInputDevice')
+    hw.read_config()
+
+    sensor = SensorStream(hw.ai_channels['BAT-12 Temperature'], 'deg C', valid_range=[35, 38])
+
+    # Raw streaming and RMS strategy
+    raw = StreamToFile('StreamRaw', None, hw.buf_len)
+    raw.open(sensor)
+    sensor.add_strategy(raw)
+    rms = RMSStrategy('RMS', 50, hw.buf_len)
+    save_rms = StreamToFile('StreamRMS', None, hw.buf_len)
+    save_rms.open(sensor)
+    sensor.add_strategy(rms)
+    sensor.add_strategy(save_rms)
+
+    app = MyTestApp(0)
+    app.MainLoop()

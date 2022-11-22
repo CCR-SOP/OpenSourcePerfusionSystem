@@ -20,7 +20,7 @@ class ProcessingStrategy:
     def __init__(self, name, window_len, expected_buffer_len):
         self._logger = logging.getLogger(__name__)
         self._name = name
-        self._data_type = np.float32
+        self._data_type = np.float64
         self._win_len = window_len
         self._window_buffer = np.zeros(self._win_len, dtype=self._data_type)
         self._processed_buffer = np.zeros(expected_buffer_len, dtype=self._data_type)

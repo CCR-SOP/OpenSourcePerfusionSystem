@@ -14,10 +14,12 @@ import struct
 from time import perf_counter
 from os import SEEK_END
 from collections import deque
+from datetime import datetime
 
 import numpy as np
 
 from pyPerfusion.ProcessingStrategy import ProcessingStrategy
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class StreamToFile(ProcessingStrategy):
@@ -43,17 +45,21 @@ class StreamToFile(ProcessingStrategy):
         return self._base_path / self._filename.with_suffix(ext)
 
     def _open_write(self):
-        self._logger.info(f'opening for write: {self.fqpn}')
+        self._lgr.info(f'opening for write: {self.fqpn}')
         self._fid = open(self.fqpn, 'w+b')
 
     def _open_read(self):
-        _fid = open(self.fqpn, 'rb')
+        try:
+            _fid = open(self.fqpn, 'rb')
+        except FileNotFoundError as e:
+            logging.exception(e)
+            return None, None
         data_type = np.dtype(self._sensor_params['Data Format'])
         try:
             data = np.memmap(_fid, dtype=data_type, mode='r')
         except ValueError as e:
             # cannot mmap an empty file
-            self._lgr.debug(f'in StreamToFile:_open_read: attempt to read from empty file: {e}')
+            # self._lgr.debug(f'in StreamToFile:_open_read: attempt to read from empty file: {e}')
             data = []
         return _fid, data
 
@@ -77,15 +83,14 @@ class StreamToFile(ProcessingStrategy):
         fid.write(hdr_str)
         fid.close()
 
-    def open(self, base_path=None, filename=None, sensor_params=None):
-        self._filename = pathlib.Path(filename)
-        self._sensor_params = sensor_params
-        if not isinstance(base_path, pathlib.Path):
-            base_path = pathlib.Path(base_path)
-        self._base_path = base_path
-        if not self._base_path.exists():
-            self._base_path.mkdir(parents=True, exist_ok=True)
-        self._timestamp = datetime.datetime.now()
+    def open(self, sensor=None):
+        if sensor is None:
+            self._lgr.error(f'FileStrategy:open requires a sensor as a parameter')
+            return
+        self._base_path = PerfusionConfig.get_date_folder()
+        self._filename = pathlib.Path(sensor.name)
+        self._sensor_params = sensor.params
+        self._timestamp = datetime.now()
         if self._fid:
             self._fid.close()
             self._fid = None
@@ -131,7 +136,6 @@ class StreamToFile(ProcessingStrategy):
         data_time = np.linspace(start_t, stop_t, samples_needed,
                                 dtype=data_type)
         _fid.close()
-
         return data_time, data
 
 
@@ -159,15 +163,16 @@ class PointsToFile(StreamToFile):
         self._fid.write(ts_bytes)
         data_buf.tofile(self._fid)
 
-    def __read_chunk(self, _fid):
+    def _read_chunk(self, _fid):
         ts = 0
-        data_buf = None
+        data_buf = []
         ts_bytes = _fid.read(self._bytes_per_ts)
         data_type = self._sensor_params['Data Format']
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
         if len(ts_bytes) == 4:
             ts, = struct.unpack('i', ts_bytes)
             data_buf = np.fromfile(_fid, dtype=data_type, count=samples_per_ts)
+
         return data_buf, ts
 
     def retrieve_buffer(self, last_ms, samples_needed):
@@ -178,8 +183,19 @@ class PointsToFile(StreamToFile):
         data_time = []
         data = []
         first_time = None
-        while chunk is not None:
-            chunk, ts = self.__read_chunk(_fid)
+        samples_per_ts = self._sensor_params['Samples Per Timestamp']
+        bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
+
+        # start by assuming file contains only full chunks
+        sampling_period_ms = self._sensor_params['Sampling Period (ms)']
+        expected_chunks = int(last_ms / sampling_period_ms)
+        jump_back = bytes_per_chunk * expected_chunks*2
+        try:
+            _fid.seek(-jump_back, SEEK_END)
+        except OSError:
+            _fid.seek(0)
+        while len(chunk) > 0:
+            chunk, ts = self._read_chunk(_fid)
             if not first_time:
                 first_time = ts
             if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
@@ -190,14 +206,13 @@ class PointsToFile(StreamToFile):
 
     def get_last_acq(self):
         _fid, tmp = self._open_read()
-        # dtype_size = self.hw.data_type(1).itemsize
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
         bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
         try:
             _fid.seek(-bytes_per_chunk, SEEK_END)
-            chunk, ts = self.__read_chunk(_fid)
+            chunk, ts = self._read_chunk(_fid)
         except OSError as e:
-            print(e)
+            logging.exception(e)
             chunk = None
             ts = None
 
@@ -214,9 +229,8 @@ class PointsToFile(StreamToFile):
 
     def get_data_from_last_read(self, timestamp):
         _fid, tmp = self._open_read()
-        # dtype_size = self.hw.data_type(1).itemsize
         samples_per_ts = self._sensor_params['Samples Per Timestamp']
-        bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * self._data_type(1).itemsize)
+        bytes_per_chunk = self._bytes_per_ts + (samples_per_ts * np.dtype(self._data_type).itemsize)
         ts = timestamp + 1
         data = deque()
         data_t = deque()
@@ -227,14 +241,43 @@ class PointsToFile(StreamToFile):
             offset = bytes_per_chunk * loops
             try:
                 _fid.seek(-offset, SEEK_END)
-            except OSError:
+            except OSError as e:
                 # attempt to read before beginning of file
                 self._lgr.warning(f'Attempted to read from before beginning of file with offset {offset}')
                 break
             else:
-                chunk, ts = self.__read_chunk(_fid)
+                chunk, ts = self._read_chunk(_fid)
                 if ts and ts > timestamp:
                     data_t.extendleft([ts])
                     data.extendleft(chunk)
         _fid.close()
         return data_t, data
+
+
+class MultiVarToFile(PointsToFile):
+    def _write_to_file(self, data_buf, t=None):
+        data = data_buf.get_array()
+        buf = np.array(data, dtype=np.float32)
+
+        # h = int(ts[0:2])
+        # m = int(ts[3:5])
+        # s = int(ts[6:8])
+        # timestamp = datetime.strptime(f'{h:02d}:{m:02d}:{s:02d}', '%H:%M:%S').replace(year=self._timestamp.year,
+        #                                                                               month=self._timestamp.month,
+        #                                                                               day=self._timestamp.day)
+        # ts = (timestamp - self._timestamp).total_seconds() * 1000
+        # ts_bytes = struct.pack('i', int(ts* 1000.0))
+        # self._fid.write(ts_bytes)
+        # buf.tofile(self._fid)
+        super()._write_to_file(buf, t)
+
+
+class MultiVarFromFile(PointsToFile):
+    def __init__(self, name, window_len, expected_buffer_len, index):
+        super().__init__(name, window_len, expected_buffer_len)
+        self._index = index
+
+        self._bytes_per_ts = 4
+
+    def run(self):
+        pass

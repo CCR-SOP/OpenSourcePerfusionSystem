@@ -12,19 +12,12 @@ import time
 import logging
 
 from pyPerfusion.plotting import SensorPlot, PanelPlotting
-from pyHardware.pyAI import AI
+import pyHardware.pyAI as pyAI
 from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.ProcessingStrategy import RMSStrategy
 import pyPerfusion.utils as utils
-
-
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-utils.configure_matplotlib_logging()
-
-acq = AI(100)
-sensor = SensorStream('test', 'ml/min', acq, valid_range=[15, 20])
 
 
 class TestFrame(wx.Frame):
@@ -32,20 +25,13 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
-
-        sensor.hw.add_channel(0)
-        sensor.set_ch_id(0)
-        sensor.hw.set_demo_properties(0, demo_amp=20, demo_offset=10)
-
         strategy = StreamToFile('Raw', 1, 10)
-        strategy.open(LP_CFG.LP_PATH['stream'], 'test', sensor.params)
+        strategy.open(sensor)
         sensor.add_strategy(strategy)
 
-        rms = RMSStrategy('RMS', 10, acq.buf_len)
-        save_rms = StreamToFile('StreamRMS', None, acq.buf_len)
-        save_rms.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_rms', {**sensor.params, **rms.params})
+        rms = RMSStrategy('RMS', 10, hw.buf_len)
+        save_rms = StreamToFile('StreamRMS', None, hw.buf_len)
+        save_rms.open(sensor)
         sensor.add_strategy(rms)
         sensor.add_strategy(save_rms)
         self.panel = PanelPlotting(self)
@@ -61,16 +47,17 @@ class TestFrame(wx.Frame):
 
         sensor.open()
 
-        sensor.hw.open()
-        sensor.hw.start()
+        sensor.hw.device.start()
         sensor.start()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         sensor.stop()
+        hw.stop()
         self.panel.Destroy()
         self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -80,9 +67,19 @@ class MyTestApp(wx.App):
         return True
 
 
-app = MyTestApp(0)
-app.MainLoop()
-time.sleep(100)
-sensor.stop()
-acq.stop()
+if __name__ == "__main__":
+    PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
 
+    hw = pyAI.AIDevice()
+    hw_cfg = pyAI.AIDeviceConfig(name='Example', device_name='FakeDev',
+                                 sampling_period_ms=25, read_period_ms=250)
+    ch_cfg = pyAI.AIChannelConfig(name='test', line=0)
+    hw.open(hw_cfg)
+    hw.add_channel(ch_cfg)
+
+    sensor = SensorStream(hw.ai_channels[ch_cfg.name], 'ml/min', valid_range=[15, 20])
+
+    app = MyTestApp(0)
+    app.MainLoop()

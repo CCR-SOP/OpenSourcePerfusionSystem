@@ -17,7 +17,7 @@ from pyHardware.pyAI import AI
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
 import pyPerfusion.utils as utils
 
@@ -38,8 +38,6 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.__plot_frame = PlotFrame.LAST_5_SECONDS
 
-        LP_CFG.set_base(basepath='~/Documents/LPTEST')
-        LP_CFG.update_stream_folder()
         self._lgr = logging.getLogger(__name__)
         utils.setup_stream_logger(self._lgr, logging.DEBUG)
         utils.configure_matplotlib_logging()
@@ -67,7 +65,7 @@ class TestFrame(wx.Frame):
 
         for sensor in self.sensors:
             raw = StreamToFile('Raw', None, self.hw_stream.buf_len)
-            raw.open(LP_CFG.LP_PATH['stream'], f'{sensor.name}_raw', sensor.params)
+            raw.open(PerfusionConfig.get_date_folder(), f'{sensor.name}_raw', sensor.params)
             sensor.add_strategy(raw)
 
         self.events = []
@@ -84,7 +82,7 @@ class TestFrame(wx.Frame):
         self.events[1].hw.set_read_period_ms(3000)
         for evt in self.events:
             raw = PointsToFile('Raw', None, evt.hw.buf_len)
-            raw.open(LP_CFG.LP_PATH['stream'], f'{evt.name}_raw', evt.params)
+            raw.open(PerfusionConfig.get_date_folder(), f'{evt.name}_raw', evt.params)
             evt.add_strategy(raw)
 
         self.sizer_main = wx.BoxSizer(wx.HORIZONTAL)
@@ -241,6 +239,7 @@ class MyTestApp(wx.App):
         return True
 
 if __name__ == '__main__':
+    PerfusionConfig.set_test_config()
     app = MyTestApp(0)
     app.MainLoop()
 

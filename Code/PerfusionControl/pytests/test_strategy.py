@@ -12,12 +12,6 @@ import numpy as np
 
 from pyPerfusion.ProcessingStrategy import ProcessingStrategy, RMSStrategy
 
-@pytest.fixture
-def ai():
-    ai = pyAI.AI(period_sample_ms=10)
-    yield ai
-    ai.stop()
-
 
 def setup_module(module):
     print("setup_module      module:{}".format(module.__name__))

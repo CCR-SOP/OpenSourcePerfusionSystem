@@ -16,18 +16,16 @@ from pyHardware.pyDIO import DIO
 from pyHardware.pyAI_Finite_NIDAQ import AI_Finite_NIDAQ
 from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.SensorPoint import SensorPoint
 from pyPerfusion.FileStrategy import StreamToFile
 
 device = 'Dev2'
 
+PerfusionConfig.set_test_config()
+
 logger = logging.getLogger()
 utils.setup_stream_logger(logger, logging.DEBUG)
-
-
-LP_CFG.set_base(basepath='~/Documents/LPTEST')
-LP_CFG.update_stream_folder()
 
 dio1 = DIO('valve1')
 dio2 = DIO('valve2')
@@ -53,11 +51,11 @@ sensor2 = SensorPoint('FiniteAcq2', 'counts', ai)
 sensor2.set_ch_id('1')
 
 strategy = StreamToFile('Raw', 1, 10)
-strategy.open(LP_CFG.LP_PATH['stream'], sensor1.name, sensor1.params)
+strategy.open(PerfusionConfig.get_date_folder(), sensor1.name, sensor1.params)
 sensor1.add_strategy(strategy)
 
 strategy = StreamToFile('Raw', 1, 10)
-strategy.open(LP_CFG.LP_PATH['stream'], sensor2.name, sensor2.params)
+strategy.open(PerfusionConfig.get_date_folder(), sensor2.name, sensor2.params)
 sensor2.add_strategy(strategy)
 
 

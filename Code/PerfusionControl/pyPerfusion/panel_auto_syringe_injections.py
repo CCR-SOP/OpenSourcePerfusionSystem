@@ -11,9 +11,9 @@ from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.panel_AI import PanelAI
 from pyPerfusion.syringe_timer import SyringeTimer
 from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.FileStrategy import StreamToFile
-from pyHardware.PHDserial import PHDserial
+from pyPerfusion.pyPump11Elite import Pump11Elite
 
 class PanelSyringe(wx.Panel):
     def __init__(self, parent, sensor, name, injection):
@@ -25,7 +25,7 @@ class PanelSyringe(wx.Panel):
 
         self._inc = 0.1
 
-        section = LP_CFG.get_hwcfg_section(self._injection.name)
+        section = PerfusionConfig.read_section('hardware', self._injection.name)
         self.manucode = section['manucode']
         self.size = section['size']
         self.inject = section['inject']
@@ -49,8 +49,8 @@ class PanelSyringe(wx.Panel):
         if self._injection.name in ['Epoprostenol', 'Phenylephrine', 'Insulin', 'Glucagon']:
             self._panel_feedback = PanelFeedbackSyringe(self, self._sensor, self._name, self._injection)
 
-        self._injection.reset_syringe()
-        self._injection.set_syringe_manufacturer_size(self.manucode[1:4], self.size)
+        self._injection.clear_syringe()
+        # self._injection.set_syringe_manufacturer_size(self.manucode[1:4], self.size)
 
         self.__do_layout()
         self.__set_bindings()
@@ -93,7 +93,7 @@ class PanelSyringe(wx.Panel):
         state = self.btn_start_basal.GetLabel()
         if state == 'Start Basal Infusion':
             self.enable_buttons(False)
-            self._injection.reset_syringe()
+            self._injection.clear_syringe()
             rate = self.spin_rate.GetValue()
             unit = self.choice_rate.GetString(self.choice_rate.GetSelection())
             self._injection.set_infusion_rate(rate, unit)
@@ -109,7 +109,7 @@ class PanelSyringe(wx.Panel):
     def OnOneTimeBolus(self, evt):
         self.btn_start_basal.Enable(False)
         self.enable_buttons(False)
-        self._injection.reset_syringe()
+        self._injection.clear_syringe()
         self._injection.set_infusion_rate(25, 'ml/min')
         volume = self.spin_1TB_volume.GetValue()
         unit = self.choice_1TB_unit.GetString(self.choice_1TB_unit.GetSelection())
@@ -165,7 +165,7 @@ class PanelFeedbackSyringe(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        section = LP_CFG.get_hwcfg_section(self._injection.name)
+        section = PerfusionConfig.read_section('hardware', self._injection.name)
         self.feedback = section['feedback']
         self.feedbackunit = section['feedbackunit']
         self.direction = section['direction']
@@ -225,7 +225,7 @@ class PanelFeedbackSyringe(wx.Panel):
         self.btn_update_reduction_time = wx.Button(self, label='Update')
 
         if self._injection.name == 'Insulin':
-            section = LP_CFG.get_hwcfg_section(self._injection.name)
+            section = PerfusionConfig.read_section('hardware', self._injection.name)
             self.upperglucoselimit = section['upperglucoselimit']
             self.basalratetolerance = section['basalratetolerance']
             self.aboverangerate = section['aboverangerate']
@@ -456,7 +456,7 @@ class PanelFeedbackSyringe(wx.Panel):
     def OnStartFeedbackInjection(self, evt):
         state = self.btn_start_feedback_injections.GetLabel()
         if state == 'Start Feedback Injections':
-            self._injection.reset_syringe()
+            self._injection.clear_syringe()
             self.parent.spin_rate.Enable(False)
             self.parent.choice_rate.Enable(False)
             self.parent.btn_start_basal.Enable(False)
@@ -515,44 +515,44 @@ class TestFrame(wx.Frame):
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensor = SensorStream('Flow Sensor', 'mL/min', self.acq)
         raw = StreamToFile('StreamRaw', None, self.acq.buf_len)
-        raw.open(LP_CFG.LP_PATH['stream'], f'{self.sensor.name}_raw', self.sensor.params)
+        raw.open(PerfusionConfig.get_date_folder(), f'{self.sensor.name}_raw', self.sensor.params)
         self.sensor.add_strategy(raw)
         sizer.Add(PanelAI(self, self.sensor, self.sensor.name, 'StreamRaw'), 1, wx.ALL | wx.EXPAND, border=1)
 
-        section = LP_CFG.get_hwcfg_section('Epoprostenol')
+        section = PerfusionConfig.read_section('hardware', 'Epoprostenol')
         com = section['commport']
         baud = section['baudrate']
-        vasodilator_injection = PHDserial('Epoprostenol')
+        vasodilator_injection = Pump11Elite('Epoprostenol')
         vasodilator_injection.open(com, baud)
-        vasodilator_injection.reset_syringe()
-        vasodilator_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        vasodilator_injection.clear_syringe()
+        vasodilator_injection.open_stream(PerfusionConfig.get_date_folder())
         vasodilator_injection.start_stream()
 
-        section = LP_CFG.get_hwcfg_section('Phenylephrine')
+        section = PerfusionConfig.read_section('hardware', 'Phenylephrine')
         com = section['commport']
         baud = section['baudrate']
-        vasoconstrictor_injection = PHDserial('Phenylephrine')
+        vasoconstrictor_injection = Pump11Elite('Phenylephrine')
         vasoconstrictor_injection.open(com, baud)
-        vasoconstrictor_injection.reset_syringe()
-        vasoconstrictor_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        vasoconstrictor_injection.clear_syringe()
+        vasoconstrictor_injection.open_stream(PerfusionConfig.get_date_folder())
         vasoconstrictor_injection.start_stream()
 
-        section = LP_CFG.get_hwcfg_section('Heparin')
+        section = PerfusionConfig.read_section('hardware', 'Heparin')
         com = section['commport']
         baud = section['baudrate']
-        heparin_injection = PHDserial('Heparin')
+        heparin_injection = Pump11Elite('Heparin')
         heparin_injection.open(com, baud)
-        heparin_injection.reset_syringe()
-        heparin_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        heparin_injection.clear_syringe()
+        heparin_injection.open_stream(PerfusionConfig.get_date_folder())
         heparin_injection.start_stream()
 
-        section = LP_CFG.get_hwcfg_section('TPN & Bile Salts')
+        section = PerfusionConfig.read_section('hardware', 'TPN & Bile Salts')
         com = section['commport']
         baud = section['baudrate']
-        tpn_bilesalts_injection = PHDserial('TPN & Bile Salts')
+        tpn_bilesalts_injection = Pump11Elite('TPN & Bile Salts')
         tpn_bilesalts_injection.open(com, baud)
-        tpn_bilesalts_injection.reset_syringe()
-        tpn_bilesalts_injection.open_stream(LP_CFG.LP_PATH['stream'])
+        tpn_bilesalts_injection.clear_syringe()
+        tpn_bilesalts_injection.open_stream(PerfusionConfig.get_date_folder())
         tpn_bilesalts_injection.start_stream()
 
         self._syringes = [vasodilator_injection, vasoconstrictor_injection, heparin_injection, tpn_bilesalts_injection]
@@ -608,8 +608,7 @@ class MyTestApp(wx.App):
         return True
 
 if __name__ == "__main__":
-    LP_CFG.set_base(basepath='~/Documents/LPTEST')
-    LP_CFG.update_stream_folder()
+    PerfusionConfig.set_test_config()
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     utils.setup_stream_logger(logger, logging.DEBUG)
