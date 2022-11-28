@@ -8,16 +8,15 @@ import logging
 from threading import Thread, Lock, Event
 from time import perf_counter, sleep
 from queue import Queue, Empty
+from dataclasses import dataclass
 
 import numpy as np
 import serial
 import serial.tools.list_ports
 
-from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.FileStrategy import StreamToFile
-
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
@@ -65,47 +64,55 @@ class CDIParsedData:
         print(f'Hemoglobin is {self.hgb}')
 
 
+@dataclass
+class CDIConfig:
+    port: str = ''
+    sampling_period_ms: int = 1000
+    samples_per_read: int = 18
+
+
 class CDIStreaming:
     def __init__(self, name):
-        super().__init__()
         self._lgr = logging.getLogger(__name__)
+        self.name = name
+        self._queue = None
         self.data_type = np.float32
 
-        self.name = name
+        self.cfg = CDIConfig()
 
         self.__serial = serial.Serial()
-        self._baud = 9600
-
-        self._queue = None
-        self.__acq_start_t = None
-        self.period_sampling_ms = 1000
-        self.samples_per_read = 18
         self._timeout = 0.5
+
         self._event_halt = Event()
         self.__thread = None
-        self.buf_len = 17
-
         self.is_streaming = False
+
+    def write_config(self):
+        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
+
+    def read_config(self):
+        cfg = CDIConfig()
+        PerfusionConfig.read_into_dataclass('hardware', self.name, cfg)
+        self.open(cfg)
 
     def is_open(self):
         return self.__serial.is_open
 
-    def open(self, port_name: str, baud_rate: int) -> None:
+    def open(self, cfg: CDIConfig = None) -> None:
         if self.__serial.is_open:
             self.__serial.close()
-        if isinstance(port_name, str):
-            self.__serial.port = port_name
-            self.__serial.baudrate = baud_rate
-            self.__serial.stopbits = serial.STOPBITS_ONE
-            self.__serial.parity = serial.PARITY_NONE
-            self.__serial.bytesize = serial.EIGHTBITS
-            try:
-                self.__serial.open()
-            except serial.serialutil.SerialException as e:
-                self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
-                self._lgr.error(f'Message: {e}')
-        else:
-            self.__serial = port_name
+        if cfg is not None:
+            self.cfg = cfg
+        self.__serial.port = self.cfg.port
+        self.__serial.baudrate = 9600
+        self.__serial.stopbits = serial.STOPBITS_ONE
+        self.__serial.parity = serial.PARITY_NONE
+        self.__serial.bytesize = serial.EIGHTBITS
+        try:
+            self.__serial.open()
+        except serial.serialutil.SerialException as e:
+            self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
+            self._lgr.error(f'Message: {e}')
         self._queue = Queue()
 
     def close(self):
