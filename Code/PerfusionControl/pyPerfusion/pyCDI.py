@@ -66,6 +66,7 @@ class CDIParsedData:
 
 @dataclass
 class CDIConfig:
+    name: str = 'CDI'
     port: str = ''
     sampling_period_ms: int = 1000
     samples_per_read: int = 18

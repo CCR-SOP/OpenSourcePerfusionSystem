@@ -2,7 +2,14 @@
 
 Example script to show how to open a CDI object from the config file
 
-Assumes the current test_config has an appropriate configuration called Test CDI
+Assumes hardware.ini has a configuration:
+[Test CDI]
+port = COM13
+samples_per_read = 18
+sampling_period_ms = 1000
+
+Actually port value should be changed to the value of the CDI port
+
 
 @project: Liver Perfusion, NIH
 @author: John Kakareka, NIH
