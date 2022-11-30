@@ -17,7 +17,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.FileStrategy import StreamToFile
 import pyPerfusion.pyPump11Elite as pyPump11Elite
-from pyPerfusion.panel_syringe_simple import PanelSyringe
+from pyPerfusion.panel_syringe import PanelSyringe
 
 drugs = ['TPN + Bile Salts', 'Insulin', 'Glucagon', 'Zosyn', 'Phenylephrine', 'Epoprostenol']
 comports = ['COM12', 'COM9', 'COM11', 'COM10', 'COM7', 'COM8']
