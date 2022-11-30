@@ -68,13 +68,15 @@ DEFAULT_MANUFACTURERS = {
 
 @dataclass
 class SyringeConfig:
-    com_port: str = ''
-    manufacturer_code: str = ''
-    size: str = ''
-    initial_injection_rate: int = 0
-    initial_target_volume: int = 0
-    baud: int = 9600
-    address: int = 0
+    def __init__(self, comport='', manu_code='bdp', size='60', init_injection_rate=1000, init_target_volume=1000):
+        super().__init__()
+        com_port: comport
+        manufacturer_code: manu_code
+        size: size
+        initial_injection_rate: int(init_injection_rate)
+        initial_target_volume: int(init_target_volume)
+        baud: int = 9600
+        address: int = 0
 
 
 # utility function to return all available comports in a list
@@ -107,13 +109,13 @@ def get_code_from_name(desired_name: str):
 
 
 class Pump11Elite:
-    def __init__(self, name):
+    def __init__(self, name, config=SyringeConfig()):
         super().__init__()
         self._lgr = logging.getLogger(__name__)
         self.data_type = np.float32
 
         self.name = name
-        self.cfg = SyringeConfig()
+        self.cfg = config
 
         self._serial = serial.Serial()
         self._queue = None
