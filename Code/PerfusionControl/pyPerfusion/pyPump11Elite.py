@@ -68,7 +68,9 @@ DEFAULT_MANUFACTURERS = {
 
 @dataclass
 class SyringeConfig:
-    def __init__(self, comport='', manu_code='bdp', size='60', init_injection_rate=1000, init_target_volume=1000):
+    def __init__(self, drug='', comport='', manu_code='bdp', size='60', init_injection_rate=1000,
+                 init_target_volume=1000):
+        drug: drug
         super().__init__()
         com_port: comport
         manufacturer_code: manu_code

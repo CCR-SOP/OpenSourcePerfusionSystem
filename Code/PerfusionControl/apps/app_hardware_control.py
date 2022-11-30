@@ -13,22 +13,17 @@ import logging
 
 import wx
 
-from pyPerfusion.panel_AI import PanelAI  # comment out
-import pyHardware.pyAI_NIDAQ as NIDAQAI  # comment out
-from pyPerfusion.SensorStream import SensorStream  # comment out
-
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.FileStrategy import StreamToFile
 import pyPerfusion.pyPump11Elite as pyPump11Elite
+from pyPerfusion.panel_syringe_simple import PanelSyringe
 
-BAUD_RATES = ['9600', '14400', '19200', '38400', '57600', '115200']
-drug_dict = {"TPN + Bile Salts": "COM12",
-             "Insulin": "COM9",
-             "Glucagon": "COM11",
-             "Zosyn": "COM10",
-             "Phenlyephrine": "COM7",
-             "Epoprostenol": "COM8"}
+drugs = ['TPN + Bile Salts', 'Insulin', 'Glucagon', 'Zosyn', 'Phenylephrine', 'Epoprostenol']
+comports = ['COM12', 'COM9', 'COM11', 'COM10', 'COM7', 'COM8']
+sizes = ['60', '10', '10', '60', '10', '10']  # check these
+rates = [0, 0, 0, 0, 0, 0]  # update
+target_vols = [0, 0, 0, 0, 0, 0]  # update
 
 class HardwareFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -38,10 +33,22 @@ class HardwareFrame(wx.Frame):
         utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
         utils.configure_matplotlib_logging()
 
-        syringe_total = 6
+        # Initialize syringes with corresponding panels
         self.syringes = []
-        for syringe in range (1,syringe_total):
-            self.syringes[syringe-1] =
+        self.panel = {}
+        for x in range(6):
+            SpecificConfig = pyPump11Elite.SyringeConfig(drug=drugs[x], comport=comports[x], size=sizes[x],
+                                                         init_injection_rate=rates[x],
+                                                         init_target_volume=target_vols[x])
+            syringe = pyPump11Elite.Pump11Elite(name=drugs[x], config=SpecificConfig)
+            self.syringes.append(syringe)
+            self.panel[drugs[x]] = PanelSyringe(parent=self, syringe=syringe)
+            sizer.Add(self.panel[drugs[x]], 1, wx.ALL | wx.EXPAND, border=1)
+
+        self.SetSizer(sizer)
+        self.Fit()
+        self.Layout()
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
 
     def OnClose(self, evt):  # UPDATE
