@@ -115,6 +115,7 @@ class Pump11Elite:
         self.samples_per_read = 0
 
         # JWK, this should be tied to actual hardware
+        # SCL this seems to be working? Was this corrected?
         self.is_infusing = False
 
         self._params = {
@@ -145,9 +146,9 @@ class Pump11Elite:
 
         if cfg is not None:
             self.cfg = cfg
-        self._serial.port = self.cfg.com_port
-        self._serial.baudrate = self.cfg.baud
-        self._serial.xonxoff = True
+            self._serial.port = self.cfg.com_port
+            self._serial.baudrate = self.cfg.baud
+            self._serial.xonxoff = True
         try:
             self._serial.open()
         except serial.serialutil.SerialException as e:
@@ -211,7 +212,8 @@ class Pump11Elite:
         if response == 'Target volume not set':
             vol = 0
             vol_unit = ''
-            self._lgr.warning(f'Attempt to read target volume before it was set')
+            # self._lgr.warning(f'Attempt to read target volume before it was set')
+            # Doesn't need a warning - normal functionality during basal infusions
         else:
             try:
                 vol, vol_unit = response.split(' ')
@@ -315,6 +317,7 @@ class Pump11Elite:
         target_vol, target_unit = self.get_target_volume()
         if target_vol == 0:
             self.record_continuous_infusion(t, start=False)
+
 
     def set_syringe(self, manu_code: str, syringe_size: str) -> None:
         self._set_param('syrm', f'{manu_code} {syringe_size}\r')
