@@ -129,15 +129,15 @@ class PanelSyringeConfig(wx.Panel):
     def OnOpen(self, evt):
         port = self.combo_port.GetStringSelection()
         baud = int(self.choice_baud.GetStringSelection())
-        if not self.syringe.is_open():
 
+        if not self.syringe.is_open():
             self.syringe.cfg.com_port = port
             self.syringe.cfg.baud = baud
             self.syringe.open(self.syringe.cfg)
 
             self.btn_open.SetLabel('Close')
         else:
-            self._lgr.debug(f'Closing syringe at {port}, {baud}')
+            self._lgr.info(f'Closing syringe at {port}, {baud}')
             self.syringe.close()
             self.btn_open.SetLabel('Open')
 
@@ -161,7 +161,7 @@ class PanelSyringeConfig(wx.Panel):
         self.syringe.write_config()
 
     def on_load_cfg(self, evt):
-        self.syringe.read_config()
+        self.syringe.read_config()  # this apparently also opens the comport
         self.update_controls_from_config()
 
 
@@ -222,16 +222,21 @@ class PanelSyringeControls(wx.Panel):
     def OnBasal(self, evt):
         infusion_rate = self.spin_rate.GetValue()
         if self.syringe.is_infusing:
+            self.syringe.set_target_volume(0)
             self.btn_basal.SetLabel('Start Basal')
             self.btn_basal.SetValue(True)
             self.syringe.stop()
+            self._lgr.info(f'Basal syringe infusion halted')
+
         else:
             self.syringe.set_infusion_rate(infusion_rate)
-            self._lgr.debug(f'infusion rate: {infusion_rate}')
-            self._lgr.debug(f'target volume: {0}')
+            self.syringe.set_target_volume(0)
+            # self._lgr.debug(f'Infusion rate: {infusion_rate}')
+            # self._lgr.debug(f'Target volume: {0}')
             self.syringe.start_constant_infusion()
-            self.btn_basal.SetLabel('Stop')
+            self.btn_basal.SetLabel('Stop Basal')
             self.btn_basal.SetValue(False)
+            self._lgr.info(f'Basal syringe infusion at rate {infusion_rate} uL/min started')
 
     def OnBolus(self, evt):
         infusion_rate = self.spin_rate.GetValue()
@@ -239,6 +244,7 @@ class PanelSyringeControls(wx.Panel):
         self.syringe.set_infusion_rate(infusion_rate)
         self.syringe.set_target_volume(target_vol)
         self.syringe.infuse_to_target_volume()
+        self._lgr.info(f'Bolus infusion of {target_vol} uL at rate {infusion_rate} uL/min started')
 
     def update_config_from_controls(self):
         self.syringe.cfg.initial_injection_rate = int(self.spin_rate.GetValue())
