@@ -15,7 +15,7 @@ class SensorPoint(SensorStream):
         self._params = {'Sensor': self.hw.cfg.name,
                         'Unit': self._unit_str,
                         'Data Format': np.dtype(self.hw.data_type).name,
-                        'Sampling Period (ms)': self.hw.cfg.sampling_period_ms,
+                        'Sampling Period (ms)': self.hw.sampling_period_ms,
                         'Samples Per Timestamp': self._samples_per_ts,
                         'Bytes Per Timestamp': self._bytes_per_ts,
                         'Start of Acquisition': 0
