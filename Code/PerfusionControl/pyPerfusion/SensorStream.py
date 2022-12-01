@@ -25,13 +25,13 @@ class SensorStream:
 
         self.data = None
         self._timestamp = None
-        self.data = np.array(self.hw.device.buf_len, dtype=self.hw.device.cfg.data_type)
+        self.data = np.array(self.hw.buf_len, dtype=self.hw.data_type)
 
         self._strategies = []
         self._params = {'Sensor': self.hw.cfg.name,
                         'Unit': self._unit_str,
-                        'Data Format': np.dtype(self.hw.device.cfg.data_type).name,
-                        'Sampling Period (ms)': self.hw.device.cfg.sampling_period_ms,
+                        'Data Format': np.dtype(self.hw.data_type).name,
+                        'Sampling Period (ms)': self.hw.cfg.sampling_period_ms,
                         'Start of Acquisition': 0
                         }
 

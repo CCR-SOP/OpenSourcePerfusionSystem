@@ -10,12 +10,12 @@ class SensorPoint(SensorStream):
     def __init__(self, hw, unit_str):
         self._lgr = logging.getLogger(__name__)
         super().__init__(hw, unit_str)
-        self._samples_per_ts = hw.device.samples_per_read
-        self._bytes_per_ts = np.dtype(self.hw.device.cfg.data_type).itemsize
+        self._samples_per_ts = hw.samples_per_read
+        self._bytes_per_ts = np.dtype(self.hw.data_type).itemsize
         self._params = {'Sensor': self.hw.cfg.name,
                         'Unit': self._unit_str,
-                        'Data Format': np.dtype(self.hw.device.cfg.data_type).name,
-                        'Sampling Period (ms)': self.hw.device.cfg.sampling_period_ms,
+                        'Data Format': np.dtype(self.hw.data_type).name,
+                        'Sampling Period (ms)': self.hw.cfg.sampling_period_ms,
                         'Samples Per Timestamp': self._samples_per_ts,
                         'Bytes Per Timestamp': self._bytes_per_ts,
                         'Start of Acquisition': 0
