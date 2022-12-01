@@ -166,22 +166,27 @@ class PanelSyringeConfig(wx.Panel):
 
 
 class PanelSyringeControls(wx.Panel):
-    def __init__(self, parent, syringe: pyPump11Elite.Pump11Elite):
+    def __init__(self, parent, syringe: pyPump11Elite.Pump11Elite, start_rate=100, start_vol=1000):
         super().__init__(parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self.syringe = syringe
         self._inc = 100
 
-        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.syringe.name)
+        # redundant with PanelSyringe but used in app_hardware_control
+        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        # self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
-        self.spin_rate.SetValue(100)
+        self.spin_rate.SetValue(start_rate)
         self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min)')
         self.btn_basal = wx.ToggleButton(self, label='Start Basal')
 
+        self.btn_open = wx.ToggleButton(self, label='Open')
+
         self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
-        self.spin_volume.SetValue(1000)
+        self.spin_volume.SetValue(start_vol)
         self.label_volume = wx.StaticText(self, label='Target Volume (ul)')
         self.btn_bolus = wx.Button(self, label='Bolus')
 
@@ -195,6 +200,7 @@ class PanelSyringeControls(wx.Panel):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
 
         sizer_cfg = wx.GridSizer(cols=3)
+
         sizer_cfg.Add(self.label_rate, flags)
         sizer_cfg.Add(self.spin_rate, flags)
         sizer_cfg.Add(self.btn_basal, flags)
@@ -203,8 +209,10 @@ class PanelSyringeControls(wx.Panel):
         sizer_cfg.Add(self.spin_volume, flags)
         sizer_cfg.Add(self.btn_bolus, flags)
 
+        sizer_cfg.Add(self.btn_open, flags)
         sizer_cfg.Add(self.btn_save_cfg, flags)
         sizer_cfg.Add(self.btn_load_cfg, flags)
+
 
         self.sizer.Add(sizer_cfg)
 
@@ -214,10 +222,26 @@ class PanelSyringeControls(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
+        self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
         self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
         self.btn_bolus.Bind(wx.EVT_BUTTON, self.OnBolus)
         self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
+
+    def OnOpen(self, evt):
+        port = self.combo_port.GetStringSelection()
+        baud = int(self.choice_baud.GetStringSelection())
+
+        if not self.syringe.is_open():
+            self.syringe.cfg.com_port = port
+            self.syringe.cfg.baud = baud
+            self.syringe.open(self.syringe.cfg)
+
+            self.btn_open.SetLabel('Close')
+        else:
+            self._lgr.info(f'Closing syringe at {port}, {baud}')
+            self.syringe.close()
+            self.btn_open.SetLabel('Open')
 
     def OnBasal(self, evt):
         infusion_rate = self.spin_rate.GetValue()
