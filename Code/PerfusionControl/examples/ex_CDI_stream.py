@@ -24,11 +24,7 @@ COMPORT = 'COM13'
 
 def main():
     cdi = pyCDI.CDIStreaming('Test CDI')
-    if True:
-        fake_port = serial.serial_for_url('loop://')
-        cdi.__serial = fake_port
-    else:
-        cdi.read_config()
+    cdi.read_config()
 
     sensorpt = SensorPoint(cdi, 'na')
     sensorpt.add_strategy(strategy=MultiVarToFile('write', 1, 17))
@@ -42,11 +38,15 @@ def main():
     cdi.start()
 
     data = list(range(18))
+    fake_cdi = serial.Serial()
+    fake_cdi.port = 'COM5'
+    fake_cdi.baud_rate = 9600
+    fake_cdi.open()
     for i in range(10):
         now = datetime.now().strftime('%H:%M:%S')
         cdi_str = f'abc{now}\t' + '\t'.join(f'{d:02x}{d+i:04d}' for d in data)
         print(f'writing {cdi_str}')
-        fake_port.write(bytes(cdi_str + '\n', 'ascii'))
+        fake_cdi.write(bytes(cdi_str + '\n', 'ascii'))
         time.sleep(1)
         print(cdi.request_data(timeout=1))
         print(f'Last acq is : {read_strategy.get_last_acq()}')

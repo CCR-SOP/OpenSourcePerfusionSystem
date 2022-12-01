@@ -30,7 +30,7 @@ code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', 
 class CDIParsedData:
     def __init__(self, response):
         # parse raw ASCII output
-        fields = response.strip(b'\r\n').split(sep=b'\t')
+        fields = response.strip('\r\n').split(sep='\t')
         # in addition to codes, there is a header packet
         # CRC and end packet
         if len(fields) == len(code_mapping) + 2:
@@ -52,7 +52,6 @@ class CDIParsedData:
                                               f'expected {len(code_mapping)} fields, '
                                               f'found {len(fields)}')
 
-
     def get_array(self):
         data = [getattr(self, value) for value in code_mapping.values()]
         return data
@@ -69,7 +68,6 @@ class CDIConfig:
     name: str = 'CDI'
     port: str = ''
     sampling_period_ms: int = 1000
-    samples_per_read: int = 18
 
 
 class CDIStreaming:
@@ -78,6 +76,8 @@ class CDIStreaming:
         self.name = name
         self._queue = None
         self.data_type = np.float32
+        self.buf_len = 18
+        self.samples_per_read = 18
 
         self.cfg = CDIConfig()
 
@@ -133,7 +133,8 @@ class CDIStreaming:
         while not self._event_halt.is_set():
             if self.__serial.in_waiting > 0:
                 resp = self.__serial.readline().decode('ascii')
-                # self._lgr.debug(f'response is {resp}')
+                self._lgr.debug(f'response is {resp}')
+                self._lgr.debug(f'type(response) is {type(resp)}')
                 one_cdi_packet = CDIParsedData(resp)
                 # self._lgr.debug(f'one_cdi_packet = {one_cdi_packet.arterial_pH}')
                 ts = perf_counter()
