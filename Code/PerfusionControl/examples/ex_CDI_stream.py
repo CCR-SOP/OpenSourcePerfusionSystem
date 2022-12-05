@@ -19,7 +19,7 @@ import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
 from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 
-COMPORT = 'COM13'
+COMPORT = 'COM25'
 
 
 def main():
@@ -37,24 +37,27 @@ def main():
     # ro_sensorpt.start()
     cdi.start()
 
-    data = list(range(18))
-    fake_cdi = serial.Serial()
-    fake_cdi.port = 'COM5'
-    fake_cdi.baud_rate = 9600
-    fake_cdi.open()
-    for i in range(10):
-        now = datetime.now().strftime('%H:%M:%S')
-        cdi_str = f'abc{now}\t' + '\t'.join(f'{d:02x}{d+i:04d}' for d in data)
-        print(f'writing {cdi_str}')
-        fake_cdi.write(bytes(cdi_str + '\n', 'ascii'))
-        time.sleep(1)
-        print(cdi.request_data(timeout=1))
-        print(f'Last acq is : {read_strategy.get_last_acq()}')
-    print(f'Last 5 samples are {read_strategy.get_data_from_last_read(timestamp=0)}')
-    time.sleep(5.0)
-    print(f'Last 5 samples are {read_strategy.get_last_acq()}')
+    # data = list(range(18))
+    # fake_cdi = serial.Serial()
+    # fake_cdi.port = 'COM5'
+    # fake_cdi.baud_rate = 9600
+    # fake_cdi.open()
+    # for i in range(10):
+    #     now = datetime.now().strftime('%H:%M:%S')
+    #     cdi_str = f'abc{now}\t' + '\t'.join(f'{d:02x}{d+i:04d}' for d in data)
+    #     print(f'writing {cdi_str}')
+    #     fake_cdi.write(bytes(cdi_str + '\n', 'ascii'))
+    #     time.sleep(1)
+    #     print(cdi.request_data(timeout=1))
+    #     print(f'Last acq is : {read_strategy.get_last_acq()}')
+    print('waiting 30 seconds')
+    time.sleep(30.0)
+    print(f'Last sample:  {read_strategy.get_data_from_last_read(timestamp=0)}')
+    print('waiting 30 seconds')
+    time.sleep(30.0)
+    print(f'Last acq:  {read_strategy.get_last_acq()}')
     time.sleep(60.0)
-    ts, last_samples = read_strategy.retrieve_buffer(60000, 5)
+    ts, last_samples = read_strategy.retrieve_buffer(60000, 2)
     print(last_samples)
     print(type(last_samples))
     for ts, samples in zip(ts, last_samples):

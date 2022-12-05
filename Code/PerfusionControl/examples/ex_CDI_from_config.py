@@ -29,7 +29,7 @@ cdi = pyCDI.CDIStreaming('Test CDI')
 cdi.read_config()
 print(f'Read config for {cdi.name}: ComPort={cdi.cfg.port}, ',
       f'Sampling Period (ms)={cdi.cfg.sampling_period_ms}, ',
-      f'Samples per read (ms) = {cdi.cfg.samples_per_read}')
+      f'Samples per read (ms) = {cdi.samples_per_read}')
 print('Attempting to read data')
 packet = cdi.request_data()
 data = pyCDI.CDIParsedData(packet)

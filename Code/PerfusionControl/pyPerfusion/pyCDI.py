@@ -38,7 +38,7 @@ class CDIParsedData:
             # timestamp will be ignored and will use the timestamp when the response arrives
             # self.timestamp = fields[0][-8:]
             for field in fields[1:-1]:
-                code = field[0:2].upper().decode('ascii')
+                code = field[0:2].upper()
                 try:
                     # logging.getLogger(__name__).debug(f'code is {code}')
                     value = float(field[4:])
@@ -88,6 +88,10 @@ class CDIStreaming:
         self.__thread = None
         self.is_streaming = False
 
+    @property
+    def sampling_period_ms(self):
+        return self.cfg.sampling_period_ms
+
     def write_config(self):
         PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
 
@@ -121,9 +125,9 @@ class CDIStreaming:
             self.__serial.close()
 
     def request_data(self, timeout=30):  # request single data packet
-        # self.__serial.write('X08Z36'.encode(encoding='ascii'))
+        # self.__serial.write(b'X08Z36')
         self.__serial.timeout = timeout
-        CDIpacket = self.__serial.readline()
+        CDIpacket = self.__serial.readline().decode('ascii')
         return CDIpacket
 
     def run(self):  # continuous data stream
