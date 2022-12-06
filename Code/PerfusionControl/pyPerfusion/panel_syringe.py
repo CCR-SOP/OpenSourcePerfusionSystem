@@ -58,7 +58,7 @@ class PanelSyringeConfig(wx.Panel):
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.label_port = wx.StaticText(self, label='COM Port')
-        avail_ports = pyPump11Elite.get_avail_com_ports()
+        avail_ports = utils.get_avail_com_ports()
         self.combo_port = wx.ComboBox(self, wx.ID_ANY, style=wx.CB_READONLY, choices=avail_ports)
 
         self.label_baud = wx.StaticText(self, label='Baud')
@@ -113,7 +113,7 @@ class PanelSyringeConfig(wx.Panel):
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def OnPortDropDown(self, evt):
-        ports = pyPump11Elite.get_avail_com_ports()
+        ports = utils.get_avail_com_ports()
         self._lgr.info(f'Available com ports are {ports}')
         self.combo_port.Set(ports)
 
@@ -263,7 +263,7 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         # see if there are any available com ports, if not
         # use a mock for testing.
-        ports = pyPump11Elite.get_avail_com_ports()
+        ports = utils.get_avail_com_ports()
         if len(ports) > 0:
             self.syringe = pyPump11Elite.Pump11Elite('Example Syringe')
         else:
