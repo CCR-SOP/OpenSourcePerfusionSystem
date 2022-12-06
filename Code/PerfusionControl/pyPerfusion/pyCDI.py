@@ -29,7 +29,10 @@ code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', 
 
 class CDIParsedData:
     def __init__(self, response):
+        self.valid_data = False
         # parse raw ASCII output
+        if response is None:
+            return
         fields = response.strip('\r\n').split(sep='\t')
         # in addition to codes, there is a header packet
         # CRC and end packet
@@ -47,9 +50,10 @@ class CDIParsedData:
                     value = -1
                 if code in code_mapping.keys():
                     setattr(self, code_mapping[code], value)
+            self.valid_data = True
         else:
             logging.getLogger(__name__).error(f'Could parse CDI data, '
-                                              f'expected {len(code_mapping)} fields, '
+                                              f'expected {len(code_mapping) + 2} fields, '
                                               f'found {len(fields)}')
 
     def get_array(self):
@@ -58,9 +62,12 @@ class CDIParsedData:
 
     # test ability to read all 3 sensors on CDI - delete eventually
     def print_results(self):
-        print(f'Arterial pH is {self.arterial_pH}')
-        print(f'Venous pH is {self.venous_pH}')
-        print(f'Hemoglobin is {self.hgb}')
+        if self.valid_data:
+            print(f'Arterial pH is {self.arterial_pH}')
+            print(f'Venous pH is {self.venous_pH}')
+            print(f'Hemoglobin is {self.hgb}')
+        else:
+            print('No valid data to print')
 
 
 @dataclass
@@ -125,9 +132,11 @@ class CDIStreaming:
             self.__serial.close()
 
     def request_data(self, timeout=30):  # request single data packet
-        # self.__serial.write(b'X08Z36')
-        self.__serial.timeout = timeout
-        CDIpacket = self.__serial.readline().decode('ascii')
+        if self.__serial.is_open:
+            self.__serial.timeout = timeout
+            CDIpacket = self.__serial.readline().decode('ascii')
+        else:
+            CDIpacket = None
         return CDIpacket
 
     def run(self):  # continuous data stream
@@ -135,12 +144,9 @@ class CDIStreaming:
         self._event_halt.clear()
         self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
-            if self.__serial.in_waiting > 0:
+            if self.__serial.is_open and self.__serial.in_waiting > 0:
                 resp = self.__serial.readline().decode('ascii')
-                self._lgr.debug(f'response is {resp}')
-                self._lgr.debug(f'type(response) is {type(resp)}')
                 one_cdi_packet = CDIParsedData(resp)
-                # self._lgr.debug(f'one_cdi_packet = {one_cdi_packet.arterial_pH}')
                 ts = perf_counter()
                 self._queue.put((one_cdi_packet, ts))
             else:
