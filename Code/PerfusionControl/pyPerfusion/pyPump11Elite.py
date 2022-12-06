@@ -73,9 +73,18 @@ class SyringeConfig:
         manufacturer_code: str = ''
         size: str = ''
         initial_injection_rate: float = 0.0
+        initial_rate_unit: str = 'uL/min'
+        initial_vol_unit: str = 'uL'
         initial_target_volume: float = 0.0
         baud: int = 9600
         address: int = 0
+
+
+# utility function to return all available comports in a list
+# typically used in a GUI to provide a selection of com ports
+def get_avail_com_ports() -> list:
+    ports = [comport.device for comport in serial.tools.list_ports.comports()]
+    return ports
 
 
 def get_available_manufacturer_codes() -> list:
@@ -249,6 +258,8 @@ class Pump11Elite:
             pass
         elif target_vol_unit == 'ml':
             target_vol = target_vol * 1000
+        elif not target_vol_unit or target_vol == 0:
+            self._lgr.info(f'Please manually stop syringe pump and add a target volume to bolus')
         else:
             self._lgr.error(f'Unknown target volume unit in syringe {self.name}: {target_vol_unit}')
             target_vol = 0
