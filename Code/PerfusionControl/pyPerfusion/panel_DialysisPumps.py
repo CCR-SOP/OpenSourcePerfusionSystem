@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
-""" Application to display all hardware control
+""" Application to display dialysis pump controls
 
 @project: LiverPerfusion NIH
 @author: Stephie Lux, NIH
 
 This work was created by an employee of the US Federal Gov
 and under the public domain.
-
-As of 20221130 - only setup for syringe control
 """
 import logging
 
