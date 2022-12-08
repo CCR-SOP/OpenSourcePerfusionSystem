@@ -22,7 +22,7 @@ drugs = ['TPN + Bile Salts', 'Insulin', 'Glucagon', 'Heparin', 'Phenylephrine', 
 
 # TODO: Insulin, glucagon need the target_vol updated by Dexcom
 
-class HardwareFrame(wx.Frame):
+class SyringeFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
@@ -35,7 +35,6 @@ class HardwareFrame(wx.Frame):
         self.panel = {}
         for x in range(6):
             SpecificConfig = pyPump11Elite.SyringeConfig(drug=drugs[x])
-            # does the line above actually work for saving and updating the config?
             syringe = pyPump11Elite.Pump11Elite(name=drugs[x], config=SpecificConfig)
             syringe.read_config()
 
@@ -50,7 +49,7 @@ class HardwareFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
 
-    def OnClose(self, evt):  # UPDATE
+    def OnClose(self, evt):
         for syringe in self.syringes:
             syringe.stop()
         for panel in self.panel.keys():
@@ -60,7 +59,7 @@ class HardwareFrame(wx.Frame):
 
 class MyHardwareApp(wx.App):
     def OnInit(self):
-        frame = HardwareFrame(None, wx.ID_ANY, "")
+        frame = SyringeFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
         return True
