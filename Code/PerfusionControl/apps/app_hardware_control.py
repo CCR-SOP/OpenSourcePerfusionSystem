@@ -6,8 +6,6 @@
 
 This work was created by an employee of the US Federal Gov
 and under the public domain.
-
-As of 20221130 - only setup for syringe control
 """
 import logging
 
@@ -53,7 +51,7 @@ class SyringeFrame(wx.Frame):
         for syringe in self.syringes:
             syringe.stop()
         for panel in self.panel.keys():
-            self.panel[panel].Destroy()
+            self.panel[panel].Destroy()  # this threw an error suddenly?
         self.Destroy()
 
 
