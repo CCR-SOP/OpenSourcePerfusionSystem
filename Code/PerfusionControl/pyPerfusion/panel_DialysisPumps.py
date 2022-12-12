@@ -69,9 +69,29 @@ class DialysisPumpPanel(wx.Panel):
 
     def OnStart(self, evt):
         # write something to open
-        # switch label on toggle buttons
+        self.start_btn.SetLabel('Stop')
 
-# initialize frame, app
+class TestFrame(wx.Frame):
+    def __init__(self, *args, **kwds):
+        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
+        wx.Frame.__init__(self, *args, **kwds)
+        # see if there are any available com ports, if not
+        # use a mock for testing.
+        self.pump = DialysatePumps('Mock Pump')
+
+        self.panel = DialysisPumpPanel(self, self.pump)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, evt):
+        self.pump.close()  # need method for this
+        self.Destroy()
+
+class MyTestApp(wx.App):
+    def OnInit(self):
+        frame = TestFrame(None, wx.ID_ANY, "")
+        self.SetTopWindow(frame)
+        frame.Show()
+        return True
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
