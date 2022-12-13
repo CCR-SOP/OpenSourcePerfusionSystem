@@ -26,37 +26,39 @@ class DialysisPumpPanel(wx.Panel):
         self.parent = parent
         self.pump = pump
 
-        self.sizer = wx.StaticBoxSizer(wx.VERTICAL)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label='Pump Name Here')  # change to self.pump.name
+        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.label_inflow = wx.StaticText(self, label='Dialysate Inflow Pump Flow Rate')
+        self.label_inflow = wx.StaticText(self, label='Dialysate Inflow Pump Flow Rate:')
         self.input_inflow_rate = wx.TextCtrl(self, wx.ID_ANY, value='5')
 
-        self.label_outflow = wx.StaticText(self, label='Dialysate Outflow Pump Flow Rate')
+        self.label_outflow = wx.StaticText(self, label='Dialysate Outflow Pump Flow Rate:')
         self.input_outflow_rate = wx.TextCtrl(self, wx.ID_ANY, value='5')
 
-        self.start_btn = wx.ToggleButton(self, label='Start')
-        self.unit_label = wx.StaticText(self, label='mL/min')  # connect this to the hardware instead
+        self.start_btn_inflow = wx.ToggleButton(self, label='Start')
+        self.unit_label_inflow = wx.StaticText(self, label='mL/min')  # connect this to the hardware instead
+
+        self.start_btn_outflow = wx.ToggleButton(self, label='Start')
+        self.unit_label_outflow = wx.StaticText(self, label='mL/min')  # connect this to the hardware instead
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
-        sizer_cfg = wx.GridSizer(cols=4)
+        sizer_cfg = wx.GridSizer(cols=2)
 
         sizer_cfg.Add(self.label_inflow, flags)
         sizer_cfg.Add(self.input_inflow_rate, flags)
-        sizer_cfg.Add(self.start_btn, flags)
-        sizer_cfg.Add(self.unit_label, flags)
+        sizer_cfg.Add(self.start_btn_inflow, flags)
+        sizer_cfg.Add(self.unit_label_inflow, flags)
 
         sizer_cfg.Add(self.label_outflow, flags)
         sizer_cfg.Add(self.input_outflow_rate, flags)
-        sizer_cfg.Add(self.start_btn, flags)
-        sizer_cfg.Add(self.unit_label, flags)
+        sizer_cfg.Add(self.start_btn_outflow, flags)
+        sizer_cfg.Add(self.unit_label_outflow, flags)
 
-        sizer_cfg.AddSpacer(2)
-
-        sizer_cfg.Add(self.start_btn, flags)
+        self.sizer.Add(sizer_cfg)
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
@@ -64,12 +66,17 @@ class DialysisPumpPanel(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
+        self.start_btn_inflow.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartInflow)
+        self.start_btn_outflow.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartOutflow)
         # do we need something to accept the text input?
 
-    def OnStart(self, evt):
+    def OnStartInflow(self, evt):
         # write something to open
-        self.start_btn.SetLabel('Stop')
+        self.start_btn_inflow.SetLabel('Stop')
+
+    def OnStartOutflow(self, evt):
+        # write something to open
+        self.start_btn_outflow.SetLabel('Stop')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -83,7 +90,7 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.pump.close()  # need method for this
+        # self.pump.close()  # need method for this
         self.Destroy()
 
 class MyTestApp(wx.App):
