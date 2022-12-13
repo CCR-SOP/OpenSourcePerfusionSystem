@@ -18,15 +18,15 @@ from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 
 
 class DialysisPumpPanel(wx.Panel):
-    def __init__(self, parent, pump: DialysatePumps, **kwds):
+    def __init__(self, parent, **kwds):  # add pump as an argument - just skeletonized right now
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
         utils.configure_matplotlib_logging()
         self.parent = parent
-        self.pump = pump
+        # self.pump = pump
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label='Pump Name Here')  # change to self.pump.name
+        static_box = wx.StaticBox(self, wx.ID_ANY, label='Dialysis Pumps')
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.label_inflow = wx.StaticText(self, label='Dialysate Inflow Pump Flow Rate:')
@@ -82,11 +82,9 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        # see if there are any available com ports, if not
-        # use a mock for testing.
-        self.pump = DialysatePumps('Mock Pump')
+        # self.pump = DialysatePumps('Mock Pump')
 
-        self.panel = DialysisPumpPanel(self, self.pump)
+        self.panel = DialysisPumpPanel(self)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
