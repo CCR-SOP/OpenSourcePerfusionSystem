@@ -39,11 +39,10 @@ class StockertPumpPanel(wx.Panel):
         sizer_cfg = wx.GridSizer(cols=3)
 
         sizer_cfg.Add(self.label_pump_speed, flags)
-        sizer_cfg.AddSpacer(2)
         sizer_cfg.Add(self.input_pump_speed, flags)
-        sizer_cfg.AddSpacer(2)
         sizer_cfg.Add(self.start_btn, flags)
-        sizer_cfg.AddSpacer(2)
+
+        self.sizer.Add(sizer_cfg)
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
@@ -52,7 +51,7 @@ class StockertPumpPanel(wx.Panel):
 
     def __set_bindings(self):
         self.start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
-        # do we need something to accept the text input?
+        # need something to accept the text input
 
     def OnStart(self, evt):
         # write something to open
