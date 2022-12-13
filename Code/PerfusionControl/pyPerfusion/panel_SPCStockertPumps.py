@@ -14,7 +14,7 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 
-class CentrifugalPumps(wx.Panel):
+class CentrifugalPumpPanel(wx.Panel):
     def __init__(self, parent):
         self.parent = parent
         wx.Panel.__init__(self, parent)
@@ -88,6 +88,7 @@ class StockertPumpPanel(wx.Panel):
         # write something to open
         self.start_btn.SetLabel('Stop')
 
+
 class SinusoidalPumpPanel(wx.Panel):
     def __init__(self, parent):
         self.parent = parent
@@ -115,8 +116,6 @@ class SinusoidalPumpPanel(wx.Panel):
         sizer_cfg.Add(self.input_trough_speed, flags)
         sizer_cfg.Add(self.label_peak_speed, flags)
         sizer_cfg.Add(self.input_peak_speed, flags)
-
-        # how to skip a column?
         sizer_cfg.Add(self.start_btn, flags)
 
         self.sizer.Add(sizer_cfg)
@@ -138,9 +137,8 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        # define pumps and call combined panel
 
-        self.panel = CentrifugalPumps(self)
+        self.panel = CentrifugalPumpPanel(self)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
