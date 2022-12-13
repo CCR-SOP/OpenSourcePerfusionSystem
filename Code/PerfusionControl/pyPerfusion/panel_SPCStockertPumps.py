@@ -14,16 +14,47 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 
+class CentrifugalPumps(wx.Panel):
+    def __init__(self, parent):
+        self.parent = parent
+        wx.Panel.__init__(self, parent)
 
-class StockertPumpPanel(wx.Panel):
-    def __init__(self, parent, **kwds):  # need to add in pump code
-        wx.Panel.__init__(self, parent, -1)
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
         utils.configure_matplotlib_logging()
-        self.parent = parent
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Mock Stockert Pump")
+        self._panel_HA = StockertPumpPanel(self, 'Hepatic Artery Pump')
+        self._panel_PV = StockertPumpPanel(self, 'Portal Vein Pump')
+        self._panel_pulsatile = SinusoidalPumpPanel(self)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Centrifugal Pumps")
+        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+
+        self.__do_layout()
+        self.__set_bindings()
+
+    def __do_layout(self):
+        flags = wx.SizerFlags().Expand().Border()
+
+        self.sizer.Add(self._panel_HA, flags.Proportion(2))
+        self.sizer.Add(self._panel_PV, flags.Proportion(2))
+        self.sizer.Add(self._panel_pulsatile, flags.Proportion(2))
+
+        self.sizer.SetSizeHints(self.parent)
+        self.SetSizer(self.sizer)
+        self.Layout()
+        self.Fit()
+
+    def __set_bindings(self):
+        pass
+
+
+class StockertPumpPanel(wx.Panel):
+    def __init__(self, parent, name):
+        self.parent = parent
+        wx.Panel.__init__(self, parent)
+        self.name = name
+        # need the pump as an input argument eventually
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.label_pump_speed = wx.StaticText(self, label='Input pump speed (rpm):')
@@ -58,14 +89,11 @@ class StockertPumpPanel(wx.Panel):
         self.start_btn.SetLabel('Stop')
 
 class SinusoidalPumpPanel(wx.Panel):
-    def __init__(self, parent, **kwds):  # need to add in pump code
-        wx.Panel.__init__(self, parent, -1)
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-        utils.configure_matplotlib_logging()
+    def __init__(self, parent):
         self.parent = parent
+        wx.Panel.__init__(self, parent)
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Sinusoidal Pump")
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Pulsatile Mode for HA Pump")
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.label_trough_speed = wx.StaticText(self, label='Minimum speed (rpm):')
@@ -84,41 +112,38 @@ class SinusoidalPumpPanel(wx.Panel):
         sizer_cfg = wx.GridSizer(cols=4)
 
         sizer_cfg.Add(self.label_trough_speed, flags)
-        sizer_cfg.AddSpacer(2)
         sizer_cfg.Add(self.input_trough_speed, flags)
-        sizer_cfg.AddSpacer(2)
         sizer_cfg.Add(self.label_peak_speed, flags)
-        sizer_cfg.AddSpacer(2)
         sizer_cfg.Add(self.input_peak_speed, flags)
-        sizer_cfg.AddSpacer(2)
 
+        # how to skip a column?
         sizer_cfg.Add(self.start_btn, flags)
-        sizer_cfg.AddSpacer(2)
+
+        self.sizer.Add(sizer_cfg)
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
+    # update methods as needed
+
     def __set_bindings(self):
         self.start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
-        # do we need something to accept the text input?
 
     def OnStart(self, evt):
-        # write something to open
         self.start_btn.SetLabel('Stop')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        # define pumps
+        # define pumps and call combined panel
 
-        self.panel = StockertPumpPanel(self)
+        self.panel = CentrifugalPumps(self)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        # write something to close
         self.Destroy()
 
 class MyTestApp(wx.App):
