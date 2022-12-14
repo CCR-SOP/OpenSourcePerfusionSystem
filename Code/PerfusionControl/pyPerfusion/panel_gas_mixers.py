@@ -15,6 +15,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import mcqlib_GB100.mcqlib.main as mcq
 from pyPerfusion.pyGB100_SL import GB100_shift
+# import something for CDI
 
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
@@ -146,7 +147,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.mixer_shifter.check_CO2(CDI_output)
             self.mixer_shifter.check_O2(CDI_output)
             # something to make this repeat every 5 minutes
-            # change all of the displays
+            # change all of the displays - maybe this should be an independent method
         else:
             self.automatic_start_btn.SetLabel('Start Automatic')
             # break out of the 5 minute loop
