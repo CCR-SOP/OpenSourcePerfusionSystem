@@ -13,7 +13,7 @@ import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.panel_multiple_syringes import SyringeFrame
+from pyPerfusion.panel_multiple_syringes import SyringePanel
 from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_SPCStockertPumps import CentrifugalPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
@@ -26,12 +26,12 @@ class HardwarePanel(wx.Panel):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self._panel_syringes = SyringeFrame(self)  # may need to be a panel...
+        self._panel_syringes = SyringePanel(self)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self)
         self._panel_gas_mixers = GasMixerPanel(self)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.sizer = wx.GridSizer(cols=2)
 
         self.__do_layout()
         self.__set_bindings()
