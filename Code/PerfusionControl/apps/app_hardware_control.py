@@ -16,6 +16,7 @@ import pyPerfusion.utils as utils
 from pyPerfusion.panel_multiple_syringes import SyringeFrame
 from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_SPCStockertPumps import CentrifugalPumpPanel
+from pyPerfusion.panel_gas_mixers import GasMixerPanel
 
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
@@ -25,10 +26,10 @@ class HardwarePanel(wx.Panel):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self._panel_syringes = SyringeFrame(self)
+        self._panel_syringes = SyringeFrame(self)  # may need to be a panel...
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self)
-        # add in gas mixer panel once complete
+        self._panel_gas_mixers = GasMixerPanel(self)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
@@ -41,6 +42,7 @@ class HardwarePanel(wx.Panel):
         self.sizer.Add(self._panel_syringes, flags.Proportion(2))
         self.sizer.Add(self._panel_centrifugal_pumps, flags.Proportion(2))
         self.sizer.Add(self._panel_dialysate_pumps, flags.Proportion(2))
+        self.sizer.Add(self._panel_gas_mixers, flags.Proportion(2))
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
