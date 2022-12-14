@@ -20,13 +20,15 @@ drugs = ['TPN + Bile Salts', 'Insulin', 'Glucagon', 'Heparin', 'Phenylephrine', 
 
 # TODO: Insulin, glucagon need the target_vol updated by Dexcom
 
-class SyringeFrame(wx.Frame):
-    def __init__(self, *args, **kwds):
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, *args, **kwds)
+utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+utils.configure_matplotlib_logging()
+
+class SyringePanel(wx.Panel):
+    def __init__(self, parent):
+        self.parent = parent
+        wx.Panel.__init__(self, parent)
+
         sizer = wx.GridSizer(cols=2)
-        utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-        utils.configure_matplotlib_logging()
 
         # Initialize syringes with corresponding panels
         self.syringes = []
@@ -44,14 +46,24 @@ class SyringeFrame(wx.Frame):
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
-        self.Bind(wx.EVT_CLOSE, self.OnClose)
-
 
     def OnClose(self, evt):
         for syringe in self.syringes:
             syringe.stop()
         for panel in self.panel.keys():
-            self.panel[panel].Destroy()  # this threw an error suddenly?
+            self.panel[panel].Destroy()
+
+
+class SyringeFrame(wx.Frame):
+    def __init__(self, *args, **kwds):
+        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
+        wx.Frame.__init__(self, *args, **kwds)
+
+        self.panel = SyringePanel(self)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, evt):
+        self.panel.OnClose(self)
         self.Destroy()
 
 
