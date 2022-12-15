@@ -26,6 +26,7 @@ physio_ranges = {'pH_lower': 7.3, 'pH_upper': 7.5,
                  'venous_CO2_lower': 20, 'venous_CO2_upper': 80,
                  'venous_O2_lower_so2': 60, 'venous_O2_upper_so2': 92}
 
+
 class GB100_shift:
     def __init__(self, vessel, mixer):
         self._logger = logging.getLogger(__name__)
