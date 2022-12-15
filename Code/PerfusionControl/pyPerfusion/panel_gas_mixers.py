@@ -140,18 +140,18 @@ class BaseGasMixerPanel(wx.Panel):
 
     def OnAutoStart(self, evt):
         working_status = self.mixer_shifter.mixer.get_working_status()
-        CDI_output = [1] * 18  # BIND THIS TO THE REAL CDI OUTPUT
-        if working_status == 1:  # 1 is off
+        CDI_output = [1] * 18  # TODO: BIND THIS TO THE REAL CDI OUTPUT
+        if working_status == 1:
             self.mixer_shifter.mixer.set_working_status_ON()
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.mixer_shifter.check_pH(CDI_output)
             self.mixer_shifter.check_CO2(CDI_output)
             self.mixer_shifter.check_O2(CDI_output)
-            # something to make this repeat every 5 minutes
-            # change all of the displays - maybe this should be an independent method
+            # TODO: something to make this repeat every 5 minutes
+            # TODO: change all of the displays - maybe this should be an independent method
         else:
             self.automatic_start_btn.SetLabel('Start Automatic')
-            # break out of the 5 minute loop
+            # TODO: break out of the 5 minute loop
 
     def OnChangePercentMix(self, evt):
         new_percent = evt.GetValue()
@@ -161,7 +161,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.mixer_shifter.mixer.set_channel_percent_value(2, 100-new_percent)
 
         # Update app display to reflect new values
-        gas2_mix_perc = 100 - new_percent  # or pull this value from the gas mixer?
+        gas2_mix_perc = 100 - new_percent
         gas2_mix_str = str(gas2_mix_perc)
         self.input_gas2.SetValue(gas2_mix_str)
 
@@ -178,6 +178,7 @@ class BaseGasMixerPanel(wx.Panel):
         print(new_total_flow)
         # this isn't working? i can't figure out why since I call this the same way in the (working) example file
         # Error: failed all the attempts
+        # TODO: fix
 
 
 class TestFrame(wx.Frame):
@@ -191,12 +192,14 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         self.Destroy()
 
+
 class MyTestApp(wx.App):
     def OnInit(self):
         frame = TestFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
         return True
+
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
