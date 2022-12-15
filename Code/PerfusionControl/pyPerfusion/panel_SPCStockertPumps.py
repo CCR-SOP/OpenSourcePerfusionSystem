@@ -103,6 +103,9 @@ class SinusoidalPumpPanel(wx.Panel):
         self.label_peak_speed = wx.StaticText(self, label='Maximum speed (rpm):')
         self.input_peak_speed = wx.TextCtrl(self, wx.ID_ANY, value='200')
 
+        self.label_frequency = wx.StaticText(self, label='Frequency (Hz):')
+        self.input_frequency = wx.TextCtrl(self, wx.ID_ANY, value='.6')
+
         self.start_btn = wx.ToggleButton(self, label='Start')
 
         self.__do_layout()
@@ -110,12 +113,14 @@ class SinusoidalPumpPanel(wx.Panel):
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
-        sizer_cfg = wx.GridSizer(cols=4)
+        sizer_cfg = wx.GridSizer(cols=6)
 
         sizer_cfg.Add(self.label_trough_speed, flags)
         sizer_cfg.Add(self.input_trough_speed, flags)
         sizer_cfg.Add(self.label_peak_speed, flags)
         sizer_cfg.Add(self.input_peak_speed, flags)
+        sizer_cfg.Add(self.label_frequency, flags)
+        sizer_cfg.Add(self.input_frequency, flags)
         sizer_cfg.Add(self.start_btn, flags)
 
         self.sizer.Add(sizer_cfg)
