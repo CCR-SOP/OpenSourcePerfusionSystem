@@ -10,6 +10,9 @@ and under the public domain.
 
 import mcqlib_GB100.mcqlib.main as mcq
 import time
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+
+PerfusionConfig.set_test_config()
 
 mixer = mcq.Main('Arterial Gas Mixer')
 total_channels = mixer.get_total_channels()

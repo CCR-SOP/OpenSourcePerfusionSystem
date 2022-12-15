@@ -9,8 +9,11 @@ and under the public domain.
 
 from pyPerfusion.pyGB100_SL import GB100_shift
 import mcqlib_GB100.mcqlib.main as mcq
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
-sample_CDI_output = [1] * 18  # comment this out
+PerfusionConfig.set_test_config()
+
+sample_CDI_output = [1] * 18
 
 HA_mixer = mcq.Main('Arterial Gas Mixer')
 HA_mixer_shift = GB100_shift('HA', HA_mixer)

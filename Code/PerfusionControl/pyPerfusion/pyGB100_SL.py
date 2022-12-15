@@ -8,13 +8,16 @@ and under the public domain.
 """
 
 import logging
-import serial
 import time
 from datetime import datetime
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import mcqlib_GB100.mcqlib.main as mcq
+
+PerfusionConfig.set_test_config()
+utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+utils.configure_matplotlib_logging()
 
 # dictionary of acceptable value ranges
 physio_ranges = {'pH_lower': 7.3, 'pH_upper': 7.5,
