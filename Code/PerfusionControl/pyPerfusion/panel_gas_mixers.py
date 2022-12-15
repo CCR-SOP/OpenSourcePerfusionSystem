@@ -61,6 +61,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.parent = parent
         self.name = name
         self.mixer_shifter = mixer_shifter
+        self.gas1 = list(self.mixer_shifter.gas_dict.keys())[0]
+        self.gas2 = list(self.mixer_shifter.gas_dict.keys())[1]
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -79,14 +81,14 @@ class BaseGasMixerPanel(wx.Panel):
         gas1_flow_str = str(gas1_flow)
         gas2_flow_str = str(gas2_flow)
 
-        self.label_gas1 = wx.StaticText(self, label='Gas 1 % Mix:')
+        self.label_gas1 = wx.StaticText(self, label=f'{self.gas1} % Mix:')
         self.input_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
-        self.label_flow_gas1 = wx.StaticText(self, label='Gas 1 flow (mL/min):')
+        self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} actual flow (mL/min):')
         self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_flow_str)
 
-        self.label_gas2 = wx.StaticText(self, label='Gas 2 % Mix:')
+        self.label_gas2 = wx.StaticText(self, label=f'{self.gas2} % Mix:')
         self.input_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_mix_str)
-        self.label_flow_gas2 = wx.StaticText(self, label='Gas 2 flow (mL/min):')
+        self.label_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} actual flow (mL/min):')
         self.flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_flow_str)
 
         self.manual_start_btn = wx.ToggleButton(self, label='Manual Start')
@@ -163,8 +165,8 @@ class BaseGasMixerPanel(wx.Panel):
         gas2_mix_str = str(gas2_mix_perc)
         self.input_gas2.SetValue(gas2_mix_str)
 
-        gas1_flow = self.mixer_shifter.mixer.get_channel_target_sccm(1)
-        gas2_flow = self.mixer_shifter.mixer.get_channel_target_sccm(2)
+        gas1_flow = self.mixer_shifter.mixer.get_channel_sccm_av(1)
+        gas2_flow = self.mixer_shifter.mixer.get_channel_sccm_av(2)
         gas1_flow_str = str(gas1_flow)
         gas2_flow_str = str(gas2_flow)
         self.flow_gas1.SetValue(gas1_flow_str)
@@ -173,7 +175,9 @@ class BaseGasMixerPanel(wx.Panel):
     def OnChangeTotalFlow(self, evt):
         new_total_flow = evt.GetValue()
         self.mixer_shifter.mixer.set_mainboard_total_flow(new_total_flow)
-        # check that gas mixer stays on? test this for both change methods
+        print(new_total_flow)
+        # this isn't working? i can't figure out why since I call this the same way in the (working) example file
+        # Error: failed all the attempts
 
 
 class TestFrame(wx.Frame):
