@@ -29,34 +29,29 @@ class DialysisPumpPanel(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label='Dialysis Pumps')
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.label_inflow = wx.StaticText(self, label='Dialysate Inflow Pump Flow Rate:')
+        self.label_inflow = wx.StaticText(self, label='Dialysate inflow pump flow rate (mL/min):')
         self.input_inflow_rate = wx.TextCtrl(self, wx.ID_ANY, value='5')
 
-        self.label_outflow = wx.StaticText(self, label='Dialysate Outflow Pump Flow Rate:')
+        self.label_outflow = wx.StaticText(self, label='Dialysate outflow pump flow rate (mL/min):')
         self.input_outflow_rate = wx.TextCtrl(self, wx.ID_ANY, value='5')
 
         self.start_btn_inflow = wx.ToggleButton(self, label='Start')
-        self.unit_label_inflow = wx.StaticText(self, label='mL/min')  # connect this to the hardware instead
-
         self.start_btn_outflow = wx.ToggleButton(self, label='Start')
-        self.unit_label_outflow = wx.StaticText(self, label='mL/min')  # connect this to the hardware instead
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
-        sizer_cfg = wx.GridSizer(cols=2)
+        sizer_cfg = wx.GridSizer(cols=3)
 
         sizer_cfg.Add(self.label_inflow, flags)
         sizer_cfg.Add(self.input_inflow_rate, flags)
         sizer_cfg.Add(self.start_btn_inflow, flags)
-        sizer_cfg.Add(self.unit_label_inflow, flags)
 
         sizer_cfg.Add(self.label_outflow, flags)
         sizer_cfg.Add(self.input_outflow_rate, flags)
         sizer_cfg.Add(self.start_btn_outflow, flags)
-        sizer_cfg.Add(self.unit_label_outflow, flags)
 
         self.sizer.Add(sizer_cfg)
 
