@@ -17,12 +17,12 @@ import mcqlib_GB100.mcqlib.main as mcq
 from pyPerfusion.pyGB100_SL import GB100_shift
 # import something for CDI
 
+PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 HA_mixer = mcq.Main('Arterial Gas Mixer')
 HA_mixer_shift = GB100_shift('HA', HA_mixer)
-
 PV_mixer = mcq.Main('Venous Gas Mixer')
 PV_mixer_shift = GB100_shift('PV', PV_mixer)
 
@@ -69,10 +69,9 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
         self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400, initial=total_flow, inc=1)
 
-        channel_nr = 1  # needs to be an attribute
+        channel_nr = 1  # always just change the first channel and the rest will follow
         gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(channel_nr)
         gas2_mix_perc = 100 - gas1_mix_perc
-        # gas1_mix_str = str(gas1_mix_perc)
         gas2_mix_str = str(gas2_mix_perc)
 
         gas1_flow = self.mixer_shifter.mixer.get_channel_target_sccm(1)
@@ -124,8 +123,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.manual_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnManualStart())
-        self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart())
+        self.manual_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnManualStart)
+        self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
         self.input_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangePercentMix)
         self.input_total_flow.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeTotalFlow)
 

@@ -16,7 +16,7 @@ import pyPerfusion.utils as utils
 import mcqlib_GB100.mcqlib.main as mcq
 
 PerfusionConfig.set_test_config()
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 # dictionary of acceptable value ranges
