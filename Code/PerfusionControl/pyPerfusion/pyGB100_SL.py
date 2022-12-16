@@ -60,8 +60,7 @@ class GB100_shift:
             id_gas = mixer.get_channel_id_gas(channel)  # numeric ID
             gas_type = mcq.mcq_utils.get_gas_type(id_gas)  # gas compound names (oxygen, nitrogen, etc.)
             if gas_type == "Air":
-                self._logger.debug(f'Gas type is set to {gas_type}. Please set to Oxygen, Carbon Dioxide, or Nitrogen.')
-                # can we throw an error if this happens to force the code to stop running?
+                self._logger.error(f'Gas type is set to {gas_type}. Please set to Oxygen, Carbon Dioxide, or Nitrogen.')
             gas_types.append(gas_type)
         self.gas_dict = {gas_types[0]: 1, gas_types[1]: 2}
 
@@ -85,7 +84,7 @@ class GB100_shift:
                     new_percentage_mix = percentage_mix - self.co2_adjust
                 self.mixer.set_channel_percent_value(self.gas_dict['Carbon Dioxide'], new_percentage_mix)
             else:
-                self._logger.debug(f'CO2 % is at {percentage_mix} and cannot be changed automatically')  # should this be printing in Git? It's not
+                self._logger.debug(f'CO2 % is at {percentage_mix} and cannot be changed automatically')
         else:
             self._logger.debug(f'Cannot update CO2 in PV - gas mix only contains N2 and O2. Increasing total flow by '
                                f'10 mL/min to blow off more CO2. Adjust total flow for continued changes')
