@@ -15,7 +15,10 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import mcqlib_GB100.mcqlib.main as mcq
 from pyPerfusion.pyGB100_SL import GB100_shift
-# import something for CDI
+import pyPerfusion.pyCDI as pyCDI
+from pyPerfusion.SensorPoint import SensorPoint
+from pyPerfusion.FileStrategy import MultiVarToFile
+import time
 
 PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
@@ -139,19 +142,24 @@ class BaseGasMixerPanel(wx.Panel):
             self.manual_start_btn.SetLabel('Start Manual')
 
     def OnAutoStart(self, evt):
-        working_status = self.mixer_shifter.mixer.get_working_status()
-        CDI_output = [1] * 18  # TODO: BIND THIS TO THE REAL CDI OUTPUT
-        if working_status == 1:
+        GB100_working_status = self.mixer_shifter.mixer.get_working_status()
+        cdi = pyCDI.CDIStreaming('CDI')
+        # cdi.read_config() need updated pyCDI and SensorPopint for this to work
+        sensorpt = SensorPoint(cdi, 'NA')
+        sensorpt.start()
+        cdi.start()
+        CDI_output = sensorpt.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+        if GB100_working_status == 1:
             self.mixer_shifter.mixer.set_working_status_ON()
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.mixer_shifter.check_pH(CDI_output)
             self.mixer_shifter.check_CO2(CDI_output)
             self.mixer_shifter.check_O2(CDI_output)
-            # TODO: something to make this repeat every 5 minutes
+            time.sleep(5.0)
             # TODO: change all of the displays - maybe this should be an independent method
         else:
             self.automatic_start_btn.SetLabel('Start Automatic')
-            # TODO: break out of the 5 minute loop
+            cdi.stop()
 
     def OnChangePercentMix(self, evt):
         new_percent = evt.GetValue()
