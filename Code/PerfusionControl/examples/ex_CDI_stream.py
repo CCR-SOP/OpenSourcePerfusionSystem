@@ -20,6 +20,7 @@ import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
 from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 
+PerfusionConfig.set_test_config()
 
 def main():
     cdi = pyCDI.CDIStreaming('CDI')

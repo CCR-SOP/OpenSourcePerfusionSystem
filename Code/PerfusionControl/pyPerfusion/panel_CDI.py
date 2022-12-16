@@ -19,7 +19,7 @@ from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
-
+PerfusionConfig.set_test_config()
 
 class PanelCDI(wx.Panel):
     def __init__(self, parent, cdi_obj: pyCDI.CDIStreaming):

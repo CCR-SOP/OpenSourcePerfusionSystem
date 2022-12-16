@@ -61,13 +61,13 @@ class CDIParsedData:
         return data
 
     # test ability to read all 3 sensors on CDI - delete eventually
-    def print_results(self):
-        if self.valid_data:
-            print(f'Arterial pH is {self.arterial_pH}')
-            print(f'Venous pH is {self.venous_pH}')
-            print(f'Hemoglobin is {self.hgb}')
-        else:
-            print('No valid data to print')
+    # def print_results(self):
+        # if self.valid_data:
+            # print(f'Arterial pH is {self.arterial_pH}')
+            # print(f'Venous pH is {self.venous_pH}')
+            # print(f'Hemoglobin is {self.hgb}')
+        # else:
+            # print('No valid data to print')
 
 
 @dataclass
