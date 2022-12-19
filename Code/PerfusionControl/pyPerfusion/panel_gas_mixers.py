@@ -182,11 +182,7 @@ class BaseGasMixerPanel(wx.Panel):
 
     def OnChangeTotalFlow(self, evt):
         new_total_flow = evt.GetValue()
-        self.mixer_shifter.mixer.set_mainboard_total_flow(new_total_flow)
-        print(new_total_flow)
-        # this isn't working? i can't figure out why since I call this the same way in the (working) example file
-        # Error: failed all the attempts
-        # TODO: fix
+        self.mixer_shifter.mixer.set_mainboard_total_flow(int(new_total_flow))
 
 
 class TestFrame(wx.Frame):
