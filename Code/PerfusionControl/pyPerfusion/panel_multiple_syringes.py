@@ -19,9 +19,9 @@ from pyPerfusion.panel_syringe import PanelSyringeControls
 drugs = ['TPN + Bile Salts', 'Insulin', 'Glucagon', 'Heparin', 'Phenylephrine', 'Epoprostenol']
 
 # TODO: Insulin, glucagon need the target_vol updated by Dexcom
-
-utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
+
 
 class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
     def __init__(self, parent):
