@@ -23,7 +23,7 @@ from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 PerfusionConfig.set_test_config()
 
 def main():
-    cdi = pyCDI.CDIStreaming('CDI')
+    cdi = pyCDI.CDIStreaming('Test CDI')
     cdi.read_config()
     fake_cdi = None
     if not cdi.is_open():

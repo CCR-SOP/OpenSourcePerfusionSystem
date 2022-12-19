@@ -33,4 +33,6 @@ print(f'Read config for {cdi.name}: ComPort={cdi.cfg.port}, ',
 print('Attempting to read data')
 packet = cdi.request_data()
 data = pyCDI.CDIParsedData(packet)
-data.print_results()
+print(f'Arterial pH is {data.arterial_pH}')
+print(f'Venous pH is {data.venous_pH}')
+print(f'Hemoglobin is {data.hgb}')
