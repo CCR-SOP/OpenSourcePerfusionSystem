@@ -11,7 +11,7 @@ import logging
 import pyPerfusion.utils as utils
 
 from dexcom_G6_reader.readdata import Dexcom
-from pyHardware.pyDexcom import DexcomSensor
+from pyPerfusion.pyDexcom import DexcomSensor
 from pyPerfusion.plotting import TSMDexPanelPlotting, TSMDexPanelPlotLT, TSMDexSensorPlot
 from pyHardware.PHDserial import PHDserial
 from pyPerfusion.panel_Syringe import PanelSyringe
