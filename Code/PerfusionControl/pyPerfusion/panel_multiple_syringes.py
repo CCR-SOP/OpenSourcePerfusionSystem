@@ -23,7 +23,7 @@ drugs = ['TPN + Bile Salts', 'Insulin', 'Glucagon', 'Heparin', 'Phenylephrine', 
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
-class SyringePanel(wx.Panel):  # does nto expand to correct size by itself now
+class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
     def __init__(self, parent):
         self.parent = parent
         wx.Panel.__init__(self, parent)

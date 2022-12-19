@@ -171,7 +171,8 @@ class PanelSyringeControls(wx.Panel):
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self.syringe = syringe
-        self._inc = 100
+        self._inc = 1
+        self._vol_inc = 100
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.syringe.name)
         # redundant with PanelSyringe but used in app_hardware_control
@@ -182,7 +183,7 @@ class PanelSyringeControls(wx.Panel):
         self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min)')
         self.btn_basal = wx.ToggleButton(self, label='Start Basal')
 
-        self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
+        self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc)
         self.label_volume = wx.StaticText(self, label='Target Volume (ul)')
         self.btn_bolus = wx.Button(self, label='Bolus')
 
