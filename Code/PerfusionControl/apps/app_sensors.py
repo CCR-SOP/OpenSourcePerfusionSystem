@@ -17,6 +17,9 @@ from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.FileStrategy import StreamToFile
+import pyPerfusion.pyCDI as pyCDI
+from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
+from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 
 
 class SensorFrame(wx.Frame):
@@ -47,6 +50,14 @@ class SensorFrame(wx.Frame):
             sizer.Add(self.panel[sensor.name], 1, wx.ALL | wx.EXPAND, border=1)
 
         self.acq.start()
+
+        self.cdi = pyCDI.CDIStreaming('Test CDI')
+        self.cdi.read_config()
+        self.cdi_sensor = SensorPoint(self.cdi, 'na')
+        self.cdi_sensor.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+        self.cdi_sensor.start()
+        self.cdi.start()
+
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
@@ -57,6 +68,8 @@ class SensorFrame(wx.Frame):
             sensor.stop()
         for panel in self.panel.keys():
             self.panel[panel].Destroy()
+        self.cdi.stop()
+        self.cdi_sensor.stop()
         self.Destroy()
 
 

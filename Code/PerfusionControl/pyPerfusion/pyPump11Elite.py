@@ -77,13 +77,6 @@ class SyringeConfig:
     address: int = 0
 
 
-# utility function to return all available comports in a list
-# typically used in a GUI to provide a selection of com ports
-def get_avail_com_ports() -> list:
-    ports = [comport.device for comport in serial.tools.list_ports.comports()]
-    return ports
-
-
 def get_available_manufacturer_codes() -> list:
     return list(DEFAULT_MANUFACTURERS.keys())
 

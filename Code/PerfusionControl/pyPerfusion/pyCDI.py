@@ -8,16 +8,15 @@ import logging
 from threading import Thread, Lock, Event
 from time import perf_counter, sleep
 from queue import Queue, Empty
+from dataclasses import dataclass
 
 import numpy as np
 import serial
 import serial.tools.list_ports
 
-from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.FileStrategy import StreamToFile
-
 import pyPerfusion.utils as utils
-import pyPerfusion.PerfusionConfig as LP_CFG
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 utils.configure_matplotlib_logging()
@@ -30,8 +29,11 @@ code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', 
 
 class CDIParsedData:
     def __init__(self, response):
+        self.valid_data = False
         # parse raw ASCII output
-        fields = response.strip(b'\r\n').split(sep=b'\t')
+        if response is None:
+            return
+        fields = response.strip('\r\n').split(sep='\t')
         # in addition to codes, there is a header packet
         # CRC and end packet
         if len(fields) == len(code_mapping) + 2:
@@ -39,7 +41,7 @@ class CDIParsedData:
             # timestamp will be ignored and will use the timestamp when the response arrives
             # self.timestamp = fields[0][-8:]
             for field in fields[1:-1]:
-                code = field[0:2].upper().decode('ascii')
+                code = field[0:2].upper()
                 try:
                     # logging.getLogger(__name__).debug(f'code is {code}')
                     value = float(field[4:])
@@ -48,64 +50,81 @@ class CDIParsedData:
                     value = -1
                 if code in code_mapping.keys():
                     setattr(self, code_mapping[code], value)
+            self.valid_data = True
         else:
             logging.getLogger(__name__).error(f'Could parse CDI data, '
-                                              f'expected {len(code_mapping)} fields, '
+                                              f'expected {len(code_mapping) + 2} fields, '
                                               f'found {len(fields)}')
-
 
     def get_array(self):
         data = [getattr(self, value) for value in code_mapping.values()]
         return data
 
     # test ability to read all 3 sensors on CDI - delete eventually
-    def print_results(self):
-        print(f'Arterial pH is {self.arterial_pH}')
-        print(f'Venous pH is {self.venous_pH}')
-        print(f'Hemoglobin is {self.hgb}')
+    # def print_results(self):
+        # if self.valid_data:
+            # print(f'Arterial pH is {self.arterial_pH}')
+            # print(f'Venous pH is {self.venous_pH}')
+            # print(f'Hemoglobin is {self.hgb}')
+        # else:
+            # print('No valid data to print')
+
+
+@dataclass
+class CDIConfig:
+    name: str = 'CDI'
+    port: str = ''
+    sampling_period_ms: int = 1000
 
 
 class CDIStreaming:
     def __init__(self, name):
-        super().__init__()
         self._lgr = logging.getLogger(__name__)
-        self.data_type = np.float32
-
         self.name = name
+        self._queue = None
+        self.data_type = np.float32
+        self.buf_len = 18
+        self.samples_per_read = 18
+
+        self.cfg = CDIConfig()
 
         self.__serial = serial.Serial()
-        self._baud = 9600
-
-        self._queue = None
-        self.__acq_start_t = None
-        self.period_sampling_ms = 1000
-        self.samples_per_read = 18
         self._timeout = 0.5
+
         self._event_halt = Event()
         self.__thread = None
-        self.buf_len = 17
-
         self.is_streaming = False
+
+    @property
+    def sampling_period_ms(self):
+        return self.cfg.sampling_period_ms
+
+    def write_config(self):
+        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
+
+    def read_config(self):
+        cfg = CDIConfig()
+        PerfusionConfig.read_into_dataclass('hardware', self.name, cfg)
+        self.open(cfg)
 
     def is_open(self):
         return self.__serial.is_open
 
-    def open(self, port_name: str, baud_rate: int) -> None:
+    def open(self, cfg: CDIConfig = None) -> None:
         if self.__serial.is_open:
             self.__serial.close()
-        if isinstance(port_name, str):
-            self.__serial.port = port_name
-            self.__serial.baudrate = baud_rate
-            self.__serial.stopbits = serial.STOPBITS_ONE
-            self.__serial.parity = serial.PARITY_NONE
-            self.__serial.bytesize = serial.EIGHTBITS
-            try:
-                self.__serial.open()
-            except serial.serialutil.SerialException as e:
-                self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
-                self._lgr.error(f'Message: {e}')
-        else:
-            self.__serial = port_name
+        if cfg is not None:
+            self.cfg = cfg
+        self.__serial.port = self.cfg.port
+        self.__serial.baudrate = 9600
+        self.__serial.stopbits = serial.STOPBITS_ONE
+        self.__serial.parity = serial.PARITY_NONE
+        self.__serial.bytesize = serial.EIGHTBITS
+        try:
+            self.__serial.open()
+        except serial.serialutil.SerialException as e:
+            self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
+            self._lgr.error(f'Message: {e}')
         self._queue = Queue()
 
     def close(self):
@@ -113,9 +132,11 @@ class CDIStreaming:
             self.__serial.close()
 
     def request_data(self, timeout=30):  # request single data packet
-        # self.__serial.write('X08Z36'.encode(encoding='ascii'))
-        self.__serial.timeout = timeout
-        CDIpacket = self.__serial.readline()
+        if self.__serial.is_open:
+            self.__serial.timeout = timeout
+            CDIpacket = self.__serial.readline().decode('ascii')
+        else:
+            CDIpacket = None
         return CDIpacket
 
     def run(self):  # continuous data stream
@@ -123,11 +144,9 @@ class CDIStreaming:
         self._event_halt.clear()
         self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
-            if self.__serial.in_waiting > 0:
+            if self.__serial.is_open and self.__serial.in_waiting > 0:
                 resp = self.__serial.readline().decode('ascii')
-                # self._lgr.debug(f'response is {resp}')
                 one_cdi_packet = CDIParsedData(resp)
-                # self._lgr.debug(f'one_cdi_packet = {one_cdi_packet.arterial_pH}')
                 ts = perf_counter()
                 self._queue.put((one_cdi_packet, ts))
             else:

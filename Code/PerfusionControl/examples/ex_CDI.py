@@ -14,10 +14,12 @@ import pyPerfusion.pyCDI as pyCDI
 
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)  # add in debugging comments
 
-COMPORT = 'COM13'
 
 cdi = pyCDI.CDIStreaming('Test CDI')
-cdi.open(COMPORT, 9600)
+cfg = pyCDI.CDIConfig(port='COM13')
+cdi.open(cfg)
 packet = cdi.request_data()
 data = pyCDI.CDIParsedData(packet)
-data.print_results()
+print(f'Arterial pH is {data.arterial_pH}')
+print(f'Venous pH is {data.venous_pH}')
+print(f'Hemoglobin is {data.hgb}')

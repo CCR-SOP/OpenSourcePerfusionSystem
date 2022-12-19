@@ -201,6 +201,22 @@ class AIChannel:
         self._demo_amp = {}
         self._demo_offset = {}
 
+    @property
+    def buf_len(self):
+        return self.device.buf_len
+
+    @property
+    def data_type(self):
+        return self.device.cfg.data_type
+
+    @property
+    def sampling_period_ms(self):
+        return self.device.cfg.sampling_period_ms
+
+    @property
+    def samples_per_read(self):
+        return self.device.samples_per_read
+
     def write_config(self):
         PerfusionConfig.write_from_dataclass(self.device.cfg.name, self.cfg.name, self.cfg)
 

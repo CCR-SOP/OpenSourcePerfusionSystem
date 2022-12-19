@@ -11,6 +11,9 @@ import logging
 from time import time
 from functools import wraps
 
+import serial
+import serial.tools.list_ports
+
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
@@ -85,3 +88,10 @@ def simple_time_tracker(log_fun):
 def log(message):
     """for use with simple_time_tracker"""
     print('[SimpleTimeTracker] {function_name} {total_time:.3f}'.format(**message))
+
+
+# utility function to return all available comports in a list
+# typically used in a GUI to provide a selection of com ports
+def get_avail_com_ports() -> list:
+    ports = [comport.device for comport in serial.tools.list_ports.comports()]
+    return ports
