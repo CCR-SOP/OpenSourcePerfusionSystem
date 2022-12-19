@@ -51,7 +51,7 @@ class SensorFrame(wx.Frame):
 
         self.acq.start()
 
-        self.cdi = pyCDI.CDIStreaming('CDI')
+        self.cdi = pyCDI.CDIStreaming('Test CDI')
         self.cdi.read_config()
         self.cdi_sensor = SensorPoint(self.cdi, 'na')
         self.cdi_sensor.add_strategy(strategy=MultiVarToFile('write', 1, 17))
