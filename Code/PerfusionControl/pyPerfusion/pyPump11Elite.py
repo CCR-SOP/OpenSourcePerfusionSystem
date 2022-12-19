@@ -68,13 +68,23 @@ DEFAULT_MANUFACTURERS = {
 
 @dataclass
 class SyringeConfig:
-    com_port: str = ''
-    manufacturer_code: str = ''
-    size: str = ''
-    initial_injection_rate: int = 0
-    initial_target_volume: int = 0
-    baud: int = 9600
-    address: int = 0
+        drug: str = ''
+        com_port: str = ''
+        manufacturer_code: str = ''
+        size: str = ''
+        initial_injection_rate: float = 0.0
+        initial_rate_unit: str = 'uL/min'
+        initial_vol_unit: str = 'uL'
+        initial_target_volume: float = 0.0
+        baud: int = 9600
+        address: int = 0
+
+
+# utility function to return all available comports in a list
+# typically used in a GUI to provide a selection of com ports
+def get_avail_com_ports() -> list:
+    ports = [comport.device for comport in serial.tools.list_ports.comports()]
+    return ports
 
 
 def get_available_manufacturer_codes() -> list:
@@ -100,13 +110,13 @@ def get_code_from_name(desired_name: str):
 
 
 class Pump11Elite:
-    def __init__(self, name):
+    def __init__(self, name, config=SyringeConfig()):
         super().__init__()
         self._lgr = logging.getLogger(__name__)
         self.data_type = np.float32
 
         self.name = name
-        self.cfg = SyringeConfig()
+        self.cfg = config
 
         self._serial = serial.Serial()
         self._queue = None
@@ -115,6 +125,7 @@ class Pump11Elite:
         self.samples_per_read = 0
 
         # JWK, this should be tied to actual hardware
+        # SCL this seems to be working? Was this corrected?
         self.is_infusing = False
 
         self._params = {
@@ -145,9 +156,9 @@ class Pump11Elite:
 
         if cfg is not None:
             self.cfg = cfg
-        self._serial.port = self.cfg.com_port
-        self._serial.baudrate = self.cfg.baud
-        self._serial.xonxoff = True
+            self._serial.port = self.cfg.com_port
+            self._serial.baudrate = self.cfg.baud
+            self._serial.xonxoff = True
         try:
             self._serial.open()
         except serial.serialutil.SerialException as e:
@@ -211,7 +222,8 @@ class Pump11Elite:
         if response == 'Target volume not set':
             vol = 0
             vol_unit = ''
-            self._lgr.warning(f'Attempt to read target volume before it was set')
+            # self._lgr.warning(f'Attempt to read target volume before it was set')
+            # Doesn't need a warning - normal functionality during basal infusions
         else:
             try:
                 vol, vol_unit = response.split(' ')
@@ -246,6 +258,8 @@ class Pump11Elite:
             pass
         elif target_vol_unit == 'ml':
             target_vol = target_vol * 1000
+        elif not target_vol_unit or target_vol == 0:
+            self._lgr.info(f'Please manually stop syringe pump and add a target volume to bolus')
         else:
             self._lgr.error(f'Unknown target volume unit in syringe {self.name}: {target_vol_unit}')
             target_vol = 0
@@ -315,6 +329,7 @@ class Pump11Elite:
         target_vol, target_unit = self.get_target_volume()
         if target_vol == 0:
             self.record_continuous_infusion(t, start=False)
+
 
     def set_syringe(self, manu_code: str, syringe_size: str) -> None:
         self._set_param('syrm', f'{manu_code} {syringe_size}\r')

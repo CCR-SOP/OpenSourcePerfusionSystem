@@ -9,6 +9,9 @@ and under the public domain.
 
 from pyPerfusion.pyGB100_SL import GB100_shift
 import mcqlib_GB100.mcqlib.main as mcq
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+
+PerfusionConfig.set_test_config()
 
 sample_CDI_output = [1] * 18
 
