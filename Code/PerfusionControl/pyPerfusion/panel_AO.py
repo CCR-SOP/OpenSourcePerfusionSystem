@@ -113,24 +113,11 @@ class PanelAOSettings(wx.Panel):
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def on_update(self, evt):
-        volts = self.spin_pk2pk.GetValue()
-        hz = self.spin_hz.GetValue()
-        offset = self.spin_offset.GetValue()
-        want_sine = self.check_sine.IsChecked()
-
-        if want_sine:
-            try:
-
-                self.ao_ch.set_sine(pk2pk_volts=volts, offset_volts=offset, hz=hz)
-                self.ao_ch.update_buffer()
-            except pyAO.AODeviceException as e:
-                dlg = wx.MessageDialog(parent=self, message=str(e), caption='AO Device Error', style=wx.OK)
-                dlg.ShowModal()
-                self.check_sine.SetValue(0)
-        else:
-            self.ao_ch.set_dc(offset_volts=offset)
-        self.ao_ch.device.stop()
-        self.ao_ch.device.start()
+        self._lgr.debug('in on_update')
+        self.update_config_from_controls()
+        self._lgr.debug('update config from controls')
+        self.ao_ch.set_output(self.ao_ch.cfg.output_type)
+        self._lgr.debug('set output')
 
     def OnSine(self, evt):
         want_sine = self.check_sine.IsChecked()
@@ -148,22 +135,18 @@ class PanelAOSettings(wx.Panel):
     def update_config_from_controls(self):
         want_sine = self.check_sine.IsChecked()
         if want_sine:
-            new_cfg = pyAO.AOSineChannelConfig(name=self.ao_ch.cfg.name,
-                                               line=self.ao_ch.cfg.line,
-                                               max_accel_volts_per_s=self.ao_ch.cfg.max_accel_volts_per_s)
-
-            new_cfg.pk2pk_volts = self.spin_pk2pk.GetValue()
-            new_cfg.hz = self.spin_hz.GetValue()
-            self.ao_ch.cfg = new_cfg
+            output_type = pyAO.SineOutput()
+            output_type.pk2pk_volts = self.spin_pk2pk.GetValue()
+            output_type.hz = self.spin_hz.GetValue()
+            output_type.offset_volts = self.spin_offset.GetValue()
         else:
-            new_cfg = pyAO.AOChannelConfig(name=self.ao_ch.cfg.name,
-                                           line=self.ao_ch.cfg.line,
-                                           max_accel_volts_per_s=self.ao_ch.cfg.max_accel_volts_per_s)
-            self.ao_ch.cfg = new_cfg
-        self.ao_ch.cfg.offset_volts = self.spin_offset.GetValue()
+            output_type = pyAO.DCOutput()
+            output_type.offset_volts = self.spin_offset.GetValue()
+        self.ao_ch.cfg.output_type = output_type
+        self._lgr.debug(f'output is {self.ao_ch.cfg.output_type}')
 
     def update_controls_from_config(self):
-        if type(self.ao_ch.cfg) == pyAO.AOSineChannelConfig:
+        if type(self.ao_ch.cfg) == pyAO.SineOutput:
             self.check_sine.SetValue(True)
             self.spin_pk2pk.SetValue(self.ao_ch.cfg.pk2pk_volts)
             self.spin_hz.SetValue(self.ao_ch.cfg.hz)
@@ -172,32 +155,6 @@ class PanelAOSettings(wx.Panel):
         self.spin_offset.SetValue(self.ao_ch.cfg.offset_volts)
         self.OnSine(wx.CommandEvent())
 
-    def update_config_from_controls(self):
-        want_sine = self.check_sine.IsChecked()
-        if want_sine:
-            new_cfg = pyAO.AOSineChannelConfig(name=self.ao_ch.cfg.name,
-                                               line=self.ao_ch.cfg.line,
-                                               max_accel_volts_per_s=self.ao_ch.cfg.max_accel_volts_per_s)
-
-            new_cfg.pk2pk_volts = self.spin_pk2pk.GetValue()
-            new_cfg.hz = self.spin_hz.GetValue()
-            self.ao_ch.cfg = new_cfg
-        else:
-            new_cfg = pyAO.AOChannelConfig(name=self.ao_ch.cfg.name,
-                                           line=self.ao_ch.cfg.line,
-                                           max_accel_volts_per_s=self.ao_ch.cfg.max_accel_volts_per_s)
-            self.ao_ch.cfg = new_cfg
-        self.ao_ch.cfg.offset_volts = self.spin_offset.GetValue()
-
-    def update_controls_from_config(self):
-        if type(self.ao_ch.cfg) == pyAO.AOSineChannelConfig:
-            self.check_sine.SetValue(True)
-            self.spin_pk2pk.SetValue(self.ao_ch.cfg.pk2pk_volts)
-            self.spin_hz.SetValue(self.ao_ch.cfg.hz)
-        else:
-            self.check_sine.SetValue(False)
-        self.spin_offset.SetValue(self.ao_ch.cfg.offset_volts)
-        self.OnSine(wx.CommandEvent())
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -221,7 +178,7 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
     dev = NIDAQAODevice()
-    dev.cfg = pyAO.AODeviceConfig(name='TestAnalogOutputDevice')
+    dev.cfg = pyAO.AODeviceConfig(name='Dev2Output')
     dev.read_config()
     channel_names = list(dev.ao_channels)
     ao_channel = dev.ao_channels[channel_names[0]]

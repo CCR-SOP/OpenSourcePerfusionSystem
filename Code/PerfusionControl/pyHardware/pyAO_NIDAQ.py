@@ -32,18 +32,11 @@ class NIDAQAODevice(pyAO.AODevice):
     def devname(self):
         # recreate from scratch so base naming convention does not need
         # to be consistent with actual hardware naming convention
-        lines = [cfg.line for cfg in self.cfg.ch_info.values()]
+        lines = [ch.cfg.line for ch in self.ao_channels.values()]
         if len(lines) == 0:
-            dev_str = f'{self.cfg.device_name}/ai'
+            dev_str = f'{self.cfg.device_name}/ao'
         else:
             dev_str = f','.join([f'{self.cfg.device_name}/ao{line}' for line in lines])
-        return dev_str
-
-    def devname4line(self, line=None):
-        # recreate from scratch so base naming convention does not need
-        # to be consistent with actual hardware naming convention
-        lines = [line]
-        dev_str = f','.join([f'{self.cfg.device_name}/ao{line}' for line in lines])
         return dev_str
 
     def _output_samples(self):
@@ -51,20 +44,13 @@ class NIDAQAODevice(pyAO.AODevice):
         pass
 
     def is_open(self):
-        return any(self.__tasks)
+        return self.cfg is not None
 
     def open(self, cfg: pyAO.AODeviceConfig):
         self.cfg = cfg
 
     def close(self):
         self.stop()
-
-    def add_channel(self, cfg):
-        if cfg.name in self.ao_channels.keys():
-            self._lgr.warning(f'Channel {cfg.name} already exists. Overwriting with new config')
-        self.stop()
-        self.cfg.ch_info[cfg.name] = cfg
-        self.ao_channels[cfg.name] = NIDAQAOChannel(cfg=cfg, device=self)
 
     # def __check_hw_clk_support(self):
     #     task = PyDAQmx.Task()
@@ -95,6 +81,14 @@ class NIDAQAODevice(pyAO.AODevice):
             # set output to 0 to stop all motors
             ch.set_output(pyAO.DCOutput(offset_volts=0.0))
 
+    def add_channel(self, cfg: pyAO.AOChannelConfig):
+        if cfg.name in self.ao_channels.keys():
+            self._lgr.warning(f'Channel {cfg.name} already exists. Overwriting with new config')
+        else:
+            self.cfg.ch_names.append(cfg.name)
+        self.stop()
+        self.ao_channels[cfg.name] = NIDAQAOChannel(cfg=cfg, device=self)
+
 
 class NIDAQAOChannel(pyAO.AOChannel):
     def __init__(self, cfg: pyAO.AOChannelConfig, device: pyAO.AODevice):
@@ -102,6 +96,14 @@ class NIDAQAOChannel(pyAO.AOChannel):
         self._task = PyDAQmx.Task()
         self.__timeout = 1.0
         self._open_task()
+        self.device = device
+
+    @property
+    def devname(self):
+        # recreate from scratch so base naming convention does not need
+        # to be consistent with actual hardware naming convention
+        dev_str = f'{self.device.cfg.device_name}/ao{self.cfg.line }'
+        return dev_str
 
     def _open_task(self):
         self._task.StopTask()
@@ -109,7 +111,8 @@ class NIDAQAOChannel(pyAO.AOChannel):
         self._task.ClearTask()
         self._task = PyDAQmx.Task()
         try:
-            devname = self.device.devname4line(line=self.cfg.line)
+            devname = self.devname
+            self._lgr.debug(f'devname is {devname}')
             self._task.CreateAOVoltageChan(devname, None, 0, 5,
                                            PyDAQmx.DAQmxConstants.DAQmx_Val_Volts, None)
         except PyDAQmx.DevCannotBeAccessedError as e:
@@ -127,9 +130,10 @@ class NIDAQAOChannel(pyAO.AOChannel):
             raise(pyAO.AODeviceException(msg))
 
     def set_output(self, output: pyAO.OutputType):
+
         super().set_output(output)
         self._open_task()
-
+        self._lgr.debug(f'output is {output}')
         hz = 1.0 / (self.device.cfg.sampling_period_ms / 1000.0)
         try:
             if len(self._buffer) > 1:
@@ -141,6 +145,7 @@ class NIDAQAOChannel(pyAO.AOChannel):
             self._lgr.error(msg)
         try:
             written = ctypes.c_int32(0)
+            self._lgr.debug(f'set_output: {self._buffer[0]}')
             self._task.WriteAnalogF64(len(self._buffer), True, self.__timeout * 5,
                                       PyDAQmx.DAQmx_Val_GroupByChannel,
                                       self._buffer, PyDAQmx.byref(written), None)
