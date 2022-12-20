@@ -56,7 +56,6 @@ class PanelAOSettings(wx.Panel):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-
         self.ao_ch = ao_ch
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -145,6 +144,33 @@ class PanelAOSettings(wx.Panel):
     def on_load_cfg(self, evt):
         self.ao_ch.device.read_config(ch_name=self.ao_ch.cfg.name)
         self.update_controls_from_config()
+
+    def update_config_from_controls(self):
+        want_sine = self.check_sine.IsChecked()
+        if want_sine:
+            new_cfg = pyAO.AOSineChannelConfig(name=self.ao_ch.cfg.name,
+                                               line=self.ao_ch.cfg.line,
+                                               max_accel_volts_per_s=self.ao_ch.cfg.max_accel_volts_per_s)
+
+            new_cfg.pk2pk_volts = self.spin_pk2pk.GetValue()
+            new_cfg.hz = self.spin_hz.GetValue()
+            self.ao_ch.cfg = new_cfg
+        else:
+            new_cfg = pyAO.AOChannelConfig(name=self.ao_ch.cfg.name,
+                                           line=self.ao_ch.cfg.line,
+                                           max_accel_volts_per_s=self.ao_ch.cfg.max_accel_volts_per_s)
+            self.ao_ch.cfg = new_cfg
+        self.ao_ch.cfg.offset_volts = self.spin_offset.GetValue()
+
+    def update_controls_from_config(self):
+        if type(self.ao_ch.cfg) == pyAO.AOSineChannelConfig:
+            self.check_sine.SetValue(True)
+            self.spin_pk2pk.SetValue(self.ao_ch.cfg.pk2pk_volts)
+            self.spin_hz.SetValue(self.ao_ch.cfg.hz)
+        else:
+            self.check_sine.SetValue(False)
+        self.spin_offset.SetValue(self.ao_ch.cfg.offset_volts)
+        self.OnSine(wx.CommandEvent())
 
     def update_config_from_controls(self):
         want_sine = self.check_sine.IsChecked()
