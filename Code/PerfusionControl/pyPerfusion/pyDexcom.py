@@ -14,9 +14,9 @@ from time import perf_counter
 from threading import Thread, Event
 from time import perf_counter, sleep, time
 from collections import deque
-from queue import Queue, Empty
 from dataclasses import dataclass, asdict
 
+from dexcom_G6_reader.readdata import Dexcom
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
@@ -33,11 +33,11 @@ class DexcomReceiver:
         self._lgr = logging.getLogger(__name__)
         self.cfg = DexcomConfig()
         self.name = name
-        self._receiver = None
+        self.receiver = None
 
         self.__thread = None
         self._event_halt = Event()
-        self._queue = deque(maxlen=100)
+        self._queue = deque()
 
         self._last_acq_time = None
         self._last_error = None
@@ -56,20 +56,22 @@ class DexcomReceiver:
     def open(self, cfg: DexcomConfig = None) -> None:
         if cfg is not None:
             self.cfg = cfg
-        self._queue = Queue()
-        self._receiver = Dexcom(self.cfg.com_port)
+        self._queue = deque()
+        self._lgr.debug(f'Attempting to open Dexcom at {self.cfg.com_port}')
+        self.receiver = Dexcom(self.cfg.com_port)
         # JWK, verify SN
-        actual_SN = self._receiver.ReadManufacturingData().get('SerialNumber')
+        actual_SN = self.receiver.ReadManufacturingData().get('SerialNumber')
         if actual_SN != self.cfg.serial_number:
             self._lgr.error(f'Dexcom sensor {self.name} ({self.cfg.com_port}) did not match serial'
                             f' number (expected={self.cfg.serial_number}, found={actual_SN}')
-            self._receiver = None
+            self.receiver = None
             self.cfg = DexcomConfig()
         else:
-            self._receiver.Connect()
+            self._lgr.debug(f'connecting...')
+            self.receiver.Connect()
 
     def close(self):
-        self._receiver.Disconnect()
+        self.receiver.Disconnect()
         self.stop()
 
     def start(self):
@@ -101,12 +103,15 @@ class DexcomReceiver:
             self._acq_samples()
 
     def _acq_samples(self):
-        data, new_time, error = self._receiver.get_data()
+        self._lgr.debug('in acq_samples')
+        data, new_time, error = self.receiver.get_data()
         ts = struct.pack('i', int(perf_counter() * 1000.0))
         self._last_error = error
         if new_time != self._last_acq_time:
+            self._lgr.debug(f'pushing {data} {ts}')
             self._queue.append((data, ts))
             self._last_acq_time = new_time
+        self._lgr.debug('done')
 
     def get_data(self):
         buf = None

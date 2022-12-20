@@ -31,14 +31,16 @@ dexcom.read_config()
 print(f'Read config for {dexcom.name}: ComPort={dexcom.cfg.com_port}, ',
       f'Serial # = {dexcom.cfg.serial_number}, ',
       f'Read Period (ms) = {dexcom.cfg.read_period_ms}')
-print('Attempting to read data')
+# print('Attempting to read data')
+# print(f'{dexcom.receiver.ReadRecords("EGV_DATA")}')
+# print(dexcom.receiver.get_data())
+print(dexcom._acq_samples())
 dexcom.start()
-for i in range(2):
+for i in range(3):
       print('sleeping for 1 second')
       sleep(1.0)
       data, t = dexcom.get_data()
       print(f'Timestamp is {t}')
       print(f'Data is {data}')
-
 dexcom.stop()
 dexcom.close()
