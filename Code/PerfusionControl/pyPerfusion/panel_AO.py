@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-"""
+""" Panel class for controlling analog output
 
-@author: John Kakareka
+@project: LiverPerfusion NIH
+@author: John Kakareka, NIH
 
-Panel class for testing and configuring AIO
+This work was created by an employee of the US Federal Gov
+and under the public domain.
 """
 import logging
-import pyPerfusion.utils as utils
 
 import wx
 
+import pyPerfusion.utils as utils
 from pyHardware.pyAO_NIDAQ import NIDAQAODevice
 import pyHardware.pyAO as pyAO
 import pyPerfusion.PerfusionConfig as PerfusionConfig
@@ -26,7 +28,7 @@ class PanelAO(wx.Panel):
         self.parent = parent
         self.ao_ch = ao_ch
 
-        self._panel_settings = PanelAOSettings(self, self.ao_ch)
+        self._panel_dc = PanelAODCControl(self, self.ao_ch)
         name = f'{self.ao_ch.device.cfg.name} - {self.ao_ch.cfg.name}'
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -39,11 +41,9 @@ class PanelAO(wx.Panel):
 
     def __do_layout(self):
 
-        self.sizer.Add(self._panel_settings)
+        self.sizer.Add(self._panel_dc, wx.SizerFlags(1).Expand())
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.sizer, 1, wx.EXPAND | wx.ALL, border=5)
-        self.SetSizer(sizer)
+        self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
@@ -51,7 +51,7 @@ class PanelAO(wx.Panel):
         pass
 
 
-class PanelAOSettings(wx.Panel):
+class PanelAODCControl(wx.Panel):
     def __init__(self, parent, ao_ch):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
@@ -59,70 +59,43 @@ class PanelAOSettings(wx.Panel):
         self.ao_ch = ao_ch
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.btn_update = wx.Button(self, label='Update')
+        self.label_offset = wx.StaticText(self, label='Speed (ul/min)')
+        self.slider_offset = wx.Slider(self, minValue=0, maxValue=50000, value=0, style=wx.SL_HORIZONTAL | wx.SL_LABELS)
 
-        self.check_sine = wx.CheckBox(self, label='Sine output')
-        self.spin_pk2pk = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=0, inc=0.1)
-        self.lbl_pk2pk = wx.StaticText(self, label='Pk-Pk Voltage')
-        self.spin_offset = wx.SpinCtrlDouble(self, min=0.0, max=5.0, initial=0, inc=0.1)
-        self.lbl_offset = wx.StaticText(self, label='Offset Voltage')
-        self.spin_hz = wx.SpinCtrlDouble(self, min=0.0, max=1000.0, initial=1.0)
-        self.lbl_hz = wx.StaticText(self, label='Hz')
-        self.spin_hz.Digits = 3
-        self.spin_offset.Digits = 3
-        self.spin_pk2pk.Digits = 3
-
-        self.btn_save_cfg = wx.Button(self, label='Save Settings')
-        self.btn_load_cfg = wx.Button(self, label='Load Settings')
-
-        self.OnSine(wx.EVT_CHECKBOX)
+        self.btn_save_cfg = wx.Button(self, label='Save Default')
+        self.btn_load_cfg = wx.Button(self, label='Load Default')
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        self.sizer.Add(self.check_sine)
 
-        self.sizer_sine = wx.GridSizer(cols=3, hgap=5, vgap=2)
-        flags = wx.SizerFlags(0).Expand()
-        self.sizer_sine.Add(self.lbl_pk2pk, flags)
-        self.sizer_sine.Add(self.lbl_offset, flags)
-        self.sizer_sine.Add(self.lbl_hz, flags)
-        self.sizer_sine.Add(self.spin_pk2pk, flags)
-        self.sizer_sine.Add(self.spin_offset, flags)
-        self.sizer_sine.Add(self.spin_hz, flags)
-
-        self.sizer.Add(self.sizer_sine, flags)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.label_offset, wx.SizerFlags().CenterHorizontal())
+        sizer.Add(self.slider_offset, wx.SizerFlags(1).Expand())
+        self.sizer.Add(sizer, wx.SizerFlags(0).Expand())
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
-        flags = wx.SizerFlags(0)
-        sizer.Add(self.btn_update, flags)
-        sizer.Add(self.btn_save_cfg, flags)
+        sizer.Add(self.btn_save_cfg)
         sizer.AddSpacer(5)
-        sizer.Add(self.btn_load_cfg, flags)
-        self.sizer.Add(sizer)
+        sizer.Add(self.btn_load_cfg)
+        self.sizer.Add(sizer, wx.SizerFlags(0).CenterHorizontal().Top())
 
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
     def __set_bindings(self):
-        self.btn_update.Bind(wx.EVT_BUTTON, self.on_update)
-        self.check_sine.Bind(wx.EVT_CHECKBOX, self.OnSine)
+        self.slider_offset.Bind(wx.EVT_SLIDER, self.on_update)
         self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def on_update(self, evt):
-        self._lgr.debug('in on_update')
-        self.update_config_from_controls()
-        self._lgr.debug('update config from controls')
+        output_type = pyAO.DCOutput()
+        output_type.offset_volts = self.slider_offset.GetValue() / 10000.0
+        self._lgr.debug(f'offset is {output_type.offset_volts}')
+        self.ao_ch.cfg.output_type = output_type
         self.ao_ch.set_output(self.ao_ch.cfg.output_type)
-        self._lgr.debug('set output')
-
-    def OnSine(self, evt):
-        want_sine = self.check_sine.IsChecked()
-        self.spin_hz.Enable(want_sine)
-        self.spin_pk2pk.Enable(want_sine)
 
     def on_save_cfg(self, evt):
         self.update_config_from_controls()
@@ -133,27 +106,12 @@ class PanelAOSettings(wx.Panel):
         self.update_controls_from_config()
 
     def update_config_from_controls(self):
-        want_sine = self.check_sine.IsChecked()
-        if want_sine:
-            output_type = pyAO.SineOutput()
-            output_type.pk2pk_volts = self.spin_pk2pk.GetValue()
-            output_type.hz = self.spin_hz.GetValue()
-            output_type.offset_volts = self.spin_offset.GetValue()
-        else:
-            output_type = pyAO.DCOutput()
-            output_type.offset_volts = self.spin_offset.GetValue()
+        output_type = pyAO.DCOutput()
+        output_type.offset_volts = self.spin_offset.GetValue()
         self.ao_ch.cfg.output_type = output_type
-        self._lgr.debug(f'output is {self.ao_ch.cfg.output_type}')
 
     def update_controls_from_config(self):
-        if type(self.ao_ch.cfg) == pyAO.SineOutput:
-            self.check_sine.SetValue(True)
-            self.spin_pk2pk.SetValue(self.ao_ch.cfg.pk2pk_volts)
-            self.spin_hz.SetValue(self.ao_ch.cfg.hz)
-        else:
-            self.check_sine.SetValue(False)
-        self.spin_offset.SetValue(self.ao_ch.cfg.offset_volts)
-        self.OnSine(wx.CommandEvent())
+        self.slider_offset.SetValue(self.ao_ch.cfg.offset_volts)
 
 
 class TestFrame(wx.Frame):
@@ -178,7 +136,7 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
     dev = NIDAQAODevice()
-    dev.cfg = pyAO.AODeviceConfig(name='Dev2Output')
+    dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')
     dev.read_config()
     channel_names = list(dev.ao_channels)
     ao_channel = dev.ao_channels[channel_names[0]]
