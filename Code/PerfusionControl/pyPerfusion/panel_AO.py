@@ -59,8 +59,8 @@ class PanelAODCControl(wx.Panel):
         self.ao_ch = ao_ch
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.label_offset = wx.StaticText(self, label='Speed (mL/min)')
-        self.slider_offset = wx.Slider(self, minValue=0, maxValue=50, value=0, style=wx.SL_HORIZONTAL | wx.SL_LABELS)
+        self.label_offset = wx.StaticText(self, label='Speed (uL/min)')
+        self.slider_offset = wx.Slider(self, minValue=0, maxValue=50000, value=0, style=wx.SL_HORIZONTAL | wx.SL_LABELS)
 
         self.btn_save_cfg = wx.Button(self, label='Save Default')
         self.btn_load_cfg = wx.Button(self, label='Load Default')
@@ -92,7 +92,7 @@ class PanelAODCControl(wx.Panel):
 
     def on_update(self, evt):
         output_type = pyAO.DCOutput()
-        output_type.offset_volts = self.slider_offset.GetValue() / 10.0
+        output_type.offset_volts = self.slider_offset.GetValue() / 10000.0
         # self._lgr.debug(f'offset is {output_type.offset_volts}')
         self.ao_ch.cfg.output_type = output_type
         self.ao_ch.set_output(self.ao_ch.cfg.output_type)
@@ -139,6 +139,5 @@ if __name__ == "__main__":
     dev.read_config()
     channel_names = list(dev.ao_channels)
     ao_channel = dev.ao_channels[channel_names[0]]
-
     app = MyTestApp(0)
     app.MainLoop()
