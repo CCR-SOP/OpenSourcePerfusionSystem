@@ -133,7 +133,6 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
-    PerfusionConfig.set_test_config()
 
     dev = NIDAQAODevice()
     dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')
