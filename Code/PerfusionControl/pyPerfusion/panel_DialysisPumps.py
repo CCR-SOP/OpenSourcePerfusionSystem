@@ -14,8 +14,8 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import time
+from pyPerfusion.panel_AO import PanelAODCControl
 from pyPerfusion.pyDialysatePumps import DialysatePumps
-from pyHardware.pyAO_NIDAQ import NIDAQ_AO
 
 import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint

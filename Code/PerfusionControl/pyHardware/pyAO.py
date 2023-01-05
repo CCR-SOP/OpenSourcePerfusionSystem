@@ -120,7 +120,7 @@ class AODevice:
                 ch_cfg = AOChannelConfig(name=ch_name)
                 self.add_channel(ch_cfg)
                 self.ao_channels[ch_name].read_config(ch_name)
-                self._lgr.info(f'read_config: added channel {ch_cfg}')
+                # self._lgr.info(f'read_config: added channel {ch_cfg}')
 
         self.open(self.cfg)
 
@@ -134,14 +134,14 @@ class AODevice:
         if cfg.name in self.ao_channels.keys():
             self._lgr.warning(f'Channel {cfg.name} already exists. Overwriting with new config')
         else:
-            self._lgr.debug(f'Adding ao channel {cfg.name}')
+            # self._lgr.debug(f'Adding ao channel {cfg.name}')
             self.cfg.ch_names.append(cfg.name)
         self.stop()
         self.ao_channels[cfg.name] = AOChannel(cfg=cfg, device=self)
 
     def remove_channel(self, name: str):
         if name in self.ao_channels.keys():
-            self._lgr.info(f'Removing channel {name} from device {self.cfg.device_name}')
+            # self._lgr.info(f'Removing channel {name} from device {self.cfg.device_name}')
             del self.ao_channels[name]
             self.cfg.ch_names.remove(name)
         else:
@@ -223,7 +223,7 @@ class AOChannel:
         self.cfg.output_type = output
         if self.cfg.output_type.name == 'DC':
             self._buffer = np.full(1, self.cfg.output_type.offset_volts)
-            self._lgr.info(f'{self.cfg.name}: setting DC={self.cfg.output_type.offset_volts}')
+            # self._lgr.info(f'{self.cfg.name}: setting DC={self.cfg.output_type.offset_volts}')
         elif self.cfg.output_type.name == 'Sine':
             if self.cfg.output_type.hz > 0.0:
                 hz = self.cfg.output_type.hz
@@ -231,7 +231,7 @@ class AOChannel:
                 offset = self.cfg.output_type.offset_volts
                 t = np.arange(0, 1 / hz, step=self.device.cfg.sampling_period_ms / 1000.0)
                 self._buffer = p2p / 2.0 * np.sin(2 * np.pi * hz * t, dtype=self.device.cfg.buf_type) + offset
-                self._lgr.info(f'{self.cfg.name}: setting {p2p}*sin(2pi*{hz}) + {offset}')
+                # self._lgr.info(f'{self.cfg.name}: setting {p2p}*sin(2pi*{hz}) + {offset}')
             else:
                 self._lgr.error(f"Attempt to create a non-positive frequency {self.cfg.output_type.hz}")
         elif self.cfg.output_type.name == 'Ramp':
@@ -246,8 +246,8 @@ class AOChannel:
                 if calc_len == 0:
                     calc_len = 1
                 self._buffer = np.linspace(start_volts, stop_volts, num=calc_len)
-                self._lgr.info(f'{self.cfg.name}: setting ramp from {start_volts} to {stop_volts} '
-                               f'over {seconds} seconds with {calc_len} samples')
+                # self._lgr.info(f'{self.cfg.name}: setting ramp from {start_volts} to {stop_volts} '
+                # f'over {seconds} seconds with {calc_len} samples')
             else:
                 self._buffer = np.array([stop_volts], dtype=self.device.cfg.data_type)
                 # self._lgr.info('no change, no ramp set')

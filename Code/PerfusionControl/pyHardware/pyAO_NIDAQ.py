@@ -112,7 +112,7 @@ class NIDAQAOChannel(pyAO.AOChannel):
         self._task = PyDAQmx.Task()
         try:
             devname = self.devname
-            self._lgr.debug(f'devname is {devname}')
+            # self._lgr.debug(f'devname is {devname}')
             self._task.CreateAOVoltageChan(devname, None, 0, 5,
                                            PyDAQmx.DAQmxConstants.DAQmx_Val_Volts, None)
         except PyDAQmx.DevCannotBeAccessedError as e:
@@ -133,7 +133,7 @@ class NIDAQAOChannel(pyAO.AOChannel):
 
         super().set_output(output)
         self._open_task()
-        self._lgr.debug(f'output is {output}')
+        # elf._lgr.debug(f'output is {output}')
         hz = 1.0 / (self.device.cfg.sampling_period_ms / 1000.0)
         try:
             if len(self._buffer) > 1:
@@ -145,7 +145,7 @@ class NIDAQAOChannel(pyAO.AOChannel):
             self._lgr.error(msg)
         try:
             written = ctypes.c_int32(0)
-            self._lgr.debug(f'set_output: {self._buffer[0]}')
+            # self._lgr.debug(f'set_output: {self._buffer[0]}')
             self._task.WriteAnalogF64(len(self._buffer), True, self.__timeout * 5,
                                       PyDAQmx.DAQmx_Val_GroupByChannel,
                                       self._buffer, PyDAQmx.byref(written), None)
