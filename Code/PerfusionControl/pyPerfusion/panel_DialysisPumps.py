@@ -44,7 +44,6 @@ class DialysisPumpPanel(wx.Panel):
         dev2.read_config()
         channel_names = list(dev2.ao_channels)
         ao_ch = dev2.ao_channels[channel_names[0]]
-        print(channel_names)
         self._panel_inflow = PanelAO(self, ao_ch)  # this controls the in flow pump but doesn't have the correct label
 
         ao_ch = dev2.ao_channels[channel_names[1]]
