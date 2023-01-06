@@ -29,7 +29,7 @@ class PanelAO(wx.Panel):
         self.ao_ch = ao_ch
 
         self._panel_dc = PanelAODCControl(self, self.ao_ch)
-        name = f'{self.ao_ch.device.cfg.name} - {self.ao_ch.cfg.name}'
+        name = f'{self.ao_ch.cfg.name}'
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 

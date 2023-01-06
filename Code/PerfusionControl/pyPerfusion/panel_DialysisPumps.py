@@ -14,16 +14,13 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import time
-from pyPerfusion.panel_AO import PanelAODCControl
+from pyPerfusion.panel_AO import PanelAO
 from pyHardware.pyAO_NIDAQ import NIDAQAODevice
 import pyHardware.pyAO as pyAO
 
-DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
-LINE_LIST = [f'{line}' for line in range(0, 9)]
-
 import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint
-# from pyPerfusion.FileStrategy import MultiVarToFile  # not in this branch
+from pyPerfusion.FileStrategy import MultiVarToFile
 
 # add dict of limits
 
@@ -36,34 +33,37 @@ class DialysisPumpPanel(wx.Panel):
         self.parent = parent
 
         dev = NIDAQAODevice()
-        dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')  # TODO: make sure this works
+        dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')
         dev.read_config()
         channel_names = list(dev.ao_channels)
         ao_ch = dev.ao_channels[channel_names[0]]
-        self._panel_outflow = PanelAODCControl(self, ao_ch)
-        name_outflow = f'{ao_ch.cfg.name}'
+        self._panel_outflow = PanelAO(self, ao_ch)
 
-        dev.cfg = pyAO.AODeviceConfig(name='Dev2Output')
-        dev.read_config()
-        channel_names = list(dev.ao_channels)
-        ao_ch = dev.ao_channels[channel_names[0]]
-        self._panel_inflow = PanelAODCControl(self, ao_ch)
-        name_inflow = f'{ao_ch.cfg.name}'
+        dev2 = NIDAQAODevice()
+        dev2.cfg = pyAO.AODeviceConfig(name='Dev2Output')
+        dev2.read_config()
+        channel_names = list(dev2.ao_channels)
+        ao_ch = dev2.ao_channels[channel_names[0]]
+        print(channel_names)
+        self._panel_inflow = PanelAO(self, ao_ch)  # this controls the in flow pump but doesn't have the correct label
 
-        # add auto_start_btn
-        # add blood inflow
+        ao_ch = dev2.ao_channels[channel_names[1]]
+        self._panel_bloodflow = PanelAO(self, ao_ch)
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        # add auto_start_btn later
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Dialysis Pumps")
+        self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
-        sizer_cfg = wx.GridSizer(cols=1)
 
-        # FILL IN
+        self.sizer.Add(self._panel_inflow, flags.Proportion(2))
+        self.sizer.Add(self._panel_outflow, flags.Proportion(2))
+        self.sizer.Add(self._panel_bloodflow, flags.Proportion(2))
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
@@ -71,17 +71,16 @@ class DialysisPumpPanel(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.auto_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnStartAuto)
-        # do we need something to accept the text input?
+        pass
 
-    def OnStartAuto(self, evt):
-        label = self.auto_start_btn.GetLabel()
-        if label == "Start Automatic":
-            self.auto_start_btn.SetLabel('Stop Automatic')
+    # def OnStartAuto(self, evt):
+        # label = self.auto_start_btn.GetLabel()
+        # if label == "Start Automatic":
+            # self.auto_start_btn.SetLabel('Stop Automatic')
             # turn things on - Allen's OnDIalysis
-            self.AutomaticDialysis()
-        elif label == "Stop Automatic":
-            self.auto_start_btn.SetLabel('Start Automatic')
+            # self.AutomaticDialysis()
+        # elif label == "Stop Automatic":
+            # self.auto_start_btn.SetLabel('Start Automatic')
             # turn things off - Allen's OnDialysis
         # check limits of dialysis and that difference isn't too high- see dict - make sure all are true
         # accept values from CDI - see panel_gas_mixers for example (but check with John before you do it)
@@ -90,8 +89,8 @@ class DialysisPumpPanel(wx.Panel):
         # be able to flip whether inflow or outflow is higher if trend gets reversed
         # necessary hardware functioning to read everything in
 
-    def AutomaticDialysis(self):
-        time.sleep(5.0)
+    # def AutomaticDialysis(self):
+        # time.sleep(5.0)
         # pick initial rates for auto - 3 mL/min in and out? may end up changing this
         # add functionality - UpdateDialysis methods
 
