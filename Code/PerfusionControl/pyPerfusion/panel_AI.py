@@ -161,9 +161,9 @@ class PanelAICalibration(wx.Panel):
 
     def update_config_from_controls(self):
         self._sensor.hw.cfg.cal_pt1_target = self.spin_cal_pt1.GetValue()
-        self._sensor.hw.cfg.cal_pt1_reading = self.label_cal_pt1_val.GetLabel()
+        self._sensor.hw.cfg.cal_pt1_reading = float(self.label_cal_pt1_val.GetLabel())
         self._sensor.hw.cfg.cal_pt2_target = self.spin_cal_pt2.GetValue()
-        self._sensor.hw.cfg.cal_pt2_reading = self.label_cal_pt2_val.GetLabel()
+        self._sensor.hw.cfg.cal_pt2_reading = float(self.label_cal_pt2_val.GetLabel())
 
     def update_controls_from_config(self):
         self.spin_cal_pt1.SetValue(self._sensor.hw.cfg.cal_pt1_target)
