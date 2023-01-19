@@ -60,7 +60,7 @@ class PanelAODCControl(wx.Panel):
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Speed (uL/min)')
-        self.slider_offset = wx.Slider(self, minValue=0, maxValue=50000, value=0, style=wx.SL_HORIZONTAL | wx.SL_LABELS)
+        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50000, initial=0, inc=1)
 
         self.btn_save_cfg = wx.Button(self, label='Save Default')
         self.btn_load_cfg = wx.Button(self, label='Load Default')
@@ -72,7 +72,7 @@ class PanelAODCControl(wx.Panel):
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.label_offset, wx.SizerFlags().CenterHorizontal())
-        sizer.Add(self.slider_offset, wx.SizerFlags(1).Expand())
+        sizer.Add(self.entered_offset, wx.SizerFlags(1).Expand())
         self.sizer.Add(sizer, wx.SizerFlags(0).Expand())
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -86,14 +86,14 @@ class PanelAODCControl(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.slider_offset.Bind(wx.EVT_SLIDER, self.on_update)
+        self.entered_offset.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
         self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def on_update(self, evt):
         output_type = pyAO.DCOutput()
-        output_type.offset_volts = self.slider_offset.GetValue() / 10000.0
-        # self._lgr.debug(f'offset is {output_type.offset_volts}')
+        output_type.offset_volts = self.entered_offset.GetValue() / 10000.0
+        self._lgr.debug(f'offset is {output_type.offset_volts}')
         self.ao_ch.cfg.output_type = output_type
         self.ao_ch.set_output(self.ao_ch.cfg.output_type)
 
@@ -102,7 +102,7 @@ class PanelAODCControl(wx.Panel):
         self.ao_ch.write_config()
 
     def on_load_cfg(self, evt):
-        self.ao_ch.device.read_config(ch_name=self.ao_ch.cfg.name)
+        self.ao_ch.device.read_config()  # ch_name=self.ao_ch.cfg.name
         self.update_controls_from_config()
 
     def update_config_from_controls(self):
@@ -111,7 +111,7 @@ class PanelAODCControl(wx.Panel):
         self.ao_ch.cfg.output_type = output_type
 
     def update_controls_from_config(self):
-        self.slider_offset.SetValue(self.ao_ch.cfg.offset_volts)
+        self.entered_offset.SetValue(self.ao_ch.cfg.offset_volts)
 
 
 class TestFrame(wx.Frame):
@@ -138,6 +138,6 @@ if __name__ == "__main__":
     dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')
     dev.read_config()
     channel_names = list(dev.ao_channels)
-    ao_channel = dev.ao_channels[channel_names[0]]
+    ao_channel = dev.ao_channels[channel_names[1]]
     app = MyTestApp(0)
     app.MainLoop()

@@ -22,7 +22,7 @@ import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile
 
-# add dict of limits
+# TODO: add dict of limits
 
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, **kwds):
@@ -36,20 +36,25 @@ class DialysisPumpPanel(wx.Panel):
         dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')
         dev.read_config()
         channel_names = list(dev.ao_channels)
-        ao_ch = dev.ao_channels[channel_names[0]]
+        ao_ch = dev.ao_channels[channel_names[1]]
         self._panel_outflow = PanelAO(self, ao_ch)
+
+        # ao_ch = dev.ao_channels[channel_names[0]]  # TODO: where glucose pump will go
+        # self._panel_glucose = PanelAO(self, ao_ch)
 
         dev2 = NIDAQAODevice()
         dev2.cfg = pyAO.AODeviceConfig(name='Dev2Output')
         dev2.read_config()
         channel_names = list(dev2.ao_channels)
         ao_ch = dev2.ao_channels[channel_names[0]]
-        self._panel_inflow = PanelAO(self, ao_ch)  # this controls the in flow pump but doesn't have the correct label
+        self._panel_inflow = PanelAO(self, ao_ch)
 
         ao_ch = dev2.ao_channels[channel_names[1]]
         self._panel_bloodflow = PanelAO(self, ao_ch)
 
-        # add auto_start_btn later
+        # TODO: add auto_start_btn for dialysis later
+
+        # TODO: add initial rates to config and update this in panel_AO?
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Dialysis Pumps")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -59,10 +64,12 @@ class DialysisPumpPanel(wx.Panel):
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
+        self.sizer = wx.GridSizer(cols=2)
 
         self.sizer.Add(self._panel_inflow, flags.Proportion(2))
         self.sizer.Add(self._panel_outflow, flags.Proportion(2))
         self.sizer.Add(self._panel_bloodflow, flags.Proportion(2))
+        # self.sizer.Add(self._panel_glucose, flags.Proportion(2))
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
