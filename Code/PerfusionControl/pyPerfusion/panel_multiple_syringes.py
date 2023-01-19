@@ -16,7 +16,7 @@ import pyPerfusion.utils as utils
 import pyPerfusion.pyPump11Elite as pyPump11Elite
 from pyPerfusion.panel_syringe import PanelSyringeControls
 
-drugs = ['TPN + Bile Salts', 'Insulin', 'Glucagon', 'Heparin', 'Phenylephrine', 'Epoprostenol']
+drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
 
 # TODO: Insulin, glucagon need the target_vol updated by Dexcom
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
