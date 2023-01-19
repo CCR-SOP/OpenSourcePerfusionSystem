@@ -59,11 +59,12 @@ class PanelAODCControl(wx.Panel):
         self.ao_ch = ao_ch
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.label_offset = wx.StaticText(self, label='Speed (uL/min)')
-        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50000, initial=0, inc=1)
+        self.label_offset = wx.StaticText(self, label='Speed (mL/min)')
+        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, initial=0, inc=.001)
 
         self.btn_save_cfg = wx.Button(self, label='Save Default')
         self.btn_load_cfg = wx.Button(self, label='Load Default')
+        self.btn_change_rate = wx.Button(self, label='Update Rate')
 
         self.__do_layout()
         self.__set_bindings()
@@ -76,6 +77,8 @@ class PanelAODCControl(wx.Panel):
         self.sizer.Add(sizer, wx.SizerFlags(0).Expand())
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sizer.Add(self.btn_change_rate)
+        sizer.AddSpacer(5)
         sizer.Add(self.btn_save_cfg)
         sizer.AddSpacer(5)
         sizer.Add(self.btn_load_cfg)
@@ -86,14 +89,14 @@ class PanelAODCControl(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.entered_offset.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_update)
+        self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
         self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def on_update(self, evt):
         output_type = pyAO.DCOutput()
-        output_type.offset_volts = self.entered_offset.GetValue() / 10000.0
-        self._lgr.debug(f'offset is {output_type.offset_volts}')
+        output_type.offset_volts = self.entered_offset.GetValue() / 10
+        # self._lgr.debug(f'offset is {output_type.offset_volts}')
         self.ao_ch.cfg.output_type = output_type
         self.ao_ch.set_output(self.ao_ch.cfg.output_type)
 
@@ -120,6 +123,11 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self.panel = PanelAO(self, ao_channel)
 
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, evt):
+        # TODO: stop the pump??
+        self.Destroy()
 
 class MyTestApp(wx.App):
     def OnInit(self):
