@@ -32,7 +32,7 @@ print(f'Setting output to {output_type.offset_volts}')
 ao_channel.set_output(output_type)
 print('Sleeping for 5 seconds')
 sleep(5)
-output_type.offset_volts = 0.25
+output_type.offset_volts = 2
 print(f'Setting output to {output_type.offset_volts}')
 ao_channel.set_output(output_type)
 print('Sleeping for 5 seconds')
