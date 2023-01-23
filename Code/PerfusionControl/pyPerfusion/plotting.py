@@ -165,9 +165,10 @@ class PanelPlotting(wx.Panel):
         self._plot_frame_ms = 5_000
 
         self.fig = mpl.figure.Figure()
+        self.fig.set_tight_layout(True)
+        self._axes = self.fig.add_subplot(111)
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
-        # self._axes = self.fig.add_subplot(111)
-        self._axes = self.fig.add_axes([0.05, 0.05, 0.9, 0.85])
+
         self._plots = []
         self._leg = []
         self.list_strategy = wx.ListBox(self, wx.ID_ANY)
@@ -176,7 +177,6 @@ class PanelPlotting(wx.Panel):
         self.__set_bindings()
 
         self.timer_plot = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.OnTimer)
         self.timer_plot.Start(200, wx.TIMER_CONTINUOUS)
 
     @property
@@ -193,28 +193,23 @@ class PanelPlotting(wx.Panel):
 
     def __do_layout(self):
         self.canvas.SetMinSize(wx.Size(1, 1))
-        # self.fig.tight_layout()
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.canvas, 10, wx.ALL | wx.EXPAND, border=1)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.canvas, 1, wx.TOP | wx.LEFT | wx.GROW, border=1)
         sizer.Add(self.list_strategy, 1, wx.ALL)
         self.list_strategy.Hide()
 
         self.SetSizer(sizer)
-        self.Fit()
         self.Layout()
+        self.Fit()
 
     def __set_bindings(self):
-        pass
+        self.Bind(wx.EVT_TIMER, self.OnTimer)
 
     def plot(self):
         for plot in self._plots:
             plot.plot(self._plot_frame_ms, self.__plot_len)
-
-        self._axes.relim()
-        self._axes.autoscale_view()
-        self.canvas.draw()
         self.show_legend()
+        self.canvas.draw()
 
     def OnTimer(self, event):
         if event.GetId() == self.timer_plot.GetId():
