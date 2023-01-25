@@ -20,6 +20,7 @@ from pyPerfusion.FileStrategy import StreamToFile
 import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
 from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
+from pyPerfusion.ProcessingStrategy import MovingAverageStrategy
 
 
 class SensorFrame(wx.Frame):
@@ -42,7 +43,14 @@ class SensorFrame(wx.Frame):
             self.sensors.append(sensor)
             sensor.start()
 
+        # JWK, TODO hardcode smoothing filters for now, will add this to config later
+        self.acq.ai_channels['Hepatic Artery Flow'].add_strategy(MovingAverageStrategy('HAFlowAvg', 11, self.acq_buf_len))
+        self.acq.ai_channels['Portal Vein Flow'].add_strategy(MovingAverageStrategy('HAFlowAvg', 11, self.acq_buf_len))
+        self.acq.ai_channels['Hepatic Artery Pressure'].add_strategy(MovingAverageStrategy('HAFlowAvg', 11, self.acq_buf_len))
+        self.acq.ai_channels['Portal Vein Pressure'].add_strategy(MovingAverageStrategy('HAFlowAvg', 11, self.acq_buf_len))
+
         self.acq.start()
+
 
         self.panel = {}
         for sensor in self.sensors:

@@ -85,3 +85,29 @@ class RMSStrategy(ProcessingStrategy):
     def reset(self):
         super().reset()
         self._sum = 0
+
+
+class MovingAverageStrategy(ProcessingStrategy):
+    def __init__(self, name, window_len, expected_buffer_len):
+        super().__init__(name, window_len, expected_buffer_len)
+        self._params['Algorithm'] = 'MovingAverage'
+        self._params['Data Format'] = str(np.dtype(np.float32))
+        self._sum = 0
+
+    def process_buffer(self, buffer, t=None):
+        idx = 0
+        for sample in buffer:
+            front = self._window_buffer[0]
+            self._window_buffer = np.roll(self._window_buffer, -1)
+            self._window_buffer[-1] = sample
+            self._sum += sample - front
+            avg = self._sum / self._win_len
+            self._processed_buffer = np.roll(self._processed_buffer, -1)
+            self._processed_buffer[-1] = avg
+            idx += 1
+
+        return self._processed_buffer
+
+    def reset(self):
+        super().reset()
+        self._sum = 0
