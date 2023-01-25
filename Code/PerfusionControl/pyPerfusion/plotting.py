@@ -209,6 +209,9 @@ class PanelPlotting(wx.Panel):
         for plot in self._plots:
             plot.plot(self._plot_frame_ms, self.__plot_len)
         self.show_legend()
+        # use relim and autoscale_view to ensure the streaming plot update the axes correctly
+        self._axes.relim()
+        self._axes.autoscale_view()
         self.canvas.draw()
 
     def OnTimer(self, event):
