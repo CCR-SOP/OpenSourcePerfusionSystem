@@ -88,7 +88,7 @@ class StreamToFile(ProcessingStrategy):
             self._lgr.error(f'FileStrategy:open requires a sensor as a parameter')
             return
         self._base_path = PerfusionConfig.get_date_folder()
-        self._filename = pathlib.Path(sensor.name)
+        self._filename = pathlib.Path(f'{sensor.name}_{self._name}')
         self._sensor_params = sensor.params
         self._timestamp = datetime.now()
         if self._fid:

@@ -18,7 +18,7 @@ import numpy as np
 
 class ProcessingStrategy:
     def __init__(self, name, window_len, expected_buffer_len):
-        self._logger = logging.getLogger(__name__)
+        self._lgr = logging.getLogger(__name__)
         self._name = name
         self._data_type = np.float64
         self._win_len = window_len
@@ -101,9 +101,12 @@ class MovingAverageStrategy(ProcessingStrategy):
             self._window_buffer = np.roll(self._window_buffer, -1)
             self._window_buffer[-1] = sample
             self._sum += sample - front
-            avg = self._sum / self._win_len
+            avg = np.sum(self._window_buffer) / self._win_len
             self._processed_buffer = np.roll(self._processed_buffer, -1)
             self._processed_buffer[-1] = avg
+            # self._lgr.debug(f'sample: {sample}: avg: {avg}')
+            # self._lgr.debug(f'buffer: {buffer}')
+            # self._lgr.debug(f'processed buffer: {self._processed_buffer}')
             idx += 1
 
         return self._processed_buffer
