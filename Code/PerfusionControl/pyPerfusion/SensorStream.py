@@ -83,8 +83,12 @@ class SensorStream:
     def run(self):
         next_t = time.time()
         offset = 0
+        if self.hw.sampling_period_ms == 0:
+            sampling_period_s = 1.0
+        else:
+            sampling_period_s = self.hw.sampling_period_ms / 1000.0
         while not self._evt_halt.is_set():
-            next_t += offset + self.hw.device.cfg.sampling_period_ms / 1000.0
+            next_t += offset + sampling_period_s
             delay = next_t - time.time()
             if delay > 0:
                 time.sleep(delay)
