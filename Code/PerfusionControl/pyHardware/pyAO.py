@@ -223,7 +223,7 @@ class AOChannel:
         self.cfg.output_type = output
         if self.cfg.output_type.name == 'DC':
             self._buffer = np.full(1, self.cfg.output_type.offset_volts)
-            # self._lgr.info(f'{self.cfg.name}: setting DC={self.cfg.output_type.offset_volts}')
+            self._lgr.info(f'{self.cfg.name}: setting DC={self.cfg.output_type.offset_volts}')
         elif self.cfg.output_type.name == 'Sine':
             if self.cfg.output_type.hz > 0.0:
                 hz = self.cfg.output_type.hz

@@ -83,7 +83,8 @@ class NIDAQAODevice(pyAO.AODevice):
 
     def add_channel(self, cfg: pyAO.AOChannelConfig):
         if cfg.name in self.ao_channels.keys():
-            self._lgr.warning(f'Channel {cfg.name} already exists. Overwriting with new config')
+            # self._lgr.warning(f'Channel {cfg.name} already exists. Overwriting with new config')  # this runs twice for unknown reasons
+            pass
         else:
             self.cfg.ch_names.append(cfg.name)
         self.stop()
