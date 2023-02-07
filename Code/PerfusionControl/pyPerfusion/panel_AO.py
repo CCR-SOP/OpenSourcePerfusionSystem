@@ -22,14 +22,13 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelAO(wx.Panel):
-    def __init__(self, parent, ao_ch):  # init_rate):
+    def __init__(self, parent, ao_ch):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.ao_ch = ao_ch
-        # self.init_rate = init_rate
 
-        self._panel_dc = PanelAODCControl(self, self.ao_ch)  # self.init_rate
+        self._panel_dc = PanelAODCControl(self, self.ao_ch)
         name = f'{self.ao_ch.cfg.name}'
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -53,16 +52,15 @@ class PanelAO(wx.Panel):
 
 
 class PanelAODCControl(wx.Panel):
-    def __init__(self, parent, ao_ch):  # init_rate
+    def __init__(self, parent, ao_ch):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self.ao_ch = ao_ch
-        # self.init_rate = init_rate
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Speed (mL/min)')
-        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)  # initial=self.init_rate
+        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)
 
         self.btn_save_cfg = wx.Button(self, label='Save Default')
         self.btn_load_cfg = wx.Button(self, label='Load Default')
@@ -110,19 +108,23 @@ class PanelAODCControl(wx.Panel):
         self.update_controls_from_config()
 
     def update_config_from_controls(self):
-        output_type = pyDC.DCOutput()
-        output_type.offset_volts = self.spin_offset.GetValue()
-        self.dc_ch.cfg.output_type = output_type
+        output_type = pyAO.DCOutput()
+        output_type.offset_volts = self.entered_offset.GetValue()
+        self._lgr.debug(f'Saving flow rate of {output_type.offset_volts}')  # this is redundant, error message runs twice
+        self.ao_ch.cfg.output_type = output_type
 
     def update_controls_from_config(self):
-        self.entered_offset.SetValue(self.ao_ch.cfg.offset_volts)
+        # self.entered_offset.SetValue(3)
+        self._lgr.debug(f'{self.ao_ch.cfg.output_type}')
+        new_val = float(self.ao_ch.cfg.output_type.offset_volts)
+        self.entered_offset.SetValue(new_val)
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelAO(self, ao_channel)  # initial_rate
+        self.panel = PanelAO(self, ao_channel)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -148,7 +150,5 @@ if __name__ == "__main__":
     dev.read_config()
     channel_names = list(dev.ao_channels)
     ao_channel = dev.ao_channels[channel_names[1]]
-    # initial_rates = list(dev.init_rates)
-    # initial_rate = dev.initial_rates[channel_names[1]]
     app = MyTestApp(0)
     app.MainLoop()
