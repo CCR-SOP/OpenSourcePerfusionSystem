@@ -18,7 +18,7 @@ import numpy as np
 
 class ProcessingStrategy:
     def __init__(self, name, window_len, expected_buffer_len):
-        self._logger = logging.getLogger(__name__)
+        self._lgr = logging.getLogger(__name__)
         self._name = name
         self._data_type = np.float64
         self._win_len = window_len
@@ -78,6 +78,35 @@ class RMSStrategy(ProcessingStrategy):
             rms = np.sqrt(self._sum / self._win_len)
             self._processed_buffer = np.roll(self._processed_buffer, -1)
             self._processed_buffer[-1] = rms
+            idx += 1
+
+        return self._processed_buffer
+
+    def reset(self):
+        super().reset()
+        self._sum = 0
+
+
+class MovingAverageStrategy(ProcessingStrategy):
+    def __init__(self, name, window_len, expected_buffer_len):
+        super().__init__(name, window_len, expected_buffer_len)
+        self._params['Algorithm'] = 'MovingAverage'
+        self._params['Data Format'] = str(np.dtype(np.float32))
+        self._sum = 0
+
+    def process_buffer(self, buffer, t=None):
+        idx = 0
+        for sample in buffer:
+            front = self._window_buffer[0]
+            self._window_buffer = np.roll(self._window_buffer, -1)
+            self._window_buffer[-1] = sample
+            self._sum += sample - front
+            avg = np.sum(self._window_buffer) / self._win_len
+            self._processed_buffer = np.roll(self._processed_buffer, -1)
+            self._processed_buffer[-1] = avg
+            # self._lgr.debug(f'sample: {sample}: avg: {avg}')
+            # self._lgr.debug(f'buffer: {buffer}')
+            # self._lgr.debug(f'processed buffer: {self._processed_buffer}')
             idx += 1
 
         return self._processed_buffer

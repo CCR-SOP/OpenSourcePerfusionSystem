@@ -46,7 +46,13 @@ class SensorPlot:
         readout_color = 'black'
         if not self._strategy:
             return
-        data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
+        try:
+            data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
+        except ValueError:
+            # this can happen if no data has been collected, so don't print a message
+            # as it can flood the logs
+            data = None
+
         if data is None or len(data) == 0:
             return
 
@@ -209,6 +215,9 @@ class PanelPlotting(wx.Panel):
         for plot in self._plots:
             plot.plot(self._plot_frame_ms, self.__plot_len)
         self.show_legend()
+        # use relim and autoscale_view to ensure the streaming plot update the axes correctly
+        self._axes.relim()
+        self._axes.autoscale_view()
         self.canvas.draw()
 
     def OnTimer(self, event):
@@ -219,7 +228,7 @@ class PanelPlotting(wx.Panel):
         total_plots = len(self._plots)
         ncols = total_plots if total_plots % 2 == 0 else total_plots + 1
         if self._axes.lines:
-            self._axes.legend(loc='lower left', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
+            self._axes.legend(loc='lower right', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
                               borderaxespad=0, framealpha=0.0, fontsize='x-small')
 
     def add_plot(self, plot):
