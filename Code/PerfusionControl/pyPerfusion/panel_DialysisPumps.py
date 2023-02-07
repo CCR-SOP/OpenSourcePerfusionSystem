@@ -39,8 +39,8 @@ class DialysisPumpPanel(wx.Panel):
         ao_ch = dev.ao_channels[channel_names[1]]
         self._panel_outflow = PanelAO(self, ao_ch)
 
-        # ao_ch = dev.ao_channels[channel_names[0]]  # TODO: where glucose pump will go
-        # self._panel_glucose = PanelAO(self, ao_ch)
+        ao_ch = dev.ao_channels[channel_names[0]]
+        self._panel_glucose = PanelAO(self, ao_ch)
 
         dev2 = NIDAQAODevice()
         dev2.cfg = pyAO.AODeviceConfig(name='Dev2Output')
@@ -69,7 +69,7 @@ class DialysisPumpPanel(wx.Panel):
         self.sizer.Add(self._panel_inflow, flags.Proportion(2))
         self.sizer.Add(self._panel_outflow, flags.Proportion(2))
         self.sizer.Add(self._panel_bloodflow, flags.Proportion(2))
-        # self.sizer.Add(self._panel_glucose, flags.Proportion(2))
+        self.sizer.Add(self._panel_glucose, flags.Proportion(2))
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
