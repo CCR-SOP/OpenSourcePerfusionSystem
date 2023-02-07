@@ -22,14 +22,14 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelAO(wx.Panel):
-    def __init__(self, parent, ao_ch, init_rate):
+    def __init__(self, parent, ao_ch):  # init_rate):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.ao_ch = ao_ch
-        self.init_rate = init_rate
+        # self.init_rate = init_rate
 
-        self._panel_dc = PanelAODCControl(self, self.ao_ch, self.init_rate)
+        self._panel_dc = PanelAODCControl(self, self.ao_ch)  # self.init_rate
         name = f'{self.ao_ch.cfg.name}'
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -53,16 +53,16 @@ class PanelAO(wx.Panel):
 
 
 class PanelAODCControl(wx.Panel):
-    def __init__(self, parent, ao_ch, init_rate):
+    def __init__(self, parent, ao_ch):  # init_rate
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self.ao_ch = ao_ch
-        self.init_rate = init_rate
+        # self.init_rate = init_rate
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Speed (mL/min)')
-        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, initial=self.init_rate, inc=.001)
+        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)  # initial=self.init_rate
 
         self.btn_save_cfg = wx.Button(self, label='Save Default')
         self.btn_load_cfg = wx.Button(self, label='Load Default')
@@ -122,7 +122,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelAO(self, ao_channel, initial_rate)
+        self.panel = PanelAO(self, ao_channel)  # initial_rate
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     dev.read_config()
     channel_names = list(dev.ao_channels)
     ao_channel = dev.ao_channels[channel_names[1]]
-    initial_rates = list(dev.init_rates)
-    initial_rate = dev.initial_rates[channel_names[1]]
+    # initial_rates = list(dev.init_rates)
+    # initial_rate = dev.initial_rates[channel_names[1]]
     app = MyTestApp(0)
     app.MainLoop()
