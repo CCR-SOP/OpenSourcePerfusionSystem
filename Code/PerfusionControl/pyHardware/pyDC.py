@@ -32,8 +32,8 @@ class DCDeviceException(Exception):
 @dataclass
 class DCChannelConfig:
     name: str = 'Channel'
-    device_name: str = ''
-    line: int = 0
+    Device: str = ''
+    LineName: int = 0
     output_volts: float = 0.0
 
 

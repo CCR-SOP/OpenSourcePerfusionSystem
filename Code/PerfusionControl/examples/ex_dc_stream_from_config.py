@@ -27,7 +27,7 @@ PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
 hw = NIDAQDCDevice()
-hw.cfg = pyDC.DCChannelConfig(name='Glucose Circuit Pump')
+hw.cfg = pyDC.DCChannelConfig(name='Dialysate Inflow Pump')
 hw.read_config()
 
 sensor = SensorStream(hw, 'ml/min')

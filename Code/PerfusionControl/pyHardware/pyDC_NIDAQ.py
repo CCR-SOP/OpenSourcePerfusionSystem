@@ -29,7 +29,7 @@ class NIDAQDCDevice(pyDC.DCDevice):
         # recreate from scratch so base naming convention does not need
         # to be consistent with actual hardware naming convention
         if self.cfg:
-            dev_str = f'{self.cfg.device_name}/ao{self.cfg.line}'
+            dev_str = f'{self.cfg.Device}/ao{self.cfg.LineName}'
         else:
             dev_str = 'None'
         return dev_str
@@ -46,17 +46,17 @@ class NIDAQDCDevice(pyDC.DCDevice):
             self._task.CreateAOVoltageChan(devname, None, 0, 5,
                                            PyDAQmx.DAQmxConstants.DAQmx_Val_Volts, None)
         except PyDAQmx.DevCannotBeAccessedError as e:
-            msg = f'Could not access device "{self.device.cfg.device_name}". Please ensure device is '\
+            msg = f'Could not access device "{self.device.cfg.Device}". Please ensure device is '\
                   f'plugged in and assigned the correct device name'
             self._lgr.error(msg)
             raise(pyDC.AODeviceException(msg))
         except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
-            msg = f'Channel "{self.cfg.line}" does not exist on device {self.device.cfg.device_name}'
+            msg = f'Channel "{self.cfg.LineName}" does not exist on device {self.device.cfg.Device}'
             self._lgr.error(msg)
             raise(pyDC.AODeviceException(msg))
         except PyDAQmx.DAQmxFunctions.InvalidDeviceIDError:
             if self.cfg:
-                name = self.cfg.device_name
+                name = self.cfg.Device
             else:
                 name = 'None'
             msg = f'Device "{name}" is not a valid device ID'
@@ -72,6 +72,6 @@ class NIDAQDCDevice(pyDC.DCDevice):
             self._task.WriteAnalogF64(len(self._buffer), True, self.__timeout * 5, PyDAQmx.DAQmx_Val_GroupByChannel,
                                       self._buffer, PyDAQmx.byref(written), None)
         except PyDAQmx.DAQmxFunctions.PALResourceReservedError as e:
-            msg = f'{self.device.cfg.device_name} is reserved. Check for an invalid config or output type'
+            msg = f'{self.device.cfg.Device} is reserved. Check for an invalid config or output type'
             self._lgr.error(msg)
             self._lgr.error(e)
