@@ -12,8 +12,8 @@ import logging
 import wx
 
 import pyPerfusion.utils as utils
-from pyHardware.pyAO_NIDAQ import NIDAQAODevice
-import pyHardware.pyAO as pyAO
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+import pyHardware.pyDC as pyDC
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
@@ -21,15 +21,15 @@ DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
-class PanelAO(wx.Panel):
-    def __init__(self, parent, ao_ch):
+class PanelDC(wx.Panel):
+    def __init__(self, parent, dc_ch):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
-        self.ao_ch = ao_ch
+        self.dc_ch = dc_ch
 
-        self._panel_dc = PanelAODCControl(self, self.ao_ch)
-        name = f'{self.ao_ch.cfg.name}'
+        self._panel_dc = PanelDCDCControl(self, self.dc_ch)
+        name = f'{self.dc_ch.cfg.name}'
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
@@ -37,7 +37,7 @@ class PanelAO(wx.Panel):
         self.__set_bindings()
 
     def close(self):
-        self.ao_ch.close()
+        self.dc_ch.close()
 
     def __do_layout(self):
 
@@ -51,12 +51,12 @@ class PanelAO(wx.Panel):
         pass
 
 
-class PanelAODCControl(wx.Panel):
-    def __init__(self, parent, ao_ch):
+class PanelDCDCControl(wx.Panel):
+    def __init__(self, parent, dc_ch):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-        self.ao_ch = ao_ch
+        self.dc_ch = dc_ch
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Speed (uL/min)')
@@ -91,34 +91,34 @@ class PanelAODCControl(wx.Panel):
         self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def on_update(self, evt):
-        output_type = pyAO.DCOutput()
+        output_type = pyDC.DCOutput()
         output_type.offset_volts = self.slider_offset.GetValue() / 10000.0
         # self._lgr.debug(f'offset is {output_type.offset_volts}')
-        self.ao_ch.cfg.output_type = output_type
-        self.ao_ch.set_output(self.ao_ch.cfg.output_type)
+        self.dc_ch.cfg.output_type = output_type
+        self.dc_ch.set_output(self.dc_ch.cfg.output_type)
 
     def on_save_cfg(self, evt):
         self.update_config_from_controls()
-        self.ao_ch.write_config()
+        self.dc_ch.write_config()
 
     def on_load_cfg(self, evt):
-        self.ao_ch.device.read_config(ch_name=self.ao_ch.cfg.name)
+        self.dc_ch.device.read_config(ch_name=self.dc_ch.cfg.name)
         self.update_controls_from_config()
 
     def update_config_from_controls(self):
-        output_type = pyAO.DCOutput()
+        output_type = pyDC.DCOutput()
         output_type.offset_volts = self.spin_offset.GetValue()
-        self.ao_ch.cfg.output_type = output_type
+        self.dc_ch.cfg.output_type = output_type
 
     def update_controls_from_config(self):
-        self.slider_offset.SetValue(self.ao_ch.cfg.offset_volts)
+        self.slider_offset.SetValue(self.dc_ch.cfg.offset_volts)
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelAO(self, ao_channel)
+        self.panel = PanelDC(self, dc_channel)
 
 
 class MyTestApp(wx.App):
@@ -134,10 +134,10 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    dev = NIDAQAODevice()
-    dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')
+    dev = NIDAQDCDevice()
+    dev.cfg = pyDC.DCDeviceConfig(name='Dev1Output')
     dev.read_config()
-    channel_names = list(dev.ao_channels)
-    ao_channel = dev.ao_channels[channel_names[0]]
+    channel_names = list(dev.dc_channels)
+    dc_channel = dev.dc_channels[channel_names[0]]
     app = MyTestApp(0)
     app.MainLoop()
