@@ -9,8 +9,8 @@ import wx
 import time
 from pathlib import Path
 
-from pyHardware.pyAO_NIDAQ import NIDAQ_AO
-from pyPerfusion.panel_AO import PanelAO
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+from pyPerfusion.panel_DC import PanelDC
 
 devices = ['Centrifugal Pump 1', 'Centrifugal Pump 2', 'Peristaltic Pump 1', 'Peristaltic Pump 2']
 
@@ -23,7 +23,7 @@ class TestFrame(wx.Frame):
 
         self._panel = []
         for device in devices:
-            self._panel.append(PanelAO(self, NIDAQ_AO(), device))
+            self._panel.append(PanelDC(self, NIDAQDCDevice(), device))
             sizer.Add(self._panel[-1], 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
