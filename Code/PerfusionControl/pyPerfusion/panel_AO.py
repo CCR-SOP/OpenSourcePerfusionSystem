@@ -27,10 +27,13 @@ class PanelDC(wx.Panel):
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.name = name
+        print(self.name)
 
         self._panel_dc = PanelDCControl(self, self.name)
         self.hw = NIDAQDCDevice()
         self.hw.cfg = pyDC.DCChannelConfig(name=self.name)
+        self.hw.read_config()
+
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
@@ -61,6 +64,7 @@ class PanelDCControl(wx.Panel):
 
         self.hw = NIDAQDCDevice()
         self.hw.cfg = pyDC.DCChannelConfig(name=self.name)
+        self.hw.read_config()
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Speed (mL/min)')
@@ -99,12 +103,13 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelDC(self, ao_channel)
+        self.panel = PanelDC(self, name)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         self.Destroy()
+        hw.stop()
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -119,8 +124,10 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    # dev = NIDAQDCDevice()
-    # dev.cfg = pyDC.DCDeviceConfig(name='Dev1Output')
-    # dev.read_config()
+    name = 'Dialysate Inflow Pump'
+    hw = NIDAQDCDevice()
+    hw.cfg = pyDC.DCChannelConfig(name=name)
+    hw.read_config()
+
     app = MyTestApp(0)
     app.MainLoop()
