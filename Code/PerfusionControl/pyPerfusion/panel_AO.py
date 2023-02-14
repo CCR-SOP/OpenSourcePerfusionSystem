@@ -21,23 +21,24 @@ DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
-class PanelAO(wx.Panel):
-    def __init__(self, parent, ao_ch):
+class PanelDC(wx.Panel):
+    def __init__(self, parent, name):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
-        self.ao_ch = ao_ch
+        self.name = name
 
-        self._panel_dc = PanelAODCControl(self, self.ao_ch)
-        name = f'{self.ao_ch.cfg.name}'
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
+        self._panel_dc = PanelDCControl(self, self.name)
+        self.hw = NIDAQDCDevice()
+        self.hw.cfg = pyDC.DCChannelConfig(name=self.name)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
         self.__set_bindings()
 
     def close(self):
-        self.dc_ch.close()
+        self.hw.stop()
 
     def __do_layout(self):
 
@@ -51,19 +52,20 @@ class PanelAO(wx.Panel):
         pass
 
 
-class PanelAODCControl(wx.Panel):
-    def __init__(self, parent, ao_ch):
+class PanelDCControl(wx.Panel):
+    def __init__(self, parent, name):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-        self.ao_ch = ao_ch
+        self.name = name
+
+        self.hw = NIDAQDCDevice()
+        self.hw.cfg = pyDC.DCChannelConfig(name=self.name)
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Speed (mL/min)')
         self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)
 
-        self.btn_save_cfg = wx.Button(self, label='Save Default')
-        self.btn_load_cfg = wx.Button(self, label='Load Default')
         self.btn_change_rate = wx.Button(self, label='Update Rate')
 
         self.__do_layout()
@@ -78,10 +80,6 @@ class PanelAODCControl(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_change_rate)
-        sizer.AddSpacer(5)
-        sizer.Add(self.btn_save_cfg)
-        sizer.AddSpacer(5)
-        sizer.Add(self.btn_load_cfg)
         self.sizer.Add(sizer, wx.SizerFlags(0).CenterHorizontal().Top())
 
         self.SetSizer(self.sizer)
@@ -90,46 +88,22 @@ class PanelAODCControl(wx.Panel):
 
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
-        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
-        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def on_update(self, evt):
-        output_type = pyAO.DCOutput()
-        output_type.offset_volts = self.entered_offset.GetValue() / 10
-        # self._lgr.debug(f'offset is {output_type.offset_volts}')
-        self.ao_ch.cfg.output_type = output_type
-        self.ao_ch.set_output(self.ao_ch.cfg.output_type)
-    def on_save_cfg(self, evt):
-        self.update_config_from_controls()
-        self.dc_ch.write_config()
-
-    def on_load_cfg(self, evt):
-        self.ao_ch.device.read_config()  # ch_name=self.ao_ch.cfg.name
-        self.update_controls_from_config()
-
-    def update_config_from_controls(self):
-        output_type = pyAO.DCOutput()
-        output_type.offset_volts = self.entered_offset.GetValue()
-        self._lgr.debug(f'Saving flow rate of {output_type.offset_volts}')  # this is redundant, error message runs twice
-        self.ao_ch.cfg.output_type = output_type
-
-    def update_controls_from_config(self):
-        # self.entered_offset.SetValue(3)
-        self._lgr.debug(f'{self.ao_ch.cfg.output_type}')
-        new_val = float(self.ao_ch.cfg.output_type.offset_volts)
-        self.entered_offset.SetValue(new_val)
-
+        self.hw.stop()
+        new_flow = self.entered_offset.GetValue() / 10
+        self.hw.set_output(new_flow)
+        self.hw.start()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelAO(self, ao_channel)
+        self.panel = PanelDC(self, ao_channel)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        # TODO: stop the pump??
         self.Destroy()
 
 class MyTestApp(wx.App):
@@ -145,10 +119,8 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    dev = NIDAQDCDevice()
-    dev.cfg = pyDC.DCDeviceConfig(name='Dev1Output')
-    dev.read_config()
-    channel_names = list(dev.ao_channels)
-    ao_channel = dev.ao_channels[channel_names[1]]
+    # dev = NIDAQDCDevice()
+    # dev.cfg = pyDC.DCDeviceConfig(name='Dev1Output')
+    # dev.read_config()
     app = MyTestApp(0)
     app.MainLoop()

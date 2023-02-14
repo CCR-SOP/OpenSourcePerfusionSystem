@@ -61,7 +61,7 @@ class DCDevice:
         return self.cfg is not None
 
     def close(self):
-        pass
+        self.stop()
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass('hardware', self.cfg.name, self.cfg)
@@ -72,11 +72,11 @@ class DCDevice:
         PerfusionConfig.read_into_dataclass('hardware', channel_name, self.cfg)
 
     def start(self):
-        self.stop()
+        # self.stop()
         self.__acq_start_t = perf_counter()
 
     def stop(self):
-        pass
+        self.set_output(0)
 
     def set_output(self, output_volts: float):
         self._buffer[0] = output_volts

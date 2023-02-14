@@ -8,15 +8,18 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-
+from threading import enumerate
+from time import sleep
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import time
 from pyPerfusion.panel_AO import PanelAO
 from pyHardware.pyAO_NIDAQ import NIDAQAODevice
 import pyHardware.pyAO as pyAO
+import pyHardware.pyDC as pyDC
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+from pyPerfusion.FileStrategy import StreamToFile
 
 import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint
