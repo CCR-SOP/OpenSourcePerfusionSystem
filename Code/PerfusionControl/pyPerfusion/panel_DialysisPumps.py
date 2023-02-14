@@ -8,13 +8,13 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from threading import enumerate
-from time import sleep
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.panel_DC import PanelDC
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+import pyHardware.pyDC as pyDC
 from pyPerfusion.FileStrategy import StreamToFile
 
 import pyPerfusion.pyCDI as pyCDI
@@ -22,6 +22,23 @@ from pyPerfusion.SensorPoint import SensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile
 
 # TODO: add dict of limits
+
+# Initialize hardware configurations
+hw_do = NIDAQDCDevice()
+hw_do.cfg = pyDC.DCChannelConfig(name='Dialysate Outflow Pump')
+hw_do.read_config()
+
+hw_di = NIDAQDCDevice()
+hw_di.cfg = pyDC.DCChannelConfig(name='Dialysate Inflow Pump')
+hw_di.read_config()
+
+hw_bf = NIDAQDCDevice()
+hw_bf.cfg = pyDC.DCChannelConfig(name='Dialysis Blood Pump')
+hw_bf.read_config()
+
+hw_gc = NIDAQDCDevice()
+hw_gc.cfg = pyDC.DCChannelConfig(name='Glucose Circuit Pump')
+hw_gc.read_config()
 
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, **kwds):
@@ -31,10 +48,10 @@ class DialysisPumpPanel(wx.Panel):
         utils.configure_matplotlib_logging()
         self.parent = parent
 
-        self._panel_outflow = PanelDC(self, "Dialysate Outflow Pump")
-        self._panel_glucose = PanelDC(self, "Glucose Circuit Pump")
-        self._panel_inflow = PanelDC(self, "Dialysate Inflow Pump")
-        self._panel_bloodflow = PanelDC(self, "Dialysis Blood Pump")
+        self._panel_outflow = PanelDC(self, "Dialysate Outflow Pump", hw_do)
+        self._panel_glucose = PanelDC(self, "Glucose Circuit Pump", hw_gc)
+        self._panel_inflow = PanelDC(self, "Dialysate Inflow Pump", hw_di)
+        self._panel_bloodflow = PanelDC(self, "Dialysis Blood Pump", hw_bf)
 
         # TODO: add auto_start_btn for dialysis later
 
