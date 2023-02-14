@@ -14,11 +14,7 @@ import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.panel_AO import PanelDC
-# from pyHardware.pyAO_NIDAQ import NIDAQAODevice
-import pyHardware.pyAO as pyAO
-import pyHardware.pyDC as pyDC
-from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+from pyPerfusion.panel_DC import PanelDC
 from pyPerfusion.FileStrategy import StreamToFile
 
 import pyPerfusion.pyCDI as pyCDI
