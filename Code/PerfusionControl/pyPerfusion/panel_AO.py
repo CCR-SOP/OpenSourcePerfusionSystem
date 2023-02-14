@@ -128,6 +128,5 @@ if __name__ == "__main__":
     hw = NIDAQDCDevice()
     hw.cfg = pyDC.DCChannelConfig(name=temp_name)
     hw.read_config()
-
     app = MyTestApp(0)
     app.MainLoop()
