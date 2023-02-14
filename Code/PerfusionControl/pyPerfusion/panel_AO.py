@@ -103,7 +103,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelDC(self, name)
+        self.panel = PanelDC(self, temp_name)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -124,9 +124,9 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    name = 'Dialysate Inflow Pump'
+    temp_name = 'Dialysate Inflow Pump'
     hw = NIDAQDCDevice()
-    hw.cfg = pyDC.DCChannelConfig(name=name)
+    hw.cfg = pyDC.DCChannelConfig(name=temp_name)
     hw.read_config()
 
     app = MyTestApp(0)

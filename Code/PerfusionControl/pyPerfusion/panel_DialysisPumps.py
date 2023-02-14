@@ -14,8 +14,8 @@ import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.panel_AO import PanelAO
-from pyHardware.pyAO_NIDAQ import NIDAQAODevice
+from pyPerfusion.panel_AO import PanelDC
+# from pyHardware.pyAO_NIDAQ import NIDAQAODevice
 import pyHardware.pyAO as pyAO
 import pyHardware.pyDC as pyDC
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
@@ -35,35 +35,26 @@ class DialysisPumpPanel(wx.Panel):
         utils.configure_matplotlib_logging()
         self.parent = parent
 
-        dev = NIDAQAODevice()
-        dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')
-        dev.read_config()
-        channel_names = list(dev.ao_channels)
-        ao_ch = dev.ao_channels[channel_names[1]]
-        self._panel_outflow = PanelAO(self, ao_ch)
-
-        ao_ch = dev.ao_channels[channel_names[0]]
-        self._panel_glucose = PanelAO(self, ao_ch)
-
-        dev2 = NIDAQAODevice()
-        dev2.cfg = pyAO.AODeviceConfig(name='Dev2Output')
-        dev2.read_config()
-        channel_names = list(dev2.ao_channels)
-        ao_ch = dev2.ao_channels[channel_names[0]]
-        self._panel_inflow = PanelAO(self, ao_ch)
-
-        ao_ch = dev2.ao_channels[channel_names[1]]
-        self._panel_bloodflow = PanelAO(self, ao_ch)
+        self._panel_outflow = PanelDC(self, "Dialysate Outflow Pump")
+        self._panel_glucose = PanelDC(self, "Glucose Circuit Pump")
+        self._panel_inflow = PanelDC(self, "Dialysate Inflow Pump")
+        self._panel_bloodflow = PanelDC(self, "Dialysis Blood Pump")
 
         # TODO: add auto_start_btn for dialysis later
 
         # TODO: add initial rates to config and update this in panel_AO?
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Dialysis Pumps")
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
+
+    def close(self):
+        self._panel_outflow.close()
+        self._panel_inflow.close()
+        self._panel_glucose.close()
+        self._panel_bloodflow.close()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -113,6 +104,7 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.Destroy()
+        self.panel.close()
 
 class MyTestApp(wx.App):
     def OnInit(self):
