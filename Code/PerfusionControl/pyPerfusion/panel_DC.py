@@ -24,17 +24,15 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelDC(wx.Panel):
-    def __init__(self, parent, name, hw, sensor):
+    def __init__(self, parent, sensor):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
-        self.name = name
-        self.hw = hw
         self.sensor = sensor
 
-        self._panel_dc = PanelDCControl(self, self.name, self.hw, self.sensor)
+        self._panel_dc = PanelDCControl(self, self.sensor)
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.sensor.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
@@ -57,12 +55,10 @@ class PanelDC(wx.Panel):
 
 
 class PanelDCControl(wx.Panel):
-    def __init__(self, parent, name, hw, sensor):
+    def __init__(self, parent, sensor):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-        self.name = name
-        self.hw = hw
         self.sensor = sensor
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -70,9 +66,6 @@ class PanelDCControl(wx.Panel):
         self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
-
-        self.sensor.open()
-        self.sensor.start()
 
         self.__do_layout()
         self.__set_bindings()
@@ -96,16 +89,15 @@ class PanelDCControl(wx.Panel):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
 
     def on_update(self, evt):
+        self._lgr.debug('on_update called')
         new_flow = self.entered_offset.GetValue() / 10
-        self.hw.set_output(new_flow)
-        if self.hw.get_data is None:
-            self.hw.start()
+        self.sensor.hw.set_output(new_flow)
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelDC(self, temp_name, temp_hw, temp_sensor)
+        self.panel = PanelDC(self, temp_name, temp_sensor)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 

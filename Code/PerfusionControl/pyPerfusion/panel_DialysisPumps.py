@@ -18,43 +18,31 @@ import pyHardware.pyDC as pyDC
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.SensorStream import SensorStream
 
-import pyPerfusion.pyCDI as pyCDI
-from pyPerfusion.SensorPoint import SensorPoint
-from pyPerfusion.FileStrategy import MultiVarToFile
-
-# TODO: add dict of limits for automation
-
-# Initialize hardware configurations and sensor stream
-PerfusionConfig.set_test_config()
-roller_pumps = []
-sensors = []
-rPumpNames = {0: "Dialysate Outflow Pump", 1: "Dialysate Inflow Pump", 2: "Dialysis Blood Pump",
-    3: "Glucose Circuit Pump"}
-
-for x in range(4):
-    hw = NIDAQDCDevice()
-    hw.cfg = pyDC.DCChannelConfig(name=rPumpNames[x])
-    hw.read_config()
-    sensor = SensorStream(hw, "ml/min")
-    sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
-    roller_pumps.append(hw)
-    sensors.append(sensor)
-
-# for some reason adding this took the code back to giving double logger comments? I had gotten rid of this and it came back... not sure why
 
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, **kwds):
+        self._lgr = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-        utils.configure_matplotlib_logging()
         self.parent = parent
 
-        self._panel_outflow = PanelDC(self, "Dialysate Outflow Pump", roller_pumps[0], sensors[0])
-        # wanted to access value --> key in rPumpsNames dict but no joy so manually indexed
-        self._panel_glucose = PanelDC(self, "Glucose Circuit Pump", roller_pumps[3], sensors[3])
-        self._panel_inflow = PanelDC(self, "Dialysate Inflow Pump", roller_pumps[1], sensors[1])
-        self._panel_bloodflow = PanelDC(self, "Dialysis Blood Pump", roller_pumps[2], sensors[2])
+        # Initialize hardware configurations and sensor stream
+        self.roller_pumps = {}
+        self.rPumpNames = ["Dialysate Outflow Pump", "Dialysate Inflow Pump",
+                           "Dialysis Blood Pump", "Glucose Circuit Pump"]
+
+        for pumpName in self.rPumpNames:
+            hw = NIDAQDCDevice()
+            hw.cfg = pyDC.DCChannelConfig(name=pumpName)
+            hw.read_config()
+            sensor = SensorStream(hw, "ml/min")
+            sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+            self.roller_pumps[pumpName] = sensor
+
+        self._panel_outflow = PanelDC(self, self.roller_pumps['Dialysate Outflow Pump'])
+        self._panel_glucose = PanelDC(self, self.roller_pumps['Glucose Circuit Pump'])
+        self._panel_inflow = PanelDC(self, self.roller_pumps['Dialysate Inflow Pump'])
+        self._panel_bloodflow = PanelDC(self, self.roller_pumps['Dialysis Blood Pump'])
 
         # TODO: add auto_start_btn for dialysis later
 
@@ -122,6 +110,7 @@ class TestFrame(wx.Frame):
         self.Destroy()
         self.panel.close()
 
+
 class MyTestApp(wx.App):
     def OnInit(self):
         frame = TestFrame(None, wx.ID_ANY, "")
@@ -129,9 +118,12 @@ class MyTestApp(wx.App):
         frame.Show()
         return True
 
+
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    logger = logging.getLogger()
+    utils.setup_stream_logger(logger, logging.DEBUG)
     utils.configure_matplotlib_logging()
+
     app = MyTestApp(0)
     app.MainLoop()
