@@ -22,32 +22,23 @@ import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile
 
-# TODO: add dict of limits
+# TODO: add dict of limits for automation
 
 # Initialize hardware configurations and sensor stream
-hw_do = NIDAQDCDevice()
-hw_do.cfg = pyDC.DCChannelConfig(name='Dialysate Outflow Pump')
-hw_do.read_config()
-sensor_do = SensorStream(hw_do, 'ml/min')
-sensor_do.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+PerfusionConfig.set_test_config()
+roller_pumps = []
+sensors = []
+rPumpNames = {0: "Dialysate Outflow Pump", 1: "Dialysate Inflow Pump", 2: "Dialysis Blood Pump",
+    3: "Glucose Circuit Pump"}
 
-hw_di = NIDAQDCDevice()
-hw_di.cfg = pyDC.DCChannelConfig(name='Dialysate Inflow Pump')
-hw_di.read_config()
-sensor_di = SensorStream(hw_di, 'ml/min')
-sensor_di.add_strategy(strategy=StreamToFile('Raw', 1, 10))
-
-hw_bf = NIDAQDCDevice()
-hw_bf.cfg = pyDC.DCChannelConfig(name='Dialysis Blood Pump')
-hw_bf.read_config()
-sensor_bf = SensorStream(hw_bf, 'ml/min')
-sensor_bf.add_strategy(strategy=StreamToFile('Raw', 1, 10))
-
-hw_gc = NIDAQDCDevice()
-hw_gc.cfg = pyDC.DCChannelConfig(name='Glucose Circuit Pump')
-hw_gc.read_config()
-sensor_gc = SensorStream(hw_gc, 'ml/min')
-sensor_gc.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+for x in range(4):
+    hw = NIDAQDCDevice()
+    hw.cfg = pyDC.DCChannelConfig(name=rPumpNames[x])
+    hw.read_config()
+    sensor = SensorStream(hw, "ml/min")
+    sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+    roller_pumps.append(hw)
+    sensors.append(sensor)
 
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, **kwds):
@@ -57,10 +48,11 @@ class DialysisPumpPanel(wx.Panel):
         utils.configure_matplotlib_logging()
         self.parent = parent
 
-        self._panel_outflow = PanelDC(self, "Dialysate Outflow Pump", hw_do, sensor_do)
-        self._panel_glucose = PanelDC(self, "Glucose Circuit Pump", hw_gc, sensor_gc)
-        self._panel_inflow = PanelDC(self, "Dialysate Inflow Pump", hw_di, sensor_di)
-        self._panel_bloodflow = PanelDC(self, "Dialysis Blood Pump", hw_bf, sensor_bf)
+        self._panel_outflow = PanelDC(self, "Dialysate Outflow Pump", roller_pumps[0], sensors[0])
+        # wanted to access value --> key in rPumpsNames dict but no joy so manually indexed
+        self._panel_glucose = PanelDC(self, "Glucose Circuit Pump", roller_pumps[3], sensors[3])
+        self._panel_inflow = PanelDC(self, "Dialysate Inflow Pump", roller_pumps[1], sensors[1])
+        self._panel_bloodflow = PanelDC(self, "Dialysis Blood Pump", roller_pumps[2], sensors[2])
 
         # TODO: add auto_start_btn for dialysis later
 
