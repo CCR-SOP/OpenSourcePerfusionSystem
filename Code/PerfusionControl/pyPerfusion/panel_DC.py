@@ -24,20 +24,25 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelDC(wx.Panel):
-    def __init__(self, parent, name, hw):
+    def __init__(self, parent, name, hw, sensor):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.name = name
         self.hw = hw
+        self.sensor = sensor
 
-        self._panel_dc = PanelDCControl(self, self.name, self.hw)
+        self._panel_dc = PanelDCControl(self, self.name, self.hw, self.sensor)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
         self.__set_bindings()
+
+    def close(self):
+        self.hw.stop()
+        self.sensor.stop()
 
     def __do_layout(self):
 
@@ -52,18 +57,22 @@ class PanelDC(wx.Panel):
 
 
 class PanelDCControl(wx.Panel):
-    def __init__(self, parent, name, hw):
+    def __init__(self, parent, name, hw, sensor):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self.name = name
         self.hw = hw
+        self.sensor = sensor
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Speed (mL/min)')
         self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
+
+        self.sensor.open()
+        self.sensor.start()
 
         self.__do_layout()
         self.__set_bindings()
@@ -87,22 +96,23 @@ class PanelDCControl(wx.Panel):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
 
     def on_update(self, evt):
-        self.hw.stop()
         new_flow = self.entered_offset.GetValue() / 10
         self.hw.set_output(new_flow)
-        self.hw.start()
+        if self.hw.get_data is None:
+            self.hw.start()
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelDC(self, temp_name, temp_hw)
+        self.panel = PanelDC(self, temp_name, temp_hw, temp_sensor)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         self.Destroy()
         temp_hw.stop()
+        temp_sensor.stop()
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -122,12 +132,8 @@ if __name__ == "__main__":
     temp_hw.cfg = pyDC.DCChannelConfig(name=temp_name)
     temp_hw.read_config()
 
-    sensor = SensorStream(temp_hw, 'ml/min')
-    sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
-    sensor.open()
-    sensor.start()
+    temp_sensor = SensorStream(temp_hw, 'ml/min')
+    temp_sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
 
     app = MyTestApp(0)
     app.MainLoop()
-
-    sensor.stop()

@@ -66,7 +66,7 @@ class NIDAQDCDevice(pyDC.DCDevice):
     def set_output(self, output_volts: float):
         super().set_output(output_volts)
         self._open_task()
-        self._lgr.debug(f'output is {output_volts}')
+        self._lgr.debug(f'output is {output_volts} V')
         try:
             written = ctypes.c_int32(0)
             self._task.WriteAnalogF64(len(self._buffer), True, self.__timeout * 5, PyDAQmx.DAQmx_Val_GroupByChannel,

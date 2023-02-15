@@ -16,6 +16,7 @@ from pyPerfusion.panel_DC import PanelDC
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 import pyHardware.pyDC as pyDC
 from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.SensorStream import SensorStream
 
 import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint
@@ -23,22 +24,30 @@ from pyPerfusion.FileStrategy import MultiVarToFile
 
 # TODO: add dict of limits
 
-# Initialize hardware configurations
+# Initialize hardware configurations and sensor stream
 hw_do = NIDAQDCDevice()
 hw_do.cfg = pyDC.DCChannelConfig(name='Dialysate Outflow Pump')
 hw_do.read_config()
+sensor_do = SensorStream(hw_do, 'ml/min')
+sensor_do.add_strategy(strategy=StreamToFile('Raw', 1, 10))
 
 hw_di = NIDAQDCDevice()
 hw_di.cfg = pyDC.DCChannelConfig(name='Dialysate Inflow Pump')
 hw_di.read_config()
+sensor_di = SensorStream(hw_di, 'ml/min')
+sensor_di.add_strategy(strategy=StreamToFile('Raw', 1, 10))
 
 hw_bf = NIDAQDCDevice()
 hw_bf.cfg = pyDC.DCChannelConfig(name='Dialysis Blood Pump')
 hw_bf.read_config()
+sensor_bf = SensorStream(hw_bf, 'ml/min')
+sensor_bf.add_strategy(strategy=StreamToFile('Raw', 1, 10))
 
 hw_gc = NIDAQDCDevice()
 hw_gc.cfg = pyDC.DCChannelConfig(name='Glucose Circuit Pump')
 hw_gc.read_config()
+sensor_gc = SensorStream(hw_gc, 'ml/min')
+sensor_gc.add_strategy(strategy=StreamToFile('Raw', 1, 10))
 
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, **kwds):
@@ -48,14 +57,14 @@ class DialysisPumpPanel(wx.Panel):
         utils.configure_matplotlib_logging()
         self.parent = parent
 
-        self._panel_outflow = PanelDC(self, "Dialysate Outflow Pump", hw_do)
-        self._panel_glucose = PanelDC(self, "Glucose Circuit Pump", hw_gc)
-        self._panel_inflow = PanelDC(self, "Dialysate Inflow Pump", hw_di)
-        self._panel_bloodflow = PanelDC(self, "Dialysis Blood Pump", hw_bf)
+        self._panel_outflow = PanelDC(self, "Dialysate Outflow Pump", hw_do, sensor_do)
+        self._panel_glucose = PanelDC(self, "Glucose Circuit Pump", hw_gc, sensor_gc)
+        self._panel_inflow = PanelDC(self, "Dialysate Inflow Pump", hw_di, sensor_di)
+        self._panel_bloodflow = PanelDC(self, "Dialysis Blood Pump", hw_bf, sensor_bf)
 
         # TODO: add auto_start_btn for dialysis later
 
-        # TODO: add initial rates to config and update this in panel_AO?
+        # TODO: add initial rates to config and update this in panel_DC?
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
