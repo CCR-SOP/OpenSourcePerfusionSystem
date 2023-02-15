@@ -40,6 +40,8 @@ for x in range(4):
     roller_pumps.append(hw)
     sensors.append(sensor)
 
+# for some reason adding this took the code back to giving double logger comments? I had gotten rid of this and it came back... not sure why
+
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, **kwds):
         wx.Panel.__init__(self, parent, -1)
@@ -71,15 +73,15 @@ class DialysisPumpPanel(wx.Panel):
         self._panel_bloodflow.close()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
+        flagsExpand = wx.SizerFlags(1)
+        flagsExpand.Expand().Border(wx.ALL, 10)
         self.sizer = wx.GridSizer(cols=2)
 
-        self.sizer.Add(self._panel_inflow, flags.Proportion(2))
-        self.sizer.Add(self._panel_outflow, flags.Proportion(2))
-        self.sizer.Add(self._panel_bloodflow, flags.Proportion(2))
-        self.sizer.Add(self._panel_glucose, flags.Proportion(2))
+        self.sizer.Add(self._panel_inflow, flagsExpand)
+        self.sizer.Add(self._panel_outflow, flagsExpand)
+        self.sizer.Add(self._panel_bloodflow, flagsExpand)
+        self.sizer.Add(self._panel_glucose, flagsExpand)
 
-        self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()

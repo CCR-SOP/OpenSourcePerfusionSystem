@@ -66,7 +66,7 @@ class PanelDCControl(wx.Panel):
         self.sensor = sensor
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.label_offset = wx.StaticText(self, label='Speed (mL/min)')
+        self.label_offset = wx.StaticText(self, label='Pump Speed (mL/min)')
         self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
