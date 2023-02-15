@@ -97,7 +97,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelDC(self, temp_name, temp_sensor)
+        self.panel = PanelDC(self, temp_sensor)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
