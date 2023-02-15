@@ -39,7 +39,7 @@ class PanelDC(wx.Panel):
         self.__set_bindings()
 
     def close(self):
-        self.hw.stop()
+        self.sensor.hw.stop()
         self.sensor.stop()
 
     def __do_layout(self):
