@@ -33,7 +33,7 @@ class GasMixerPanel(wx.Panel):
         HA_mixer_shift = GB100_shift('HA', HA_mixer)
         PV_mixer = mcq.Main('Venous Gas Mixer')
         PV_mixer_shift = GB100_shift('PV', PV_mixer)
-        
+
         self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', mixer_shifter=HA_mixer_shift)
         self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', mixer_shifter=PV_mixer_shift)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
