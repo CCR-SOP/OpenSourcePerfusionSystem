@@ -8,64 +8,68 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import time
-from pyPerfusion.panel_AO import PanelAO
-from pyHardware.pyAO_NIDAQ import NIDAQAODevice
-import pyHardware.pyAO as pyAO
+from pyPerfusion.panel_DC import PanelDC
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+import pyHardware.pyDC as pyDC
+from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.SensorStream import SensorStream
 
-import pyPerfusion.pyCDI as pyCDI
-from pyPerfusion.SensorPoint import SensorPoint
-from pyPerfusion.FileStrategy import MultiVarToFile
-
-# add dict of limits
 
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, **kwds):
+        self._lgr = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-        utils.configure_matplotlib_logging()
         self.parent = parent
 
-        dev = NIDAQAODevice()
-        dev.cfg = pyAO.AODeviceConfig(name='Dev1Output')
-        dev.read_config()
-        channel_names = list(dev.ao_channels)
-        ao_ch = dev.ao_channels[channel_names[0]]
-        self._panel_outflow = PanelAO(self, ao_ch)
+        # Initialize hardware configurations and sensor stream
+        self.roller_pumps = {}
+        self.rPumpNames = ["Dialysate Outflow Pump", "Dialysate Inflow Pump",
+                           "Dialysis Blood Pump", "Glucose Circuit Pump"]
 
-        dev2 = NIDAQAODevice()
-        dev2.cfg = pyAO.AODeviceConfig(name='Dev2Output')
-        dev2.read_config()
-        channel_names = list(dev2.ao_channels)
-        ao_ch = dev2.ao_channels[channel_names[0]]
-        print(channel_names)
-        self._panel_inflow = PanelAO(self, ao_ch)  # this controls the in flow pump but doesn't have the correct label
+        for pumpName in self.rPumpNames:
+            hw = NIDAQDCDevice()
+            hw.cfg = pyDC.DCChannelConfig(name=pumpName)
+            hw.read_config()
+            sensor = SensorStream(hw, "ml/min")
+            sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+            self.roller_pumps[pumpName] = sensor
 
-        ao_ch = dev2.ao_channels[channel_names[1]]
-        self._panel_bloodflow = PanelAO(self, ao_ch)
+        self._panel_outflow = PanelDC(self, self.roller_pumps['Dialysate Outflow Pump'])
+        self._panel_glucose = PanelDC(self, self.roller_pumps['Glucose Circuit Pump'])
+        self._panel_inflow = PanelDC(self, self.roller_pumps['Dialysate Inflow Pump'])
+        self._panel_bloodflow = PanelDC(self, self.roller_pumps['Dialysis Blood Pump'])
 
-        # add auto_start_btn later
+        # TODO: add auto_start_btn for dialysis later
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Dialysis Pumps")
+        # TODO: add initial rates to config and update this in panel_DC?
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
 
+    def close(self):
+        self._panel_outflow.close()
+        self._panel_inflow.close()
+        self._panel_glucose.close()
+        self._panel_bloodflow.close()
+
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
+        flagsExpand = wx.SizerFlags(1)
+        flagsExpand.Expand().Border(wx.ALL, 10)
+        self.sizer = wx.GridSizer(cols=2)
 
-        self.sizer.Add(self._panel_inflow, flags.Proportion(2))
-        self.sizer.Add(self._panel_outflow, flags.Proportion(2))
-        self.sizer.Add(self._panel_bloodflow, flags.Proportion(2))
+        self.sizer.Add(self._panel_inflow, flagsExpand)
+        self.sizer.Add(self._panel_outflow, flagsExpand)
+        self.sizer.Add(self._panel_bloodflow, flagsExpand)
+        self.sizer.Add(self._panel_glucose, flagsExpand)
 
-        self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
@@ -104,6 +108,8 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.Destroy()
+        self.panel.close()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -112,9 +118,12 @@ class MyTestApp(wx.App):
         frame.Show()
         return True
 
+
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    logger = logging.getLogger()
+    utils.setup_stream_logger(logger, logging.DEBUG)
     utils.configure_matplotlib_logging()
+
     app = MyTestApp(0)
     app.MainLoop()
