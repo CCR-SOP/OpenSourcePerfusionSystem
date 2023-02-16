@@ -24,16 +24,16 @@ PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
-HA_mixer = mcq.Main('Arterial Gas Mixer')
-HA_mixer_shift = GB100_shift('HA', HA_mixer)
-PV_mixer = mcq.Main('Venous Gas Mixer')
-PV_mixer_shift = GB100_shift('PV', PV_mixer)
-
 class GasMixerPanel(wx.Panel):
     def __init__(self, parent):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
+        HA_mixer = mcq.Main('Arterial Gas Mixer')
+        HA_mixer_shift = GB100_shift('HA', HA_mixer)
+        PV_mixer = mcq.Main('Venous Gas Mixer')
+        PV_mixer_shift = GB100_shift('PV', PV_mixer)
+        
         self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', mixer_shifter=HA_mixer_shift)
         self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', mixer_shifter=PV_mixer_shift)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
@@ -64,7 +64,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.parent = parent
         self.name = name
         self.mixer_shifter = mixer_shifter
-        self.gas1 = list(self.mixer_shifter.gas_dict.keys())[0]
+        self.gas1 = list(self.mixer_shifter.gas_dict.keys())[0]  # how to access key in value:key dict pair
         self.gas2 = list(self.mixer_shifter.gas_dict.keys())[1]
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
@@ -76,23 +76,20 @@ class BaseGasMixerPanel(wx.Panel):
 
         channel_nr = 1  # always just change the first channel and the rest will follow
         gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(channel_nr)
-        gas2_mix_perc = 100 - gas1_mix_perc
-        gas2_mix_str = str(gas2_mix_perc)
+        gas2_mix_perc = str(100 - gas1_mix_perc)
 
-        gas1_flow = self.mixer_shifter.mixer.get_channel_target_sccm(1)
-        gas2_flow = self.mixer_shifter.mixer.get_channel_target_sccm(2)
-        gas1_flow_str = str(gas1_flow)
-        gas2_flow_str = str(gas2_flow)
+        gas1_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(1))
+        gas2_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(2))
 
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1} % Mix:')
         self.input_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
         self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} actual flow (mL/min):')
-        self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_flow_str)
+        self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_flow)
 
         self.label_gas2 = wx.StaticText(self, label=f'{self.gas2} % Mix:')
-        self.input_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_mix_str)
+        self.input_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_mix_perc)
         self.label_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} actual flow (mL/min):')
-        self.flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_flow_str)
+        self.flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_flow)
 
         self.manual_start_btn = wx.ToggleButton(self, label='Manual Start')
         self.automatic_start_btn = wx.ToggleButton(self, label='Automatic Start')
@@ -168,17 +165,17 @@ class BaseGasMixerPanel(wx.Panel):
         self.mixer_shifter.mixer.set_channel_percent_value(1, new_percent)
         self.mixer_shifter.mixer.set_channel_percent_value(2, 100-new_percent)
 
-        # Update app display to reflect new values
-        gas2_mix_perc = 100 - new_percent
+        self.UpdateAppDisplay(new_percent)
+
+    def UpdateAppDisplay(self, new_perc):
+        gas2_mix_perc = 100 - new_perc
         gas2_mix_str = str(gas2_mix_perc)
         self.input_gas2.SetValue(gas2_mix_str)
 
-        gas1_flow = self.mixer_shifter.mixer.get_channel_sccm_av(1)
-        gas2_flow = self.mixer_shifter.mixer.get_channel_sccm_av(2)
-        gas1_flow_str = str(gas1_flow)
-        gas2_flow_str = str(gas2_flow)
-        self.flow_gas1.SetValue(gas1_flow_str)
-        self.flow_gas2.SetValue(gas2_flow_str)
+        gas1_flow = str(self.mixer_shifter.mixer.get_channel_sccm_av(1))
+        gas2_flow = str(self.mixer_shifter.mixer.get_channel_sccm_av(2))
+        self.flow_gas1.SetValue(gas1_flow)
+        self.flow_gas2.SetValue(gas2_flow)
 
     def OnChangeTotalFlow(self, evt):
         new_total_flow = evt.GetValue()
