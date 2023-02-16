@@ -78,18 +78,24 @@ class BaseGasMixerPanel(wx.Panel):
         gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(channel_nr)
         gas2_mix_perc = str(100 - gas1_mix_perc)
 
-        gas1_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(1))
-        gas2_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(2))
+        gas1_flow = str(self.mixer_shifter.mixer.get_channel_sccm(1))
+        gas2_flow = str(self.mixer_shifter.mixer.get_channel_sccm(2))
+        gas1_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(1))
+        gas2_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(2))
 
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1} % Mix:')
-        self.input_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
+        self.percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
         self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} actual flow (mL/min):')
         self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_flow)
+        self.label_target_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} target flow (mL/min):')
+        self.target_flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_target_flow)
 
         self.label_gas2 = wx.StaticText(self, label=f'{self.gas2} % Mix:')
-        self.input_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_mix_perc)
+        self.percent_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_mix_perc)
         self.label_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} actual flow (mL/min):')
         self.flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_flow)
+        self.label_target_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} target flow (mL/min):')
+        self.target_flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_target_flow)
 
         self.manual_start_btn = wx.ToggleButton(self, label='Manual Start')
         self.automatic_start_btn = wx.ToggleButton(self, label='Automatic Start')
@@ -105,12 +111,16 @@ class BaseGasMixerPanel(wx.Panel):
         sizer_cfg.Add(self.input_total_flow, flags)
 
         sizer_cfg.Add(self.label_gas1, flags)
-        sizer_cfg.Add(self.input_gas1, flags)
+        sizer_cfg.Add(self.percent_gas1, flags)
+        sizer_cfg.Add(self.label_target_flow_gas1, flags)
+        sizer_cfg.Add(self.target_flow_gas1, flags)
         sizer_cfg.Add(self.label_flow_gas1, flags)
         sizer_cfg.Add(self.flow_gas1, flags)
 
         sizer_cfg.Add(self.label_gas2, flags)
-        sizer_cfg.Add(self.input_gas2, flags)
+        sizer_cfg.Add(self.percent_gas2, flags)
+        sizer_cfg.Add(self.label_target_flow_gas2, flags)
+        sizer_cfg.Add(self.target_flow_gas2, flags)
         sizer_cfg.Add(self.label_flow_gas2, flags)
         sizer_cfg.Add(self.flow_gas2, flags)
 
@@ -127,7 +137,7 @@ class BaseGasMixerPanel(wx.Panel):
     def __set_bindings(self):
         self.manual_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnManualStart)
         self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
-        self.input_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangePercentMix)
+        self.percent_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangePercentMix)
         self.input_total_flow.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeTotalFlow)
 
     def OnManualStart(self, evt):
@@ -165,21 +175,30 @@ class BaseGasMixerPanel(wx.Panel):
         self.mixer_shifter.mixer.set_channel_percent_value(1, new_percent)
         self.mixer_shifter.mixer.set_channel_percent_value(2, 100-new_percent)
 
-        self.UpdateAppDisplay(new_percent)
+        self.UpdateAppPercentages(new_percent)
 
-    def UpdateAppDisplay(self, new_perc):
-        gas2_mix_perc = 100 - new_perc
-        gas2_mix_str = str(gas2_mix_perc)
-        self.input_gas2.SetValue(gas2_mix_str)
+    def UpdateAppPercentages(self, new_perc):
+        gas2_mix_perc = str(100 - new_perc)
+        self.percent_gas2.SetValue(gas2_mix_perc)
 
+        self.UpdateAppFlows()
+
+    def OnChangeTotalFlow(self, evt):
+        new_total_flow = evt.GetValue()
+        self.mixer_shifter.mixer.set_mainboard_total_flow(int(new_total_flow))
+
+        self.UpdateAppFlows()
+
+    def UpdateAppFlows(self):
         gas1_flow = str(self.mixer_shifter.mixer.get_channel_sccm_av(1))
         gas2_flow = str(self.mixer_shifter.mixer.get_channel_sccm_av(2))
         self.flow_gas1.SetValue(gas1_flow)
         self.flow_gas2.SetValue(gas2_flow)
 
-    def OnChangeTotalFlow(self, evt):
-        new_total_flow = evt.GetValue()
-        self.mixer_shifter.mixer.set_mainboard_total_flow(int(new_total_flow))
+        gas1_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(1))
+        gas2_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(2))
+        self.target_flow_gas1.SetValue(gas1_target_flow)
+        self.target_flow_gas2.SetValue(gas2_target_flow)
 
 
 class TestFrame(wx.Frame):
