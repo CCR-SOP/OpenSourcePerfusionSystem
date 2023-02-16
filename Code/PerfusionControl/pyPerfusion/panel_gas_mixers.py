@@ -97,8 +97,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_target_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} target flow (mL/min):')
         self.target_flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_target_flow)
 
-        self.manual_start_btn = wx.ToggleButton(self, label='Manual Start')
-        self.automatic_start_btn = wx.ToggleButton(self, label='Automatic Start')
+        self.manual_start_btn = wx.ToggleButton(self, label='Start Manual')
+        self.automatic_start_btn = wx.ToggleButton(self, label='Start Automatic')
 
         self.__do_layout()
         self.__set_bindings()
@@ -140,23 +140,25 @@ class BaseGasMixerPanel(wx.Panel):
         self.percent_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangePercentMix)
         self.input_total_flow.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeTotalFlow)
 
-    def OnManualStart(self, evt):
+    def OnManualStart(self, evt):  # does this need to be turned on to start?
         working_status = self.mixer_shifter.mixer.get_working_status()
-        if working_status == 1:  # 1 is off
+        if working_status == 0:  # 0 is off
             self.mixer_shifter.mixer.set_working_status_ON()
             self.manual_start_btn.SetLabel('Stop Manual')
         else:
+            self.mixer_shifter.mixer.set_working_status_OFF()
             self.manual_start_btn.SetLabel('Start Manual')
+        self.UpdateAppFlows()
 
     def OnAutoStart(self, evt):
         GB100_working_status = self.mixer_shifter.mixer.get_working_status()
         cdi = pyCDI.CDIStreaming('CDI')
-        # cdi.read_config() need updated pyCDI and SensorPopint for this to work
+        # cdi.read_config() need updated pyCDI and SensorPoint for this to work
         sensorpt = SensorPoint(cdi, 'NA')
         sensorpt.start()
         cdi.start()
         CDI_output = sensorpt.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-        if GB100_working_status == 1:
+        if GB100_working_status == 0:
             self.mixer_shifter.mixer.set_working_status_ON()
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.mixer_shifter.check_pH(CDI_output)
@@ -175,6 +177,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.mixer_shifter.mixer.set_channel_percent_value(1, new_percent)
         self.mixer_shifter.mixer.set_channel_percent_value(2, 100-new_percent)
 
+        self.EnsureTurnedOn()
+        # delay? which lines turns off code?
         self.UpdateAppPercentages(new_percent)
 
     def UpdateAppPercentages(self, new_perc):
@@ -187,6 +191,8 @@ class BaseGasMixerPanel(wx.Panel):
         new_total_flow = evt.GetValue()
         self.mixer_shifter.mixer.set_mainboard_total_flow(int(new_total_flow))
 
+        self.EnsureTurnedOn()
+        # delay? which lines turns off code?
         self.UpdateAppFlows()
 
     def UpdateAppFlows(self):
@@ -199,6 +205,11 @@ class BaseGasMixerPanel(wx.Panel):
         gas2_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(2))
         self.target_flow_gas1.SetValue(gas1_target_flow)
         self.target_flow_gas2.SetValue(gas2_target_flow)
+
+    def EnsureTurnedOn(self):
+           # check we stay turned on since it's been turning off. TODO: TEST
+           if self.mixer_shifter.mixer.get_working_status() == 0:
+               self.mixer_shifter.mixer.set_working_status_ON()
 
 
 class TestFrame(wx.Frame):
