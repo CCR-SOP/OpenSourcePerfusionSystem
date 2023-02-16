@@ -140,7 +140,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.percent_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangePercentMix)
         self.input_total_flow.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeTotalFlow)
 
-    def OnManualStart(self, evt):  # does this need to be turned on to start?
+    def OnManualStart(self, evt):
         working_status = self.mixer_shifter.mixer.get_working_status()
         if working_status == 0:  # 0 is off
             self.mixer_shifter.mixer.set_working_status_ON()
@@ -148,6 +148,8 @@ class BaseGasMixerPanel(wx.Panel):
         else:
             self.mixer_shifter.mixer.set_working_status_OFF()
             self.manual_start_btn.SetLabel('Start Manual')
+
+        time.sleep(4.0)  # approximate response time is 4 s. does time.sleep cause looping or is it fine?
         self.UpdateAppFlows()
 
     def OnAutoStart(self, evt):
@@ -177,8 +179,9 @@ class BaseGasMixerPanel(wx.Panel):
         self.mixer_shifter.mixer.set_channel_percent_value(1, new_percent)
         self.mixer_shifter.mixer.set_channel_percent_value(2, 100-new_percent)
 
+        time.sleep(2.0)
         self.EnsureTurnedOn()
-        # delay? which lines turns off code?
+        time.sleep(2.0)
         self.UpdateAppPercentages(new_percent)
 
     def UpdateAppPercentages(self, new_perc):
@@ -192,7 +195,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.mixer_shifter.mixer.set_mainboard_total_flow(int(new_total_flow))
 
         self.EnsureTurnedOn()
-        # delay? which lines turns off code?
+        time.sleep(1.0)
         self.UpdateAppFlows()
 
     def UpdateAppFlows(self):
@@ -207,7 +210,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.target_flow_gas2.SetValue(gas2_target_flow)
 
     def EnsureTurnedOn(self):
-           # check we stay turned on since it's been turning off. TODO: TEST
            if self.mixer_shifter.mixer.get_working_status() == 0:
                self.mixer_shifter.mixer.set_working_status_ON()
 
