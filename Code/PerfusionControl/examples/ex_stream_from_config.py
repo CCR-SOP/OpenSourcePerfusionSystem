@@ -2,7 +2,8 @@
 """ Example to show how to create a sensor stream from a saved config
 
 Assumes that the test configuration folder contains a config
-"TestAnalogInputDevce.ini" with a channel called "Flow"
+"TestAnalogInputDevice.ini" with a channel called "Flow" and a
+config called "sensors.ini" with a section called "HA Flow"
 
 @project: Project NIH
 @author: John Kakareka, NIH

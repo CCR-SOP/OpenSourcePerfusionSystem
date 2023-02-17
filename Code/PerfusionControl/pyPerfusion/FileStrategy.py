@@ -120,7 +120,6 @@ class StreamToFile(ProcessingStrategy.ProcessingStrategy):
         file_size = len(data)
         if not _fid or file_size == 0:
             return [], []
-
         period = self._sensor_params['Sampling Period (ms)']
         data_type = self._sensor_params['Data Format']
         if last_ms == 0:
