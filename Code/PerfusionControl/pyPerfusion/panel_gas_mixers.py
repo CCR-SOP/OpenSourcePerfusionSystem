@@ -22,7 +22,6 @@ import time
 import datetime
 
 
-
 class GasMixerPanel(wx.Panel):
     def __init__(self, parent, HA_mixer_shift, PV_mixer_shift, cdi):
         self.parent = parent
@@ -66,10 +65,12 @@ class BaseGasMixerPanel(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
+        # Pull initial total flow and create display
         total_flow = self.mixer_shifter.mixer.get_mainboard_total_flow()
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
         self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400, initial=total_flow, inc=1)
 
+        # Pull initial gas-specific percentages and flow rates
         channel_nr = 1  # always just change the first channel and the rest will follow
         gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(channel_nr)
         gas2_mix_perc = str(100 - gas1_mix_perc)
@@ -78,9 +79,7 @@ class BaseGasMixerPanel(wx.Panel):
         gas1_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(1))
         gas2_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(2))
 
-        self.update_total_flow_btn = wx.Button(self, label='Update Total Flow')
-        self.update_gas1_perc_btn = wx.Button(self, label='Update Gas Mix')
-
+        # Gas 1 display
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1} % Mix:')
         self.input_percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
         self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} actual flow (mL/min):')
@@ -88,6 +87,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_target_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} target flow (mL/min):')
         self.target_flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_target_flow)
 
+        # Gas 2 display
         self.label_gas2 = wx.StaticText(self, label=f'{self.gas2} % Mix:')
         self.percent_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_mix_perc)
         self.label_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} actual flow (mL/min):')
@@ -95,11 +95,17 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_target_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} target flow (mL/min):')
         self.target_flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_target_flow)
 
+        # Buttons for functionality
+        self.update_total_flow_btn = wx.Button(self, label='Update Total Flow')
+        self.update_gas1_perc_btn = wx.Button(self, label='Update Gas Mix')
         self.manual_start_btn = wx.ToggleButton(self, label='Start Manual')
         self.automatic_start_btn = wx.ToggleButton(self, label='Start Automatic')
 
         self.__do_layout()
         self.__set_bindings()
+
+        # TODO: run this every 30 s???
+        self.CheckHardwareForUpdates()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -141,7 +147,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
         self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
 
-    def OnManualStart(self, evt):
+    def OnManualStart(self, evt):  # think more about this... doesn't let you set the app first, just starts based on what's on hardware
         working_status = self.mixer_shifter.mixer.get_working_status()
         if working_status == 0:  # 0 is off
             self.mixer_shifter.mixer.set_working_status_ON()
@@ -162,8 +168,9 @@ class BaseGasMixerPanel(wx.Panel):
             self.mixer_shifter.check_pH(self.cdi)
             self.mixer_shifter.check_CO2(self.cdi)
             self.mixer_shifter.check_O2(self.cdi)
-            time.sleep(5.0)
-            # TODO: change all of the displays - maybe this should be an independent method
+            # loop through on a timer
+            new_perc = 1  # need real value as output from CDI methods
+            self.UpdateAppPercentages(new_perc)
         else:
             self.automatic_start_btn.SetLabel('Start Automatic')
             self.cdi.stop()
@@ -180,18 +187,18 @@ class BaseGasMixerPanel(wx.Panel):
         time.sleep(2.0)
         self.UpdateAppPercentages(new_percent)
 
-    def UpdateAppPercentages(self, new_perc):
-        gas2_mix_perc = str(100 - new_perc)
-        self.percent_gas2.SetValue(gas2_mix_perc)
-
-        self.UpdateAppFlows()
-
     def OnChangeTotalFlow(self, evt):
         new_total_flow = self.input_total_flow.GetValue()
         self.mixer_shifter.mixer.set_mainboard_total_flow(int(new_total_flow))
 
         self.EnsureTurnedOn()
         time.sleep(1.0)
+        self.UpdateAppFlows()
+
+    def UpdateAppPercentages(self, new_perc):
+        gas2_mix_perc = str(100 - new_perc)
+        self.percent_gas2.SetValue(gas2_mix_perc)
+
         self.UpdateAppFlows()
 
     def UpdateAppFlows(self):
@@ -208,14 +215,13 @@ class BaseGasMixerPanel(wx.Panel):
     def EnsureTurnedOn(self):
            if self.mixer_shifter.mixer.get_working_status() == 0:
                self.mixer_shifter.mixer.set_working_status_ON()
-    
-    
+
     def CheckHardwareForUpdates(self):  # NOT TESTED
         time_to_check = 30
         
         while time_to_check > 0:  # got this off the internet, not sure if there's a better away? i feel like this will cause delays
-            # timer = datetime.timedelta(seconds=time_to_check)
-            # print(timer, end='\r')
+            timer = datetime.timedelta(seconds=time_to_check)
+            print(timer, end='\r')
             time.sleep(1.0)
             time_to_check -= 1
 
