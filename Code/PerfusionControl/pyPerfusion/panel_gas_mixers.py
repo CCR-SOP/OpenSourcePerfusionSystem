@@ -78,6 +78,9 @@ class BaseGasMixerPanel(wx.Panel):
         gas1_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(1))
         gas2_target_flow = str(self.mixer_shifter.mixer.get_channel_target_sccm(2))
 
+        self.update_total_flow_btn = wx.Button(self, label='Update Total Flow')
+        self.update_gas1_perc_btn = wx.Button(self, label='Update Gas Mix')
+
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1} % Mix:')
         self.percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
         self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} actual flow (mL/min):')
@@ -107,6 +110,9 @@ class BaseGasMixerPanel(wx.Panel):
 
         sizer_cfg.Add(self.label_gas1, flags)
         sizer_cfg.Add(self.percent_gas1, flags)
+        sizer_cfg.Add(self.update_total_flow_btn, flags)
+        sizer_cfg.Add(self.update_gas1_perc_btn, flags)
+
         sizer_cfg.Add(self.label_target_flow_gas1, flags)
         sizer_cfg.Add(self.target_flow_gas1, flags)
         sizer_cfg.Add(self.label_flow_gas1, flags)
@@ -132,8 +138,8 @@ class BaseGasMixerPanel(wx.Panel):
     def __set_bindings(self):
         self.manual_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnManualStart)
         self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
-        self.percent_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangePercentMix)
-        self.input_total_flow.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeTotalFlow)
+        self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
+        self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
 
     def OnManualStart(self, evt):
         working_status = self.mixer_shifter.mixer.get_working_status()
@@ -144,7 +150,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.mixer_shifter.mixer.set_working_status_OFF()
             self.manual_start_btn.SetLabel('Start Manual')
 
-        time.sleep(4.0)  # approximate response time is 4 s. does time.sleep cause looping or is it fine?
+        time.sleep(4.0)
         self.UpdateAppFlows()
 
     def OnAutoStart(self, evt):
