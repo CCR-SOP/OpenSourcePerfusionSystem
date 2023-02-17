@@ -20,22 +20,16 @@ from pyPerfusion.SensorPoint import SensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile
 import time
 
-PerfusionConfig.set_test_config()
-utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-utils.configure_matplotlib_logging()
+
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, HA_mixer_shift, PV_mixer_shift, cdi):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        HA_mixer = mcq.Main('Arterial Gas Mixer')
-        HA_mixer_shift = GB100_shift('HA', HA_mixer)
-        PV_mixer = mcq.Main('Venous Gas Mixer')
-        PV_mixer_shift = GB100_shift('PV', PV_mixer)
-
         self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', mixer_shifter=HA_mixer_shift)
         self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', mixer_shifter=PV_mixer_shift)
+        self.cdi = cdi
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -57,13 +51,14 @@ class GasMixerPanel(wx.Panel):
         pass
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, mixer_shifter: GB100_shift, **kwds):
+    def __init__(self, parent, name, mixer_shifter: GB100_shift, cdi, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 
         self.parent = parent
         self.name = name
         self.mixer_shifter = mixer_shifter
+        self.cdi = cdi
         self.gas1 = list(self.mixer_shifter.gas_dict.keys())[0]  # how to access key in value:key dict pair
         self.gas2 = list(self.mixer_shifter.gas_dict.keys())[1]
 
@@ -154,23 +149,18 @@ class BaseGasMixerPanel(wx.Panel):
 
     def OnAutoStart(self, evt):
         GB100_working_status = self.mixer_shifter.mixer.get_working_status()
-        cdi = pyCDI.CDIStreaming('CDI')
-        # cdi.read_config() need updated pyCDI and SensorPoint for this to work
-        sensorpt = SensorPoint(cdi, 'NA')
-        sensorpt.start()
-        cdi.start()
-        CDI_output = sensorpt.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+
         if GB100_working_status == 0:
             self.mixer_shifter.mixer.set_working_status_ON()
             self.automatic_start_btn.SetLabel('Stop Automatic')
-            self.mixer_shifter.check_pH(CDI_output)
-            self.mixer_shifter.check_CO2(CDI_output)
-            self.mixer_shifter.check_O2(CDI_output)
+            self.mixer_shifter.check_pH(self.cdi)
+            self.mixer_shifter.check_CO2(self.cdi)
+            self.mixer_shifter.check_O2(self.cdi)
             time.sleep(5.0)
             # TODO: change all of the displays - maybe this should be an independent method
         else:
             self.automatic_start_btn.SetLabel('Start Automatic')
-            cdi.stop()
+            self.cdi.stop()
 
     def OnChangePercentMix(self, evt):
         new_percent = evt.GetValue()
@@ -219,7 +209,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self)
+        self.panel = GasMixerPanel(self, HA_mixer_shift, PV_mixer_shift, CDI_output)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -237,6 +227,18 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+
+    HA_mixer = mcq.Main('Arterial Gas Mixer')
+    HA_mixer_shift = GB100_shift('HA', HA_mixer)
+    PV_mixer = mcq.Main('Venous Gas Mixer')
+    PV_mixer_shift = GB100_shift('PV', PV_mixer)
+
+    cdi = pyCDI.CDIStreaming('CDI')
+    # cdi.read_config() need updated pyCDI and SensorPoint for this to work
+    sensorpt = SensorPoint(cdi, 'NA')
+    sensorpt.start()
+    cdi.start()
+    CDI_output = sensorpt.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+
     app = MyTestApp(0)
     app.MainLoop()
