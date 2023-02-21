@@ -27,7 +27,7 @@ physio_ranges = {'pH_lower': 7.3, 'pH_upper': 7.5,
                  'venous_O2_lower_so2': 60, 'venous_O2_upper_so2': 92}
 
 
-class GB100_shift:
+class GB100:
     def __init__(self, vessel, mixer):
         self._logger = logging.getLogger(__name__)
         self.vessel = vessel  # vessel = "HA" or "PV"
@@ -65,7 +65,7 @@ class GB100_shift:
             gas_types.append(gas_type)
         self.gas_dict = {gas_types[0]: 1, gas_types[1]: 2}
 
-    def check_pH(self, CDI_input):
+    def update_pH(self, CDI_input):
         new_flow = []
         total_flow = self.mixer.get_mainboard_total_flow()
         if CDI_input[self.pH_index] < physio_ranges['pH_lower']:
@@ -74,7 +74,7 @@ class GB100_shift:
              new_flow = total_flow - self.flow_adjust
         self.mixer.set_mainboard_total_flow(new_flow)
 
-    def check_CO2(self, CDI_input):  # can only adjust CO2 in HA
+    def update_CO2(self, CDI_input):  # can only adjust CO2 in HA
         if self.vessel == "HA":
             new_percentage_mix = []
             percentage_mix = self.mixer.get_channel_percent_value(self.gas_dict['Carbon Dioxide'])
@@ -93,7 +93,7 @@ class GB100_shift:
             new_flow = total_flow + 10
             self.mixer.set_mainboard_total_flow(new_flow)
 
-    def check_O2(self, CDI_input):
+    def update_O2(self, CDI_input):
         new_percentage_mix = []
         percentage_mix = self.mixer.get_channel_percent_value(self.gas_dict['Oxygen'])
         if 0 < percentage_mix < 100:

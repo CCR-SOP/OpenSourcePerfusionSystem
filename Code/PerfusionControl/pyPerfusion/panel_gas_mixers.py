@@ -14,7 +14,7 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import mcqlib_GB100.mcqlib.main as mcq
-from pyPerfusion.pyGB100_SL import GB100_shift
+from pyPerfusion.pyGB100_SL import GB100
 import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile
@@ -27,9 +27,9 @@ class GasMixerPanel(wx.Panel):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', mixer_shifter=HA_mixer_shift)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', mixer_shifter=PV_mixer_shift)
         self.cdi = cdi
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', mixer_shifter=HA_mixer_shift, cdi=self.cdi)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', mixer_shifter=PV_mixer_shift, cdi=self.cdi)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -51,7 +51,7 @@ class GasMixerPanel(wx.Panel):
         pass
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, mixer_shifter: GB100_shift, cdi, **kwds):
+    def __init__(self, parent, name, mixer_shifter: GB100, cdi, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 
@@ -165,9 +165,9 @@ class BaseGasMixerPanel(wx.Panel):
         if GB100_working_status == 0:
             self.mixer_shifter.mixer.set_working_status_ON()
             self.automatic_start_btn.SetLabel('Stop Automatic')
-            self.mixer_shifter.check_pH(self.cdi)
-            self.mixer_shifter.check_CO2(self.cdi)
-            self.mixer_shifter.check_O2(self.cdi)
+            self.mixer_shifter.update_pH(self.cdi)
+            self.mixer_shifter.update_CO2(self.cdi)
+            self.mixer_shifter.update_O2(self.cdi)
             # loop through on a timer
             new_perc = 1  # need real value as output from CDI methods
             self.UpdateAppPercentages(new_perc)
@@ -257,9 +257,9 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 
     HA_mixer = mcq.Main('Arterial Gas Mixer')
-    HA_mixer_shift = GB100_shift('HA', HA_mixer)
+    HA_mixer_shift = GB100('HA', HA_mixer)
     PV_mixer = mcq.Main('Venous Gas Mixer')
-    PV_mixer_shift = GB100_shift('PV', PV_mixer)
+    PV_mixer_shift = GB100('PV', PV_mixer)
 
     cdi = pyCDI.CDIStreaming('CDI')
     # cdi.read_config() need updated pyCDI and SensorPoint for this to work
