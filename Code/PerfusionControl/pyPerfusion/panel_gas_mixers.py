@@ -110,7 +110,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
         self.timer = wx.Timer(self)
-        # self.timer.Start(30, wx.TIMER_CONTINUOUS)
+        self.timer.Start(1_000, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -151,7 +151,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
         self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
         self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
-        # self.Bind(wx.EVT_TIMER, self.CheckHardwareForUpdates)
+        self.Bind(wx.EVT_TIMER, self.CheckHardwareForUpdates)
 
     def OnManualStart(self, evt):
         self.automatic_start_btn.Disable()
@@ -222,8 +222,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.flow_gas1.SetValue(gas1_flow)
         self.flow_gas2.SetValue(gas2_flow)
 
-        gas1_target_flow = str(self.gas_unit.get_target_sccm_(1))
-        gas2_target_flow = str(self.gas_unit.get_target_sccm_(2))
+        gas1_target_flow = str(self.gas_unit.get_target_sccm(1))
+        gas2_target_flow = str(self.gas_unit.get_target_sccm(2))
         self.target_flow_gas1.SetValue(gas1_target_flow)
         self.target_flow_gas2.SetValue(gas2_target_flow)
 
@@ -235,17 +235,17 @@ class BaseGasMixerPanel(wx.Panel):
             self.automatic_start_btn.Enable()
 
     def EnsureTurnedOn(self):
-           if self.gas_unit.get_working_status() == 0:
-               self.gas_unit.set_working_status(turn_on=True)
+        if self.gas_unit.get_working_status() == 0:
+            self.gas_unit.set_working_status(turn_on=True)
 
     def CheckHardwareForUpdates(self, evt):
-        # if evt.GetId() == self.timer.GetId():
+        if evt.GetId() == self.timer.GetId():
             # new_total_flow = self.gas_unit.get_total_flow()
             # self.input_total_flow.SetValue(new_total_flow)
-            # new_gas1_mix_perc = self.gas_unit.get_percent_value(1)
+            new_gas1_mix_perc = self.gas_unit.get_percent_value(1)
             # self.input_percent_gas1.SetValue(new_gas1_mix_perc)
-            # self.UpdateAppPercentages(new_gas1_mix_perc)
-        pass
+            self.UpdateAppPercentages(new_gas1_mix_perc)
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -261,6 +261,7 @@ class TestFrame(wx.Frame):
 
         self.Destroy()
         # destroy timer??
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
