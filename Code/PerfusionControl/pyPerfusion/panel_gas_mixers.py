@@ -19,7 +19,6 @@ import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile
 import time
-import datetime
 
 
 class GasMixerPanel(wx.Panel):
@@ -106,8 +105,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.__do_layout()
         self.__set_bindings()
 
-        # TODO: run this every 30 s???
-        self.CheckHardwareForUpdates()
+        self.timer = wx.Timer(self)
+        self.timer.Start(30, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -148,6 +147,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
         self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
         self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
+        self.Bind(wx.EVT_TIMER, self.CheckHardwareForUpdates)
 
     def OnManualStart(self, evt):
         self.automatic_start_btn.Disable()
@@ -231,8 +231,13 @@ class BaseGasMixerPanel(wx.Panel):
            if self.mixer_shifter.mixer.get_working_status() == 0:
                self.mixer_shifter.mixer.set_working_status_ON()
 
-    def CheckHardwareForUpdates(self):
-        pass
+    def CheckHardwareForUpdates(self, evt):
+        if evt.GetId() == self.timer.GetId():
+            new_total_flow = self.mixer_shifter.mixer.get_mainboard_total_flow()
+            self.input_total_flow.SetValue(new_total_flow)
+            new_gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(1)
+            self.input_percent_gas1.SetValue(new_gas1_mix_perc)
+            self.UpdateAppPercentages(new_gas1_mix_perc)
         
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
