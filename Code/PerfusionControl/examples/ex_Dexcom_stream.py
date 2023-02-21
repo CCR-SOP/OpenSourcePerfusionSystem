@@ -19,7 +19,7 @@ from pyPerfusion.SensorPoint import SensorPoint
 
 
 def main():
-    dexcom = pyDexcom.DexcomReceiver('Hepatic Artery')
+    dexcom = pyDexcom.DexcomReceiver('Portal Vein')
     dexcom.read_config()
 
     sensorpt = SensorPoint(dexcom, 'na')
