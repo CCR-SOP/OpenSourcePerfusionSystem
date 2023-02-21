@@ -21,8 +21,7 @@ from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.CalculatedSensor import FlowOverPressureStream
-import pyPerfusion.ProcessingStrategy as ProcessingStrategy
+from pyPerfusion.CalculatedSensor import FlowOverPressure
 import pyPerfusion.Strategies as Strategies
 
 
@@ -74,9 +73,9 @@ if __name__ == "__main__":
     sensor_flow.start()
     sensor_pressure.start()
 
-    f_over_p = FlowOverPressureStream(name='Flow Over Pressure',
-                                      flow=sensor_flow.get_file_strategy('Stream2File'),
-                                      pressure=sensor_pressure.get_file_strategy('Stream2File'))
+    f_over_p = FlowOverPressure(name='Flow Over Pressure',
+                                flow=sensor_flow.get_file_strategy('Stream2File'),
+                                pressure=sensor_pressure.get_file_strategy('Stream2File'))
     flow_over_pressure = SensorStream(f_over_p, '')
     flow_over_pressure.add_strategy(Strategies.get_strategy('Stream2File'))
     flow_over_pressure.open()

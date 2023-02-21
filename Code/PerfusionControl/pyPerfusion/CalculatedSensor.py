@@ -13,7 +13,7 @@ class FlowOverPressureConfig:
     name: str = ''
 
 
-class FlowOverPressureStream:
+class FlowOverPressure:
     def __init__(self, name: str, flow: StreamToFile, pressure: StreamToFile):
         self._lgr = logging.getLogger(__name__)
         self.cfg = FlowOverPressureConfig(name=name)
