@@ -70,7 +70,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
         self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400, initial=total_flow, inc=1)
 
-        # Pull initial gas-specific percentages and flow rates
+        # Pull initial gas mix percentages and flow rates
         channel_nr = 1  # always just change the first channel and the rest will follow
         gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(channel_nr)
         gas2_mix_perc = str(100 - gas1_mix_perc)
@@ -96,10 +96,12 @@ class BaseGasMixerPanel(wx.Panel):
         self.target_flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_target_flow)
 
         # Buttons for functionality
-        self.update_total_flow_btn = wx.Button(self, label='Update Total Flow')
-        self.update_gas1_perc_btn = wx.Button(self, label='Update Gas Mix')
+        self.update_total_flow_btn = wx.Button(self, label='Update Total Gas Flow')
+        self.update_gas1_perc_btn = wx.Button(self, label='Update Gas % Mix')
         self.manual_start_btn = wx.ToggleButton(self, label='Start Manual')
         self.automatic_start_btn = wx.ToggleButton(self, label='Start Automatic')
+        self.manual_start_btn.Disable()
+        self.automatic_start_btn.Disable()
 
         self.__do_layout()
         self.__set_bindings()
@@ -116,8 +118,6 @@ class BaseGasMixerPanel(wx.Panel):
 
         sizer_cfg.Add(self.label_gas1, flags)
         sizer_cfg.Add(self.input_percent_gas1, flags)
-        sizer_cfg.Add(self.update_total_flow_btn, flags)
-        sizer_cfg.Add(self.update_gas1_perc_btn, flags)
 
         sizer_cfg.Add(self.label_target_flow_gas1, flags)
         sizer_cfg.Add(self.target_flow_gas1, flags)
@@ -131,6 +131,8 @@ class BaseGasMixerPanel(wx.Panel):
         sizer_cfg.Add(self.label_flow_gas2, flags)
         sizer_cfg.Add(self.flow_gas2, flags)
 
+        sizer_cfg.Add(self.update_total_flow_btn, flags)
+        sizer_cfg.Add(self.update_gas1_perc_btn, flags)
         sizer_cfg.Add(self.manual_start_btn, flags)
         sizer_cfg.Add(self.automatic_start_btn, flags)
 
@@ -147,8 +149,10 @@ class BaseGasMixerPanel(wx.Panel):
         self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
         self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
 
-    def OnManualStart(self, evt):  # think more about this... doesn't let you set the app first, just starts based on what's on hardware
+    def OnManualStart(self, evt):
+        self.automatic_start_btn.Disable()
         working_status = self.mixer_shifter.mixer.get_working_status()
+
         if working_status == 0:  # 0 is off
             self.mixer_shifter.mixer.set_working_status_ON()
             self.manual_start_btn.SetLabel('Stop Manual')
@@ -160,6 +164,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.UpdateAppFlows()
 
     def OnAutoStart(self, evt):
+        self.manual_start_btn.Disable()
         GB100_working_status = self.mixer_shifter.mixer.get_working_status()
 
         if GB100_working_status == 0:
@@ -181,25 +186,35 @@ class BaseGasMixerPanel(wx.Panel):
         # Update gas mixer percentages
         self.mixer_shifter.mixer.set_channel_percent_value(1, new_percent)
         self.mixer_shifter.mixer.set_channel_percent_value(2, 100-new_percent)
+        time.sleep(2.0)
 
-        time.sleep(2.0)
-        self.EnsureTurnedOn()
-        time.sleep(2.0)
+        if self.manual_start_btn.GetLabel() == "Stop Manual":  # prevents turning on if user hasn't hit start
+            self.EnsureTurnedOn()
+            time.sleep(1.0)
+
         self.UpdateAppPercentages(new_percent)
 
     def OnChangeTotalFlow(self, evt):
         new_total_flow = self.input_total_flow.GetValue()
         self.mixer_shifter.mixer.set_mainboard_total_flow(int(new_total_flow))
 
-        self.EnsureTurnedOn()
-        time.sleep(1.0)
+        if self.manual_start_btn.GetLabel() == "Stop Manual":  # prevents turning on if user hasn't hit start
+            self.EnsureTurnedOn()
+            time.sleep(1.0)
+
         self.UpdateAppFlows()
+
+    def EnableButtons(self):
+        # if self.manual_start_btn.Enabled() == 0:
+            self.manual_start_btn.Enable()
+            self.automatic_start_btn.Enable()
 
     def UpdateAppPercentages(self, new_perc):
         gas2_mix_perc = str(100 - new_perc)
         self.percent_gas2.SetValue(gas2_mix_perc)
 
         self.UpdateAppFlows()
+        self.EnableButtons()  # only want to do after flows and buttons have been updated
 
     def UpdateAppFlows(self):
         gas1_flow = str(self.mixer_shifter.mixer.get_channel_sccm_av(1))
@@ -216,7 +231,7 @@ class BaseGasMixerPanel(wx.Panel):
            if self.mixer_shifter.mixer.get_working_status() == 0:
                self.mixer_shifter.mixer.set_working_status_ON()
 
-    def CheckHardwareForUpdates(self):  # NOT TESTED
+    def CheckHardwareForUpdates(self):
         pass
         
 class TestFrame(wx.Frame):
@@ -248,13 +263,13 @@ if __name__ == "__main__":
     PV_mixer = mcq.Main('Venous Gas Mixer')
     PV_mixer_shift = GB100('PV', PV_mixer)
 
+    # TODO: Put back when SensorStream is ready
     # cdi = pyCDI.CDIStreaming('CDI')
     # cdi.read_config() need updated pyCDI and SensorPoint for this to work
     # sensorpt = SensorPoint(cdi, 'NA')
     # sensorpt.start()
     # cdi.start()
     # CDI_output = sensorpt.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    # CDI_output =  [1] * 18
 
     app = MyTestApp(0)
     app.MainLoop()

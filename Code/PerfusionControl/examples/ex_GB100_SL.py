@@ -7,7 +7,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 
-from pyPerfusion.pyGB100_SL import GB100_shift
+from pyPerfusion.pyGB100_SL import GB100
 import mcqlib_GB100.mcqlib.main as mcq
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
