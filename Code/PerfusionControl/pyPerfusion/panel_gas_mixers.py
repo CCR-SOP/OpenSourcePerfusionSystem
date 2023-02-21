@@ -23,13 +23,13 @@ import datetime
 
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent, HA_mixer_shift, PV_mixer_shift, cdi):
+    def __init__(self, parent, HA_mixer_shifter, PV_mixer_shifter):  # , cdi):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self.cdi = cdi
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', mixer_shifter=HA_mixer_shift, cdi=self.cdi)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', mixer_shifter=PV_mixer_shift, cdi=self.cdi)
+        # self.cdi = cdi
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', mixer_shifter=HA_mixer_shifter)  # , cdi=self.cdi)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', mixer_shifter=PV_mixer_shifter)  # , cdi=self.cdi)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -51,14 +51,14 @@ class GasMixerPanel(wx.Panel):
         pass
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, mixer_shifter: GB100, cdi, **kwds):
+    def __init__(self, parent, name, mixer_shifter: GB100, **kwds):  # cdi
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 
         self.parent = parent
         self.name = name
         self.mixer_shifter = mixer_shifter
-        self.cdi = cdi
+        # self.cdi = cdi
         self.gas1 = list(self.mixer_shifter.gas_dict.keys())[0]  # how to access key in value:key dict pair
         self.gas2 = list(self.mixer_shifter.gas_dict.keys())[1]
 
@@ -217,27 +217,14 @@ class BaseGasMixerPanel(wx.Panel):
                self.mixer_shifter.mixer.set_working_status_ON()
 
     def CheckHardwareForUpdates(self):  # NOT TESTED
-        time_to_check = 30
-        
-        while time_to_check > 0:  # got this off the internet, not sure if there's a better away? i feel like this will cause delays
-            timer = datetime.timedelta(seconds=time_to_check)
-            print(timer, end='\r')
-            time.sleep(1.0)
-            time_to_check -= 1
-
-        print('Checking gas mixer hardware for changes and updating app')  # make a lgr?
-        new_total_flow = self.mixer_shifter.mixer.get_mainboard_total_flow()
-        self.input_total_flow.SetValue(new_total_flow)
-        new_gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(1)  # channel 1
-        self.input_percent_gas1.SetValue(new_gas1_mix_perc)
-        self.UpdateAppPercentages(new_gas1_mix_perc)
+        pass
         
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self, HA_mixer_shift, PV_mixer_shift, CDI_output)
+        self.panel = GasMixerPanel(self, HA_mixer_shift, PV_mixer_shift)  # , CDI_output)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -261,12 +248,13 @@ if __name__ == "__main__":
     PV_mixer = mcq.Main('Venous Gas Mixer')
     PV_mixer_shift = GB100('PV', PV_mixer)
 
-    cdi = pyCDI.CDIStreaming('CDI')
+    # cdi = pyCDI.CDIStreaming('CDI')
     # cdi.read_config() need updated pyCDI and SensorPoint for this to work
-    sensorpt = SensorPoint(cdi, 'NA')
-    sensorpt.start()
-    cdi.start()
-    CDI_output = sensorpt.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    # sensorpt = SensorPoint(cdi, 'NA')
+    # sensorpt.start()
+    # cdi.start()
+    # CDI_output = sensorpt.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    # CDI_output =  [1] * 18
 
     app = MyTestApp(0)
     app.MainLoop()
