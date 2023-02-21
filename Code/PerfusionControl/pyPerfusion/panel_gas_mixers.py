@@ -206,11 +206,6 @@ class BaseGasMixerPanel(wx.Panel):
 
         self.UpdateAppFlows()
 
-    def EnableButtons(self):
-        if not self.automatic_start_btn.IsEnabled() and not self.manual_start_btn.IsEnabled():  # starting condition
-            self.manual_start_btn.Enable()
-            self.automatic_start_btn.Enable()
-
     def UpdateAppPercentages(self, new_perc):
         gas2_mix_perc = str(100 - new_perc)
         self.percent_gas2.SetValue(gas2_mix_perc)
@@ -229,6 +224,11 @@ class BaseGasMixerPanel(wx.Panel):
         self.target_flow_gas2.SetValue(gas2_target_flow)
 
         self.EnableButtons()
+
+    def EnableButtons(self):
+        if not self.automatic_start_btn.IsEnabled() and not self.manual_start_btn.IsEnabled():  # starting condition
+            self.manual_start_btn.Enable()
+            self.automatic_start_btn.Enable()
 
     def EnsureTurnedOn(self):
            if self.mixer_shifter.mixer.get_working_status() == 0:
