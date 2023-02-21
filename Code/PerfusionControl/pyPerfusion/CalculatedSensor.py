@@ -1,10 +1,12 @@
 import logging
 from dataclasses import dataclass
+import warnings
 
 import numpy as np
 
 from pyPerfusion.FileStrategy import StreamToFile
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+
 
 @dataclass
 class FlowOverPressureConfig:
@@ -26,5 +28,11 @@ class FlowOverPressureStream:
     def get_data(self):
         flow_t, flow = self._flow.retrieve_buffer(0, self._window_len)
         pressure_t, pressure = self._pressure.retrieve_buffer(0, self._window_len)
-        f_over_p = np.float64(flow) / np.float64(pressure)
-        return f_over_p, np.float64(flow_t)
+        if flow is not None and pressure is not None:
+            f_over_p = np.float64(flow) / np.float64(pressure)
+            t = np.float64(flow_t)
+        else:
+            f_over_p = None
+            t = None
+
+        return f_over_p, t

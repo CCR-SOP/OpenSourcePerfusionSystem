@@ -77,14 +77,8 @@ if __name__ == "__main__":
     f_over_p = FlowOverPressureStream(name='Flow Over Pressure',
                                       flow=sensor_flow.get_file_strategy('Stream2File'),
                                       pressure=sensor_pressure.get_file_strategy('Stream2File'))
-    params = PerfusionConfig.read_section('strategies', 'Stream2File')
-    strategy_class = Strategies.get_class(params['strategy'])
-    cfg = strategy_class.get_config_type()()
-    PerfusionConfig.read_into_dataclass('strategies', 'Stream2File', cfg)
-
-
     flow_over_pressure = SensorStream(f_over_p, '')
-    flow_over_pressure.add_strategy(strategy_class(cfg))
+    flow_over_pressure.add_strategy(Strategies.get_strategy('Stream2File'))
     flow_over_pressure.open()
     flow_over_pressure.start()
 

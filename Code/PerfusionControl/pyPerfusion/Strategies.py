@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 import pyPerfusion.ProcessingStrategy as ProcessingStrategy
 import pyPerfusion.FileStrategy as FileStrategy
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 def get_class(name: str):
@@ -26,3 +27,11 @@ def get_class(name: str):
     else:
         return None
 
+
+def get_strategy(name: str):
+    params = PerfusionConfig.read_section('strategies', name)
+    strategy_class = get_class(params['strategy'])
+    cfg = strategy_class.get_config_type()()
+    PerfusionConfig.read_into_dataclass('strategies', 'Stream2File', cfg)
+    strategy = strategy_class(cfg)
+    return strategy
