@@ -42,6 +42,7 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        hw.stop()
         sensor_flow.stop()
         vol_stream.stop()
         self.panel.Destroy()
@@ -78,7 +79,7 @@ if __name__ == "__main__":
 
     print('calibrating flow offset')
     time.sleep(2.0)
-    vol.calibrate_offset(5)
+    vol.calibrate_offset()
     print(f'offset is {vol.flow_offset}')
     print('done')
     app = MyTestApp(0)

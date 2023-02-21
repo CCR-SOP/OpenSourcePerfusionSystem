@@ -49,11 +49,12 @@ class VolumeByFlow:
         self.sampling_period_ms = flow.hw.sampling_period_ms
         self.name = name
         self._flow = flow.get_file_strategy('Stream2File')
+        self._calibration_len = flow.hw.buf_len
         self.last_volume = 0.0
         self.flow_offset = 0.0
 
-    def calibrate_offset(self, total_samples):
-        flow_t, flow = self._flow.retrieve_buffer(0, total_samples)
+    def calibrate_offset(self):
+        flow_t, flow = self._flow.retrieve_buffer(0, self._calibration_len)
         self.flow_offset = np.mean(flow)
         # self._lgr.debug(f'flow is {flow[-1:-10]}')
 
