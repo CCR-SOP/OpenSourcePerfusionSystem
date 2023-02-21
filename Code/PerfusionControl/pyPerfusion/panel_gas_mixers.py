@@ -106,7 +106,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
         self.timer = wx.Timer(self)
-        self.timer.Start(30, wx.TIMER_CONTINUOUS)
+        # self.timer.Start(30, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -147,7 +147,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
         self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
         self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
-        self.Bind(wx.EVT_TIMER, self.CheckHardwareForUpdates)
+        # self.Bind(wx.EVT_TIMER, self.CheckHardwareForUpdates)
 
     def OnManualStart(self, evt):
         self.automatic_start_btn.Disable()
@@ -159,6 +159,7 @@ class BaseGasMixerPanel(wx.Panel):
         else:
             self.mixer_shifter.mixer.set_working_status_OFF()
             self.manual_start_btn.SetLabel('Start Manual')
+            self.automatic_start_btn.Enable()
 
         time.sleep(4.0)
         self.UpdateAppFlows()
@@ -179,6 +180,7 @@ class BaseGasMixerPanel(wx.Panel):
         else:
             self.automatic_start_btn.SetLabel('Start Automatic')
             self.cdi.stop()
+            self.manual_start_btn.Enable()
 
     def OnChangePercentMix(self, evt):
         new_percent = self.input_percent_gas1.GetValue()
@@ -198,14 +200,14 @@ class BaseGasMixerPanel(wx.Panel):
         new_total_flow = self.input_total_flow.GetValue()
         self.mixer_shifter.mixer.set_mainboard_total_flow(int(new_total_flow))
 
-        if self.manual_start_btn.GetLabel() == "Stop Manual":  # prevents turning on if user hasn't hit start
+        if self.manual_start_btn.GetLabel() == "Stop Manual":
             self.EnsureTurnedOn()
             time.sleep(1.0)
 
         self.UpdateAppFlows()
 
     def EnableButtons(self):
-        # if self.manual_start_btn.Enabled() == 0:
+        if not self.automatic_start_btn.IsEnabled() and not self.manual_start_btn.IsEnabled():  # starting condition
             self.manual_start_btn.Enable()
             self.automatic_start_btn.Enable()
 
@@ -214,7 +216,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.percent_gas2.SetValue(gas2_mix_perc)
 
         self.UpdateAppFlows()
-        self.EnableButtons()  # only want to do after flows and buttons have been updated
 
     def UpdateAppFlows(self):
         gas1_flow = str(self.mixer_shifter.mixer.get_channel_sccm_av(1))
@@ -227,18 +228,21 @@ class BaseGasMixerPanel(wx.Panel):
         self.target_flow_gas1.SetValue(gas1_target_flow)
         self.target_flow_gas2.SetValue(gas2_target_flow)
 
+        self.EnableButtons()
+
     def EnsureTurnedOn(self):
            if self.mixer_shifter.mixer.get_working_status() == 0:
                self.mixer_shifter.mixer.set_working_status_ON()
 
     def CheckHardwareForUpdates(self, evt):
-        if evt.GetId() == self.timer.GetId():
-            new_total_flow = self.mixer_shifter.mixer.get_mainboard_total_flow()
-            self.input_total_flow.SetValue(new_total_flow)
-            new_gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(1)
-            self.input_percent_gas1.SetValue(new_gas1_mix_perc)
-            self.UpdateAppPercentages(new_gas1_mix_perc)
-        
+        # if evt.GetId() == self.timer.GetId():
+            # new_total_flow = self.mixer_shifter.mixer.get_mainboard_total_flow()
+            # self.input_total_flow.SetValue(new_total_flow)
+            # new_gas1_mix_perc = self.mixer_shifter.mixer.get_channel_percent_value(1)
+            # self.input_percent_gas1.SetValue(new_gas1_mix_perc)
+            # self.UpdateAppPercentages(new_gas1_mix_perc)
+        pass
+
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -249,7 +253,7 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.Destroy()
-
+        # destroy timer??
 
 class MyTestApp(wx.App):
     def OnInit(self):
