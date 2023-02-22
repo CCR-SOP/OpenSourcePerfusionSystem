@@ -110,7 +110,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
         self.timer = wx.Timer(self)
-        self.timer.Start(30_000, wx.TIMER_CONTINUOUS)
+        self.timer.Start(60_000, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -270,10 +270,9 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         # cdi.stop()
         # stream_cdi_to_file.stop()
-
         self.Destroy()
-        # destroy timer??
-
+        self.panel._HA_panel.timer.Stop()
+        self.panel._PV_panel.timer.Stop()
 
 class MyTestApp(wx.App):
     def OnInit(self):
