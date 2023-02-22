@@ -15,7 +15,7 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 
-from pyPerfusion.pyGB100_SL import GasControl, GasUnit
+from pyPerfusion.pyGB100_SL import GasControl, GasDevice
 import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
@@ -23,14 +23,14 @@ import time
 
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent, gas_control, cdi):
+    def __init__(self, parent, gas_controller, cdi_device):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self.cdi = cdi
-        self.gas_control = gas_control
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_unit=gas_control.HA, cdi=self.cdi)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_unit=gas_control.PV, cdi=self.cdi)
+        self.cdi = cdi_device
+        self.gas_control = gas_controller
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=gas_control.HA, cdi=self.cdi)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=gas_control.PV, cdi=self.cdi)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -53,34 +53,34 @@ class GasMixerPanel(wx.Panel):
 
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, gas_unit: GasUnit, cdi, **kwds):
+    def __init__(self, parent, name, gas_device: GasDevice, cdi, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 
         self.parent = parent
         self.name = name
-        self.gas_unit = gas_unit
+        self.gas_device = gas_device
         self.cdi = cdi
-        if self.gas_unit is not None:
-            self.gas1 = self.gas_unit.get_gas_type(1)
-            self.gas2 = self.gas_unit.get_gas_type(2)
+        if self.gas_device is not None:
+            self.gas1 = self.gas_device.get_gas_type(1)
+            self.gas2 = self.gas_device.get_gas_type(2)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         # Pull initial total flow and create display
-        total_flow = self.gas_unit.get_total_flow()
+        total_flow = self.gas_device.get_total_flow()
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
         self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400, initial=total_flow, inc=1)
 
         # Pull initial gas mix percentages and flow rates
         channel_nr = 1  # always just change the first channel and the rest will follow
-        gas1_mix_perc = self.gas_unit.get_percent_value(1)
+        gas1_mix_perc = self.gas_device.get_percent_value(channel_nr)
         gas2_mix_perc = str(100 - gas1_mix_perc)
-        gas1_flow = str(self.gas_unit.get_sccm(1))
-        gas2_flow = str(self.gas_unit.get_sccm(2))
-        gas1_target_flow = str(self.gas_unit.get_target_sccm(1))
-        gas2_target_flow = str(self.gas_unit.get_target_sccm(2))
+        gas1_flow = str(self.gas_device.get_sccm(1))
+        gas2_flow = str(self.gas_device.get_sccm(2))
+        gas1_target_flow = str(self.gas_device.get_target_sccm(1))
+        gas2_target_flow = str(self.gas_device.get_target_sccm(2))
 
         # Gas 1 display
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1} % Mix:')
@@ -155,13 +155,13 @@ class BaseGasMixerPanel(wx.Panel):
 
     def OnManualStart(self, evt):
         self.automatic_start_btn.Disable()
-        working_status = self.gas_unit.get_working_status()
+        working_status = self.gas_device.get_working_status()
 
         if working_status == 0:  # 0 is off
-            self.gas_unit.set_working_status(turn_on=True)
+            self.gas_device.set_working_status(turn_on=True)
             self.manual_start_btn.SetLabel('Stop Manual')
         else:
-            self.gas_unit.set_working_status(turn_on=False)
+            self.gas_device.set_working_status(turn_on=False)
             self.manual_start_btn.SetLabel('Start Manual')
             self.automatic_start_btn.Enable()
 
@@ -170,14 +170,14 @@ class BaseGasMixerPanel(wx.Panel):
 
     def OnAutoStart(self, evt):
         self.manual_start_btn.Disable()
-        GB100_working_status = self.gas_unit.get_working_status()
+        GB100_working_status = self.gas_device.get_working_status()
 
         if GB100_working_status == 0:
-            self.gas_unit.set_working_status(turn_on=True)
+            self.gas_device.set_working_status(turn_on=True)
             self.automatic_start_btn.SetLabel('Stop Automatic')
-            self.mixer_shifter.update_pH(self.cdi)
-            self.mixer_shifter.update_CO2(self.cdi)
-            self.mixer_shifter.update_O2(self.cdi)
+            self.gas_device.update_pH(self.cdi)
+            self.gas_device.update_CO2(self.cdi)
+            self.gas_device.update_O2(self.cdi)
             # loop through on a timer
             new_perc = 1  # need real value as output from CDI methods
             self.UpdateAppPercentages(new_perc)
@@ -190,8 +190,8 @@ class BaseGasMixerPanel(wx.Panel):
         new_percent = self.input_percent_gas1.GetValue()
 
         # Update gas mixer percentages
-        self.gas_unit.set_percent_value(1, new_percent)
-        self.gas_unit.set_percent_value(2, 100 - new_percent)
+        self.gas_device.set_percent_value(1, new_percent)
+        self.gas_device.set_percent_value(2, 100 - new_percent)
         time.sleep(2.0)
 
         if self.manual_start_btn.GetLabel() == "Stop Manual":  # prevents turning on if user hasn't hit start
@@ -202,7 +202,7 @@ class BaseGasMixerPanel(wx.Panel):
 
     def OnChangeTotalFlow(self, evt):
         new_total_flow = self.input_total_flow.GetValue()
-        self.gas_unit.set_total_flow(new_total_flow)
+        self.gas_device.set_total_flow(new_total_flow)
 
         if self.manual_start_btn.GetLabel() == "Stop Manual":
             self.EnsureTurnedOn()
@@ -217,13 +217,13 @@ class BaseGasMixerPanel(wx.Panel):
         self.UpdateAppFlows()
 
     def UpdateAppFlows(self):
-        gas1_flow = str(self.gas_unit.get_sccm_av(1))
-        gas2_flow = str(self.gas_unit.get_sccm_av(2))
+        gas1_flow = str(self.gas_device.get_sccm_av(1))
+        gas2_flow = str(self.gas_device.get_sccm_av(2))
         self.flow_gas1.SetValue(gas1_flow)
         self.flow_gas2.SetValue(gas2_flow)
 
-        gas1_target_flow = str(self.gas_unit.get_target_sccm(1))
-        gas2_target_flow = str(self.gas_unit.get_target_sccm(2))
+        gas1_target_flow = str(self.gas_device.get_target_sccm(1))
+        gas2_target_flow = str(self.gas_device.get_target_sccm(2))
         self.target_flow_gas1.SetValue(gas1_target_flow)
         self.target_flow_gas2.SetValue(gas2_target_flow)
 
@@ -235,14 +235,14 @@ class BaseGasMixerPanel(wx.Panel):
             self.automatic_start_btn.Enable()
 
     def EnsureTurnedOn(self):
-        if self.gas_unit.get_working_status() == 0:
-            self.gas_unit.set_working_status(turn_on=True)
+        if self.gas_device.get_working_status() == 0:
+            self.gas_device.set_working_status(turn_on=True)
 
     def CheckHardwareForUpdates(self, evt):
         if evt.GetId() == self.timer.GetId():
-            # new_total_flow = self.gas_unit.get_total_flow()
+            # new_total_flow = self.gas_device.get_total_flow()
             # self.input_total_flow.SetValue(new_total_flow)
-            new_gas1_mix_perc = self.gas_unit.get_percent_value(1)
+            new_gas1_mix_perc = self.gas_device.get_percent_value(1)
             # self.input_percent_gas1.SetValue(new_gas1_mix_perc)
             self.UpdateAppPercentages(new_gas1_mix_perc)
 
@@ -277,7 +277,6 @@ if __name__ == "__main__":
 
     gas_control = GasControl()
 
-    # TODO: Put back when SensorStream is ready
     cdi = pyCDI.CDIStreaming('CDI')
     cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
     stream_cdi_to_file = SensorPoint(cdi, 'NA')

@@ -29,11 +29,11 @@ physio_ranges = {'pH_lower': 7.3, 'pH_upper': 7.5,
 class GasControl:
     def __init__(self):
         self._lgr = logging.getLogger(__name__)
-        self.HA = GasUnit('HA')
-        self.PV = GasUnit('PV')
+        self.HA = GasDevice('HA')
+        self.PV = GasDevice('PV')
 
 
-class GasUnit:
+class GasDevice:
     def __init__(self, channel_type):
         self._lgr = logging.getLogger(__name__)
         self.channel_type = channel_type  # channel_type = "HA" or "PV"
