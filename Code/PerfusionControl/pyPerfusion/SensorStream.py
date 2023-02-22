@@ -80,7 +80,7 @@ class SensorStream:
             self._lgr.debug(f'Found {strategy_class}')
             cfg = strategy_class.get_config_type()()
             PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-            self.add_strategy(strategy_class(cfg))
+            self.add_strategy(strategy_class(cfg.name, cfg.window_len, cfg.buf_len))
 
     def add_strategy(self, strategy: ProcessingStrategy):
         if isinstance(strategy, StreamToFile):

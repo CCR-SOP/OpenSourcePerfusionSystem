@@ -29,9 +29,9 @@ class FileStrategyConfig(ProcessingStrategy.ProcessingStrategyConfig):
 
 
 class StreamToFile(ProcessingStrategy.ProcessingStrategy):
-    def __init__(self, cfg: FileStrategyConfig):
-        super().__init__(cfg)
-        self.cfg = cfg
+    def __init__(self, name: str, window_len: int, buf_len: int):
+        super().__init__(name, window_len, buf_len)
+        self.cfg = FileStrategyConfig(name=name, window_len=window_len, buf_len=buf_len)
         self._lgr = logging.getLogger(__name__)
         self._version = 1
         self._ext = '.dat'
@@ -41,7 +41,7 @@ class StreamToFile(ProcessingStrategy.ProcessingStrategy):
         self._fid = None
         self._sensor_params = {}
         self._base_path = pathlib.Path.cwd()
-        self._filename = pathlib.Path(f'{self.name}')
+        self._filename = pathlib.Path(f'{self.cfg.name}')
         self.cfg.version = 1
 
     @classmethod
@@ -98,7 +98,7 @@ class StreamToFile(ProcessingStrategy.ProcessingStrategy):
             self._lgr.error(f'FileStrategy:open requires a sensor as a parameter')
             return
         self._base_path = PerfusionConfig.get_date_folder()
-        self._filename = pathlib.Path(f'{sensor.name}_{self.name}')
+        self._filename = pathlib.Path(f'{sensor.name}_{self.cfg.name}')
         self._sensor_params = sensor.params
         self._timestamp = datetime.now()
         if self._fid:
@@ -149,10 +149,9 @@ class StreamToFile(ProcessingStrategy.ProcessingStrategy):
 
 
 class PointsToFile(StreamToFile):
-    def __init__(self, cfg: ProcessingStrategy.ProcessingStrategyConfig):
-        super().__init__(cfg)
+    def __init__(self, name: str, window_len: int, buf_len: int):
+        super().__init__(name, window_len, buf_len)
         self._lgr = logging.getLogger(__name__)
-        self._name = name
         self._version = 2
         self._ext = '.dat'
         self._ext_hdr = '.txt'
@@ -161,7 +160,7 @@ class PointsToFile(StreamToFile):
         self._fid = None
         self._sensor_params = {}
         self._base_path = pathlib.Path.cwd()
-        self._filename = pathlib.Path(f'{self._name}')
+        self._filename = pathlib.Path(f'{self.cfg.name}')
         self._bytes_per_ts = 4
         # don't update Algorithm param as we want to pass through
         # whatever any previous algorithm named used

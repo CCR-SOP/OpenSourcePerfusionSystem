@@ -25,12 +25,12 @@ class ProcessingStrategyConfig:
 
 
 class ProcessingStrategy:
-    def __init__(self, cfg: ProcessingStrategyConfig):
+    def __init__(self, name: str, window_len: int, buf_len: int):
         self._lgr = logging.getLogger(__name__)
         self._data_type = np.float64
-        self.cfg = cfg
-        self._window_buffer = np.zeros(cfg.window_len, dtype=self._data_type)
-        self._processed_buffer = np.zeros(cfg.buf_len, dtype=self._data_type)
+        self.cfg = ProcessingStrategyConfig(name=name, window_len=window_len, buf_len=buf_len)
+        self._window_buffer = np.zeros(self.cfg.window_len, dtype=self._data_type)
+        self._processed_buffer = np.zeros(self.cfg.buf_len, dtype=self._data_type)
 
     @classmethod
     def get_config_type(cls):
@@ -74,9 +74,10 @@ class ProcessingStrategy:
 
 
 class RMSStrategy(ProcessingStrategy):
-    def __init__(self, cfg):
-        cfg.algorithm = "RMSStrategy"
-        super().__init__(cfg)
+    def __init__(self, name: str, window_len: int, buf_len: int):
+        super().__init__(name, window_len, buf_len)
+        self.cfg.algorithm = "RMSStrategy"
+
         self._sum = 0
 
     def process_buffer(self, buffer, t=None):
@@ -100,9 +101,9 @@ class RMSStrategy(ProcessingStrategy):
 
 
 class MovingAverageStrategy(ProcessingStrategy):
-    def __init__(self, cfg):
-        cfg.algorithm = "MovingAverageStrategy"
-        super().__init__(cfg)
+    def __init__(self, name: str, window_len: int, buf_len: int):
+        super().__init__(name, window_len, buf_len)
+        self.cfg.algorithm = "MovingAverageStrategy"
         self._sum = 0
 
     def process_buffer(self, buffer, t=None):

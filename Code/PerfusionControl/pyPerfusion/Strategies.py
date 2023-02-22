@@ -33,5 +33,5 @@ def get_strategy(name: str):
     strategy_class = get_class(params['strategy'])
     cfg = strategy_class.get_config_type()()
     PerfusionConfig.read_into_dataclass('strategies', 'Stream2File', cfg)
-    strategy = strategy_class(cfg)
+    strategy = strategy_class(cfg.name, cfg.window_len, cfg.buf_len)
     return strategy
