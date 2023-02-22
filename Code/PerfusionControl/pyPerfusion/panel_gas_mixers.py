@@ -110,7 +110,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
         self.timer = wx.Timer(self)
-        self.timer.Start(60_000, wx.TIMER_CONTINUOUS)
+        self.timer.Start(300_000, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -248,15 +248,15 @@ class BaseGasMixerPanel(wx.Panel):
             for x in range(2):  # this is running 3x every time?? Not sure why
                 tolerance = [target_flows[x]*0.95, target_flows[x]*1.05]
                 if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
-                    self.gas_device._lgr.debug(f'{x}')
-                    self.gas_device._lgr.warning(f'Actual flow of {self.gas_device.channel_type} not within 5% of target flow. Check gas tank flow')
+                    wx.MessageBox(f'Actual flow of {self.gas_device.channel_type} mixer, channel {x+1} not within '
+                                  f'5% of target flow. Check gas tank flow')
                     self.UpdateApp()
 
             if not self.input_percent_gas1.GetValue() == self.gas_device.get_percent_value(1):
-                self.gas_device._lgr.warning(f'Please update gas 1 mix % on application to match hardware')
+                wx.MessageBox(f'Please update gas 1 mix % on application to match hardware')
 
             if not self.input_total_flow.GetValue() == self.gas_device.get_total_flow():
-                self.gas_device._lgr.warning(f'Please update total flow on application to match hardware')
+                wx.MessageBox(f'Please update total flow on application to match hardware')
 
 
 class TestFrame(wx.Frame):
@@ -271,8 +271,8 @@ class TestFrame(wx.Frame):
         # cdi.stop()
         # stream_cdi_to_file.stop()
         self.Destroy()
-        self.panel._HA_panel.timer.Stop()
-        self.panel._PV_panel.timer.Stop()
+        self.panel._panel_HA.timer.Stop()
+        self.panel._panel_PV.timer.Stop()
 
 class MyTestApp(wx.App):
     def OnInit(self):
