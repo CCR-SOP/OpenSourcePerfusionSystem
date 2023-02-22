@@ -249,10 +249,14 @@ class BaseGasMixerPanel(wx.Panel):
                 tolerance = [target_flows[x]*0.95, target_flows[x]*1.05]
                 if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
                     self.gas_device._lgr.debug(f'{x}')
-                    self.gas_device._lgr.debug(f'Actual flow of {self.gas_device.channel_type} not within 5% of target flow. Check gas tanks and update application')
+                    self.gas_device._lgr.warning(f'Actual flow of {self.gas_device.channel_type} not within 5% of target flow. Check gas tank flow')
                     self.UpdateApp()
 
-            # TODO: add function that checks SpinCtrls match gas mixer and if nto asks user to update
+            if not self.input_percent_gas1.GetValue() == self.gas_device.get_percent_value(1):
+                self.gas_device._lgr.warning(f'Please update gas 1 mix % on application to match hardware')
+
+            if not self.input_total_flow.GetValue() == self.gas_device.get_total_flow():
+                self.gas_device._lgr.warning(f'Please update total flow on application to match hardware')
 
 
 class TestFrame(wx.Frame):
