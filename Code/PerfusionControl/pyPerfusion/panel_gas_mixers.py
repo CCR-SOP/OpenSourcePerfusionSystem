@@ -151,7 +151,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
         self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
         self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
-        self.Bind(wx.EVT_TIMER, self.CheckHardwareForUpdates)
+        self.Bind(wx.EVT_TIMER, self.CheckHardwareForAccuracy)
 
     def OnManualStart(self, evt):
         self.automatic_start_btn.Disable()
@@ -166,9 +166,9 @@ class BaseGasMixerPanel(wx.Panel):
             self.automatic_start_btn.Enable()
 
         time.sleep(4.0)
-        self.UpdateAppFlows()
+        self.UpdateApp()
 
-    def OnAutoStart(self, evt):
+    def OnAutoStart(self, evt):  # NOT READY FOR USE
         self.manual_start_btn.Disable()
         GB100_working_status = self.gas_device.get_working_status()
 
@@ -180,7 +180,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.gas_device.update_O2(self.cdi)
             # loop through on a timer
             new_perc = 1  # need real value as output from CDI methods
-            self.UpdateAppPercentages(new_perc)
+            self.UpdateApp(new_perc)
         else:
             self.automatic_start_btn.SetLabel('Start Automatic')
             self.cdi.stop()
@@ -197,7 +197,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.EnsureTurnedOn()
             time.sleep(1.0)
 
-        self.UpdateAppPercentages(new_percent)
+        self.UpdateApp(new_percent)
 
     def OnChangeTotalFlow(self, evt):
         new_total_flow = self.input_total_flow.GetValue()
@@ -207,15 +207,13 @@ class BaseGasMixerPanel(wx.Panel):
             self.EnsureTurnedOn()
             time.sleep(1.0)
 
-        self.UpdateAppFlows()
+        self.UpdateApp()
 
-    def UpdateAppPercentages(self, new_perc):
-        gas2_mix_perc = str(100 - new_perc)
-        self.percent_gas2.SetValue(gas2_mix_perc)
+    def UpdateApp(self, new_perc=None):
+        if new_perc is not None:
+            gas2_mix_perc = str(100 - new_perc)
+            self.percent_gas2.SetValue(gas2_mix_perc)
 
-        self.UpdateAppFlows()
-
-    def UpdateAppFlows(self):
         gas1_flow = str(self.gas_device.get_sccm_av(1))
         gas2_flow = str(self.gas_device.get_sccm_av(2))
         self.flow_gas1.SetValue(gas1_flow)
@@ -237,13 +235,24 @@ class BaseGasMixerPanel(wx.Panel):
         if self.gas_device.get_working_status() == 0:
             self.gas_device.set_working_status(turn_on=True)
 
-    def CheckHardwareForUpdates(self, evt):
+    def CheckHardwareForAccuracy(self, evt):
         if evt.GetId() == self.timer.GetId():
-            new_total_flow = self.gas_device.get_total_flow()
-            # self.input_total_flow.SetValue(new_total_flow)
-            new_gas1_mix_perc = self.gas_device.get_percent_value(1)
-            # self.input_percent_gas1.SetValue(new_gas1_mix_perc)
-            # self.UpdateAppPercentages(new_gas1_mix_perc)
+            # Update actual flows
+            target_flows = [0] * 2
+            target_flows[0] = self.gas_device.get_target_sccm(1)
+            target_flows[1] = self.gas_device.get_target_sccm(2)
+            actual_flows = [0] * 2
+            actual_flows[0] = self.gas_device.get_sccm_av(1)
+            actual_flows[1] = self.gas_device.get_sccm_av(2)
+
+            for x in range(2):  # this is running 3x every time?? Not sure why
+                tolerance = [target_flows[x]*0.95, target_flows[x]*1.05]
+                if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
+                    self.gas_device._lgr.debug(f'{x}')
+                    self.gas_device._lgr.debug(f'Actual flow of {self.gas_device.channel_type} not within 5% of target flow. Check gas tanks and update application')
+                    self.UpdateApp()
+
+            # TODO: add function that checks SpinCtrls match gas mixer and if nto asks user to update
 
 
 class TestFrame(wx.Frame):
