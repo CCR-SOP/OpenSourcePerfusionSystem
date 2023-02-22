@@ -85,18 +85,18 @@ class GasDevice:
 
     def get_total_flow(self):
         if self.gb100 is not None:
-            total_flow = self.gb100.mixer.get_mainboard_total_flow()
+            total_flow = self.gb100.get_mainboard_total_flow()
         else:
             total_flow = 0
         return total_flow
 
     def set_total_flow(self, total_flow):
         if self.gb100 is not None:
-            self.gb100.mixer.set_mainboard_total_flow(int(total_flow))
+            self.gb100.set_mainboard_total_flow(int(total_flow))
 
     def get_percent_value(self, channel_number):
         if self.gb100 is not None:
-            mix_percent = self.gb100.mixer.get_channel_percent_value(channel_number)
+            mix_percent = self.gb100.get_channel_percent_value(channel_number)
         else:
             mix_percent = 0
         return mix_percent
@@ -107,35 +107,35 @@ class GasDevice:
 
     def get_sccm(self, channel_number):
         if self.gb100 is not None:
-            sccm = self.gb100.mixer.get_channel_sccm(channel_number)
+            sccm = self.gb100.get_channel_sccm(channel_number)
         else:
             sccm = 0
         return sccm
 
     def get_sccm_av(self, channel_number):
         if self.gb100 is not None:
-            sccm = self.gb100.mixer.get_channel_sccm_av(channel_number)
+            sccm = self.gb100.get_channel_sccm_av(channel_number)
         else:
             sccm = 0
         return sccm
 
     def get_target_sccm(self, channel_number):
         if self.gb100 is not None:
-            sccm = self.gb100.mixer.get_channel_target_sccm(channel_number)
+            sccm = self.gb100.get_channel_target_sccm(channel_number)
         else:
             sccm = 0
         return sccm
 
     def get_working_status(self):
-        working_status = self.gb100.mixer.get_working_status()
+        working_status = self.gb100.get_working_status()
         return working_status
 
     def set_working_status(self, turn_on: bool):
         if self.gb100 is not None:
             if turn_on:
-                self.gb100.mixer.set_working_status_ON()
+                self.gb100.set_working_status_ON()
             else:
-                self.gb100.mixer.set_working_status_OFF()
+                self.gb100.set_working_status_OFF()
 
     def update_pH(self, CDI_input):
         new_flow = []

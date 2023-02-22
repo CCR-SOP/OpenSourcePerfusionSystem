@@ -256,8 +256,8 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        cdi.stop()
-        stream_cdi_to_file.stop()
+        # cdi.stop()
+        # stream_cdi_to_file.stop()
 
         self.Destroy()
         # destroy timer??
@@ -278,15 +278,15 @@ if __name__ == "__main__":
     gas_control = GasControl()
 
     cdi = pyCDI.CDIStreaming('CDI')
-    cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
-    stream_cdi_to_file = SensorPoint(cdi, 'NA')
-    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
-    ro_sensor.add_strategy(strategy=read_from_cdi)
+    # cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
+    # stream_cdi_to_file = SensorPoint(cdi, 'NA')
+    # stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    # ro_sensor = ReadOnlySensorPoint(cdi, 'na')
+    read_from_cdi = [1] * 18  #  MultiVarFromFile('multi_var', 1, 17, 1)
+    # ro_sensor.add_strategy(strategy=read_from_cdi)
 
-    stream_cdi_to_file.start()
-    cdi.start()
+    # stream_cdi_to_file.start()
+    # cdi.start()
 
     app = MyTestApp(0)
     app.MainLoop()
