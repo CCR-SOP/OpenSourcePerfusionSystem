@@ -23,14 +23,14 @@ import time
 
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent, gas_controller, cdi_device):
+    def __init__(self, parent, gas_controller, cdi_output):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self.cdi = cdi_device
+        self.cdi = cdi_output
         self.gas_control = gas_controller
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=gas_control.HA, cdi=self.cdi)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=gas_control.PV, cdi=self.cdi)
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=gas_control.HA, cdi_output=self.cdi)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=gas_control.PV, cdi_output=self.cdi)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -53,14 +53,14 @@ class GasMixerPanel(wx.Panel):
 
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, gas_device: GasDevice, cdi, **kwds):
+    def __init__(self, parent, name, gas_device: GasDevice, cdi_output, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 
         self.parent = parent
         self.name = name
         self.gas_device = gas_device
-        self.cdi = cdi
+        self.cdi = cdi_output
         if self.gas_device is not None:
             self.gas1 = self.gas_device.get_gas_type(1)
             self.gas2 = self.gas_device.get_gas_type(2)
@@ -110,7 +110,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
         self.timer = wx.Timer(self)
-        self.timer.Start(1_000, wx.TIMER_CONTINUOUS)
+        self.timer.Start(30_000, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -190,8 +190,7 @@ class BaseGasMixerPanel(wx.Panel):
         new_percent = self.input_percent_gas1.GetValue()
 
         # Update gas mixer percentages
-        self.gas_device.set_percent_value(1, new_percent)
-        self.gas_device.set_percent_value(2, 100 - new_percent)
+        self.gas_device.set_percent_value(2, 100 - new_percent)  # set channel 2 only
         time.sleep(2.0)
 
         if self.manual_start_btn.GetLabel() == "Stop Manual":  # prevents turning on if user hasn't hit start
@@ -240,11 +239,11 @@ class BaseGasMixerPanel(wx.Panel):
 
     def CheckHardwareForUpdates(self, evt):
         if evt.GetId() == self.timer.GetId():
-            # new_total_flow = self.gas_device.get_total_flow()
+            new_total_flow = self.gas_device.get_total_flow()
             # self.input_total_flow.SetValue(new_total_flow)
             new_gas1_mix_perc = self.gas_device.get_percent_value(1)
             # self.input_percent_gas1.SetValue(new_gas1_mix_perc)
-            self.UpdateAppPercentages(new_gas1_mix_perc)
+            # self.UpdateAppPercentages(new_gas1_mix_perc)
 
 
 class TestFrame(wx.Frame):
@@ -282,7 +281,7 @@ if __name__ == "__main__":
     # stream_cdi_to_file = SensorPoint(cdi, 'NA')
     # stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
     # ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    read_from_cdi = [1] * 18  #  MultiVarFromFile('multi_var', 1, 17, 1)
+    read_from_cdi = [1] * 18  # MultiVarFromFile('multi_var', 1, 17, 1)
     # ro_sensor.add_strategy(strategy=read_from_cdi)
 
     # stream_cdi_to_file.start()

@@ -103,7 +103,7 @@ class GasDevice:
 
     def set_percent_value(self, channel_number, new_percent):
         if self.gb100 is not None:
-            self.gb100.set_channel_percent_value(1, new_percent)
+            self.gb100.set_channel_percent_value(channel_number, new_percent)
 
     def get_sccm(self, channel_number):
         if self.gb100 is not None:
