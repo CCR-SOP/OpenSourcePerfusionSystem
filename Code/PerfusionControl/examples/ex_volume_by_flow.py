@@ -66,7 +66,7 @@ if __name__ == "__main__":
     hw = NIDAQAIDevice()
     hw.cfg = AINIDAQDeviceConfig(name='Dev1')
     hw.read_config()
-    # hw.start()
+    hw.start()
     sensor_flow = SensorStream(hw.ai_channels['Inferior Vena Cava Flow'], 'ml/min')
     sensor_flow.read_config()
     sensor_flow.start()
