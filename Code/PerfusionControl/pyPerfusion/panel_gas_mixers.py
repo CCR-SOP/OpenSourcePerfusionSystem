@@ -293,7 +293,6 @@ if __name__ == "__main__":
     stream_cdi_to_file = SensorPoint(cdi, 'NA')
     stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
     ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    # read_from_cdi = [1] * 18
     read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
     ro_sensor.add_strategy(strategy=read_from_cdi)
 
