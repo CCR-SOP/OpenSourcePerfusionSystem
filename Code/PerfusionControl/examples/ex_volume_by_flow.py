@@ -64,10 +64,10 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     hw = NIDAQAIDevice()
-    hw.cfg = AINIDAQDeviceConfig(name='TestAnalogInputDevice')
+    hw.cfg = AINIDAQDeviceConfig(name='Dev1')
     hw.read_config()
-    hw.start()
-    sensor_flow = SensorStream(hw.ai_channels['HA Flow'], 'ml/min')
+    # hw.start()
+    sensor_flow = SensorStream(hw.ai_channels['Inferior Vena Cava Flow'], 'ml/min')
     sensor_flow.read_config()
     sensor_flow.start()
 
