@@ -245,7 +245,7 @@ class BaseGasMixerPanel(wx.Panel):
             actual_flows[0] = self.gas_device.get_sccm_av(1)
             actual_flows[1] = self.gas_device.get_sccm_av(2)
 
-            for x in range(2):  # this is running 3x every time?? Not sure why
+            for x in range(2):
                 tolerance = [target_flows[x]*0.95, target_flows[x]*1.05]
                 if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
                     wx.MessageBox(f'Actual flow of {self.gas_device.channel_type} mixer, channel {x+1} not within '
@@ -268,8 +268,8 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        # cdi.stop()
-        # stream_cdi_to_file.stop()
+        cdi.stop()
+        stream_cdi_to_file.stop()
         self.Destroy()
         self.panel._panel_HA.timer.Stop()
         self.panel._panel_PV.timer.Stop()
@@ -289,15 +289,16 @@ if __name__ == "__main__":
     gas_control = GasControl()
 
     cdi = pyCDI.CDIStreaming('CDI')
-    # cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
-    # stream_cdi_to_file = SensorPoint(cdi, 'NA')
-    # stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    # ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    read_from_cdi = [1] * 18  # MultiVarFromFile('multi_var', 1, 17, 1)
-    # ro_sensor.add_strategy(strategy=read_from_cdi)
+    cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
+    stream_cdi_to_file = SensorPoint(cdi, 'NA')
+    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    ro_sensor = ReadOnlySensorPoint(cdi, 'na')
+    # read_from_cdi = [1] * 18
+    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
+    ro_sensor.add_strategy(strategy=read_from_cdi)
 
-    # stream_cdi_to_file.start()
-    # cdi.start()
+    stream_cdi_to_file.start()
+    cdi.start()
 
     app = MyTestApp(0)
     app.MainLoop()
