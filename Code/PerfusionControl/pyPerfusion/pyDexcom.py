@@ -44,6 +44,10 @@ class DexcomReceiver:
         # stores the perf_counter value at the start of the acquisition which defines the zero-time for all
         # following samples
         self.__acq_start_t = 0
+        self.buf_len = 1
+        self.data_type = int
+        self.sampling_period_ms = 30_000
+        self.samples_per_read = 1
 
     def read_config(self):
         cfg = DexcomConfig()
