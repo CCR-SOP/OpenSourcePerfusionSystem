@@ -94,6 +94,8 @@ def read_into_dataclass(cfg_name: str, section_name: str, cfg):
         raise MissingConfigFile(filename)
     if parser.has_section(section_name):
         section = parser[section_name]
+        # print(section)
+        # print(section.items())
         for key, value in section.items():
             dummy = getattr(cfg, key)
             try:
