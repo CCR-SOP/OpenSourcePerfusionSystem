@@ -53,8 +53,9 @@ class SensorFrame(wx.Frame):
 
         self.panels = []
         # manually add sensors to panel to better control how they are organized and which ones are displayed
-        self.panels.append(PanelAI(self, self.sensors['Hepatic Artery Flow'], strategy='StreamRaw'))
+        # self.panels.append(PanelAI(self, self.sensors['Hepatic Artery Flow'], strategy='StreamRaw'))
         self.panels.append(PanelAI(self, self.sensors['Hepatic Artery Flow'], strategy='StreamMovAvg'))
+        self.panels.append(PanelAI(self, self.sensors['Portal Vein Flow'], strategy='StreamMovAvg'))
         self.panels.append(PanelAI(self, self.sensors['Hepatic Artery Pressure'], strategy='StreamMovAvg'))
         self.panels.append(PanelAI(self, self.sensors['Portal Vein Pressure'], strategy='StreamMovAvg'))
         for panel in self.panels:

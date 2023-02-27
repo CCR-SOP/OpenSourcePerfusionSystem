@@ -120,6 +120,7 @@ def write_from_dataclass(cfg_name: str, section_name: str, cfg):
     with open(filename, 'w') as file:
         parser.write(file)
 
+
 def write_section(cfg_name: str, section_name: str, info: dict):
     global ACTIVE_CONFIG
     parser = ConfigParser()

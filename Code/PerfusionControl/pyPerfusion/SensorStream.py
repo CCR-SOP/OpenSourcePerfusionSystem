@@ -2,21 +2,32 @@ import datetime
 from threading import Thread, Event
 import logging
 import time
-from typing import Type
+from dataclasses import dataclass, field
 
 import numpy as np
 
-from pyPerfusion.ProcessingStrategy import ProcessingStrategy
+import pyPerfusion.ProcessingStrategy as ProcessingStrategy
+import pyPerfusion.Strategies as Strategies
 from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 DATA_VERSION = 1
+
+
+
+@dataclass
+class SensorStreamConfig:
+    name: str = ''
+    unit: str = 'volts'
+    strategy_names: str = ''
 
 
 class SensorStream:
     def __init__(self, hw_channel, unit_str, valid_range=None):
         self._lgr = logging.getLogger(__name__)
         self._lgr.info(f'Creating SensorStream object {hw_channel.cfg.name}')
+        self.cfg = SensorStreamConfig()
         self.__thread = None
         self._unit_str = unit_str
         self._valid_range = valid_range
@@ -54,6 +65,22 @@ class SensorStream:
     @property
     def valid_range(self):
         return self._valid_range
+
+    def write_config(self):
+        PerfusionConfig.write_from_dataclass('sensors', self.cfg.name, self.cfg)
+
+    def read_config(self):
+        self._lgr.debug(f'Reading config for {self.hw.cfg.name}')
+        PerfusionConfig.read_into_dataclass('sensors', self.hw.cfg.name, self.cfg)
+        self._lgr.debug(f'strategies are {self.cfg.strategy_names}')
+        for name in self.cfg.strategy_names.split(', '):
+            self._lgr.debug(f'Getting strategy {name}')
+            params = PerfusionConfig.read_section('strategies', name)
+            strategy_class = Strategies.get_class(params['strategy'])
+            self._lgr.debug(f'Found {strategy_class}')
+            cfg = strategy_class.get_config_type()()
+            PerfusionConfig.read_into_dataclass('strategies', name, cfg)
+            self.add_strategy(strategy_class(cfg.name, cfg.window_len, cfg.buf_len))
 
     def add_strategy(self, strategy: ProcessingStrategy):
         if isinstance(strategy, StreamToFile):

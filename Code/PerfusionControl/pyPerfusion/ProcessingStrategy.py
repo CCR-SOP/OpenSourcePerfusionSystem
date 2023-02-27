@@ -8,32 +8,45 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-import pathlib
-import datetime
 import logging
-from os import SEEK_END
+from dataclasses import dataclass
 
 import numpy as np
 
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+
+
+@dataclass
+class ProcessingStrategyConfig:
+    name: str = ''
+    strategy: str = "ProcessingStrategy"
+    buf_len: int = 0
+    window_len: int = 1
+
 
 class ProcessingStrategy:
-    def __init__(self, name, window_len, expected_buffer_len):
+    def __init__(self, name: str, window_len: int, buf_len: int):
         self._lgr = logging.getLogger(__name__)
-        self._name = name
         self._data_type = np.float64
-        self._win_len = window_len
-        self._window_buffer = np.zeros(self._win_len, dtype=self._data_type)
-        self._processed_buffer = np.zeros(expected_buffer_len, dtype=self._data_type)
-        self._params = {'Algorithm': 'Raw',
-                        'Window Length': window_len}
+        self.cfg = ProcessingStrategyConfig(name=name, window_len=window_len, buf_len=buf_len)
+        self._window_buffer = np.zeros(self.cfg.window_len, dtype=self._data_type)
+        self._processed_buffer = np.zeros(self.cfg.buf_len, dtype=self._data_type)
+
+    @classmethod
+    def get_config_type(cls):
+        return ProcessingStrategyConfig
 
     @property
     def name(self):
-        return self._name
+        return self.cfg.name
 
-    @property
-    def params(self):
-        return self._params
+    def write_config(self):
+        PerfusionConfig.write_from_dataclass('strategies', self.cfg.name, self.cfg)
+
+    def read_config(self, strategy_name: str = None):
+        if strategy_name is None:
+            strategy_name = self.cfg.name
+        PerfusionConfig.read_into_dataclass('strategies', strategy_name, self.cfg)
 
     def process_buffer(self, buffer, t=None):
         idx = 0
@@ -61,10 +74,10 @@ class ProcessingStrategy:
 
 
 class RMSStrategy(ProcessingStrategy):
-    def __init__(self, name, window_len, expected_buffer_len):
-        super().__init__(name, window_len, expected_buffer_len)
-        self._params['Algorithm'] = 'RMS'
-        self._params['Data Format'] = str(np.dtype(np.float32))
+    def __init__(self, name: str, window_len: int, buf_len: int):
+        super().__init__(name, window_len, buf_len)
+        self.cfg.algorithm = "RMSStrategy"
+
         self._sum = 0
 
     def process_buffer(self, buffer, t=None):
@@ -75,7 +88,7 @@ class RMSStrategy(ProcessingStrategy):
             self._window_buffer = np.roll(self._window_buffer, -1)
             self._window_buffer[-1] = sqr
             self._sum += sqr - front
-            rms = np.sqrt(self._sum / self._win_len)
+            rms = np.sqrt(self._sum / self.cfg.window_len)
             self._processed_buffer = np.roll(self._processed_buffer, -1)
             self._processed_buffer[-1] = rms
             idx += 1
@@ -88,10 +101,9 @@ class RMSStrategy(ProcessingStrategy):
 
 
 class MovingAverageStrategy(ProcessingStrategy):
-    def __init__(self, name, window_len, expected_buffer_len):
-        super().__init__(name, window_len, expected_buffer_len)
-        self._params['Algorithm'] = 'MovingAverage'
-        self._params['Data Format'] = str(np.dtype(np.float32))
+    def __init__(self, name: str, window_len: int, buf_len: int):
+        super().__init__(name, window_len, buf_len)
+        self.cfg.algorithm = "MovingAverageStrategy"
         self._sum = 0
 
     def process_buffer(self, buffer, t=None):
@@ -101,7 +113,7 @@ class MovingAverageStrategy(ProcessingStrategy):
             self._window_buffer = np.roll(self._window_buffer, -1)
             self._window_buffer[-1] = sample
             self._sum += sample - front
-            avg = np.sum(self._window_buffer) / self._win_len
+            avg = np.sum(self._window_buffer) / self.cfg.window_len
             self._processed_buffer = np.roll(self._processed_buffer, -1)
             self._processed_buffer[-1] = avg
             # self._lgr.debug(f'sample: {sample}: avg: {avg}')

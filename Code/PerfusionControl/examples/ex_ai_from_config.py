@@ -2,8 +2,7 @@
 """ Example to show how to create a sensor stream from a saved config
 
 Assumes that the test configuration folder contains a config
-"TestAnalogInputDevice.ini" with a channel called "Flow" and a
-config called "sensors.ini" with a section called "HA Flow"
+"TestAnalogInputDevce.ini" with a channel called "Flow"
 
 @project: Project NIH
 @author: John Kakareka, NIH
@@ -32,7 +31,15 @@ hw.cfg = AINIDAQDeviceConfig(name='TestAnalogInputDevice')
 hw.read_config()
 
 sensor = SensorStream(hw.ai_channels['HA Flow'], 'ml/min')
-sensor.read_config()
+sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
 
-strategy = sensor.get_file_strategy('Stream2File')
-print(strategy.cfg.name)
+sensor.open()
+hw.start()
+sensor.start()
+print('Sleeping 4 seconds')
+sleep(4)
+sensor.stop()
+hw.stop()
+print('stopped sensor')
+for thread in enumerate():
+    print(thread.name)

@@ -15,16 +15,23 @@ from time import perf_counter
 from os import SEEK_END
 from collections import deque
 from datetime import datetime
+from dataclasses import dataclass, asdict
 
 import numpy as np
 
-from pyPerfusion.ProcessingStrategy import ProcessingStrategy
+import pyPerfusion.ProcessingStrategy as ProcessingStrategy
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
-class StreamToFile(ProcessingStrategy):
-    def __init__(self, name, window_len, expected_buffer_len):
-        super().__init__(name, window_len, expected_buffer_len)
+@dataclass
+class FileStrategyConfig(ProcessingStrategy.ProcessingStrategyConfig):
+    version: int = 0
+
+
+class StreamToFile(ProcessingStrategy.ProcessingStrategy):
+    def __init__(self, name: str, window_len: int, buf_len: int):
+        super().__init__(name, window_len, buf_len)
+        self.cfg = FileStrategyConfig(name=name, window_len=window_len, buf_len=buf_len)
         self._lgr = logging.getLogger(__name__)
         self._version = 1
         self._ext = '.dat'
@@ -34,10 +41,12 @@ class StreamToFile(ProcessingStrategy):
         self._fid = None
         self._sensor_params = {}
         self._base_path = pathlib.Path.cwd()
-        self._filename = pathlib.Path(f'{self._name}')
-        # don't update Algorithm param as we want to pass through
-        # whatever any previous algorithm named used
-        self._params['File Format'] = f'{self._version}'
+        self._filename = pathlib.Path(f'{self.cfg.name}')
+        self.cfg.version = 1
+
+    @classmethod
+    def get_config_type(cls):
+        return FileStrategyConfig
 
     @property
     def fqpn(self, hdr=False):
@@ -71,7 +80,8 @@ class StreamToFile(ProcessingStrategy):
             self._last_idx += buf_len
 
     def _get_stream_info(self):
-        all_params = {**self._params, **self._sensor_params}
+        # all_params = {**self._params, **self._sensor_params}
+        all_params = asdict(self.cfg)
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)
 
@@ -88,7 +98,7 @@ class StreamToFile(ProcessingStrategy):
             self._lgr.error(f'FileStrategy:open requires a sensor as a parameter')
             return
         self._base_path = PerfusionConfig.get_date_folder()
-        self._filename = pathlib.Path(f'{sensor.name}_{self._name}')
+        self._filename = pathlib.Path(f'{sensor.name}_{self.cfg.name}')
         self._sensor_params = sensor.params
         self._timestamp = datetime.now()
         if self._fid:
@@ -110,7 +120,6 @@ class StreamToFile(ProcessingStrategy):
         file_size = len(data)
         if not _fid or file_size == 0:
             return [], []
-
         period = self._sensor_params['Sampling Period (ms)']
         data_type = self._sensor_params['Data Format']
         if last_ms == 0:
@@ -140,10 +149,9 @@ class StreamToFile(ProcessingStrategy):
 
 
 class PointsToFile(StreamToFile):
-    def __init__(self, name, window_len, expected_buffer_len):
-        super().__init__(name, window_len, expected_buffer_len)
+    def __init__(self, name: str, window_len: int, buf_len: int):
+        super().__init__(name, window_len, buf_len)
         self._lgr = logging.getLogger(__name__)
-        self._name = name
         self._version = 2
         self._ext = '.dat'
         self._ext_hdr = '.txt'
@@ -152,7 +160,7 @@ class PointsToFile(StreamToFile):
         self._fid = None
         self._sensor_params = {}
         self._base_path = pathlib.Path.cwd()
-        self._filename = pathlib.Path(f'{self._name}')
+        self._filename = pathlib.Path(f'{self.cfg.name}')
         self._bytes_per_ts = 4
         # don't update Algorithm param as we want to pass through
         # whatever any previous algorithm named used
@@ -275,8 +283,8 @@ class MultiVarToFile(PointsToFile):
 
 
 class MultiVarFromFile(PointsToFile):
-    def __init__(self, name, window_len, expected_buffer_len, index):
-        super().__init__(name, window_len, expected_buffer_len)
+    def __init__(self, cfg: ProcessingStrategy.ProcessingStrategyConfig, index):
+        super().__init__(cfg)
         self._index = index
 
         self._bytes_per_ts = 4
