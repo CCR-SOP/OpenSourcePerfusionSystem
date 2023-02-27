@@ -29,8 +29,8 @@ class GasMixerPanel(wx.Panel):
 
         self.cdi = cdi_output
         self.gas_control = gas_controller
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=gas_control.HA, cdi_output=self.cdi)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=gas_control.PV, cdi_output=self.cdi)
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=self.gas_control.HA, cdi_output=self.cdi)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=self.gas_control.PV, cdi_output=self.cdi)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -110,7 +110,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
         self.timer = wx.Timer(self)
-        self.timer.Start(300_000, wx.TIMER_CONTINUOUS)
+        self.timer.Start(600_000, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -249,7 +249,7 @@ class BaseGasMixerPanel(wx.Panel):
                 tolerance = [target_flows[x]*0.95, target_flows[x]*1.05]
                 if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
                     wx.MessageBox(f'Actual flow of {self.gas_device.channel_type} mixer, channel {x+1} not within '
-                                  f'5% of target flow. Check gas tank flow')
+                                  f'5% of target flow. Check gas tank flow')  # implement loggers again
                     self.UpdateApp()
 
             if not self.input_percent_gas1.GetValue() == self.gas_device.get_percent_value(1):
@@ -295,7 +295,6 @@ if __name__ == "__main__":
     ro_sensor = ReadOnlySensorPoint(cdi, 'na')
     read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
     ro_sensor.add_strategy(strategy=read_from_cdi)
-
     stream_cdi_to_file.start()
     cdi.start()
 

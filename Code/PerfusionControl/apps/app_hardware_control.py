@@ -18,20 +18,27 @@ from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_SPCStockertPumps import CentrifugalPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
 
+from pyPerfusion.pyGB100_SL import GasControl
+import pyPerfusion.pyCDI as pyCDI
+from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
+from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
+
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, gas_control, cdi_output):
         self.parent = parent
         wx.Panel.__init__(self, parent)
+
+        self.gas_control = gas_control
+        self.cdi_output = cdi_output  # should everything be initialized like this?
 
         self._panel_syringes = SyringePanel(self)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self)
-        self._panel_gas_mixers = GasMixerPanel(self)
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
-        self.sizer = wx.GridSizer(cols=2)
+        self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi_output)
+        self.sizer = wx.GridSizer(cols=2)  # label="Hardware Control App" - how can we put this in?
 
         self.__do_layout()
         self.__set_bindings()
@@ -57,7 +64,7 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self)
+        self.panel = HardwarePanel(self, gas_control=gas_controller, cdi_output=read_from_cdi)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -74,5 +81,17 @@ class MyHardwareApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
+
+    gas_controller = GasControl()
+    cdi = pyCDI.CDIStreaming('CDI')
+    cdi.read_config()
+    stream_cdi_to_file = SensorPoint(cdi, 'NA')
+    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    ro_sensor = ReadOnlySensorPoint(cdi, 'na')
+    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
+    ro_sensor.add_strategy(strategy=read_from_cdi)
+    stream_cdi_to_file.start()
+    cdi.start()
+
     app = MyHardwareApp(0)
     app.MainLoop()
