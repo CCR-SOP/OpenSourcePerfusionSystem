@@ -66,7 +66,7 @@ class GasDevice:
             self.gb100 = None
         self.co2_adjust = 5
         self.o2_adjust = 3  # Changing by 3% should change pO2 by 4.65 mmHg
-        self.flow_adjust = 10  # mL/min
+        self.flow_adjust = 5  # mL/min
 
     def get_gas_type(self, numeric_id):
         if self.gb100 is not None:
@@ -138,13 +138,15 @@ class GasDevice:
                 self.gb100.set_working_status_OFF()
 
     def update_pH(self, CDI_input):
-        new_flow = []
-        total_flow = self.gas_control.get_mainboard_total_flow()
-        if CDI_input[self.pH_index] < physio_ranges['pH_lower']:
+        total_flow = self.get_total_flow()
+        if CDI_input.arterial_pH == -1:
+            self._lgr.warning(f'pH is out of range. Cannot be adjusted automatically')
+        elif CDI_input.arterial_pH < physio_ranges['pH_lower']:
             new_flow = total_flow + self.flow_adjust
-        elif CDI_input[self.pH_index] > physio_ranges['pH_upper']:
-             new_flow = total_flow - self.flow_adjust
-        self.gas_control.set_mainboard_total_flow(new_flow)
+            self.set_total_flow(new_flow)
+        elif CDI_input.arterial_pH > physio_ranges['pH_upper']:
+            new_flow = total_flow - self.flow_adjust
+            self.set_total_flow(new_flow)
 
     def update_CO2(self, CDI_input):  # can only adjust CO2 in HA
         if self.channel_type == "HA":

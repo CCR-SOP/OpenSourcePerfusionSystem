@@ -23,14 +23,14 @@ import time
 
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent, gas_controller, cdi_output):
+    def __init__(self, parent, gas_controller, cdi):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self.cdi = cdi_output
+        self.cdi = cdi
         self.gas_control = gas_controller
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=self.gas_control.HA, cdi_output=self.cdi)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=self.gas_control.PV, cdi_output=self.cdi)
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=self.gas_control.HA, cdi=self.cdi)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=self.gas_control.PV, cdi=self.cdi)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -53,14 +53,14 @@ class GasMixerPanel(wx.Panel):
 
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, gas_device: GasDevice, cdi_output, **kwds):
+    def __init__(self, parent, name, gas_device: GasDevice, cdi, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 
         self.parent = parent
         self.name = name
         self.gas_device = gas_device
-        self.cdi = cdi_output
+        self.cdi = cdi
         if self.gas_device is not None:
             self.gas1 = self.gas_device.get_gas_type(1)
             self.gas2 = self.gas_device.get_gas_type(2)
@@ -106,11 +106,13 @@ class BaseGasMixerPanel(wx.Panel):
         self.manual_start_btn.Disable()
         self.automatic_start_btn.Disable()
 
+        self.sync_with_hw_timer = wx.Timer(self)
+        self.sync_with_hw_timer.Start(600_000, wx.TIMER_CONTINUOUS)
+
+        self.cdi_timer = wx.Timer(self)
+
         self.__do_layout()
         self.__set_bindings()
-
-        self.timer = wx.Timer(self)
-        self.timer.Start(600_000, wx.TIMER_CONTINUOUS)
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
@@ -151,7 +153,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
         self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
         self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
-        self.Bind(wx.EVT_TIMER, self.CheckHardwareForAccuracy)
+        self.Bind(wx.EVT_TIMER, self.CheckHardwareForAccuracy, self.sync_with_hw_timer)
+        self.Bind(wx.EVT_TIMER, self.pullDataFromCDI, self.cdi_timer)
 
     def OnManualStart(self, evt):
         self.automatic_start_btn.Disable()
@@ -168,23 +171,32 @@ class BaseGasMixerPanel(wx.Panel):
         time.sleep(4.0)
         self.UpdateApp()
 
-    def OnAutoStart(self, evt):  # NOT READY FOR USE
+    def OnAutoStart(self, evt):  # PRELIMINARY
         self.manual_start_btn.Disable()
-        GB100_working_status = self.gas_device.get_working_status()
+        working_status = self.gas_device.get_working_status()
 
-        if GB100_working_status == 0:
+        if working_status == 0:  # 0 is off
             self.gas_device.set_working_status(turn_on=True)
             self.automatic_start_btn.SetLabel('Stop Automatic')
-            self.gas_device.update_pH(self.cdi)
-            self.gas_device.update_CO2(self.cdi)
-            self.gas_device.update_O2(self.cdi)
-            # loop through on a timer
-            new_perc = 1  # need real value as output from CDI methods
-            self.UpdateApp(new_perc)
+            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
         else:
+            self.gas_device.set_working_status(turn_on=False)
             self.automatic_start_btn.SetLabel('Start Automatic')
-            self.cdi.stop()
             self.manual_start_btn.Enable()
+            self.cdi_timer.Stop()
+    
+    def pullDataFromCDI(self, evt):        
+        if evt.GetId() == self.cdi_timer.GetId():  # updating pH when timer goes off
+            packet = self.cdi.request_data()
+            data = pyCDI.CDIParsedData(packet)
+            self.gas_device.update_pH(data)
+            # self.gas_device.update_CO2(self.cdi)
+            # self.gas_device.update_O2(self.cdi)
+            # new_perc = 1  # need real value as output from CDI methods
+            if self.automatic_start_btn.GetLabel() == "Stop Automatic":
+                self.EnsureTurnedOn()
+                time.sleep(1.0)
+            self.UpdateApp()
 
     def OnChangePercentMix(self, evt):
         new_percent = self.input_percent_gas1.GetValue()
@@ -236,7 +248,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.gas_device.set_working_status(turn_on=True)
 
     def CheckHardwareForAccuracy(self, evt):
-        if evt.GetId() == self.timer.GetId():
+        if evt.GetId() == self.sync_with_hw_timer.GetId():
             # Update actual flows
             target_flows = [0] * 2
             target_flows[0] = self.gas_device.get_target_sccm(1)
@@ -264,15 +276,17 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self, gas_control, read_from_cdi)
+        self.panel = GasMixerPanel(self, gas_control, cdi)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        cdi.stop()
-        stream_cdi_to_file.stop()
+        # cdi.stop()
+        # stream_cdi_to_file.stop()
         self.Destroy()
-        self.panel._panel_HA.timer.Stop()
-        self.panel._panel_PV.timer.Stop()
+        self.panel._panel_HA.sync_with_hw_timer.Stop()
+        self.panel._panel_PV.sync_with_hw_timer.Stop()
+        self.panel._panel_HA.cdi_timer.Stop()
+        self.panel._panel_PV.cdi_timer.Stop()
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -289,14 +303,19 @@ if __name__ == "__main__":
     gas_control = GasControl()
 
     cdi = pyCDI.CDIStreaming('CDI')
-    cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
-    stream_cdi_to_file = SensorPoint(cdi, 'NA')
-    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
-    ro_sensor.add_strategy(strategy=read_from_cdi)
-    stream_cdi_to_file.start()
-    cdi.start()
+    cfg = pyCDI.CDIConfig(port='COM13')
+    cdi.open(cfg)
+    
+    # TODO: FIX
+    #  This is bugging out again - accessing the wrong comport. inserted code from ex_CDI for testing purposes
+    # cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
+    # stream_cdi_to_file = SensorPoint(cdi, 'NA')
+    # stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    # ro_sensor = ReadOnlySensorPoint(cdi, 'na')
+    # read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
+    # ro_sensor.add_strategy(strategy=read_from_cdi)
+    # stream_cdi_to_file.start()
+    # cdi.start()
 
     app = MyTestApp(0)
     app.MainLoop()
