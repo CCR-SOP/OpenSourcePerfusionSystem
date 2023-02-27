@@ -27,17 +27,17 @@ utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, gas_control, cdi_output):
+    def __init__(self, parent, gas_control, cdi_obj):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
         self.gas_control = gas_control
-        self.cdi_output = cdi_output  # should everything be initialized like this?
+        self.cdi = cdi_obj  # should everything be initialized like this?
 
         self._panel_syringes = SyringePanel(self)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self)
-        self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi_output)
+        self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi)
         self.sizer = wx.GridSizer(cols=2)  # label="Hardware Control App" - how can we put this in?
 
         self.__do_layout()
@@ -64,7 +64,7 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self, gas_control=gas_controller, cdi_output=read_from_cdi)
+        self.panel = HardwarePanel(self, gas_control=gas_controller, cdi_obj=cdi_obj)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -83,15 +83,18 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
     gas_controller = GasControl()
-    cdi = pyCDI.CDIStreaming('CDI')
-    cdi.read_config()
-    stream_cdi_to_file = SensorPoint(cdi, 'NA')
-    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
-    ro_sensor.add_strategy(strategy=read_from_cdi)
-    stream_cdi_to_file.start()
-    cdi.start()
+    cdi_obj = pyCDI.CDIStreaming('CDI')
+    cfg = pyCDI.CDIConfig(port='COM13')
+    cdi_obj.open(cfg)
+
+    # cdi.read_config()
+    # stream_cdi_to_file = SensorPoint(cdi, 'NA')
+    # stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    # ro_sensor = ReadOnlySensorPoint(cdi, 'na')
+    # read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
+    # ro_sensor.add_strategy(strategy=read_from_cdi)
+    # stream_cdi_to_file.start()
+    # cdi.start()
 
     app = MyHardwareApp(0)
     app.MainLoop()
