@@ -14,7 +14,7 @@ import pyPerfusion.ProcessingStrategy as ProcessingStrategy
 import pyPerfusion.FileStrategy as FileStrategy
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.Strategy_Processing as Strategy_Processing
-from pyPerfusion.Strategy_ReadWrite import WriterStream
+import pyPerfusion.Strategy_ReadWrite as Strategy_RW
 
 
 def get_class(name: str):
@@ -30,8 +30,11 @@ def get_class(name: str):
         return Strategy_Processing.RMS
     elif name == 'MovingAverage':
         return Strategy_Processing.MovingAverage
-    elif name == 'Writer':
-        return WriterStream
+    elif name == 'WriterStream':
+        return Strategy_RW.WriterStream
+    elif name == 'WriterPoints':
+        return Strategy_RW.WriterPoints
+
     else:
         return None
 
