@@ -8,6 +8,7 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+import logging
 from dataclasses import dataclass
 
 import numpy as np
@@ -22,11 +23,17 @@ class WindowConfig(Strategy_ReadWrite.WriterConfig):
 
 class RMS(Strategy_ReadWrite.WriterStream):
     def __init__(self, cfg: WindowConfig):
+        self._lgr = logging.getLogger(__name__)
+        self._lgr.debug(f'cfg type is {type(cfg)}')
         super().__init__(cfg)
         self.cfg.algorithm = "RMS"
         self._sum = 0
         self._window_buffer = None
         self._data_type = np.float64
+
+    @classmethod
+    def get_config_type(cls):
+        return WindowConfig
 
     def _process(self, buffer, t=None):
         if self._window_buffer is None:
@@ -46,16 +53,19 @@ class RMS(Strategy_ReadWrite.WriterStream):
     def reset(self):
         super().reset()
         self._sum = 0
-        self._window_buffer = None
 
 
 class MovingAverage(Strategy_ReadWrite.WriterStream):
-    def __init__(self, , cfg: WindowConfig):
+    def __init__(self, cfg: WindowConfig):
         super().__init__(cfg)
         self.cfg.algorithm = "MovingAverage"
         self._sum = 0
         self._window_buffer = None
         self._data_type = np.float64
+
+    @classmethod
+    def get_config_type(cls):
+        return WindowConfig
 
     def _process(self, buffer, t=None):
         if self._window_buffer is None:
@@ -77,4 +87,3 @@ class MovingAverage(Strategy_ReadWrite.WriterStream):
     def reset(self):
         super().reset()
         self._sum = 0
-        self._window_buffer = None

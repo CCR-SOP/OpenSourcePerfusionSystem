@@ -32,7 +32,7 @@ from pyHardware.SystemHardware import SYS_HW
 class HWProtocol(Protocol):
     T = TypeVar("T", bound=npt.NBitBase)
 
-    def get_buf_info(self) -> (int, np.datatype):
+    def get_buf_info(self) -> (int, np.dtype):
         pass
 
     def get_data(self) -> (np.int32, np.dtype[T]):
@@ -81,11 +81,12 @@ class Sensor:
         for name in self.cfg.strategy_names.split(', '):
             self._lgr.debug(f'Getting strategy {name}')
             params = PerfusionConfig.read_section('strategies', name)
-            strategy_class = Strategies.get_class(params['strategy'])
+            strategy_class = Strategies.get_class(params['algorithm'])
             self._lgr.debug(f'Found {strategy_class}')
             cfg = strategy_class.get_config_type()()
+            self._lgr.debug(f'Config type is {cfg}')
             PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-            self.add_strategy(strategy_class(cfg.name, cfg.window_len, cfg.buf_len))
+            self.add_strategy(strategy_class(cfg))
 
     def add_strategy(self, strategy: ProcessingStrategy):
         if isinstance(strategy, StreamToFile):
@@ -93,7 +94,7 @@ class Sensor:
         elif isinstance(strategy, PointsToFile):
             strategy.open(self)
         else:
-            strategy.open()
+            strategy.open(sensor_name=self.name)
         self._strategies.append(strategy)
 
     def get_all_file_strategies(self):
@@ -145,13 +146,11 @@ class Sensor:
     def start(self):
         if self.__thread:
             self.stop()
-        self._timestamp = datetime.datetime.now()
-        self._params['Start of Acquisition'] = self._timestamp.strftime('%Y-%m-%d_%H:%M')
         self._evt_halt.clear()
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'SensorStream ({self.hw.cfg.name})'
+        self.__thread.name = f'Sensor ({self.cfg.name})'
         self.__thread.start()
-        self._lgr.debug(f'{self.hw.cfg.name} sensor started')
+        self._lgr.debug(f'{self.cfg.name} sensor started')
 
     def stop(self):
         self._evt_halt.set()
