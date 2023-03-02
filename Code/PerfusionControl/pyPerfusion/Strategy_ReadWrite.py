@@ -116,9 +116,11 @@ class WriterStream:
 
     def _write_to_file(self, data_buf, t=None):
         buf_len = len(data_buf)
-        self._lgr.debug(f'len(data_buf)  is {len(data_buf)}')
         if self._fid:
-            data_buf.tofile(self._fid)
+            try:
+                data_buf.tofile(self._fid)
+            except OSError as e:
+                self._lgr.error(f'{self.cfg.name}: {e}')
             self._fid.flush()
             self._last_idx += buf_len
 
@@ -159,11 +161,11 @@ class WriterStream:
     def process_buffer(self, buffer, t=None):
         # In derived classes, do not override this method, override _process
         if self._processed_buffer is None:
-            self._processed_buffer = np.zeros(len(buffer), dtype=type(buffer))
+            self._lgr.debug(f'{self.cfg.name}: creating process buffer of {buffer.dtype}')
+            self._processed_buffer = np.zeros(len(buffer), dtype=buffer.dtype)
         self._process(buffer, t)
-        self._lgr.debug(f'processed_buffer type is {type(self._processed_buffer)}')
         self._write_to_file(self._processed_buffer, t)
-        return self._processed_buffer
+        return self._processed_buffer, t
 
 
 # class PointsToFile(StreamToFile):
