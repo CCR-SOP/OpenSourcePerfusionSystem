@@ -142,10 +142,10 @@ class GasDevice:
         if CDI_input.arterial_pH == -1:
             self._lgr.warning(f'pH is out of range. Cannot be adjusted automatically')
         elif CDI_input.arterial_pH < physio_ranges['pH_lower']:
-            new_flow = total_flow + self.flow_adjust
+            new_flow = total_flow - self.flow_adjust
             self.set_total_flow(new_flow)
         elif CDI_input.arterial_pH > physio_ranges['pH_upper']:
-            new_flow = total_flow - self.flow_adjust
+            new_flow = total_flow + self.flow_adjust
             self.set_total_flow(new_flow)
 
     def update_CO2(self, CDI_input):  # can only adjust CO2 in HA
