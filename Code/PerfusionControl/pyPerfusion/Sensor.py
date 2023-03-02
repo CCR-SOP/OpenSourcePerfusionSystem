@@ -27,7 +27,7 @@ import pyPerfusion.ProcessingStrategy as ProcessingStrategy
 import pyPerfusion.Strategies as Strategies
 from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-
+from pyHardware.SystemHardware import SYS_HW
 
 class HWProtocol(Protocol):
     T = TypeVar("T", bound=npt.NBitBase)
@@ -45,60 +45,38 @@ class HWProtocol(Protocol):
 @dataclass
 class SensorConfig:
     name: str = ''
-    hw: HWProtocol = None
-    unit: str = 'volts'
+    hw_name: str = ''
     strategy_names: str = ''
 
 
 class Sensor:
-    def __init__(self, hw_channel, unit_str, valid_range=None):
+    def __init__(self, name: str):
         self._lgr = logging.getLogger(__name__)
-        self._lgr.info(f'Creating SensorStream object {hw_channel.cfg.name}')
-        self.cfg = SensorConfig()
+        self._lgr.info(f'Creating Sensor object {name}')
         self.__thread = None
-        self._unit_str = unit_str
-        self._valid_range = valid_range
-        self.hw = hw_channel
         self._evt_halt = Event()
+        self.hw = None
 
-        self.data = None
-        self._timestamp = None
-        self.data = np.array(self.hw.buf_len, dtype=self.hw.data_type)
+        self.cfg = SensorConfig(name=name)
 
         self._strategies = []
-        self._params = {'Sensor': self.hw.cfg.name,
-                        'Unit': self._unit_str,
-                        'Data Format': np.dtype(self.hw.data_type).name,
-                        'Sampling Period (ms)': self.hw.sampling_period_ms,
-                        'Start of Acquisition': 0
-                        }
-
-    @property
-    def params(self):
-        return self._params
 
     @property
     def name(self):
-        return self.hw.cfg.name
-
-    @property
-    def buf_len(self):
-        return self.hw.buf_len
-
-    @property
-    def unit_str(self):
-        return self._unit_str
-
-    @property
-    def valid_range(self):
-        return self._valid_range
+        return self.cfg.name
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass('sensors', self.cfg.name, self.cfg)
 
     def read_config(self):
-        self._lgr.debug(f'Reading config for {self.hw.cfg.name}')
-        PerfusionConfig.read_into_dataclass('sensors', self.hw.cfg.name, self.cfg)
+        self._lgr.debug(f'Reading config for {self.cfg.name}')
+        PerfusionConfig.read_into_dataclass('sensors', self.cfg.name, self.cfg)
+
+        # create hardware
+        self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.cfg.name}')
+        self.hw = SYS_HW.get_hw(self.cfg.hw_name)
+
+        # load strategies
         self._lgr.debug(f'strategies are {self.cfg.strategy_names}')
         for name in self.cfg.strategy_names.split(', '):
             self._lgr.debug(f'Getting strategy {name}')
