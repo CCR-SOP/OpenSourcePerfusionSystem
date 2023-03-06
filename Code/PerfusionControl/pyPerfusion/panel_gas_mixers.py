@@ -178,7 +178,7 @@ class BaseGasMixerPanel(wx.Panel):
         if working_status == 0:  # 0 is off
             self.gas_device.set_working_status(turn_on=True)
             self.automatic_start_btn.SetLabel('Stop Automatic')
-            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
+            self.cdi_timer.Start(60_000, wx.TIMER_CONTINUOUS)
         else:
             self.gas_device.set_working_status(turn_on=False)
             self.automatic_start_btn.SetLabel('Start Automatic')
@@ -261,11 +261,11 @@ class BaseGasMixerPanel(wx.Panel):
                 tolerance = [target_flows[x]*0.95, target_flows[x]*1.05]
                 if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
                     wx.MessageBox(f'Actual flow of {self.gas_device.channel_type} mixer, channel {x+1} not within '
-                                  f'5% of target flow. Check gas tank flow')  # implement loggers again
+                                  f'5% of target flow. Check gas tank flow')  # TODO: implement loggers again
                     self.UpdateApp()
 
             if not self.input_percent_gas1.GetValue() == self.gas_device.get_percent_value(1):
-                wx.MessageBox(f'Please update gas 1 mix % on application to match hardware')
+                wx.MessageBox(f'Please update gas 1 mix % on application to match hardware')  # TODO: do not run with CDI
 
             if not self.input_total_flow.GetValue() == self.gas_device.get_total_flow():
                 wx.MessageBox(f'Please update total flow on application to match hardware')
@@ -280,8 +280,8 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        # cdi.stop()
-        # stream_cdi_to_file.stop()
+        cdi.stop()
+        stream_cdi_to_file.stop()
         self.Destroy()
         self.panel._panel_HA.sync_with_hw_timer.Stop()
         self.panel._panel_PV.sync_with_hw_timer.Stop()
@@ -302,20 +302,15 @@ if __name__ == "__main__":
 
     gas_control = GasControl()
 
-    cdi = pyCDI.CDIStreaming('CDI')
-    cfg = pyCDI.CDIConfig(port='COM13')
-    cdi.open(cfg)
-    
-    # TODO: FIX
-    #  This is bugging out again - accessing the wrong comport. inserted code from ex_CDI for testing purposes
-    # cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
-    # stream_cdi_to_file = SensorPoint(cdi, 'NA')
-    # stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    # ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    # read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
-    # ro_sensor.add_strategy(strategy=read_from_cdi)
-    # stream_cdi_to_file.start()
-    # cdi.start()
+    cdi = pyCDI.CDIStreaming('CDI')  # TODO: make sure everything is in scope above
+    cdi.read_config()  # need updated pyCDI and SensorPoint for this to work
+    stream_cdi_to_file = SensorPoint(cdi, 'NA')
+    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    ro_sensor = ReadOnlySensorPoint(cdi, 'na')
+    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
+    ro_sensor.add_strategy(strategy=read_from_cdi)
+    stream_cdi_to_file.start()
+    cdi.start()
 
     app = MyTestApp(0)
     app.MainLoop()

@@ -138,13 +138,13 @@ class GasDevice:
                 self.gb100.set_working_status_OFF()
 
     def update_pH(self, CDI_input):
-        total_flow = self.get_total_flow()
-        if CDI_input.arterial_pH == -1:
+        total_flow = self.get_total_flow()  # TODO: need ceilings
+        if CDI_input.venous_pH == -1:
             self._lgr.warning(f'pH is out of range. Cannot be adjusted automatically')
-        elif CDI_input.arterial_pH < physio_ranges['pH_lower']:
+        elif CDI_input.venous_pH < physio_ranges['pH_lower']:
             new_flow = total_flow + self.flow_adjust
             self.set_total_flow(new_flow)
-        elif CDI_input.arterial_pH > physio_ranges['pH_upper']:
+        elif CDI_input.venous_pH > physio_ranges['pH_upper']:
             new_flow = total_flow - self.flow_adjust
             self.set_total_flow(new_flow)
 
