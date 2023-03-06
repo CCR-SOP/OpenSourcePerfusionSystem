@@ -140,6 +140,7 @@ class Sensor:
                 buf = data_buf
                 for strategy in self._strategies:
                     buf, t = strategy.process_buffer(buf, t)
+
             else:
                 time.sleep(0.5)
 

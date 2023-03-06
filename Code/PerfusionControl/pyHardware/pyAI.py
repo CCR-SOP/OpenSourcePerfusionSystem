@@ -70,7 +70,7 @@ class AIDevice:
 
         # stores the perf_counter value at the start of the acquisition which defines the zero-time for all
         # following samples
-        self.__acq_start_t = 0
+        self._acq_start_t = 0
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass(self.cfg.name, 'General', self.cfg)
@@ -106,7 +106,7 @@ class AIDevice:
 
     @property
     def start_time(self):
-        return self.__acq_start_t
+        return self._acq_start_t
 
     @property
     def samples_per_read(self):
@@ -153,7 +153,7 @@ class AIDevice:
     def start(self):
         self.stop()
         self._event_halt.clear()
-        self.__acq_start_t = perf_counter()
+        self._acq_start_t = perf_counter()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyAI {self.cfg.name}'
@@ -179,12 +179,11 @@ class AIDevice:
             self._acq_samples()
 
     def _acq_samples(self):
-        sleep_time = self.cfg.read_period_ms / self.cfg.sampling_period_ms / 1000.0
-        sleep(sleep_time)
-        buffer_t = perf_counter()
+        buffer_t = perf_counter() - self._acq_start_t
         for channel in self.ai_channels.values():
             val = np.random.random_sample()  # * self._demo_amp[ch] + self._demo_offset[ch])
             buffer = np.ones(self.samples_per_read, dtype=self.cfg.data_type) * val
+            # self._lgr.debug(f'{self.cfg.name}: buffer_t = {buffer_t}')
             channel.put_data(buffer, buffer_t)
 
 

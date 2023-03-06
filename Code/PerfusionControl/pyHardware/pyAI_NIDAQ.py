@@ -75,7 +75,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
 
     def _acq_samples(self):
         samples_read = PyDAQmx.int32()
-        buffer_t = time.perf_counter()
+        buffer_t = time.perf_counter() - self._acq_start_t
         try:
             if self._task and len(self.ai_channels) > 0:
                 self._task.ReadAnalogF64(self.samples_per_read, 1.05 * self.cfg.read_period_ms / 1000.0,

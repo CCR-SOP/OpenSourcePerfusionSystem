@@ -115,31 +115,33 @@ class ReaderPoints(Reader):
         return data_buf, ts
 
     def retrieve_buffer(self, last_ms, samples_needed):
-        _fid, tmp = self._open_read()
-        cur_time = int(perf_counter() * 1000)
+        self._lgr.debug(f'samples_needed={samples_needed}, last_ms = {last_ms}')
+        _fid, tmp = self._open_read(self.cfg.data_type)
         _fid.seek(0)
         chunk = [1]
         data_time = []
         data = []
-        first_time = None
-        bytes_per_chunk = self.cfg.bytes_per_timestamp + (self.cfg.samples_per_timestamp * np.dtype(self.cfg.data_type))
-
+        final_ts = None
+        bytes_per_chunk = self.cfg.bytes_per_timestamp + (self.cfg.samples_per_timestamp * self.cfg.data_type(1).itemsize)
         # start by assuming file contains only full chunks
-        jump_back = bytes_per_chunk * 2
+        expected_chunks = 10
+        jump_back = bytes_per_chunk * expected_chunks*2
         try:
             _fid.seek(-jump_back, SEEK_END)
         except OSError:
             _fid.seek(0)
         while len(chunk) > 0:
             chunk, ts = self._read_chunk(_fid)
-            if not first_time:
-                first_time = ts
-            if chunk is not None and (cur_time - ts < last_ms or last_ms == 0 or last_ms == -1):
+            if final_ts is None:
+                final_ts = ts
+            if chunk is not None and (final_ts - ts < last_ms or last_ms == 0 or last_ms == -1):
                 data.append(chunk)
-                data_time.append((ts - first_time) / 1000.0)
+                data_time.append(ts / 1000.0)
         inc = int(len(data) / samples_needed)
-        data = data[0:-1:inc]
+        if inc > 0:
+            data = data[0:-1:inc]
         _fid.close()
+        self._lgr.debug(f'data_time is {data_time}')
         return data_time, data
 
     def get_last_acq(self):
@@ -279,7 +281,15 @@ class WriterPoints(WriterStream):
         super().__init__(cfg)
         self._lgr = logging.getLogger(__name__)
 
+    @classmethod
+    def get_config_type(cls):
+        return WriterPointsConfig
+
+    def get_reader(self):
+        return ReaderPoints(self.fqpn, self.cfg)
+
     def _write_to_file(self, data_buf, t=None):
         ts_bytes = struct.pack('i', int(t * 1000.0))
+        # self._lgr.debug(f'{self.cfg.name}: writing to file {t}')
         self._fid.write(ts_bytes)
         data_buf.tofile(self._fid)

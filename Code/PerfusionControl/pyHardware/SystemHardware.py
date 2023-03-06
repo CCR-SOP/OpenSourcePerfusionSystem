@@ -9,33 +9,39 @@ and under the public domain.
 """
 import pyHardware.pyAI as pyAI
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
-import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class SystemHardware:
     def __init__(self):
         self.ni_dev1 = NIDAQAIDevice()
         self.ni_dev2 = NIDAQAIDevice()
+        self.mock_device = pyAI.AIDevice()
 
     def load_hardware_from_config(self):
         self.ni_dev1.cfg = AINIDAQDeviceConfig(name='Dev1')
         self.ni_dev1.read_config()
         self.ni_dev2.cfg = AINIDAQDeviceConfig(name='Dev2')
         self.ni_dev2.read_config()
+        self.mock_device.cfg = pyAI.AIDeviceConfig(name='FakeEvents')
+        self.mock_device.read_config()
 
     def start(self):
         self.ni_dev1.start()
         self.ni_dev2.start()
+        self.mock_device.start()
 
     def stop(self):
         self.ni_dev1.stop()
         self.ni_dev2.stop()
+        self.mock_device.stop()
 
     def get_hw(self, name: str):
-        ai_ch = self.ni_dev1.ai_channels.get(name, 'None')
-        if ai_ch is None:
-            ai_ch = self.ni_dev2.ai_channels.get(name, 'None')
-        return ai_ch
+        hw = self.ni_dev1.ai_channels.get(name, None)
+        if hw is None:
+            hw = self.ni_dev2.ai_channels.get(name, None)
+        if hw is None:
+            hw = self.mock_device.ai_channels.get(name, None)
+        return hw
 
 
 SYS_HW = SystemHardware()

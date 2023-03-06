@@ -113,6 +113,7 @@ class EventPlot(SensorPlot):
         if not self._strategy:
             return
         data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
+        # self._lgr.debug(f'{self._sensor.cfg.name}: data_time is {data_time}')
         if data is None or len(data) == 0:
             return
 
