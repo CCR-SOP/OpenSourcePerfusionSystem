@@ -11,10 +11,7 @@ from time import sleep
 from threading import enumerate
 import logging
 
-import pyHardware.pyAI as pyAI
-from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 import pyPerfusion.Sensor as Sensor
-from pyPerfusion.Strategy_ReadWrite import WriterStream
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW

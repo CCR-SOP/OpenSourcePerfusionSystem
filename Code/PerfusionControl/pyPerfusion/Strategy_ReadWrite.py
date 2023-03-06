@@ -47,6 +47,10 @@ class Reader:
         self.cfg = cfg
         self._last_idx = 0
 
+    @property
+    def name(self):
+        return self.cfg.name
+
     def _open_read(self, data_type):
         fid = None
         data = []
@@ -86,8 +90,7 @@ class Reader:
 
         start_t = start_idx * period / 1000.0
         stop_t = file_size * period / 1000.0
-        data_time = np.linspace(start_t, stop_t, samples_needed,
-                                dtype=data_type)
+        data_time = np.linspace(start_t, stop_t, samples_needed, dtype=self.cfg.data_type)
         _fid.close()
         return data_time, data
 
@@ -213,7 +216,7 @@ class WriterStream:
         return self._base_path / self._filename.with_suffix(self._ext)
 
     def get_reader(self):
-        return Reader(self.fqpn, self.hw)
+        return Reader(self.fqpn, self.cfg)
 
     def _open_write(self):
         self._lgr.info(f'opening for write: {self.fqpn}')

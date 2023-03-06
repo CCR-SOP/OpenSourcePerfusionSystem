@@ -56,6 +56,8 @@ class Sensor:
         self.__thread = None
         self._evt_halt = Event()
         self.hw = None
+        self.valid_range = [0, 100]
+        self.unit_str = 'NA'
 
         self.cfg = SensorConfig(name=name)
 
@@ -81,12 +83,16 @@ class Sensor:
         for name in self.cfg.strategy_names.split(', '):
             self._lgr.debug(f'Getting strategy {name}')
             params = PerfusionConfig.read_section('strategies', name)
-            strategy_class = Strategies.get_class(params['algorithm'])
-            self._lgr.debug(f'Found {strategy_class}')
-            cfg = strategy_class.get_config_type()()
-            self._lgr.debug(f'Config type is {cfg}')
-            PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-            self.add_strategy(strategy_class(cfg))
+            self._lgr.debug(f'Attempting to get algorithm {params["algorithm"]}')
+            try:
+                strategy_class = Strategies.get_class(params['algorithm'])
+                self._lgr.debug(f'Found {strategy_class}')
+                cfg = strategy_class.get_config_type()()
+                self._lgr.debug(f'Config type is {cfg}')
+                PerfusionConfig.read_into_dataclass('strategies', name, cfg)
+                self.add_strategy(strategy_class(cfg))
+            except AttributeError:
+                self._lgr.error(f'Could not find algorithm {params["algorithm"]} for sensor {self.cfg.name}')
 
     def add_strategy(self, strategy: ProcessingStrategy):
         if isinstance(strategy, StreamToFile):
@@ -113,6 +119,15 @@ class Sensor:
                 strategy = strategy[0]
         return strategy
 
+    def get_reader(self, name: str = None):
+        if name is None:
+            reader = self._strategies[-1]
+        else:
+            reader = [strategy for strategy in self._strategies if strategy.cfg.name == name]
+        if len(reader) > 0:
+            reader = reader[0]
+        return reader.get_reader()
+
     def run(self):
         while not self._evt_halt.is_set():
             data_buf, t = self.hw.get_data()
@@ -120,6 +135,8 @@ class Sensor:
                 buf = data_buf
                 for strategy in self._strategies:
                     buf, t = strategy.process_buffer(buf, t)
+            else:
+                time.sleep(0.5)
 
     def open(self):
         pass

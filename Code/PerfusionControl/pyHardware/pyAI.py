@@ -20,8 +20,8 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Thread, Event
+from queue import Queue, Empty
 from time import perf_counter, sleep, time
-from collections import deque
 import logging
 from dataclasses import dataclass, field, asdict
 from typing import List
@@ -194,7 +194,8 @@ class AIChannel:
         self.cfg = cfg
         self.device = device
 
-        self._queue = deque(maxlen=100)
+        self._queue = Queue()
+        self._q_timeout = 0.5
 
         # parameters for randomly generated data when there is no underlying hardware
         # used for testing and demo purposes
@@ -227,21 +228,22 @@ class AIChannel:
 
     def put_data(self, buf, t):
         data = self._calibrate(buf)
-        self._queue.append((data, t))
+        self._queue.put((data, t))
 
     def get_data(self):
         buf = None
         t = None
         try:
-            buf, t = self._queue.pop()
-        except IndexError:
+            buf, t = self._queue.get(timeout=self._q_timeout)
+        except Empty:
             # this can occur if there are attempts to read data before it has been acquired
             # this is not unusual, so catch the error but do nothing
             pass
         return buf, t
 
     def clear(self):
-        self._queue.clear()
+        with self._queue.mutex:
+            self._queue.queue.clear()
 
     def _calibrate(self, buffer):
 
