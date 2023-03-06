@@ -246,7 +246,7 @@ class WriterStream:
 
     def open(self, sensor_name: str = None):
         self._base_path = PerfusionConfig.get_date_folder()
-        self._filename = pathlib.Path(f'{self.sensor_name}_{self.cfg.name}')
+        self._filename = pathlib.Path(f'{sensor_name}_{self.cfg.name}')
         self._timestamp = datetime.now()
         if self._fid:
             self._fid.close()

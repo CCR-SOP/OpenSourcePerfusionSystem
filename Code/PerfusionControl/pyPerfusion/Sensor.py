@@ -75,7 +75,6 @@ class Sensor:
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
         self.cfg.valid_range = [int(x) for x in ''.join(self.cfg.valid_range).split(',')]
-        self._lgr.debug(f'valid_range is {self.cfg.valid_range}')
 
         # create hardware
         self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.cfg.name}')
@@ -94,8 +93,9 @@ class Sensor:
                 self._lgr.debug(f'Config type is {cfg}')
                 PerfusionConfig.read_into_dataclass('strategies', name, cfg)
                 self.add_strategy(strategy_class(cfg))
-            except AttributeError:
+            except AttributeError as e:
                 self._lgr.error(f'Could not find algorithm {params["algorithm"]} for sensor {self.cfg.name}')
+                self._lgr.error(f'Error message is {e}')
 
     def add_strategy(self, strategy: ProcessingStrategy):
         if isinstance(strategy, StreamToFile):

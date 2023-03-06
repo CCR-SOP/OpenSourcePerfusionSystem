@@ -57,17 +57,17 @@ class SensorPlot:
             return
 
         readout = data[-1]
-        if self._sensor.valid_range is not None:
-            low_range = self._axes.fill_between(data_time, data, self._sensor.valid_range[0],
-                                                where=data < self._sensor.valid_range[0], color='r')
-            high_range = self._axes.fill_between(data_time, data, self._sensor.valid_range[1],
-                                                 where=data > self._sensor.valid_range[1], color='r')
+        if self._sensor.cfg.valid_range is not None:
+            low_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[0],
+                                                where=data < self._sensor.cfg.valid_range[0], color='r')
+            high_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[1],
+                                                 where=data > self._sensor.cfg.valid_range[1], color='r')
             self._invalid = [low_range, high_range]
 
             if self._with_readout:
-                if readout < self._sensor.valid_range[0]:
+                if readout < self._sensor.cfg.valid_range[0]:
                     readout_color = 'orange'
-                elif readout > self._sensor.valid_range[1]:
+                elif readout > self._sensor.cfg.valid_range[1]:
                     readout_color = 'red'
 
         if self._line is None:
