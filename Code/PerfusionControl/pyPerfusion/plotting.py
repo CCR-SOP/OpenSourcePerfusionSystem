@@ -77,7 +77,7 @@ class SensorPlot:
             self._line.set_data(data_time, data)
 
         if self._with_readout:
-            self._line.set_label(f'{self._strategy.name}: {readout:.2f} {self._sensor.unit_str}')
+            self._line.set_label(f'{self._strategy.name}: {readout:.2f} {self._sensor.cfg.units}')
             leg = self._axes.get_legend()
             if leg is not None:
                 leg_texts = leg.get_texts()
@@ -95,45 +95,12 @@ class SensorPlot:
         self._strategy = strategy
         self._line = None
         self._color = color
-        if self._sensor.valid_range is not None:
-            rng = self._sensor.valid_range
+        if self._sensor.cfg.valid_range is not None:
+            rng = self._sensor.cfg.valid_range
             self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
         if not keep_old_title:
             self._axes.set_title(f'{self._sensor.name}\n')
-            self._axes.set_ylabel(self._sensor.unit_str)
-
-
-class TSMDexSensorPlot:
-    def __init__(self, plot_name, axes, unit, valid_range):
-        self._lgr = logging.getLogger(__name__)
-        self._plot_name = plot_name
-        self._axes = axes
-        self._unit = unit
-        self._valid_range = valid_range
-        self._configure_plot()
-
-    @property
-    def full_name(self):
-        return self._plot_name
-
-    def plot(self, data, data_time):
-        if data is None:
-            return
-        if data_time is None:
-            return
-        if data > self._valid_range[1]:
-            self._axes.plot_date(data_time, data, 'bo')
-        elif data < self._valid_range[0]:
-            self._axes.plot_date(data_time, data, 'ro')
-        else:
-            self._axes.plot_date(data_time, data, 'ko')
-
-    def _configure_plot(self):
-        self._axes.set_title(self._plot_name)
-        self._axes.set_ylabel(self._unit)
-        if self._valid_range is not None:
-            rng = self._valid_range
-            self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+            self._axes.set_ylabel(self._sensor.cfg.units)
 
 
 class EventPlot(SensorPlot):
@@ -167,7 +134,6 @@ class PanelPlotting(wx.Panel):
         self._with_readout = with_readout
 
         self.__plot_len = 200
-        self._valid_range = None
         self._plot_frame_ms = 5_000
 
         self.fig = mpl.figure.Figure()
@@ -240,81 +206,6 @@ class PanelPlotting(wx.Panel):
 class PanelPlotLT(PanelPlotting):
     def __init__(self, parent):
         PanelPlotting.__init__(self, parent, with_readout=False)
-
-    def _configure_plot(self, sensor):
-        self.axes.set_yticklabels([])
-        self.axes.set_xticklabels([])
-
-
-class TSMDexPanelPlotting(wx.Panel):
-    def __init__(self, parent, with_readout=True):
-        wx.Panel.__init__(self, parent, -1)
-        self._lgr = logging.getLogger(__name__)
-        self.__parent = parent
-        self._with_readout = with_readout
-
-        self.__plot_len = 200
-        self._valid_range = None
-        self._plot_frame_ms = 5_000
-
-        self.fig = mpl.figure.Figure()
-        self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
-        # self._axes = self.fig.add_subplot(111)
-        self._axes = self.fig.add_axes([0.05, 0.05, 0.9, 0.85])
-        self._plots = []
-        self._leg = []
-        self._x_range_minutes = None
-
-        self.__do_layout()
-        self.__set_bindings()
-
-    @property
-    def axes(self):
-        return self._axes
-
-    @property
-    def plot_frame_ms(self):
-        return self._plot_frame_ms
-
-    @plot_frame_ms.setter
-    def plot_frame_ms(self, ms):
-        self._plot_frame_ms = ms
-
-    def __do_layout(self):
-        self.canvas.SetMinSize(wx.Size(1, 1))
-        self.fig.tight_layout()
-
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.canvas, 10, wx.ALL | wx.EXPAND, border=1)
-
-        self.SetSizer(sizer)
-        self.Fit()
-        self.Layout()
-
-    def __set_bindings(self):
-        pass
-
-    def plot(self, data, data_time):
-        for plot in self._plots:
-            plot.plot(data, data_time)
-        current_upper_x_lim = data_time
-        if not self._x_range_minutes:
-            self._axes.set_xlim([0, current_upper_x_lim])
-        else:
-            self._axes.set_xlim([current_upper_x_lim - self._x_range_minutes, current_upper_x_lim])
-        self._axes.relim()
-        self._axes.autoscale_view()
-        self.canvas.draw()
-
-    def add_plot(self, plot):
-        self._plots.append(plot)
-        self.Fit()
-        self.__parent.Fit()
-
-
-class TSMDexPanelPlotLT(TSMDexPanelPlotting):
-    def __init__(self, parent):
-        TSMDexPanelPlotting.__init__(self, parent, with_readout=False)
 
     def _configure_plot(self, sensor):
         self.axes.set_yticklabels([])

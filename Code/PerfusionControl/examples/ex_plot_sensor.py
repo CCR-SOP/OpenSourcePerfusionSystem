@@ -28,7 +28,7 @@ class TestFrame(wx.Frame):
         self.plotraw = SensorPlot(sensor, self.panel.axes, readout=True)
         self.plotrms = SensorPlot(sensor, self.panel.axes, readout=True)
 
-        self.plotraw.set_strategy(sensor.get_reader('Writer'))
+        self.plotraw.set_strategy(sensor.get_reader('Raw'))
         self.plotrms.set_strategy(sensor.get_reader('RMS_11pt'), color='y')
 
         self.panel.add_plot(self.plotraw)

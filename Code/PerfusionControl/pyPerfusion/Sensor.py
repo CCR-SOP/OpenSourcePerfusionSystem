@@ -13,12 +13,11 @@ flow or pressure. It is also used to log how actuators, e.g., pumps, are being c
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-import datetime
 from threading import Thread, Event
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Protocol, TypeVar
+from typing import Protocol, TypeVar, List
 
 import numpy as np
 import numpy.typing as npt
@@ -47,6 +46,8 @@ class SensorConfig:
     name: str = ''
     hw_name: str = ''
     strategy_names: str = ''
+    units: str = ''
+    valid_range: List = field(default_factory=lambda: [0, 100])
 
 
 class Sensor:
@@ -56,8 +57,6 @@ class Sensor:
         self.__thread = None
         self._evt_halt = Event()
         self.hw = None
-        self.valid_range = [0, 100]
-        self.unit_str = 'NA'
 
         self.cfg = SensorConfig(name=name)
 
@@ -73,6 +72,10 @@ class Sensor:
     def read_config(self):
         self._lgr.debug(f'Reading config for {self.cfg.name}')
         PerfusionConfig.read_into_dataclass('sensors', self.cfg.name, self.cfg)
+        # update the valid_range attribute to a list of integers
+        # as it will be read in as a list of characters
+        self.cfg.valid_range = [int(x) for x in ''.join(self.cfg.valid_range).split(',')]
+        self._lgr.debug(f'valid_range is {self.cfg.valid_range}')
 
         # create hardware
         self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.cfg.name}')
@@ -126,6 +129,8 @@ class Sensor:
             reader = [strategy for strategy in self._strategies if strategy.cfg.name == name]
         if len(reader) > 0:
             reader = reader[0]
+        else:
+            return None
         return reader.get_reader()
 
     def run(self):

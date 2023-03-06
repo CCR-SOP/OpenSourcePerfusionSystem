@@ -22,9 +22,9 @@ class WindowConfig(Strategy_ReadWrite.WriterConfig):
 
 
 class RMS(Strategy_ReadWrite.WriterStream):
-    def __init__(self, cfg: WindowConfig, hw=None):
+    def __init__(self, cfg: WindowConfig):
         self._lgr = logging.getLogger(__name__)
-        super().__init__(cfg, hw)
+        super().__init__(cfg)
         self.cfg.algorithm = "RMS"
         self._sum = 0
         self._window_buffer = None

@@ -191,10 +191,9 @@ class ReaderPoints(Reader):
 
 
 class WriterStream:
-    def __init__(self, cfg: WriterConfig, hw=None):
+    def __init__(self, cfg: WriterConfig):
         self._lgr = logging.getLogger(__name__)
         self.cfg = cfg
-        self.hw = hw
         self._ext = '.dat'
         self._ext_hdr = '.txt'
         self._timestamp = None
@@ -245,9 +244,9 @@ class WriterStream:
         fid.write(hdr_str)
         fid.close()
 
-    def open(self, sensor_name=None):
+    def open(self, sensor_name: str = None):
         self._base_path = PerfusionConfig.get_date_folder()
-        self._filename = pathlib.Path(f'{sensor_name}_{self.cfg.name}')
+        self._filename = pathlib.Path(f'{self.sensor_name}_{self.cfg.name}')
         self._timestamp = datetime.now()
         if self._fid:
             self._fid.close()
@@ -276,8 +275,8 @@ class WriterStream:
 
 
 class WriterPoints(WriterStream):
-    def __init__(self, cfg: WriterPointsConfig, hw=None):
-        super().__init__(cfg, hw)
+    def __init__(self, cfg: WriterPointsConfig):
+        super().__init__(cfg)
         self._lgr = logging.getLogger(__name__)
 
     def _write_to_file(self, data_buf, t=None):
