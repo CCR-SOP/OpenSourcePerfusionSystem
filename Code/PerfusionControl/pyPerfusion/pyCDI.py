@@ -10,6 +10,7 @@ from time import perf_counter, sleep
 from queue import Queue, Empty
 from dataclasses import dataclass
 from datetime import datetime
+import struct
 
 import numpy as np
 import serial
@@ -44,7 +45,6 @@ class CDIParsedData:
             for field in fields[1:-1]:
                 code = field[0:2].upper()
                 try:
-                    # logging.getLogger(__name__).debug(f'code is {code}')
                     value = float(field[4:])
                 except ValueError:
                     logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
@@ -59,7 +59,8 @@ class CDIParsedData:
 
     def get_array(self):
         data = [getattr(self, value) for value in code_mapping.values()]
-        return data
+        # logging.getLogger(__name__).debug(f'data is {data}')
+        return np.float64(data)
 
     # test ability to read all 3 sensors on CDI - delete eventually
     # def print_results(self):
@@ -82,10 +83,11 @@ class CDIStreaming:
     def __init__(self, name):
         self._lgr = logging.getLogger(__name__)
         self.name = name
-        self._queue = None
-        self.data_type = np.float32
+        self._queue = Queue()
+        self.data_type = np.float64
         self.buf_len = 18
         self.samples_per_read = 18
+        self.acq_start = 0
 
         self.cfg = CDIConfig()
 
@@ -148,7 +150,7 @@ class CDIStreaming:
             if self.__serial.is_open and self.__serial.in_waiting > 0:
                 resp = self.__serial.readline().decode('ascii')
                 one_cdi_packet = CDIParsedData(resp)
-                ts = perf_counter()
+                ts = perf_counter() - self.acq_start
                 self._queue.put((one_cdi_packet, ts))
             else:
                 sleep(0.5)
@@ -156,6 +158,7 @@ class CDIStreaming:
     def start(self):
         self.stop()
         self._event_halt.clear()
+        self.acq_start = perf_counter()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
@@ -166,8 +169,8 @@ class CDIStreaming:
             self._event_halt.set()
             self.is_streaming = False
 
-    def get_data(self, timeout=0):  # from Pump11Elite. Might make sense so have this in the CDIParsedData class?
-        buf = None  # not sure what buf and t do?
+    def get_data(self, timeout=0):
+        buf = None
         t = None
         try:
             buf, t = self._queue.get(timeout)
@@ -189,6 +192,7 @@ class MockCDI(CDIStreaming):
         if cfg is not None:
             self.cfg = cfg
         self._is_open = True
+        self._lgr.debug('here')
         self._queue = Queue()
 
     def close(self):
@@ -203,21 +207,23 @@ class MockCDI(CDIStreaming):
         pkt_dev = 'X2000A5A0'
         ts = datetime.now()
         timestamp = f'{ts.hour:02d}:{ts.minute:02d}:{ts.second:02d}'
+        # self._lgr.debug(f'timestamp is {timestamp}')
         data = [f'{code}{int(code, 16)*2:04d}\t' for code in code_mapping.keys()]
         data_str = ''.join(data)
         crc = 0
         pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'
+        # self._lgr.debug(f'pkt is {pkt}')
         return pkt
 
     def run(self):  # continuous data stream
         self.is_streaming = True
         self._event_halt.clear()
-        self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
             if self._is_open:
                 resp = self._form_pkt()
                 one_cdi_packet = CDIParsedData(resp)
-                ts = perf_counter()
-                self._queue.put((one_cdi_packet, ts))
+                ts = perf_counter() - self.acq_start
+                self._queue.put((one_cdi_packet.get_array(), ts))
+                sleep(1.0)
             else:
                 sleep(0.5)

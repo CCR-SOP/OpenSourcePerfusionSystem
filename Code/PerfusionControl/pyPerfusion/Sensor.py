@@ -26,6 +26,7 @@ import pyPerfusion.ProcessingStrategy as ProcessingStrategy
 import pyPerfusion.Strategies as Strategies
 from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyPerfusion.pyCDI import CDIStreaming, MockCDI
 from pyHardware.SystemHardware import SYS_HW
 
 class HWProtocol(Protocol):
@@ -127,10 +128,10 @@ class Sensor:
             reader = self._strategies[-1]
         else:
             reader = [strategy for strategy in self._strategies if strategy.cfg.name == name]
-        if len(reader) > 0:
-            reader = reader[0]
-        else:
-            return None
+            if len(reader) > 0:
+                reader = reader[0]
+            else:
+                return None
         return reader.get_reader()
 
     def run(self):

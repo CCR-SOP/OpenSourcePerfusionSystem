@@ -11,6 +11,7 @@ import pathlib
 import datetime
 import logging
 import struct
+from os import SEEK_CUR
 
 from datetime import datetime
 from dataclasses import dataclass, asdict
@@ -119,7 +120,7 @@ class ReaderPoints(Reader):
 
         return data_buf, ts
 
-    def retrieve_buffer(self, last_ms, samples_needed):
+    def retrieve_buffer(self, last_ms, samples_needed, index: int = None):
         data_time = []
         data = []
 
@@ -129,12 +130,17 @@ class ReaderPoints(Reader):
         while True:
             chunk = fid.read(self.cfg.bytes_per_timestamp)
             if chunk:
-                ts, = struct.unpack('i', chunk)
+                ts, = struct.unpack('!I', chunk)
                 if elapsed_time - ts <= last_ms:
                     data_chunk = np.fromfile(fid, dtype=self.cfg.data_type,
                                              count=self.cfg.samples_per_timestamp)
-                    data.append(data_chunk)
+                    if index is None:
+                        data.append(data_chunk)
+                    else:
+                        data.append(data_chunk[index])
                     data_time.append(ts / 1_000)
+                else:
+                    fid.seek(self.bytes_per_chunk-self.cfg.bytes_per_timestamp, SEEK_CUR)
 
             else:
                 break
@@ -144,20 +150,7 @@ class ReaderPoints(Reader):
             data = data[0:-1:inc]
             data_time = data_time[0:-1:inc]
         fid.close()
-        return data_time, data
 
-
-class ReaderPointsIndex(ReaderPoints):
-    def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig, index: int):
-        self._lgr = logging.getLogger(__name__)
-        super().__init__(fqpn, cfg)
-        self.index = index
-
-    def retrieve_buffer(self, last_ms, samples_needed):
-        data_time, all_vars = super().retrieve_buffer(last_ms, samples_needed)
-        data = []
-        for chunk in all_vars:
-            data.append(chunk[self.index])
         return data_time, data
 
 
@@ -257,8 +250,8 @@ class WriterPoints(WriterStream):
     def get_reader(self):
         return ReaderPoints(self.fqpn, self.cfg)
 
+
     def _write_to_file(self, data_buf, t=None):
-        ts_bytes = struct.pack('i', int(t * 1000.0))
-        # self._lgr.debug(f'{self.cfg.name}: writing to file {t}')
+        ts_bytes = struct.pack('!I', int(t * 1000.0))
         self._fid.write(ts_bytes)
         data_buf.tofile(self._fid)
