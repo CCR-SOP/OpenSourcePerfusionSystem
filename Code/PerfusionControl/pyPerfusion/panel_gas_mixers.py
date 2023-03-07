@@ -178,7 +178,7 @@ class BaseGasMixerPanel(wx.Panel):
         if working_status == 0:  # 0 is off
             self.gas_device.set_working_status(turn_on=True)
             self.automatic_start_btn.SetLabel('Stop Automatic')
-            self.cdi_timer.Start(60_000, wx.TIMER_CONTINUOUS)
+            self.cdi_timer.Start(120_000, wx.TIMER_CONTINUOUS)
         else:
             self.gas_device.set_working_status(turn_on=False)
             self.automatic_start_btn.SetLabel('Start Automatic')
@@ -186,22 +186,26 @@ class BaseGasMixerPanel(wx.Panel):
             self.cdi_timer.Stop()
     
     def pullDataFromCDI(self, evt):        
-        if evt.GetId() == self.cdi_timer.GetId():  # updating pH when timer goes off
+        if evt.GetId() == self.cdi_timer.GetId():
             packet = self.cdi.request_data()
             data = pyCDI.CDIParsedData(packet)
-            self.gas_device.update_pH(data)
-            # self.gas_device.update_CO2(self.cdi)
-            # self.gas_device.update_O2(self.cdi)
-            # new_perc = 1  # need real value as output from CDI methods
+
+            if self.gas_device.channel_type == "PV":
+                new_flow = self.gas_device.update_pH(data)
+                if new_flow is not None:
+                    self.UpdateApp()
+            elif self.gas_device.channel_type == "HA":
+                new_mix_perc = self.gas_device.update_CO2(data)
+                if new_mix_perc is not None:
+                    self.UpdateApp(100-new_mix_perc)
+
+            # self.gas_device.update_O2(data)
             if self.automatic_start_btn.GetLabel() == "Stop Automatic":
                 self.EnsureTurnedOn()
                 time.sleep(1.0)
-            self.UpdateApp()
 
     def OnChangePercentMix(self, evt):
         new_percent = self.input_percent_gas1.GetValue()
-
-        # Update gas mixer percentages
         self.gas_device.set_percent_value(2, 100 - new_percent)  # set channel 2 only
         time.sleep(2.0)
 
