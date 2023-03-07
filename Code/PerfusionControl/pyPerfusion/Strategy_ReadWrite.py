@@ -250,7 +250,6 @@ class WriterPoints(WriterStream):
     def get_reader(self):
         return ReaderPoints(self.fqpn, self.cfg)
 
-
     def _write_to_file(self, data_buf, t=None):
         ts_bytes = struct.pack('!I', int(t * 1000.0))
         self._fid.write(ts_bytes)

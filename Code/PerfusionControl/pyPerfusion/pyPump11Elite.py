@@ -68,6 +68,7 @@ DEFAULT_MANUFACTURERS = {
 
 @dataclass
 class SyringeConfig:
+        name: str = 'Syringe'
         drug: str = ''
         com_port: str = ''
         manufacturer_code: str = ''
@@ -113,7 +114,7 @@ class Pump11Elite:
     def __init__(self, name, config=SyringeConfig()):
         super().__init__()
         self._lgr = logging.getLogger(__name__)
-        self.data_type = np.float32
+        self.data_type = np.float64
 
         self.name = name
         self.cfg = config
@@ -133,7 +134,7 @@ class Pump11Elite:
             'Syringe': self.name,
             'Volume Unit': 'ul',
             'Rate Unit': 'ul/min',
-            'Data Format': str(np.dtype(np.int32)),
+            'Data Format': str(np.dtype(np.float64)),
             'Datapoints Per Timestamp': 2,
             'Bytes Per Timestamp': 4,
             'Start of Acquisition': 0
@@ -175,6 +176,9 @@ class Pump11Elite:
         if self._serial:
             self.stop()
             self._serial.close()
+
+    def start(self):
+        self.__acq_start_t = perf_counter()
 
     def send_wait4response(self, str2send: str) -> str:
         response = ''
@@ -249,7 +253,7 @@ class Pump11Elite:
         self.clear_infusion_volume()
         self.clear_target_volume()
 
-    def record_targeted_infusion(self, t: np.float32):
+    def record_targeted_infusion(self, t: np.float64):
         """ targeted infusion actions in ul and ul/min
         """
         target_vol, target_vol_unit = self.get_target_volume()
@@ -275,11 +279,12 @@ class Pump11Elite:
             self._lgr.error(f'Unknown rate unit in syringe {self.name}: ++{rate_unit}++')
             rate = 0
 
-        buf = np.array([target_vol, rate], np.int32)
+        buf = np.array([target_vol, rate], np.float64)
         if self._queue:
+            self._lgr.debug(f'buf={buf}, t={t}')
             self._queue.put((buf, t))
 
-    def record_continuous_infusion(self, t: np.float32, start: bool):
+    def record_continuous_infusion(self, t: np.float64, start: bool):
         """ targeted infusion actions in ul and ul/min
         """
         rate, rate_unit = self.get_infusion_rate()
@@ -296,7 +301,7 @@ class Pump11Elite:
             rate = 0
 
         flag = INFUSION_START if start else INFUSION_STOP
-        buf = np.array([flag, rate], np.float32)
+        buf = np.array([flag, rate], np.float64)
         if self._queue:
             self._queue.put((buf, t))
 
@@ -305,7 +310,7 @@ class Pump11Elite:
         """
         # JWK, should check if target volume is set
         self.send_wait4response('irun\r')
-        t = perf_counter()
+        t = perf_counter() - self.__acq_start_t
         self.record_targeted_infusion(t)
 
     def start_constant_infusion(self):
@@ -313,7 +318,7 @@ class Pump11Elite:
         """
         # JWK, should check if target volume is cleared
         self.send_wait4response('irun\r')
-        t = perf_counter()
+        t = perf_counter() - self.__acq_start_t
         self.record_continuous_infusion(t, start=True)
         self.is_infusing = True
 
@@ -323,7 +328,7 @@ class Pump11Elite:
         """
         self.send_wait4response('stop\r')
         self.is_infusing = False
-        t = perf_counter()
+        t = perf_counter() - self.__acq_start_t
         # check if targeted volume is 0, if so, then this is a continuous injection
         # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
         target_vol, target_unit = self.get_target_volume()
@@ -407,4 +412,18 @@ class MockPump11Elite(Pump11Elite):
                     response = self._values[parts[0]]
 
         # JWK, we should be checking error responses
+        return response
+
+
+class MockPump11Elite(Pump11Elite):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._last_send = ''
+
+    def send_wait4response(self, str2send: str) -> str:
+        response = ''
+        if str2send == 'tvolume\r':
+            response = '100 ul'
+        elif str2send == 'irate\r':
+            response = '10 ul/min'
         return response
