@@ -45,7 +45,6 @@ class DialysisPumpPanel(wx.Panel):
         self._panel_bloodflow = PanelDC(self, self.roller_pumps['Dialysis Blood Pump'])
 
         # TODO: add auto_start_btn for dialysis later
-
         # TODO: add initial rates to config and update this in panel_DC?
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")

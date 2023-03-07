@@ -32,7 +32,10 @@ class PanelDC(wx.Panel):
 
         self._panel_dc = PanelDCControl(self, self.sensor)
 
+        font = wx.Font()
+        font.SetPointSize(int(20))
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.sensor.name)
+        static_box.SetFont(font)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
@@ -61,11 +64,20 @@ class PanelDCControl(wx.Panel):
         self.parent = parent
         self.sensor = sensor
 
+        font = wx.Font()
+        font.SetPointSize(int(20))
+
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Pump Speed (mL/min)')
-        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)
+        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5)
+        self.label_offset.SetFont(font)
+        self.entered_offset.SetFont(font)
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
+        self.btn_change_rate.SetFont(font)
+
+        self.btn_stop = wx.Button(self, label='Stop')
+        self.btn_stop.SetFont(font)
 
         self.__do_layout()
         self.__set_bindings()
@@ -79,6 +91,7 @@ class PanelDCControl(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_change_rate)
+        sizer.Add(self.btn_stop)
         self.sizer.Add(sizer, wx.SizerFlags(0).CenterHorizontal().Top())
 
         self.SetSizer(self.sizer)
@@ -87,6 +100,10 @@ class PanelDCControl(wx.Panel):
 
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
+        self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
+
+    def on_stop(self, evt):
+        self.sensor.hw.set_output(int(0))
 
     def on_update(self, evt):
         self._lgr.debug('on_update called')
