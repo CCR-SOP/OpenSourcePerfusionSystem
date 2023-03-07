@@ -11,15 +11,14 @@ import pathlib
 import datetime
 import logging
 import struct
-from time import perf_counter
-from os import SEEK_END
-from collections import deque
+
 from datetime import datetime
 from dataclasses import dataclass, asdict
 
 import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyHardware.SystemHardware import SYS_HW
 
 
 @dataclass
@@ -104,6 +103,12 @@ class ReaderPoints(Reader):
         self.cfg = cfg
         self._last_idx = 0
 
+    @property
+    def bytes_per_chunk(self):
+        bytes_per_chunk = self.cfg.bytes_per_timestamp + (
+                self.cfg.samples_per_timestamp * self.cfg.data_type(1).itemsize)
+        return bytes_per_chunk
+
     def _read_chunk(self, _fid):
         ts = 0
         data_buf = []
@@ -115,81 +120,38 @@ class ReaderPoints(Reader):
         return data_buf, ts
 
     def retrieve_buffer(self, last_ms, samples_needed):
-        self._lgr.debug(f'samples_needed={samples_needed}, last_ms = {last_ms}')
-        _fid, tmp = self._open_read(self.cfg.data_type)
-        _fid.seek(0)
-        chunk = [1]
         data_time = []
         data = []
-        final_ts = None
-        bytes_per_chunk = self.cfg.bytes_per_timestamp + (self.cfg.samples_per_timestamp * self.cfg.data_type(1).itemsize)
-        # start by assuming file contains only full chunks
-        expected_chunks = 10
-        jump_back = bytes_per_chunk * expected_chunks*2
-        try:
-            _fid.seek(-jump_back, SEEK_END)
-        except OSError:
-            _fid.seek(0)
-        while len(chunk) > 0:
-            chunk, ts = self._read_chunk(_fid)
-            if final_ts is None:
-                final_ts = ts
-            if chunk is not None and (final_ts - ts < last_ms or last_ms == 0 or last_ms == -1):
-                data.append(chunk)
-                data_time.append(ts / 1000.0)
+
+        fid = open(self.fqpn, 'rb')
+        fid.seek(0)
+        elapsed_time = SYS_HW.get_elapsed_time_ms()
+        while True:
+            chunk = fid.read(self.cfg.bytes_per_timestamp)
+            if chunk:
+                ts, = struct.unpack('i', chunk)
+                if elapsed_time - ts <= last_ms:
+                    data_chunk = np.fromfile(fid, dtype=self.cfg.data_type,
+                                             count=self.cfg.samples_per_timestamp)
+                    data.append(data_chunk)
+                    data_time.append(ts / 1_000)
+
+            else:
+                break
+
         inc = int(len(data) / samples_needed)
         if inc > 0:
             data = data[0:-1:inc]
-        _fid.close()
-        self._lgr.debug(f'data_time is {data_time}')
+            data_time = data_time[0:-1:inc]
+        fid.close()
         return data_time, data
 
-    def get_last_acq(self):
-        _fid, tmp = self._open_read()
-        bytes_per_chunk = self.cfg.bytes_per_timestamp + (self.cfg.samples_per_timestamp * np.dtype(self.cfg.data_type))
-        try:
-            _fid.seek(-bytes_per_chunk, SEEK_END)
-            chunk, ts = self._read_chunk(_fid)
-        except OSError as e:
-            logging.exception(e)
-            chunk = None
-            ts = None
 
-        _fid.close()
-        return ts, chunk
-
-    def get_current(self):
-        ts, chunk = self.get_last_acq()
-        if chunk is not None:
-            avg = np.mean(chunk)
-        else:
-            avg = None
-        return avg
-
-    def get_data_from_last_read(self, timestamp):
-        _fid, tmp = self._open_read()
-        bytes_per_chunk = self.cfg.bytes_per_timestamp + (self.cfg.samples_per_timestamp * np.dtype(self.cfg.data_type))
-        ts = timestamp + 1
-        data = deque()
-        data_t = deque()
-        _fid.seek(0, SEEK_END)
-        loops = 0
-        while ts > timestamp:
-            loops += 1
-            offset = bytes_per_chunk * loops
-            try:
-                _fid.seek(-offset, SEEK_END)
-            except OSError as e:
-                # attempt to read before beginning of file
-                self._lgr.warning(f'Attempted to read from before beginning of file with offset {offset}')
-                break
-            else:
-                chunk, ts = self._read_chunk(_fid)
-                if ts and ts > timestamp:
-                    data_t.extendleft([ts])
-                    data.extendleft(chunk)
-        _fid.close()
-        return data_t, data
+class ReaderPointsIndex(ReaderPoints):
+    def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig, index: int):
+        self._lgr = logging.getLogger(__name__)
+        super().__init__(fqpn, cfg)
+        self.index = index
 
 
 class WriterStream:

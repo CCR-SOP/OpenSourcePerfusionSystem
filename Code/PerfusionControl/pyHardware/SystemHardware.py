@@ -7,6 +7,9 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+import time
+from time import perf_counter_ns
+
 import pyHardware.pyAI as pyAI
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 
@@ -16,6 +19,7 @@ class SystemHardware:
         self.ni_dev1 = NIDAQAIDevice()
         self.ni_dev2 = NIDAQAIDevice()
         self.mock_device = pyAI.AIDevice()
+        self.acq_start = 0
 
     def load_hardware_from_config(self):
         self.ni_dev1.cfg = AINIDAQDeviceConfig(name='Dev1')
@@ -29,6 +33,7 @@ class SystemHardware:
         self.ni_dev1.start()
         self.ni_dev2.start()
         self.mock_device.start()
+        self.acq_start = perf_counter_ns()
 
     def stop(self):
         self.ni_dev1.stop()
@@ -43,5 +48,7 @@ class SystemHardware:
             hw = self.mock_device.ai_channels.get(name, None)
         return hw
 
+    def get_elapsed_time_ms(self):
+        return int((time.perf_counter_ns() - self.acq_start) / 1_000_000)
 
 SYS_HW = SystemHardware()
