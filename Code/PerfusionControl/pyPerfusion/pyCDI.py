@@ -9,6 +9,7 @@ from threading import Thread, Lock, Event
 from time import perf_counter, sleep
 from queue import Queue, Empty
 from dataclasses import dataclass
+from datetime import datetime
 
 import numpy as np
 import serial
@@ -46,7 +47,7 @@ class CDIParsedData:
                     # logging.getLogger(__name__).debug(f'code is {code}')
                     value = float(field[4:])
                 except ValueError:
-                    # logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
+                    logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
                     value = -1
                 if code in code_mapping.keys():
                     setattr(self, code_mapping[code], value)
@@ -173,3 +174,50 @@ class CDIStreaming:
         except Empty:
             pass
         return buf, t
+
+
+class MockCDI(CDIStreaming):
+    def __init__(self, name):
+        self._lgr = logging.getLogger(__name__)
+        super().__init__(name)
+        self._is_open = False
+
+    def is_open(self):
+        return self._is_open
+
+    def open(self, cfg: CDIConfig = None) -> None:
+        if cfg is not None:
+            self.cfg = cfg
+        self._is_open = True
+        self._queue = Queue()
+
+    def close(self):
+        pass
+
+    def request_data(self, timeout=30):  # request single data packet
+        return self._form_pkt()
+
+    def _form_pkt(self):
+        pkt_stx = 0x2
+        pkt_etx = 0x3
+        pkt_dev = 'X2000A5A0'
+        ts = datetime.now()
+        timestamp = f'{ts.hour:02d}:{ts.minute:02d}:{ts.second:02d}'
+        data = [f'{code}{int(code, 16)*2:04d}\t' for code in code_mapping.keys()]
+        data_str = ''.join(data)
+        crc = 0
+        pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'
+        return pkt
+
+    def run(self):  # continuous data stream
+        self.is_streaming = True
+        self._event_halt.clear()
+        self.__serial.timeout = self._timeout
+        while not self._event_halt.is_set():
+            if self._is_open:
+                resp = self._form_pkt()
+                one_cdi_packet = CDIParsedData(resp)
+                ts = perf_counter()
+                self._queue.put((one_cdi_packet, ts))
+            else:
+                sleep(0.5)

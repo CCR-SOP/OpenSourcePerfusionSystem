@@ -153,6 +153,13 @@ class ReaderPointsIndex(ReaderPoints):
         super().__init__(fqpn, cfg)
         self.index = index
 
+    def retrieve_buffer(self, last_ms, samples_needed):
+        data_time, all_vars = super().retrieve_buffer(last_ms, samples_needed)
+        data = []
+        for chunk in all_vars:
+            data.append(chunk[self.index])
+        return data_time, data
+
 
 class WriterStream:
     def __init__(self, cfg: WriterConfig):

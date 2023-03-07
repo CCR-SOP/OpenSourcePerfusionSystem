@@ -25,7 +25,7 @@ import pyPerfusion.pyCDI as pyCDI
 PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)  # add in debugging comments
 
-cdi = pyCDI.CDIStreaming('Test CDI')
+cdi = pyCDI.MockCDI('mock_cdi')
 cdi.read_config()
 print(f'Read config for {cdi.name}: ComPort={cdi.cfg.port}, ',
       f'Sampling Period (ms)={cdi.cfg.sampling_period_ms}, ',
