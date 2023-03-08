@@ -27,12 +27,12 @@ utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, gas_control, cdi_obj):
+    def __init__(self, parent, gas_control, cdi_object):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
         self.gas_control = gas_control
-        self.cdi = cdi_obj  # should everything be initialized like this?
+        self.cdi = cdi_object  # should everything be initialized like this?
 
         self._panel_syringes = SyringePanel(self)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
@@ -64,7 +64,7 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self, gas_control=gas_controller, cdi_obj=cdi_obj)
+        self.panel = HardwarePanel(self, gas_control=gas_controller, cdi_object=cdi_obj)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -84,17 +84,14 @@ if __name__ == "__main__":
 
     gas_controller = GasControl()
     cdi_obj = pyCDI.CDIStreaming('CDI')
-    cfg = pyCDI.CDIConfig(port='COM13')
-    cdi_obj.open(cfg)
-
-    # cdi.read_config()
-    # stream_cdi_to_file = SensorPoint(cdi, 'NA')
-    # stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    # ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    # read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
-    # ro_sensor.add_strategy(strategy=read_from_cdi)
-    # stream_cdi_to_file.start()
-    # cdi.start()
+    cdi_obj.read_config()
+    stream_cdi_to_file = SensorPoint(cdi_obj, 'NA')
+    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    ro_sensor = ReadOnlySensorPoint(cdi_obj, 'na')
+    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
+    ro_sensor.add_strategy(strategy=read_from_cdi)
+    stream_cdi_to_file.start()
+    cdi_obj.start()
 
     app = MyHardwareApp(0)
     app.MainLoop()
