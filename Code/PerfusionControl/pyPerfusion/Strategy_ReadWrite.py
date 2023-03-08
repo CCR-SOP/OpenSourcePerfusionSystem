@@ -7,19 +7,21 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+from __future__ import annotations
+from typing import TYPE_CHECKING
 import pathlib
-import datetime
+from time import time_ns
 import logging
 import struct
 from os import SEEK_CUR
-
-from datetime import datetime
 from dataclasses import dataclass, asdict
+from datetime import datetime
 
 import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyHardware.SystemHardware import SYS_HW
+if TYPE_CHECKING:
+    from pyPerfusion.Sensor import Sensor
 
 
 @dataclass
@@ -40,11 +42,12 @@ class WriterPointsConfig:
 
 
 class Reader:
-    def __init__(self, fqpn: pathlib.Path, cfg: WriterConfig):
+    def __init__(self, fqpn: pathlib.Path, cfg: WriterConfig, sensor: Sensor):
         self._lgr = logging.getLogger(__name__)
         self._version = 1
         self.fqpn = fqpn
         self.cfg = cfg
+        self.sensor = sensor
         self._last_idx = 0
 
     @property
@@ -96,9 +99,9 @@ class Reader:
 
 
 class ReaderPoints(Reader):
-    def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig):
+    def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
         self._lgr = logging.getLogger(__name__)
-        super().__init__(fqpn, cfg)
+        super().__init__(fqpn, cfg, sensor)
         self._version = 1
         self.fqpn = fqpn
         self.cfg = cfg
@@ -110,35 +113,27 @@ class ReaderPoints(Reader):
                 self.cfg.samples_per_timestamp * self.cfg.data_type(1).itemsize)
         return bytes_per_chunk
 
-    def _read_chunk(self, _fid):
-        ts = 0
-        data_buf = []
-        ts_bytes = _fid.read(self.cfg.bytes_per_timestamp)
-        if len(ts_bytes) == 4:
-            ts, = struct.unpack('i', ts_bytes)
-            data_buf = np.fromfile(_fid, dtype=self.cfg.data_type, count=self.cfg.samples_per_timestamp)
-
-        return data_buf, ts
-
     def retrieve_buffer(self, last_ms, samples_needed, index: int = None):
         data_time = []
         data = []
 
         fid = open(self.fqpn, 'rb')
         fid.seek(0)
-        elapsed_time = SYS_HW.get_elapsed_time_ms()
+        cur_time = int(time_ns() / 1_000_000.0)
         while True:
             chunk = fid.read(self.cfg.bytes_per_timestamp)
             if chunk:
-                ts, = struct.unpack('!I', chunk)
-                if elapsed_time - ts <= last_ms:
+                ts, = struct.unpack('!Q', chunk)
+                diff_t = cur_time - ts
+                if diff_t <= last_ms:
+                    # self._lgr.debug(f'cur_time = {cur_time}, ts={ts}, diff={diff_t}')
                     data_chunk = np.fromfile(fid, dtype=self.cfg.data_type,
                                              count=self.cfg.samples_per_timestamp)
                     if index is None:
                         data.append(data_chunk)
                     else:
                         data.append(data_chunk[index])
-                    data_time.append(ts / 1_000)
+                    data_time.append((ts - self.sensor.hw.get_acq_start_ms()) / 1000.0)
                 else:
                     fid.seek(self.bytes_per_chunk-self.cfg.bytes_per_timestamp, SEEK_CUR)
 
@@ -150,7 +145,6 @@ class ReaderPoints(Reader):
             data = data[0:-1:inc]
             data_time = data_time[0:-1:inc]
         fid.close()
-
         return data_time, data
 
 
@@ -160,12 +154,13 @@ class WriterStream:
         self.cfg = cfg
         self._ext = '.dat'
         self._ext_hdr = '.txt'
-        self._timestamp = None
         self._last_idx = 0
         self._fid = None
         self._base_path = pathlib.Path.cwd()
         self._filename = pathlib.Path(f'{self.cfg.name}')
         self.cfg.version = 1
+        self._acq_start_ms = 0
+        self.sensor = None
 
         self._processed_buffer = None
 
@@ -179,7 +174,7 @@ class WriterStream:
         return self._base_path / self._filename.with_suffix(self._ext)
 
     def get_reader(self):
-        return Reader(self.fqpn, self.cfg)
+        return Reader(self.fqpn, self.cfg, self.sensor)
 
     def _open_write(self):
         self._lgr.info(f'opening for write: {self.fqpn}')
@@ -206,12 +201,15 @@ class WriterStream:
         # reads using memory-mapped files
         fid = open(self.fqpn.with_suffix('').with_suffix('.txt'), 'wt')
         fid.write(hdr_str)
+        self._lgr.debug(f'acq_start is {self.sensor.hw.get_acq_start_ms()}')
+        acq_start = datetime.fromtimestamp(self.sensor.hw.get_acq_start_ms() / 1_000.0)
+        fid.write(f'Start of Acquisition: {acq_start}')
         fid.close()
 
-    def open(self, sensor_name: str = None):
+    def open(self, sensor: Sensor = None):
         self._base_path = PerfusionConfig.get_date_folder()
-        self._filename = pathlib.Path(f'{sensor_name}_{self.cfg.name}')
-        self._timestamp = datetime.now()
+        self._filename = pathlib.Path(f'{sensor.cfg.name}_{self.cfg.name}')
+        self.sensor = sensor
         if self._fid:
             self._fid.close()
             self._fid = None
@@ -248,9 +246,9 @@ class WriterPoints(WriterStream):
         return WriterPointsConfig
 
     def get_reader(self):
-        return ReaderPoints(self.fqpn, self.cfg)
+        return ReaderPoints(self.fqpn, self.cfg, self.sensor)
 
     def _write_to_file(self, data_buf, t=None):
-        ts_bytes = struct.pack('!I', int(t * 1000.0))
+        ts_bytes = struct.pack('!Q', t)
         self._fid.write(ts_bytes)
         data_buf.tofile(self._fid)

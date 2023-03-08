@@ -104,7 +104,7 @@ class Sensor:
         elif isinstance(strategy, PointsToFile):
             strategy.open(self)
         else:
-            strategy.open(sensor_name=self.name)
+            strategy.open(sensor=self)
         self._strategies.append(strategy)
 
     def get_all_file_strategies(self):

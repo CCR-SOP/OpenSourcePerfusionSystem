@@ -9,7 +9,7 @@
 """
 
 import logging
-from time import perf_counter
+from time import time_ns
 from queue import Queue, Empty
 from dataclasses import dataclass, asdict
 
@@ -81,6 +81,10 @@ class SyringeConfig:
         address: int = 0
 
 
+def get_epoch_ms():
+    return int(time_ns() / 1_000_000.0)
+
+
 # utility function to return all available comports in a list
 # typically used in a GUI to provide a selection of com ports
 def get_avail_com_ports() -> list:
@@ -121,7 +125,7 @@ class Pump11Elite:
 
         self._serial = serial.Serial()
         self._queue = None
-        self.__acq_start_t = None
+        self.acq_start_ms = 0
         self.period_sampling_ms = 0
         self.samples_per_read = 0
 
@@ -139,6 +143,9 @@ class Pump11Elite:
             'Bytes Per Timestamp': 4,
             'Start of Acquisition': 0
             }
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
 
     def is_open(self):
         return self._serial.is_open
@@ -178,7 +185,7 @@ class Pump11Elite:
             self._serial.close()
 
     def start(self):
-        self.__acq_start_t = perf_counter()
+        self.acq_start_ms = get_epoch_ms()
 
     def send_wait4response(self, str2send: str) -> str:
         response = ''
@@ -281,7 +288,6 @@ class Pump11Elite:
 
         buf = np.array([target_vol, rate], np.float64)
         if self._queue:
-            self._lgr.debug(f'buf={buf}, t={t}')
             self._queue.put((buf, t))
 
     def record_continuous_infusion(self, t: np.float64, start: bool):
@@ -310,7 +316,7 @@ class Pump11Elite:
         """
         # JWK, should check if target volume is set
         self.send_wait4response('irun\r')
-        t = perf_counter() - self.__acq_start_t
+        t = get_epoch_ms()
         self.record_targeted_infusion(t)
 
     def start_constant_infusion(self):
@@ -318,7 +324,7 @@ class Pump11Elite:
         """
         # JWK, should check if target volume is cleared
         self.send_wait4response('irun\r')
-        t = perf_counter() - self.__acq_start_t
+        t = get_epoch_ms()
         self.record_continuous_infusion(t, start=True)
         self.is_infusing = True
 
@@ -328,7 +334,7 @@ class Pump11Elite:
         """
         self.send_wait4response('stop\r')
         self.is_infusing = False
-        t = perf_counter() - self.__acq_start_t
+        t = get_epoch_ms()
         # check if targeted volume is 0, if so, then this is a continuous injection
         # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
         target_vol, target_unit = self.get_target_volume()

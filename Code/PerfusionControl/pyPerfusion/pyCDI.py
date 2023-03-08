@@ -6,11 +6,10 @@
 """
 import logging
 from threading import Thread, Lock, Event
-from time import perf_counter, sleep
+from time import sleep, time_ns
 from queue import Queue, Empty
 from dataclasses import dataclass
 from datetime import datetime
-import struct
 
 import numpy as np
 import serial
@@ -87,7 +86,7 @@ class CDIStreaming:
         self.data_type = np.float64
         self.buf_len = 18
         self.samples_per_read = 18
-        self.acq_start = 0
+        self.acq_start_ms = 0
 
         self.cfg = CDIConfig()
 
@@ -101,6 +100,9 @@ class CDIStreaming:
     @property
     def sampling_period_ms(self):
         return self.cfg.sampling_period_ms
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
@@ -150,7 +152,7 @@ class CDIStreaming:
             if self.__serial.is_open and self.__serial.in_waiting > 0:
                 resp = self.__serial.readline().decode('ascii')
                 one_cdi_packet = CDIParsedData(resp)
-                ts = perf_counter() - self.acq_start
+                ts = int(time_ns() / 1_000_000.0) - self.acq_start_ms
                 self._queue.put((one_cdi_packet, ts))
             else:
                 sleep(0.5)
@@ -158,7 +160,7 @@ class CDIStreaming:
     def start(self):
         self.stop()
         self._event_halt.clear()
-        self.acq_start = perf_counter()
+        self.acq_start_ms = int(time_ns() / 1_000_000.0)
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
@@ -173,7 +175,7 @@ class CDIStreaming:
         buf = None
         t = None
         try:
-            buf, t = self._queue.get(timeout)
+            buf, t = self._queue.get(timeout=timeout)
         except Empty:
             pass
         return buf, t
@@ -222,7 +224,7 @@ class MockCDI(CDIStreaming):
             if self._is_open:
                 resp = self._form_pkt()
                 one_cdi_packet = CDIParsedData(resp)
-                ts = perf_counter() - self.acq_start
+                ts = int(time_ns() / 1_000_000.0)
                 self._queue.put((one_cdi_packet.get_array(), ts))
                 sleep(1.0)
             else:

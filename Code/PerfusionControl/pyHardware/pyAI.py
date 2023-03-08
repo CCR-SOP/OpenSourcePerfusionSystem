@@ -21,9 +21,9 @@ and under the public domain.
 """
 from threading import Thread, Event
 from queue import Queue, Empty
-from time import perf_counter, sleep, time
+from time import sleep, time_ns
 import logging
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from typing import List
 
 import numpy as np
@@ -57,6 +57,10 @@ class AIDeviceConfig:
     ch_names: List[str] = field(default_factory=list)
 
 
+def get_epoch_ms():
+    return int(time_ns() / 1_000_000.0)
+
+
 class AIDevice:
     def __init__(self):
         self._lgr = logging.getLogger(__name__)
@@ -70,7 +74,7 @@ class AIDevice:
 
         # stores the perf_counter value at the start of the acquisition which defines the zero-time for all
         # following samples
-        self._acq_start_t = 0
+        self.acq_start_ms = 0
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass(self.cfg.name, 'General', self.cfg)
@@ -105,10 +109,6 @@ class AIDevice:
         return dev_str
 
     @property
-    def start_time(self):
-        return self._acq_start_t
-
-    @property
     def samples_per_read(self):
         return int(self.cfg.read_period_ms / self.cfg.sampling_period_ms)
 
@@ -124,6 +124,9 @@ class AIDevice:
         channels_valid = len(self.ai_channels) > 0
         valid_name = self.cfg.device_name != ''
         return valid_name and channels_valid
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
 
     def add_channel(self, cfg: AIChannelConfig):
         if cfg.name in self.ai_channels.keys():
@@ -153,7 +156,7 @@ class AIDevice:
     def start(self):
         self.stop()
         self._event_halt.clear()
-        self._acq_start_t = perf_counter()
+        self.acq_start_ms = get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyAI {self.cfg.name}'
@@ -161,25 +164,26 @@ class AIDevice:
 
     def stop(self):
         if self.__thread and self.__thread.is_alive():
+            self._lgr.debug(f'Stopping {self.__thread.name}')
             self._event_halt.set()
             self.__thread.join(2.0)
             self.__thread = None
 
     def run(self):
-        next_t = time()
+        next_t = get_epoch_ms()
         offset = 0
         while not self._event_halt.is_set():
-            next_t += offset + self.cfg.read_period_ms / 1000.0
-            delay = next_t - time()
+            next_t += offset + self.cfg.read_period_ms
+            delay = next_t - get_epoch_ms()
             if delay > 0:
-                sleep(delay)
+                sleep(delay / 1_000.0)
                 offset = 0
             else:
                 offset = -delay
             self._acq_samples()
 
     def _acq_samples(self):
-        buffer_t = perf_counter() - self._acq_start_t
+        buffer_t = get_epoch_ms()
         for channel in self.ai_channels.values():
             val = np.random.random_sample()  # * self._demo_amp[ch] + self._demo_offset[ch])
             buffer = np.ones(self.samples_per_read, dtype=self.cfg.data_type) * val
@@ -216,6 +220,9 @@ class AIChannel:
     @property
     def samples_per_read(self):
         return self.device.samples_per_read
+
+    def get_acq_start_ms(self):
+        return self.device.get_acq_start_ms()
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass(self.device.cfg.name, self.cfg.name, self.cfg)

@@ -10,9 +10,6 @@ and under the public domain.
 """
 import logging
 import time
-from datetime import datetime
-
-import serial
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -22,6 +19,7 @@ from pyHardware.SystemHardware import SYS_HW
 
 def main():
     SYS_HW.load_hardware_from_config()
+    SYS_HW.load_mocks()
     SYS_HW.start()
 
     sensor = Sensor(name='Mock CDI')
@@ -37,6 +35,7 @@ def main():
 
     sensor.stop()
     SYS_HW.stop()
+
 
 if __name__ == '__main__':
     utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)

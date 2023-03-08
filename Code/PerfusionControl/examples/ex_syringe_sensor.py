@@ -19,6 +19,7 @@ from pyHardware.SystemHardware import SYS_HW
 
 def main():
     SYS_HW.load_hardware_from_config()
+    SYS_HW.load_mocks()
     SYS_HW.start()
 
     sensor = Sensor(name='Mock Syringe')
