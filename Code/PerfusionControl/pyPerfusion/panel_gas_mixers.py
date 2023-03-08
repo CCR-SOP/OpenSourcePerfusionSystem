@@ -192,14 +192,17 @@ class BaseGasMixerPanel(wx.Panel):
 
             if self.gas_device.channel_type == "PV":
                 new_flow = self.gas_device.update_pH(data)
+                new_mix_perc_pv = self.gas_device.update_O2(data)
                 if new_flow is not None:
                     self.UpdateApp()
-            elif self.gas_device.channel_type == "HA":
-                new_mix_perc = self.gas_device.update_CO2(data)
-                if new_mix_perc is not None:
-                    self.UpdateApp(100-new_mix_perc)
+                if new_mix_perc_pv is not None:
+                    self.UpdateApp(new_mix_perc_pv)
 
-            # self.gas_device.update_O2(data)
+            elif self.gas_device.channel_type == "HA":
+                new_mix_perc_ha = self.gas_device.update_CO2(data)
+                if new_mix_perc_ha is not None:
+                    self.UpdateApp(100-new_mix_perc_ha)
+
             if self.automatic_start_btn.GetLabel() == "Stop Automatic":
                 self.EnsureTurnedOn()
                 time.sleep(1.0)

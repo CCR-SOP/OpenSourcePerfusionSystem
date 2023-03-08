@@ -28,7 +28,7 @@ physio_ranges = {'pH_lower': 7.4, 'pH_upper': 7.6,  # values shifted up by 0.1 b
 
 class GasControl:
     def __init__(self):
-        self._lgr = logging.getLogger(__name__)
+        # self._lgr = logging.getLogger(__name__)
         self.HA = GasDevice('HA')
         self.PV = GasDevice('PV')
 
@@ -58,6 +58,11 @@ class GasDevice:
             self.O2_upper = physio_ranges['venous_O2_upper_so2']
         else:
             self.gb100 = None
+            self.CO2_lower = None
+            self.CO2_upper = None
+            self.O2_lower = None
+            self.O2_upper = None
+
         self.co2_adjust = 1
         self.o2_adjust = 1
         self.flow_adjust = 2  # mL/min
@@ -180,13 +185,22 @@ class GasDevice:
         return new_percentage_mix
 
     def update_O2(self, CDI_input):
-        new_percentage_mix = []
-        percentage_mix = self.gas_control.get_channel_percent_value(self.gas_dict['Oxygen'])
+        new_percentage_mix = None
+        percentage_mix = self.get_percent_value(1)  # TODO: make this find O2 no matter which channel it is
         if 0 < percentage_mix < 100:
-            if CDI_input[self.sO2_index] < self.O2_lower:
+            if CDI_input.venous_O2 == -1:
+                self._lgr.warning(f'Venous O2 is out of range. Cannot be adjusted automatically')
+            elif CDI_input.venous_O2 < self.O2_lower:
                 new_percentage_mix = percentage_mix + self.o2_adjust
-            elif CDI_input[self.sO2_index] > self.O2_upper:
+                self._lgr.warning(f'Venous O2 is low')
+            elif CDI_input.venous_O2 > self.O2_upper:
                 new_percentage_mix = percentage_mix - self.o2_adjust
-            self.gas_control.set_channel_percent_value(self.gas_dict['Oxygen'], new_percentage_mix)
+                self._lgr.warning(f'Venous O2 is high')
+
+            if new_percentage_mix is not None:
+                self.set_percent_value(2, 100-new_percentage_mix)
+                self._lgr.info(f'Venous O2 updated to {new_percentage_mix}%')
         else:
-            self._lgr.debug(f'Oxygen % is at {percentage_mix} and cannot be further changed')
+            self._lgr.debug(f'O2 % is out of range and cannot be changed automatically')
+
+        return new_percentage_mix
