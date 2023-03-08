@@ -63,8 +63,8 @@ class GasDevice:
             self.O2_lower = None
             self.O2_upper = None
 
-        self.co2_adjust = 1
-        self.o2_adjust = 1
+        self.co2_adjust = 1  # %
+        self.o2_adjust = 1  # %
         self.flow_adjust = 2  # mL/min
 
     def get_gas_type(self, numeric_id):
@@ -163,7 +163,14 @@ class GasDevice:
 
     def update_CO2(self, CDI_input):
         new_percentage_mix = None
-        percentage_mix = self.get_percent_value(2)  # TODO: make this find CO2 no matter which channel it is
+
+        gas = self.get_gas_type(2)
+        if gas == "Carbon Dioxide":  # assumes 2-channel gas mixer with Carbon Dioxide as one of the options
+            gas_index = 2
+        else:
+            gas_index = 1
+
+        percentage_mix = self.get_percent_value(gas_index)
         if 0 < percentage_mix < 100:
             if CDI_input.arterial_pH == -1:
                 self._lgr.warning(f'Arterial pH is out of range. Cannot be adjusted automatically')
@@ -186,7 +193,14 @@ class GasDevice:
 
     def update_O2(self, CDI_input):
         new_percentage_mix = None
-        percentage_mix = self.get_percent_value(1)  # TODO: make this find O2 no matter which channel it is
+
+        gas = self.get_gas_type(1)
+        if gas == "Oxygen":  # assumes 2-channel gas mixer with Oxygen as one of the options
+            gas_index = 1
+        else:
+            gas_index = 2
+
+        percentage_mix = self.get_percent_value(gas_index)
         if 0 < percentage_mix < 100:
             if CDI_input.venous_O2 == -1:
                 self._lgr.warning(f'Venous O2 is out of range. Cannot be adjusted automatically')

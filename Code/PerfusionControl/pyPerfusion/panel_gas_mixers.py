@@ -178,7 +178,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.gas_device.set_working_status(turn_on=True)
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.manual_start_btn.Disable()
-            self.cdi_timer.Start(120_000, wx.TIMER_CONTINUOUS)
+            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
         else:
             self.gas_device.set_working_status(turn_on=False)
             self.automatic_start_btn.SetLabel('Start Automatic')
