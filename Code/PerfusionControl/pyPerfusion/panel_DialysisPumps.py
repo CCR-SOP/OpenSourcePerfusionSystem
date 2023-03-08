@@ -44,9 +44,6 @@ class DialysisPumpPanel(wx.Panel):
         self._panel_inflow = PanelDC(self, self.roller_pumps['Dialysate Inflow Pump'])
         self._panel_bloodflow = PanelDC(self, self.roller_pumps['Dialysis Blood Pump'])
 
-        # TODO: add auto_start_btn for dialysis later
-        # TODO: add initial rates to config and update this in panel_DC?
-
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -75,27 +72,6 @@ class DialysisPumpPanel(wx.Panel):
 
     def __set_bindings(self):
         pass
-
-    # def OnStartAuto(self, evt):
-        # label = self.auto_start_btn.GetLabel()
-        # if label == "Start Automatic":
-            # self.auto_start_btn.SetLabel('Stop Automatic')
-            # turn things on - Allen's OnDIalysis
-            # self.AutomaticDialysis()
-        # elif label == "Stop Automatic":
-            # self.auto_start_btn.SetLabel('Start Automatic')
-            # turn things off - Allen's OnDialysis
-        # check limits of dialysis and that difference isn't too high- see dict - make sure all are true
-        # accept values from CDI - see panel_gas_mixers for example (but check with John before you do it)
-        # if K and hct are in range, don't run dialysis
-        # if either is out of range,  gentle dialysis
-        # be able to flip whether inflow or outflow is higher if trend gets reversed
-        # necessary hardware functioning to read everything in
-
-    # def AutomaticDialysis(self):
-        # time.sleep(5.0)
-        # pick initial rates for auto - 3 mL/min in and out? may end up changing this
-        # add functionality - UpdateDialysis methods
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):

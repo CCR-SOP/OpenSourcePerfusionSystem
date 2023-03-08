@@ -187,7 +187,7 @@ class GasDevice:
                 self.set_percent_value(2, new_percentage_mix)
                 self._lgr.info(f'Arterial CO2 updated to {new_percentage_mix}%')
         else:
-            self._lgr.debug(f'CO2 % is out of range and cannot be changed automatically')
+            self._lgr.warning(f'CO2 % is out of range and cannot be changed automatically')
 
         return new_percentage_mix
 
@@ -215,6 +215,6 @@ class GasDevice:
                 self.set_percent_value(2, 100-new_percentage_mix)
                 self._lgr.info(f'Venous O2 updated to {new_percentage_mix}%')
         else:
-            self._lgr.debug(f'O2 % is out of range and cannot be changed automatically')
+            self._lgr.warning(f'O2 % is out of range and cannot be changed automatically')
 
         return new_percentage_mix
