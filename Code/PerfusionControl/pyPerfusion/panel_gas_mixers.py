@@ -107,7 +107,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.automatic_start_btn.Disable()
 
         self.sync_with_hw_timer = wx.Timer(self)
-        self.sync_with_hw_timer.Start(600_000, wx.TIMER_CONTINUOUS)
+        self.sync_with_hw_timer.Start(1_200_000, wx.TIMER_CONTINUOUS)
 
         self.cdi_timer = wx.Timer(self)
 
@@ -192,6 +192,7 @@ class BaseGasMixerPanel(wx.Panel):
         if evt.GetId() == self.cdi_timer.GetId():
             packet = self.cdi.request_data()
             data = pyCDI.CDIParsedData(packet)
+            # ro_sensor.retrieve_buffer()
 
             if self.gas_device.channel_type == "PV":
                 new_flow = self.gas_device.update_pH(data)
