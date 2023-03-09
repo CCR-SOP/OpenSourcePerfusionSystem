@@ -37,8 +37,8 @@ class HardwarePanel(wx.Panel):
         wx.Panel.__init__(self, parent)
 
         self.gas_control = gas_control
-        self.cdi = cdi_object  # should everything be initialized like this?
         self.roller_pumps = roller_pumps
+        self.cdi = cdi_object
 
         self._panel_syringes = SyringePanel(self)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
@@ -75,6 +75,9 @@ class HardwareFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.Destroy()
+
+        self.panel._panel_syringes.OnClose(self)
+
         self.panel._panel_dialysate_pumps._panel_outflow.close()
         self.panel._panel_dialysate_pumps._panel_inflow.close()
         self.panel._panel_dialysate_pumps._panel_glucose.close()
@@ -98,6 +101,8 @@ class MyHardwareApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
+
+    # TODO: Initialize syringe pump hardware here: requires changes to multiple_panel_syringes
 
     # Initialize gas controllers
     gas_controller = GasControl()
