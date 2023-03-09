@@ -17,14 +17,18 @@ from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 import pyHardware.pyDC as pyDC
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.SensorStream import SensorStream
+import pyPerfusion.pyCDI as pyCDI
+from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
+from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
 
 
 class DialysisPumpPanel(wx.Panel):
-    def __init__(self, parent, **kwds):
+    def __init__(self, parent, cdi_data, **kwds):
         self._lgr = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         self.parent = parent
+        self.cdi_data = cdi_data
 
         # Initialize hardware configurations and sensor stream
         self.roller_pumps = {}
@@ -42,14 +46,10 @@ class DialysisPumpPanel(wx.Panel):
         self._panel_outflow = PanelDC(self, self.roller_pumps['Dialysate Outflow Pump'])
         self._panel_glucose = PanelDC(self, self.roller_pumps['Glucose Circuit Pump'])
         self._panel_inflow = PanelDC(self, self.roller_pumps['Dialysate Inflow Pump'])
-        self._panel_bloodflow = PanelDC(self, self.roller_pumps['Dialysis Blood Pump'])
+        self._panel_bloodflow = PanelDC(self, self.roller_pumps['Dialysis Blood Pump'], self.cdi_data)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
-
-        self.automatic_start_btn = wx.ToggleButton(self, label='Start Automatic')
-
-        self.cdi_timer = wx.Timer(self)
 
         self.__do_layout()
         self.__set_bindings()
@@ -69,29 +69,43 @@ class DialysisPumpPanel(wx.Panel):
         self.sizer.Add(self._panel_outflow, flagsExpand)
         self.sizer.Add(self._panel_bloodflow, flagsExpand)
         self.sizer.Add(self._panel_glucose, flagsExpand)
-        self.sizer.Add(self.automatic_start_btn, flagsExpand)
 
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
     def __set_bindings(self):
-        self.automatic_start_btn.Bind(wx.EVT_TOGGLEBUTTON, self.OnAutoStart)
+        pass
 
-    def OnAutoStart(self, evt):
-        if self.automatic_start_btn.GetLabel() == "Start Automatic":
-            self.automatic_start_btn.SetLabel('Stop Automatic')
-            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
+class CheckHGB(DialysisPumpPanel):
+    def __init__(self, parent, cdi_input, cdi_data=None, **kwds):
+        super().__init__(parent, cdi_data, **kwds)
+        self.cdi_input = cdi_input
+        self._lgr = logging.getLogger(__name__)
+        self.update_dialysis()
+
+    def update_dialysis(self):
+        # TODO: Add ceilings and error cases
+        if self.cdi_input.hgb < 7:
+            self._lgr.debug('Hemoglobin is low. Increasing dialysate outflow')
+            # current_flow_rate = 10  # TODO: GET CURRENT FLOW RATE
+            # new_flow_rate = current_flow_rate + 1
+            # self._panel_outflow.sensor.hw.set_output(int(new_flow_rate))
+        elif self.cdi_input.hgb > 12:
+            self._lgr.debug(f'Hemoglobin is high. Increasing dialysate inflow')
+            # TODO: add real method for _panel_inflow
+        elif self.cdi_input.K > 6:
+            self._lgr.debug(f'K is high. Increasing rates of dialysis')
+            # TODO: add real method
         else:
-            self.automatic_start_btn.SetLabel('Stop Automatic')
-            self.cdi_timer.Stop()
+            self._lgr.debug(f'Dialysis can continue at a stable rate')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = DialysisPumpPanel(self)
+        self.panel = DialysisPumpPanel(self, cdi_data=ro_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -112,6 +126,16 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     utils.setup_stream_logger(logger, logging.DEBUG)
     utils.configure_matplotlib_logging()
+
+    cdi_object = pyCDI.CDIStreaming('CDI')
+    cdi_object.read_config()
+    stream_cdi_to_file = SensorPoint(cdi_object, 'NA')
+    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    ro_sensor = ReadOnlySensorPoint(cdi_object, 'na')
+    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
+    ro_sensor.add_strategy(strategy=read_from_cdi)
+    stream_cdi_to_file.start()
+    cdi_object.start()
 
     app = MyTestApp(0)
     app.MainLoop()

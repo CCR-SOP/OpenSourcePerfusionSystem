@@ -192,7 +192,7 @@ class BaseGasMixerPanel(wx.Panel):
         if evt.GetId() == self.cdi_timer.GetId():
             packet = self.cdi_data.request_data()
             data = pyCDI.CDIParsedData(packet)
-            # ro_sensor.retrieve_buffer()
+            # data = self.cdi_data.retrieve_buffer()
 
             if self.gas_device.channel_type == "PV":
                 new_flow = self.gas_device.update_pH(data)
@@ -286,7 +286,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self, gas_control, cdi_data=cdi_object)  # cdi_data = ro_sensor
+        self.panel = GasMixerPanel(self, gas_control, cdi_data=cdi_object)  # ro_sensor
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):

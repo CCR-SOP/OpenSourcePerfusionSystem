@@ -17,6 +17,7 @@ import pyHardware.pyDC as pyDC
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.panel_DialysisPumps import CheckHGB
 
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
@@ -24,16 +25,17 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelDC(wx.Panel):
-    def __init__(self, parent, sensor):
+    def __init__(self, parent, sensor, cdi_data=None):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.sensor = sensor
+        self.cdi_data = cdi_data
 
-        self._panel_dc = PanelDCControl(self, self.sensor)
+        self._panel_dc = PanelDCControl(self, self.sensor, self.cdi_data)
 
         font = wx.Font()
-        font.SetPointSize(int(20))
+        font.SetPointSize(int(18))
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.sensor.name)
         static_box.SetFont(font)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -58,14 +60,17 @@ class PanelDC(wx.Panel):
 
 
 class PanelDCControl(wx.Panel):
-    def __init__(self, parent, sensor):
+    def __init__(self, parent, sensor, cdi_data):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self.sensor = sensor
+        self.cdi_data = cdi_data
 
         font = wx.Font()
-        font.SetPointSize(int(20))
+        font.SetPointSize(int(18))
+        font_btn = wx.Font()
+        font_btn.SetPointSize(int(16))
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Pump Speed (mL/min)')
@@ -74,10 +79,15 @@ class PanelDCControl(wx.Panel):
         self.entered_offset.SetFont(font)
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
-        self.btn_change_rate.SetFont(font)
+        self.btn_change_rate.SetFont(font_btn)
 
         self.btn_stop = wx.Button(self, label='Stop')
-        self.btn_stop.SetFont(font)
+        self.btn_stop.SetFont(font_btn)
+
+        if self.sensor.name == "Dialysis Blood Pump":
+            self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
+            self.btn_auto_dialysis.SetFont(font)
+            self.cdi_timer = wx.Timer(self)
 
         self.__do_layout()
         self.__set_bindings()
@@ -92,6 +102,8 @@ class PanelDCControl(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_change_rate)
         sizer.Add(self.btn_stop)
+        if self.sensor.name == "Dialysis Blood Pump":
+            sizer.Add(self.btn_auto_dialysis)
         self.sizer.Add(sizer, wx.SizerFlags(0).CenterHorizontal().Top())
 
         self.SetSizer(self.sizer)
@@ -101,14 +113,35 @@ class PanelDCControl(wx.Panel):
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
         self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
-
-    def on_stop(self, evt):
-        self.sensor.hw.set_output(int(0))
+        if self.sensor.name == "Dialysis Blood Pump":
+            self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
 
     def on_update(self, evt):
         self._lgr.debug('on_update called')
         new_flow = self.entered_offset.GetValue() / 10
         self.sensor.hw.set_output(new_flow)
+
+    def on_stop(self, evt):
+        self.sensor.hw.set_output(int(0))
+
+    def on_auto(self, evt):
+        if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
+            self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
+            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
+        else:
+            self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
+            self.cdi_timer.Stop()
+
+    def pullDataFromCDI(self, evt):
+        if self.cdi_data is None:
+            self._lgr.debug(f'No CDI data. Cannot run automatically')
+        else:
+            if evt.GetId() == self.cdi_timer.GetId():
+                # packet = self.cdi_data.request_data()
+                # data = pyCDI.CDIParsedData(packet)
+                data = self.cdi_data.retrieve_buffer()  # assume this works
+                check_hgb = CheckHGB(cdi_input=data)  # this does NOT work ugh
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
