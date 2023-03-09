@@ -23,25 +23,13 @@ from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
 
 
 class DialysisPumpPanel(wx.Panel):
-    def __init__(self, parent, cdi_data, **kwds):
+    def __init__(self, parent, roller_pumps, cdi_data, **kwds):
         self._lgr = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         self.parent = parent
         self.cdi_data = cdi_data
-
-        # Initialize hardware configurations and sensor stream
-        self.roller_pumps = {}
-        self.rPumpNames = ["Dialysate Outflow Pump", "Dialysate Inflow Pump",
-                           "Dialysis Blood Pump", "Glucose Circuit Pump"]
-
-        for pumpName in self.rPumpNames:
-            hw = NIDAQDCDevice()
-            hw.cfg = pyDC.DCChannelConfig(name=pumpName)
-            hw.read_config()
-            sensor = SensorStream(hw, "ml/min")
-            sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
-            self.roller_pumps[pumpName] = sensor
+        self.roller_pumps = roller_pumps
 
         self._panel_outflow = PanelDC(self, self.roller_pumps['Dialysate Outflow Pump'])
         self._panel_glucose = PanelDC(self, self.roller_pumps['Glucose Circuit Pump'])
@@ -77,7 +65,7 @@ class DialysisPumpPanel(wx.Panel):
     def __set_bindings(self):
         pass
 
-class CheckHGB(DialysisPumpPanel):
+class CheckHGB(DialysisPumpPanel):  # TODO: THIS DOES NOT WORK - MOVE TO MORE LOGICAL LOCATION
     def __init__(self, parent, cdi_input, cdi_data=None, **kwds):
         super().__init__(parent, cdi_data, **kwds)
         self.cdi_input = cdi_input
@@ -105,7 +93,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = DialysisPumpPanel(self, cdi_data=ro_sensor)
+        self.panel = DialysisPumpPanel(self, roller_pumps=r_pumps, cdi_data=cdi_object)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -127,6 +115,19 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logger, logging.DEBUG)
     utils.configure_matplotlib_logging()
 
+    # Initialize pumps
+    r_pumps = {}
+    rPumpNames = ["Dialysate Outflow Pump", "Dialysate Inflow Pump",
+                       "Dialysis Blood Pump", "Glucose Circuit Pump"]
+    for pumpName in rPumpNames:
+        hw = NIDAQDCDevice()
+        hw.cfg = pyDC.DCChannelConfig(name=pumpName)
+        hw.read_config()
+        sensor = SensorStream(hw, "ml/min")
+        sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+        r_pumps[pumpName] = sensor
+
+    # Initialize CDI
     cdi_object = pyCDI.CDIStreaming('CDI')
     cdi_object.read_config()
     stream_cdi_to_file = SensorPoint(cdi_object, 'NA')

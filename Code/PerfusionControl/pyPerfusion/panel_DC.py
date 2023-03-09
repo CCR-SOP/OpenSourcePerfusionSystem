@@ -17,7 +17,7 @@ import pyHardware.pyDC as pyDC
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.FileStrategy import StreamToFile
-from pyPerfusion.panel_DialysisPumps import CheckHGB
+import pyPerfusion.pyCDI as pyCDI
 
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
@@ -86,7 +86,7 @@ class PanelDCControl(wx.Panel):
 
         if self.sensor.name == "Dialysis Blood Pump":
             self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
-            self.btn_auto_dialysis.SetFont(font)
+            self.btn_auto_dialysis.SetFont(font_btn)
             self.cdi_timer = wx.Timer(self)
 
         self.__do_layout()
@@ -137,10 +137,10 @@ class PanelDCControl(wx.Panel):
             self._lgr.debug(f'No CDI data. Cannot run automatically')
         else:
             if evt.GetId() == self.cdi_timer.GetId():
-                # packet = self.cdi_data.request_data()
-                # data = pyCDI.CDIParsedData(packet)
-                data = self.cdi_data.retrieve_buffer()  # assume this works
-                check_hgb = CheckHGB(cdi_input=data)  # this does NOT work ugh
+                packet = self.cdi_data.request_data()
+                data = pyCDI.CDIParsedData(packet)
+                # data = self.cdi_data.retrieve_buffer()  # assume this works
+                # check_hgb = CheckHGB(cdi_input=data)  # this does NOT work ugh
 
 
 class TestFrame(wx.Frame):

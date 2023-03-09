@@ -23,20 +23,26 @@ import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
 
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+import pyHardware.pyDC as pyDC
+from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.SensorStream import SensorStream
+
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, gas_control, cdi_object):
+    def __init__(self, parent, gas_control, roller_pumps, cdi_object):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
         self.gas_control = gas_control
         self.cdi = cdi_object  # should everything be initialized like this?
+        self.roller_pumps = roller_pumps
 
         self._panel_syringes = SyringePanel(self)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
-        self._panel_dialysate_pumps = DialysisPumpPanel(self)
+        self._panel_dialysate_pumps = DialysisPumpPanel(self, self.roller_pumps, self.cdi)
         self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi)
         self.sizer = wx.GridSizer(cols=2)  # label="Hardware Control App" - how can we put this in?
 
@@ -64,11 +70,22 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self, gas_control=gas_controller, cdi_object=cdi_obj)
+        self.panel = HardwarePanel(self, gas_control=gas_controller, roller_pumps=r_pumps, cdi_object=cdi_obj)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         self.Destroy()
+        self.panel._panel_dialysate_pumps._panel_outflow.close()
+        self.panel._panel_dialysate_pumps._panel_inflow.close()
+        self.panel._panel_dialysate_pumps._panel_glucose.close()
+        self.panel._panel_dialysate_pumps._panel_bloodflow.close()
+
+        self.panel._panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
+        self.panel._panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
+        self.panel._panel_gas_mixers._panel_HA.cdi_timer.Stop()
+        self.panel._panel_gas_mixers._panel_PV.cdi_timer.Stop()
+        self.panel._panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
+        self.panel._panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
 
 
 class MyHardwareApp(wx.App):
@@ -82,7 +99,22 @@ class MyHardwareApp(wx.App):
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
+    # Initialize gas controllers
     gas_controller = GasControl()
+
+    # Initialize pumps
+    r_pumps = {}
+    rPumpNames = ["Dialysate Outflow Pump", "Dialysate Inflow Pump",
+                  "Dialysis Blood Pump", "Glucose Circuit Pump"]
+    for pumpName in rPumpNames:
+        hw = NIDAQDCDevice()
+        hw.cfg = pyDC.DCChannelConfig(name=pumpName)
+        hw.read_config()
+        sensor = SensorStream(hw, "ml/min")
+        sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+        r_pumps[pumpName] = sensor
+
+    # Initialize CDI
     cdi_obj = pyCDI.CDIStreaming('CDI')
     cdi_obj.read_config()
     stream_cdi_to_file = SensorPoint(cdi_obj, 'NA')
