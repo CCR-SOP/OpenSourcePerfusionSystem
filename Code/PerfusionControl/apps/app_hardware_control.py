@@ -28,19 +28,22 @@ import pyHardware.pyDC as pyDC
 from pyPerfusion.FileStrategy import StreamToFile
 from pyPerfusion.SensorStream import SensorStream
 
+import pyPerfusion.pyPump11Elite as pyPump11Elite
+
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, gas_control, roller_pumps, cdi_object):
+    def __init__(self, parent, gas_control, roller_pumps, syringes, cdi_object):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
         self.gas_control = gas_control
         self.roller_pumps = roller_pumps
+        self.syringes = syringes
         self.cdi = cdi_object
 
-        self._panel_syringes = SyringePanel(self)
+        self._panel_syringes = SyringePanel(self, self.syringes)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self, self.roller_pumps, self.cdi)
         self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi)
@@ -70,7 +73,7 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self, gas_control=gas_controller, roller_pumps=r_pumps, cdi_object=cdi_obj)
+        self.panel = HardwarePanel(self, gas_control=gas_controller, roller_pumps=r_pumps, syringes=syringe_array, cdi_object=cdi_obj)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -87,7 +90,7 @@ class HardwareFrame(wx.Frame):
         self.panel._panel_gas_mixers._panel_PV.cdi_timer.Stop()
         self.panel._panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
         self.panel._panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
-        
+
         cdi_obj.stop()
         stream_cdi_to_file.stop()
 
@@ -103,7 +106,15 @@ class MyHardwareApp(wx.App):
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
-    # TODO: Initialize syringe pump hardware here: requires changes to multiple_panel_syringes
+    # Initialize syringes
+    drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
+
+    syringe_array = []
+    for x in range(6):
+        SpecificConfig = pyPump11Elite.SyringeConfig(drug=drugs[x])
+        new_syringe = pyPump11Elite.Pump11Elite(name=drugs[x], config=SpecificConfig)
+        new_syringe.read_config()
+        syringe_array.append(new_syringe)
 
     # Initialize gas controllers
     gas_controller = GasControl()
