@@ -84,11 +84,6 @@ class PanelDCControl(wx.Panel):
         self.btn_stop = wx.Button(self, label='Stop')
         self.btn_stop.SetFont(font_btn)
 
-        if self.sensor.name == "Dialysis Blood Pump":
-            self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
-            self.btn_auto_dialysis.SetFont(font_btn)
-            self.cdi_timer = wx.Timer(self)
-
         self.__do_layout()
         self.__set_bindings()
 
@@ -102,8 +97,6 @@ class PanelDCControl(wx.Panel):
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_change_rate)
         sizer.Add(self.btn_stop)
-        if self.sensor.name == "Dialysis Blood Pump":
-            sizer.Add(self.btn_auto_dialysis)
         self.sizer.Add(sizer, wx.SizerFlags(0).CenterHorizontal().Top())
 
         self.SetSizer(self.sizer)
@@ -113,8 +106,6 @@ class PanelDCControl(wx.Panel):
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
         self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
-        if self.sensor.name == "Dialysis Blood Pump":
-            self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
 
     def on_update(self, evt):
         self._lgr.debug('on_update called')
@@ -123,24 +114,6 @@ class PanelDCControl(wx.Panel):
 
     def on_stop(self, evt):
         self.sensor.hw.set_output(int(0))
-
-    def on_auto(self, evt):
-        if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
-            self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
-            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
-        else:
-            self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
-            self.cdi_timer.Stop()
-
-    def pullDataFromCDI(self, evt):
-        if self.cdi_data is None:
-            self._lgr.debug(f'No CDI data. Cannot run automatically')
-        else:
-            if evt.GetId() == self.cdi_timer.GetId():
-                packet = self.cdi_data.request_data()
-                data = pyCDI.CDIParsedData(packet)
-                # data = self.cdi_data.retrieve_buffer()  # assume this works
-                # check_hgb = CheckHGB(cdi_input=data)  # this does NOT work ugh
 
 
 class TestFrame(wx.Frame):

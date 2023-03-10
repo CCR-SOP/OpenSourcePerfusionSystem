@@ -36,8 +36,16 @@ class DialysisPumpPanel(wx.Panel):
         self._panel_inflow = PanelDC(self, self.roller_pumps['Dialysate Inflow Pump'])
         self._panel_bloodflow = PanelDC(self, self.roller_pumps['Dialysis Blood Pump'], self.cdi_data)
 
+        # Add auto start button as 5th panel
+        font_btn = wx.Font()
+        font_btn.SetPointSize(int(16))
+        self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
+        self.btn_auto_dialysis.SetFont(font_btn)
+        self.cdi_timer = wx.Timer(self)
+
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
-        self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
+        static_box.SetFont(font_btn)
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
@@ -51,40 +59,61 @@ class DialysisPumpPanel(wx.Panel):
     def __do_layout(self):
         flagsExpand = wx.SizerFlags(1)
         flagsExpand.Expand().Border(wx.ALL, 10)
-        self.sizer = wx.GridSizer(cols=2)
+        self.sizer = wx.FlexGridSizer(rows=3, cols=2, vgap=1, hgap=1)
 
         self.sizer.Add(self._panel_inflow, flagsExpand)
         self.sizer.Add(self._panel_outflow, flagsExpand)
         self.sizer.Add(self._panel_bloodflow, flagsExpand)
         self.sizer.Add(self._panel_glucose, flagsExpand)
+        self.sizer.Add(self.btn_auto_dialysis, flagsExpand)
 
-        self.SetSizer(self.sizer)
+        self.sizer.AddGrowableRow(0, 3)
+        self.sizer.AddGrowableRow(1, 3)
+        self.sizer.AddGrowableRow(2, 1)
+
+        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        self.SetSizer(self.wrapper)
         self.Layout()
         self.Fit()
 
     def __set_bindings(self):
-        pass
+        self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
 
-class CheckHGB(DialysisPumpPanel):  # TODO: THIS DOES NOT WORK - MOVE TO MORE LOGICAL LOCATION
-    def __init__(self, parent, cdi_input, cdi_data=None, **kwds):
-        super().__init__(parent, cdi_data, **kwds)
-        self.cdi_input = cdi_input
-        self._lgr = logging.getLogger(__name__)
-        self.update_dialysis()
+    def on_auto(self, evt):
+        if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
+            self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
+            self.cdi_timer.Start(60_000, wx.TIMER_CONTINUOUS)  # TODO: update to 5 or 10 minutes
+        else:
+            self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
+            self.cdi_timer.Stop()
 
-    def update_dialysis(self):
+    def pullDataFromCDI(self, evt):
+        if self.cdi_data is None:
+            self._lgr.debug(f'No CDI data. Cannot run automatically')
+        else:
+            if evt.GetId() == self.cdi_timer.GetId():
+                packet = self.cdi_data.request_data()
+                data = pyCDI.CDIParsedData(packet)
+                # data = self.cdi_data.retrieve_buffer()  # assume this works
+                self.update_dialysis(data)
+
+    def update_dialysis(self, cdi_input):
         # TODO: Add ceilings and error cases
-        if self.cdi_input.hgb < 7:
+        if cdi_input.hgb < 7:
             self._lgr.debug('Hemoglobin is low. Increasing dialysate outflow')
             # current_flow_rate = 10  # TODO: GET CURRENT FLOW RATE
             # new_flow_rate = current_flow_rate + 1
             # self._panel_outflow.sensor.hw.set_output(int(new_flow_rate))
-        elif self.cdi_input.hgb > 12:
+        elif cdi_input.hgb > 12:
             self._lgr.debug(f'Hemoglobin is high. Increasing dialysate inflow')
-            # TODO: add real method for _panel_inflow
-        elif self.cdi_input.K > 6:
+            # current_flow_rate = something
+            # new_flow_rate = current_flow_rate + 1
+            # self._panel_inflow.sensor.hw.set_output(int(new_flow_rate))
+        elif cdi_input.K > 6:
             self._lgr.debug(f'K is high. Increasing rates of dialysis')
-            # TODO: add real method
+            # current_flow_rate = something
+            # new_flow_rate = current_flow_rate + 1
+            # self._panel_inflow.sensor.hw.set_output(int(new_flow_rate))
         else:
             self._lgr.debug(f'Dialysis can continue at a stable rate')
 
