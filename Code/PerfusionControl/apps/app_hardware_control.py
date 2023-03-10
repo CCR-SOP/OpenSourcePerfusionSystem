@@ -47,7 +47,9 @@ class HardwarePanel(wx.Panel):
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self, self.roller_pumps, self.cdi)
         self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi)
-        self.sizer = wx.GridSizer(cols=2)  # label="Hardware Control App" - how can we put this in?
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
@@ -55,13 +57,16 @@ class HardwarePanel(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Expand().Border()
 
+        self.sizer = wx.GridSizer(cols=2)
+
         self.sizer.Add(self._panel_syringes, flags.Proportion(2))
         self.sizer.Add(self._panel_centrifugal_pumps, flags.Proportion(2))
         self.sizer.Add(self._panel_dialysate_pumps, flags.Proportion(2))
         self.sizer.Add(self._panel_gas_mixers, flags.Proportion(2))
 
-        self.sizer.SetSizeHints(self.parent)
-        self.SetSizer(self.sizer)
+        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start
+        self.SetSizer(self.wrapper)
         self.Layout()
         self.Fit()
 

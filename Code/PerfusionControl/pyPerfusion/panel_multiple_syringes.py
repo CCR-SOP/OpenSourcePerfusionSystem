@@ -38,6 +38,7 @@ class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
             sizer.Add(self.panel[drugs[i]], 1, wx.ALL | wx.EXPAND, border=1)
             i += 1
 
+        sizer.SetSizeHints(self.parent)
         self.SetSizer(sizer)
         self.Fit()
         self.Layout()
