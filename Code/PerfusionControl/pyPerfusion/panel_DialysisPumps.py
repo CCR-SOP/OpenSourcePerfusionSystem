@@ -70,6 +70,8 @@ class DialysisPumpPanel(wx.Panel):
         self.sizer.AddGrowableRow(0, 3)
         self.sizer.AddGrowableRow(1, 3)
         self.sizer.AddGrowableRow(2, 1)
+        self.sizer.AddGrowableCol(0, 1)
+        self.sizer.AddGrowableCol(1, 1)
 
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.SetSizer(self.wrapper)
@@ -78,42 +80,61 @@ class DialysisPumpPanel(wx.Panel):
 
     def __set_bindings(self):
         self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
+        self.Bind(wx.EVT_TIMER, self.pullDataFromCDI, self.cdi_timer)
 
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
             self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
-            self.cdi_timer.Start(60_000, wx.TIMER_CONTINUOUS)  # TODO: update to 5 or 10 minutes
+            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
         else:
             self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
             self.cdi_timer.Stop()
 
     def pullDataFromCDI(self, evt):
-        if self.cdi_data is None:
-            self._lgr.debug(f'No CDI data. Cannot run automatically')
-        else:
-            if evt.GetId() == self.cdi_timer.GetId():
+        if evt.GetId() == self.cdi_timer.GetId():
+            if self.cdi_data is not None:
                 packet = self.cdi_data.request_data()
                 data = pyCDI.CDIParsedData(packet)
                 # data = self.cdi_data.retrieve_buffer()  # assume this works
-                self.update_dialysis(data)
+                self.update_dialysis(data)  # says this is missing attributes but it's not
+            else:
+                self._lgr.debug(f'No CDI data. Cannot run dialysis automatically')
 
     def update_dialysis(self, cdi_input):
         # TODO: Add ceilings and error cases
-        if cdi_input.hgb < 7:
-            self._lgr.debug('Hemoglobin is low. Increasing dialysate outflow')
+        if cdi_input.hgb == -1:
+            self._lgr.warning(f'Hemoglobin is out of range. Cannot be adjusted automatically')
+        elif 0 < cdi_input.hgb < 7:
+            self._lgr.debug(f'Hemoglobin is low at {cdi_input.hgb}. Increasing dialysate outflow')
             # current_flow_rate = 10  # TODO: GET CURRENT FLOW RATE
             # new_flow_rate = current_flow_rate + 1
             # self._panel_outflow.sensor.hw.set_output(int(new_flow_rate))
         elif cdi_input.hgb > 12:
-            self._lgr.debug(f'Hemoglobin is high. Increasing dialysate inflow')
+            self._lgr.debug(f'Hemoglobin is high at {cdi_input.hgb}. Increasing dialysate inflow')
             # current_flow_rate = something
             # new_flow_rate = current_flow_rate + 1
             # self._panel_inflow.sensor.hw.set_output(int(new_flow_rate))
-        elif cdi_input.K > 6:
-            self._lgr.debug(f'K is high. Increasing rates of dialysis')
-            # current_flow_rate = something
-            # new_flow_rate = current_flow_rate + 1
-            # self._panel_inflow.sensor.hw.set_output(int(new_flow_rate))
+        else:
+            self._lgr.debug(f'No need to increase or decrease relative inflow/outflow rates')
+
+        if cdi_input.K == -1:
+            self._lgr.warning(f'K is out of range. Cannot be adjusted automatically')
+        elif 0 < cdi_input.K > 6:
+            self._lgr.debug(f'K is high at {cdi_input.K}. Increasing rates of dialysis')
+            # current_inflow_rate = something
+            # new_inflow_rate = current_flow_rate + 1
+            # self._panel_inflow.sensor.hw.set_output(int(new_inflow_rate))
+            # current_outflow_rate = something
+            # new_outflow_rate = current_flow_rate + 1
+            # self._panel_outflow.sensor.hw.set_output(int(new_outflow_rate))
+        elif cdi_input.K < 2:
+            self._lgr.debug(f'K is stable {cdi_input.K}. Decreasing rates of dialysis')
+            # current_inflow_rate = something
+            # new_inflow_rate = current_flow_rate - 1
+            # self._panel_inflow.sensor.hw.set_output(int(new_inflow_rate))
+            # current_outflow_rate = something
+            # new_outflow_rate = current_flow_rate - 1
+            # self._panel_outflow.sensor.hw.set_output(int(new_outflow_rate))
         else:
             self._lgr.debug(f'Dialysis can continue at a stable rate')
 
@@ -128,7 +149,9 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         self.Destroy()
         self.panel.close()
-
+        cdi_object.stop()
+        stream_cdi_to_file.stop()
+        self.panel.cdi_timer.Stop()
 
 class MyTestApp(wx.App):
     def OnInit(self):
