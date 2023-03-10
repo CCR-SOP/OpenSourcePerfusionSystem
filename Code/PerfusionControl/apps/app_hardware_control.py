@@ -78,10 +78,8 @@ class HardwareFrame(wx.Frame):
 
         self.panel._panel_syringes.OnClose(self)
 
-        self.panel._panel_dialysate_pumps._panel_outflow.close()
-        self.panel._panel_dialysate_pumps._panel_inflow.close()
-        self.panel._panel_dialysate_pumps._panel_glucose.close()
-        self.panel._panel_dialysate_pumps._panel_bloodflow.close()
+        self.panel._panel_dialysate_pumps.close()
+        self.panel._panel_dialysate_pumps.cdi_timer.Stop()
 
         self.panel._panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
         self.panel._panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
@@ -89,6 +87,9 @@ class HardwareFrame(wx.Frame):
         self.panel._panel_gas_mixers._panel_PV.cdi_timer.Stop()
         self.panel._panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
         self.panel._panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
+        
+        cdi_obj.stop()
+        stream_cdi_to_file.stop()
 
 
 class MyHardwareApp(wx.App):
