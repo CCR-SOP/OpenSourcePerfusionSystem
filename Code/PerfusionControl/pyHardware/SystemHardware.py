@@ -16,17 +16,20 @@ import pyHardware.pyAI as pyAI
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 import pyPerfusion.pyCDI as pyCDI
 import pyPerfusion.pyPump11Elite as pyPump11Elite
-
+from pyPerfusion.pyGB100_SL import GasControl
 
 
 class SystemHardware:
     def __init__(self):
         self._lgr = logging.getLogger(__name__)
         self.mocks_enabled = False
+
         self.ni_dev1 = NIDAQAIDevice()
         self.ni_dev2 = NIDAQAIDevice()
 
         self.syringes = []
+
+        self.gas_control = GasControl()
 
         self.mock_device = None
         self.mock_cdi = None
@@ -96,7 +99,11 @@ class SystemHardware:
 
     def get_hw(self, name: str):
         self._lgr.debug(f'Getting hardware named: {name}')
-        hw = self.ni_dev1.ai_channels.get(name, None)
+        hw = None
+        if name == 'GasControl':
+            hw = self.gas_control
+        if hw is None:
+            hw = self.ni_dev1.ai_channels.get(name, None)
         if hw is None:
             hw = self.ni_dev2.ai_channels.get(name, None)
         if hw is None:
