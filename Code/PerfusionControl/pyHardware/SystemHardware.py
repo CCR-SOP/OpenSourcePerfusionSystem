@@ -7,9 +7,11 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+import logging
 import time
 from time import perf_counter_ns
 
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyHardware.pyAI as pyAI
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 import pyPerfusion.pyCDI as pyCDI
@@ -19,9 +21,12 @@ import pyPerfusion.pyPump11Elite as pyPump11Elite
 
 class SystemHardware:
     def __init__(self):
+        self._lgr = logging.getLogger(__name__)
         self.mocks_enabled = False
         self.ni_dev1 = NIDAQAIDevice()
         self.ni_dev2 = NIDAQAIDevice()
+
+        self.syringes = []
 
         self.mock_device = None
         self.mock_cdi = None
@@ -30,10 +35,20 @@ class SystemHardware:
         self.acq_start = 0
 
     def load_hardware_from_config(self):
-        self.ni_dev1.cfg = AINIDAQDeviceConfig(name='Dev1')
-        self.ni_dev1.read_config()
-        self.ni_dev2.cfg = AINIDAQDeviceConfig(name='Dev2')
-        self.ni_dev2.read_config()
+        try:
+            self.ni_dev1.cfg = AINIDAQDeviceConfig(name='Dev1')
+            self.ni_dev1.read_config()
+            self.ni_dev2.cfg = AINIDAQDeviceConfig(name='Dev2')
+            self.ni_dev2.read_config()
+        except pyAI.AIDeviceException as e:
+            self._lgr.error(e)
+
+        all_syringe_names = PerfusionConfig.get_section_names('syringes')
+        for name in all_syringe_names:
+            syringe = pyPump11Elite.Pump11Elite(name=name)
+            syringe.read_config()
+            self._lgr.debug(f'read syringe {name}: {syringe}')
+            self.syringes.append(syringe)
 
     def load_mocks(self):
         self.mocks_enabled = True
@@ -49,8 +64,14 @@ class SystemHardware:
         self.mock_syringe.read_config()
 
     def start(self):
-        self.ni_dev1.start()
-        self.ni_dev2.start()
+        try:
+            self.ni_dev1.start()
+            self.ni_dev2.start()
+        except pyAI.AIDeviceException as e:
+            self._lgr.error(e)
+        for syringe in self.syringes:
+            syringe.start()
+
         if self.mocks_enabled:
             self.mock_device.start()
             self.mock_cdi.start()
@@ -59,18 +80,27 @@ class SystemHardware:
         self.acq_start = perf_counter_ns()
 
     def stop(self):
-        self.ni_dev1.stop()
-        self.ni_dev2.stop()
+        try:
+            self.ni_dev1.stop()
+            self.ni_dev2.stop()
+        except pyAI.AIDeviceException as e:
+            self._lgr.error(e)
+
+        for syringe in self.syringes:
+            syringe.stop()
+
         if self.mocks_enabled:
             self.mock_device.stop()
             self.mock_cdi.stop()
             self.mock_syringe.stop()
 
     def get_hw(self, name: str):
+        self._lgr.debug(f'Getting hardware named: {name}')
         hw = self.ni_dev1.ai_channels.get(name, None)
         if hw is None:
             hw = self.ni_dev2.ai_channels.get(name, None)
-
+        if hw is None:
+            hw = next((syringe for syringe in self.syringes if syringe.name == name), None)
         if self.mocks_enabled:
             if hw is None:
                 hw = self.mock_device.ai_channels.get(name, None)
@@ -79,6 +109,7 @@ class SystemHardware:
                     hw = self.mock_cdi
                 elif name == "mock_syringe":
                     hw = self.mock_syringe
+        self._lgr.debug(f'Found {hw}')
         return hw
 
     def get_elapsed_time_ms(self):

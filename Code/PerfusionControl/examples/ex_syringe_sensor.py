@@ -22,8 +22,14 @@ def main():
     SYS_HW.load_mocks()
     SYS_HW.start()
 
-    sensor = Sensor(name='Mock Syringe')
-    sensor.read_config()
+    try:
+        name = 'Mock Syringe'
+        sensor = Sensor(name=name)
+        sensor.read_config()
+    except PerfusionConfig.MissingConfigSection:
+        print(f'Could not find sensor called {name} in sensors.ini')
+        SYS_HW.stop()
+        exit()
 
     sensor.start()
     reader = sensor.get_reader()

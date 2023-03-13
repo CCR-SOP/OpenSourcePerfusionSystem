@@ -93,9 +93,10 @@ class Sensor:
                 cfg = strategy_class.get_config_type()()
                 self._lgr.debug(f'Config type is {cfg}')
                 PerfusionConfig.read_into_dataclass('strategies', name, cfg)
+                self._lgr.debug('adding strategy')
                 self.add_strategy(strategy_class(cfg))
             except AttributeError as e:
-                self._lgr.error(f'Could not find algorithm {params["algorithm"]} for sensor {self.cfg.name}')
+                self._lgr.error(f'Could not create algorithm {params["algorithm"]} for sensor {self.cfg.name}')
                 self._lgr.error(f'Error message is {e}')
 
     def add_strategy(self, strategy: ProcessingStrategy):

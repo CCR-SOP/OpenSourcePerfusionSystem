@@ -201,9 +201,12 @@ class WriterStream:
         # reads using memory-mapped files
         fid = open(self.fqpn.with_suffix('').with_suffix('.txt'), 'wt')
         fid.write(hdr_str)
-        self._lgr.debug(f'acq_start is {self.sensor.hw.get_acq_start_ms()}')
-        acq_start = datetime.fromtimestamp(self.sensor.hw.get_acq_start_ms() / 1_000.0)
-        fid.write(f'Start of Acquisition: {acq_start}')
+        if self.sensor.hw is not None:
+            self._lgr.debug(f'acq_start is {self.sensor.hw.get_acq_start_ms()}')
+            acq_start = datetime.fromtimestamp(self.sensor.hw.get_acq_start_ms() / 1_000.0)
+            fid.write(f'Start of Acquisition: {acq_start}')
+        else:
+            self._lgr.error(f'Hardware has not been attached')
         fid.close()
 
     def open(self, sensor: Sensor = None):
