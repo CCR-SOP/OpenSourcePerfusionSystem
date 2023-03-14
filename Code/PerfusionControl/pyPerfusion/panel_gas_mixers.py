@@ -32,19 +32,24 @@ class GasMixerPanel(wx.Panel):
         self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=self.gas_control.HA, cdi_data=self.cdi_data)
         self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=self.gas_control.PV, cdi_data=self.cdi_data)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
-        self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand().Border()
+        self.sizer = wx.FlexGridSizer(rows=1, cols=2, vgap=1, hgap=1)
 
-        self.sizer.Add(self._panel_HA, flags.Proportion(2))
-        self.sizer.Add(self._panel_PV, flags.Proportion(2))
+        self.sizer.Add(self._panel_HA, flags)
+        self.sizer.Add(self._panel_PV, flags)
+
+        self.sizer.AddGrowableCol(0, 1)
+        self.sizer.AddGrowableCol(1, 1)
 
         self.sizer.SetSizeHints(self.parent)
-        self.SetSizer(self.sizer)
+        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        self.SetSizer(self.wrapper)
         self.Layout()
         self.Fit()
 
@@ -67,11 +72,15 @@ class BaseGasMixerPanel(wx.Panel):
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        font = wx.Font()
+        font.SetPointSize(int(12))
 
         # Pull initial total flow and create display
         total_flow = self.gas_device.get_total_flow()
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
         self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400, initial=total_flow, inc=1)
+        self.label_total_flow.SetFont(font)
+        self.input_total_flow.SetFont(font)
 
         # Pull initial gas mix percentages and flow rates
         channel_nr = 1  # always just change the first channel and the rest will follow
@@ -85,6 +94,8 @@ class BaseGasMixerPanel(wx.Panel):
         # Gas 1 display
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1} % Mix:')
         self.input_percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
+        self.label_gas1.SetFont(font)
+        self.input_percent_gas1.SetFont(font)
         self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} actual flow (mL/min):')
         self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_flow)
         self.label_target_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} target flow (mL/min):')
@@ -103,6 +114,10 @@ class BaseGasMixerPanel(wx.Panel):
         self.update_gas1_perc_btn = wx.Button(self, label='Update Gas % Mix')
         self.manual_start_btn = wx.ToggleButton(self, label='Start Manual')
         self.automatic_start_btn = wx.ToggleButton(self, label='Start Automatic')
+        self.update_total_flow_btn.SetFont(font)
+        self.update_gas1_perc_btn.SetFont(font)
+        self.manual_start_btn.SetFont(font)
+        self.automatic_start_btn.SetFont(font)
         self.manual_start_btn.Disable()
         self.automatic_start_btn.Disable()
 
@@ -115,7 +130,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
+        flags = wx.SizerFlags().Border(wx.ALL, 2).Center()
         sizer_cfg = wx.GridSizer(cols=2)
 
         sizer_cfg.Add(self.label_total_flow, flags)
