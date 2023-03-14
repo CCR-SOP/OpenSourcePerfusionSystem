@@ -10,12 +10,11 @@ and under the public domain.
 import wx
 import logging
 
-from pyPerfusion.plotting import PanelPlotting, SensorPlot
-import pyHardware.pyAI as pyAI
-from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.FileStrategy import StreamToFile
-import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyPerfusion.plotting import SensorPlot, PanelPlotting
+import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyHardware.SystemHardware import SYS_HW
 
 
 class TestFrame(wx.Frame):
@@ -29,12 +28,10 @@ class TestFrame(wx.Frame):
             panel = PanelPlotting(self)
             self._plots.append(panel)
             plot = SensorPlot(sensor, panel.axes, readout=True)
-            plot.set_strategy(sensor.get_file_strategy('Raw'))
+            plot.set_strategy(sensor.get_reader())
             sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
             panel.add_plot(plot)
             sensor.start()
-
-        hw.start()
 
         self.SetSizer(sizer_plots)
         self.Fit()
@@ -43,9 +40,7 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for sensor in sensors:
-            sensor.stop()
-        hw.close()
+        SYS_HW.stop()
         for plot in self._plots:
             plot.Destroy()
         self.Destroy()
@@ -65,25 +60,14 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    hw = pyAI.AIDevice()
-    dev_cfg = pyAI.AIDeviceConfig(name='HighSpeed',
-                                  device_name='FakeDev',
-                                  sampling_period_ms=25,
-                                  read_period_ms=250)
-    ha_cfg = pyAI.AIChannelConfig(name='HA Flow', line=0)
-    pv_cfg = pyAI.AIChannelConfig(name='PV Flow', line=2)
-    hw.open(dev_cfg)
-    hw.add_channel(ha_cfg)
-    hw.add_channel(pv_cfg)
-    sensors = [
-        SensorStream(hw.ai_channels[ha_cfg.name], 'ml/min'),
-        SensorStream(hw.ai_channels[pv_cfg.name], 'ml/min')
-    ]
-    for sensor in sensors:
-        strategy = StreamToFile('Raw', 1, 10)
-        strategy.open(sensor)
-        sensor.add_strategy(strategy)
-        sensor.open()
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
+    sensor_haflow = Sensor.Sensor(name='Hepatic Artery Flow')
+    sensor_haflow.read_config()
+    sensor_pvflow = Sensor.Sensor(name='Portal Vein Flow')
+    sensor_pvflow.read_config()
+
+    sensors = [sensor_haflow, sensor_pvflow]
 
     app = MyTestApp(0)
     app.MainLoop()

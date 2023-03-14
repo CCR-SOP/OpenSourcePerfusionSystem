@@ -30,7 +30,7 @@ class SystemHardware:
 
         self.syringes = []
 
-        self.gas_control = GasControl()
+        self.gas_control = None
 
         self.dialysate_outflow = None
         self.glucose_circuit = None
@@ -50,6 +50,12 @@ class SystemHardware:
             self.ni_dev2.read_config()
         except pyAI.AIDeviceException as e:
             self._lgr.error(e)
+
+        try:
+            self.gas_control = GasControl()
+        except Exception as e:
+            self._lgr.error('Error trying to create GasControl')
+            self._lgr.error(f'GasControl exception: {e}')
 
         try:
             self.dialysate_inflow = NIDAQDCDevice()

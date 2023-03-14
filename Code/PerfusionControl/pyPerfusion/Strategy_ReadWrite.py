@@ -173,6 +173,10 @@ class WriterStream:
     def fqpn(self):
         return self._base_path / self._filename.with_suffix(self._ext)
 
+    @property
+    def name(self):
+        return self.cfg.name
+
     def get_reader(self):
         return Reader(self.fqpn, self.cfg, self.sensor)
 
