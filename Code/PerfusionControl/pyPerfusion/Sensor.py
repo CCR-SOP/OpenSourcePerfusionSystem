@@ -77,7 +77,7 @@ class Sensor:
         # as it will be read in as a list of characters
         self.cfg.valid_range = [int(x) for x in ''.join(self.cfg.valid_range).split(',')]
 
-        # create hardware
+        # attach hardware
         self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.cfg.name}')
         self.hw = SYS_HW.get_hw(self.cfg.hw_name)
 
@@ -125,15 +125,19 @@ class Sensor:
         return strategy
 
     def get_reader(self, name: str = None):
+        writer = self.get_writer(name)
+        return writer.get_reader()
+
+    def get_writer(self, name: str = None):
         if name is None:
-            reader = self._strategies[-1]
+            writer = self._strategies[-1]
         else:
-            reader = [strategy for strategy in self._strategies if strategy.cfg.name == name]
-            if len(reader) > 0:
-                reader = reader[0]
+            writer = [strategy for strategy in self._strategies if strategy.cfg.name == name]
+            if len(writer) > 0:
+                writer = writer[0]
             else:
                 return None
-        return reader.get_reader()
+        return writer
 
     def run(self):
         while not self._evt_halt.is_set():

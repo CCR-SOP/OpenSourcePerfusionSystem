@@ -86,3 +86,47 @@ class MovingAverage(Strategy_ReadWrite.WriterStream):
     def reset(self):
         super().reset()
         self._sum = 0
+
+
+class RunningSum(Strategy_ReadWrite.WriterStream):
+    def __init__(self, cfg: WindowConfig):
+        super().__init__(cfg)
+        self.cfg.algorithm = "VolumeByFlow"
+        self._window_buffer = None
+        self._data_type = np.float64
+        self._calibration_buffer = np.zeros(100, dtype=self._data_type)
+        self._cal_idx = 0
+        self._calibrating = False
+        self.flow_offset = 0.0
+        self.last_volume = 0.0
+
+    @classmethod
+    def get_config_type(cls):
+        return Strategy_ReadWrite.WriterConfig
+
+    def _process(self, buffer, t=None):
+        if self._calibrating:
+            self._lgr.debug('Calibrating')
+            buf_len = len(buffer)
+            buf_left = len(self._calibration_buffer) - self._cal_idx
+            if buf_len <= buf_left:
+                self._calibration_buffer[self._cal_idx:self._cal_idx + buf_len] = buffer
+                self._cal_idx += buf_len
+            else:
+                self._calibrating[self._cal_idx:self._cal_idx + buf_left] = buffer[0:buf_left]
+                self._cal_idx += buf_left
+            self._lgr.debug(f'Cal_idx is {self._cal_idx}')
+            if self._cal_idx >= len(self._calibration_buffer):
+                self._calibrating = False
+                self.flow_offset = np.mean(self._calibration_buffer)
+                self._lgr.info(f'Calibration complete, flow offset is {self.flow_offset}')
+        else:
+            self._processed_buffer = np.cumsum(buffer-self.flow_offset, dtype=self._data_type) \
+                                     + self.last_volume
+            self.last_volume = self._processed_buffer[-1]
+
+    def reset(self):
+        self.last_volume = 0.0
+        self._cal_idx = 0
+        self._calibrating = True
+

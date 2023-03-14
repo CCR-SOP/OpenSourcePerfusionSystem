@@ -17,12 +17,11 @@ import time
 import logging
 
 from pyPerfusion.plotting import SensorPlot, PanelPlotting
-from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
-from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as PerfusionConfig
+import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.CalculatedSensor import FlowOverPressure
-import pyPerfusion.Strategies as Strategies
 
 
 class TestFrame(wx.Frame):
@@ -62,20 +61,17 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logger, logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    hw = NIDAQAIDevice()
-    hw.cfg = AINIDAQDeviceConfig(name='TestAnalogInputDevice')
-    hw.read_config()
-    hw.start()
-    sensor_flow = SensorStream(hw.ai_channels['HA Flow'], 'ml/min')
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.load_mocks()
+    SYS_HW.start()
+    sensor_flow = Sensor.Sensor(name='Hepatic Artery Flow')
     sensor_flow.read_config()
-    sensor_pressure = SensorStream(hw.ai_channels['HA Pressure'], 'mmHg')
+    sensor_pressure = Sensor.Sensor(name='Hepatic Artery Pressure')
     sensor_pressure.read_config()
-    sensor_flow.start()
-    sensor_pressure.start()
 
     f_over_p = FlowOverPressure(name='Flow Over Pressure',
-                                flow=sensor_flow.get_file_strategy('Stream2File'),
-                                pressure=sensor_pressure.get_file_strategy('Stream2File'))
+                                flow=sensor_flow.get_reader(),
+                                pressure=sensor_pressure.get_reader())
     flow_over_pressure = SensorStream(f_over_p, '')
     flow_over_pressure.add_strategy(Strategies.get_strategy('Stream2File'))
     flow_over_pressure.open()

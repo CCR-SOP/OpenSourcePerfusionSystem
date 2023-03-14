@@ -30,11 +30,12 @@ def get_class(name: str):
         return Strategy_Processing.RMS
     elif name == 'MovingAverage':
         return Strategy_Processing.MovingAverage
+    elif name == 'RunningSum':
+        return Strategy_Processing.RunningSum
     elif name == 'WriterStream':
         return Strategy_RW.WriterStream
     elif name == 'WriterPoints':
         return Strategy_RW.WriterPoints
-
     else:
         return None
 
