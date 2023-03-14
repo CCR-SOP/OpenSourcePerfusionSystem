@@ -60,6 +60,13 @@ class SystemHardware:
             self._lgr.error(f'GasControl exception: {e}')
 
         try:
+            self.cdi = pyCDI.CDIStreaming()
+
+        except Exception as e:
+            self._lgr.error('Error trying to create GasControl')
+            self._lgr.error(f'GasControl exception: {e}')
+
+        try:
             self.dialysate_inflow = NIDAQDCDevice()
             self.dialysate_inflow.cfg = pyDC.DCChannelConfig(name='Dialysate Inflow Pump')
             self.dialysate_inflow.read_config()
@@ -107,6 +114,8 @@ class SystemHardware:
         for syringe in self.syringes:
             syringe.start()
 
+        if self.cdi:
+            self.cdi.start()
         if self.mocks_enabled:
             self.mock_device.start()
             self.mock_cdi.start()
@@ -132,6 +141,9 @@ class SystemHardware:
         for syringe in self.syringes:
             syringe.stop()
 
+        if self.cdi:
+            self.cdi.stop()
+            
         if self.mocks_enabled:
             self.mock_device.stop()
             self.mock_cdi.stop()
