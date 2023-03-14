@@ -23,11 +23,7 @@ from collections import deque
 import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-
-
-def get_epoch_ms():
-    return int(time_ns() / 1_000_000.0)
-
+from pyPerfusion.utils import get_epoch_ms
 
 class DCDeviceException(Exception):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""

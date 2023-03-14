@@ -15,12 +15,8 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 
-import pyPerfusion.utils as utils
+from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-
-
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-utils.configure_matplotlib_logging()
 
 code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', '03': 'arterial_temp',
                 '04': 'arterial_sO2', '05': 'arterial_bicarb', '06': 'arterial_BE', '07': 'K', '08': 'VO2',
@@ -152,7 +148,7 @@ class CDIStreaming:
             if self.__serial.is_open and self.__serial.in_waiting > 0:
                 resp = self.__serial.readline().decode('ascii')
                 one_cdi_packet = CDIParsedData(resp)
-                ts = int(time_ns() / 1_000_000.0) - self.acq_start_ms
+                ts = get_epoch_ms()
                 self._queue.put((one_cdi_packet, ts))
             else:
                 sleep(0.5)
@@ -160,7 +156,7 @@ class CDIStreaming:
     def start(self):
         self.stop()
         self._event_halt.clear()
-        self.acq_start_ms = int(time_ns() / 1_000_000.0)
+        self.acq_start_ms = get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
@@ -224,7 +220,7 @@ class MockCDI(CDIStreaming):
             if self._is_open:
                 resp = self._form_pkt()
                 one_cdi_packet = CDIParsedData(resp)
-                ts = int(time_ns() / 1_000_000.0)
+                ts = get_epoch_ms()
                 self._queue.put((one_cdi_packet.get_array(), ts))
                 sleep(1.0)
             else:

@@ -9,7 +9,6 @@ and under the public domain.
 """
 import logging
 import time
-from time import perf_counter_ns
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyHardware.pyAI as pyAI
@@ -42,7 +41,6 @@ class SystemHardware:
         self.mock_cdi = None
         self.mock_syringe = None
 
-        self.acq_start = 0
 
     def load_hardware_from_config(self):
         try:
@@ -106,7 +104,6 @@ class SystemHardware:
             self.mock_cdi.start()
             self.mock_syringe.start()
 
-        self.acq_start = perf_counter_ns()
 
     def stop(self):
         try:
@@ -163,9 +160,5 @@ class SystemHardware:
                     hw = self.mock_syringe
         self._lgr.debug(f'Found {hw}')
         return hw
-
-    def get_elapsed_time_ms(self):
-        return int((time.perf_counter_ns() - self.acq_start) / 1_000_000)
-
 
 SYS_HW = SystemHardware()

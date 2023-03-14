@@ -8,7 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from time import time
+from time import time, time_ns
 from functools import wraps
 
 import serial
@@ -95,3 +95,7 @@ def log(message):
 def get_avail_com_ports() -> list:
     ports = [comport.device for comport in serial.tools.list_ports.comports()]
     return ports
+
+
+def get_epoch_ms():
+    return int(time_ns() / 1_000_000.0)

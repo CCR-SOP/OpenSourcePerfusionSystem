@@ -18,6 +18,7 @@ import serial
 import serial.tools.list_ports
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyPerfusion.utils import get_epoch_ms, get_avail_com_ports
 
 
 DATA_VERSION = 3
@@ -79,17 +80,6 @@ class SyringeConfig:
         initial_target_volume: float = 0.0
         baud: int = 9600
         address: int = 0
-
-
-def get_epoch_ms():
-    return int(time_ns() / 1_000_000.0)
-
-
-# utility function to return all available comports in a list
-# typically used in a GUI to provide a selection of com ports
-def get_avail_com_ports() -> list:
-    ports = [comport.device for comport in serial.tools.list_ports.comports()]
-    return ports
 
 
 def get_available_manufacturer_codes() -> list:

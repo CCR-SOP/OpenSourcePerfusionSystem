@@ -21,7 +21,7 @@ and under the public domain.
 """
 from threading import Thread, Event
 from queue import Queue, Empty
-from time import sleep, time_ns
+from time import sleep
 import logging
 from dataclasses import dataclass, field
 from typing import List
@@ -30,6 +30,7 @@ import numpy as np
 import numpy.typing as npt
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyPerfusion.utils import get_epoch_ms
 
 
 class AIDeviceException(Exception):
@@ -57,10 +58,6 @@ class AIDeviceConfig:
     ch_names: List[str] = field(default_factory=list)
 
 
-def get_epoch_ms():
-    return int(time_ns() / 1_000_000.0)
-
-
 class AIDevice:
     def __init__(self):
         self._lgr = logging.getLogger(__name__)
@@ -72,8 +69,6 @@ class AIDevice:
         self.cfg = AIDeviceConfig()
         self.ai_channels = {}
 
-        # stores the perf_counter value at the start of the acquisition which defines the zero-time for all
-        # following samples
         self.acq_start_ms = 0
 
     def write_config(self):
