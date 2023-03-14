@@ -18,13 +18,6 @@ from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_SPCStockertPumps import CentrifugalPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
 
-from pyPerfusion.pyGB100_SL import GasControl
-import pyPerfusion.pyCDI as pyCDI
-from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
-from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
-
-utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-utils.configure_matplotlib_logging()
 
 class HardwarePanel(wx.Panel):
     def __init__(self, parent, gas_control, cdi_obj):
@@ -34,7 +27,9 @@ class HardwarePanel(wx.Panel):
         self.gas_control = gas_control
         self.cdi = cdi_obj  # should everything be initialized like this?
 
-        self._panel_syringes = SyringePanel(self)
+        drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
+
+        self._panel_syringes = SyringePanel(self, drugs)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self)
         self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi)
@@ -59,6 +54,7 @@ class HardwarePanel(wx.Panel):
     def __set_bindings(self):
         pass
 
+
 class HardwareFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -81,11 +77,12 @@ class MyHardwareApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+    utils.configure_matplotlib_logging()
 
-    gas_controller = GasControl()
-    cdi_obj = pyCDI.CDIStreaming('CDI')
-    cfg = pyCDI.CDIConfig(port='COM13')
-    cdi_obj.open(cfg)
+    SYS_HW.load_hardware_from_config()
+    gas_controller = SYS_HW.get_hw('GasControl')
+    cdi_obj = SYS_HW.get_hw('CDI')
 
     # cdi.read_config()
     # stream_cdi_to_file = SensorPoint(cdi, 'NA')
