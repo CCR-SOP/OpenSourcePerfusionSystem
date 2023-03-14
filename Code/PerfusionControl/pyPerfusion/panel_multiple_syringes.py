@@ -17,11 +17,9 @@ import pyPerfusion.pyPump11Elite as pyPump11Elite
 from pyPerfusion.panel_syringe import PanelSyringeControls
 from pyHardware.SystemHardware import SYS_HW
 
-drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
-
 
 class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
-    def __init__(self, parent):
+    def __init__(self, parent, drugs):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
@@ -53,7 +51,9 @@ class SyringeFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = SyringePanel(self)
+        drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
+
+        self.panel = SyringePanel(self, drugs)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
