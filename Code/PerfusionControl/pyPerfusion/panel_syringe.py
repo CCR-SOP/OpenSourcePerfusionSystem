@@ -72,8 +72,8 @@ class PanelSyringeConfig(wx.Panel):
         self.label_sizes = wx.StaticText(self, label='Syringe Sizes')
         self.combo_sizes = wx.ComboBox(self, wx.ID_ANY, choices=[])
 
-        self.btn_save_cfg = wx.Button(self, label='Save')
-        self.btn_load_cfg = wx.Button(self, label='Load')
+        # self.btn_save_cfg = wx.Button(self, label='Save')
+        # self.btn_load_cfg = wx.Button(self, label='Load')
 
         self.__do_layout()
         self.__set_bindings()
@@ -96,8 +96,8 @@ class PanelSyringeConfig(wx.Panel):
         sizer_cfg.Add(self.combo_manufacturer, flags)
         sizer_cfg.Add(self.combo_sizes, flags)
 
-        sizer_cfg.Add(self.btn_load_cfg, flags)
-        sizer_cfg.Add(self.btn_save_cfg, flags)
+        # sizer_cfg.Add(self.btn_load_cfg, flags)
+        # sizer_cfg.Add(self.btn_save_cfg, flags)
         self.sizer.Add(sizer_cfg)
 
         self.sizer.SetSizeHints(self.parent)
@@ -109,8 +109,8 @@ class PanelSyringeConfig(wx.Panel):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
         self.combo_port.Bind(wx.EVT_COMBOBOX_DROPDOWN, self.OnPortDropDown)
         self.combo_manufacturer.Bind(wx.EVT_COMBOBOX, self.OnManufacturer)
-        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
-        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
+        # self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
+        # self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
     def OnPortDropDown(self, evt):
         ports = utils.get_avail_com_ports()
@@ -174,21 +174,31 @@ class PanelSyringeControls(wx.Panel):
         self._inc = 1
         self._vol_inc = 100
 
+        font = wx.Font()
+        font.SetPointSize(int(12))
+
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.syringe.name)
+        static_box.SetFont(font)
         # redundant with PanelSyringe but used in app_hardware_control
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
         # self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
+        self.spin_rate.SetFont(font)
         self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min)')
+        self.label_rate.SetFont(font)
         self.btn_basal = wx.ToggleButton(self, label='Start Basal')
+        self.btn_basal.SetFont(font)
 
         self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc)
+        self.spin_volume.SetFont(font)
         self.label_volume = wx.StaticText(self, label='Target Volume (ul)')
+        self.label_volume.SetFont(font)
         self.btn_bolus = wx.Button(self, label='Bolus')
+        self.btn_bolus.SetFont(font)
 
-        self.btn_save_cfg = wx.Button(self, label='Save')
-        self.btn_load_cfg = wx.Button(self, label='Load')
+        # self.btn_save_cfg = wx.Button(self, label='Save')
+        # self.btn_load_cfg = wx.Button(self, label='Load')
 
         self.__do_layout()
         self.__set_bindings()
@@ -206,8 +216,8 @@ class PanelSyringeControls(wx.Panel):
         sizer_cfg.Add(self.spin_volume, flags)
         sizer_cfg.Add(self.btn_bolus, flags)
 
-        sizer_cfg.Add(self.btn_save_cfg, flags)
-        sizer_cfg.Add(self.btn_load_cfg, flags)
+        # sizer_cfg.Add(self.btn_save_cfg, flags)
+        # sizer_cfg.Add(self.btn_load_cfg, flags)
 
 
         self.sizer.Add(sizer_cfg)
@@ -220,8 +230,8 @@ class PanelSyringeControls(wx.Panel):
     def __set_bindings(self):
         self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
         self.btn_bolus.Bind(wx.EVT_BUTTON, self.OnBolus)
-        self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
-        self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
+        # self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
+        # self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
 
 
     def OnBasal(self, evt):

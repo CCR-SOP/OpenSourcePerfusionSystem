@@ -28,6 +28,13 @@ class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
         self.parent = parent
         wx.Panel.__init__(self, parent)
         self.syringes = syringes
+
+        font_panel_label = wx.Font()
+        font_panel_label.SetPointSize(int(12))
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Infusions")
+        static_box.SetFont(font_panel_label)
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
         sizer = wx.GridSizer(cols=2)
 
         self.panel = {}
@@ -39,7 +46,9 @@ class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
             i += 1
 
         sizer.SetSizeHints(self.parent)
-        self.SetSizer(sizer)
+        self.wrapper.Add(sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        self.SetSizer(self.wrapper)
+        # self.SetSizer(sizer)
         self.Fit()
         self.Layout()
 
