@@ -16,7 +16,6 @@ import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
-import pyPerfusion.Strategy_Processing as Strategy_Processing
 
 
 class TestFrame(wx.Frame):
