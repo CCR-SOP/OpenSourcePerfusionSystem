@@ -26,7 +26,7 @@ class SensorPlot:
     def __init__(self, sensor, axes, readout=True):
         self._lgr = logging.getLogger(__name__)
         self._sensor = sensor
-        self._strategy = None
+        self._reader = None
         self._axes = axes
         self._line = None
         self._invalid = None
@@ -36,22 +36,23 @@ class SensorPlot:
 
     @property
     def name(self):
-        return self._strategy.name if self._strategy else ''
+        return self._reader.name if self._reader else ''
 
     @property
     def full_name(self):
-        return f'{self._sensor.name}: {self._strategy.name}'
+        return f'{self._sensor.name}: {self._reader.name}'
 
     def plot(self, frame_ms, plot_len):
         readout_color = 'black'
-        if not self._strategy:
+        if not self._reader:
             return
         try:
-            data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
+            data_time, data = self._reader.retrieve_buffer(frame_ms, plot_len)
         except ValueError:
             # this can happen if no data has been collected, so don't print a message
             # as it can flood the logs
             data = None
+            data_time = None
 
         if data is None or len(data) == 0:
             return
@@ -72,12 +73,12 @@ class SensorPlot:
 
         if self._line is None:
             self._line, = self._axes.plot(data_time, data, color=self._color)
-            self._line.set_label(self._strategy.name)
+            self._line.set_label(self._reader.name)
         else:
             self._line.set_data(data_time, data)
 
         if self._with_readout:
-            self._line.set_label(f'{self._strategy.name}: {readout:.2f} {self._sensor.cfg.units}')
+            self._line.set_label(f'{self._reader.name}: {readout:.2f} {self._sensor.cfg.units}')
             leg = self._axes.get_legend()
             if leg is not None:
                 leg_texts = leg.get_texts()
@@ -91,8 +92,8 @@ class SensorPlot:
         except ValueError:
             pass
 
-    def set_strategy(self, strategy, color=None, keep_old_title=False):
-        self._strategy = strategy
+    def set_reader(self, reader, color=None, keep_old_title=False):
+        self._reader = reader
         self._line = None
         self._color = color
         if self._sensor.cfg.valid_range is not None:
@@ -110,9 +111,9 @@ class EventPlot(SensorPlot):
         self._line.set_label(self.name)
 
     def plot(self, frame_ms, plot_len):
-        if not self._strategy:
+        if not self._reader:
             return
-        data_time, data = self._strategy.retrieve_buffer(frame_ms, plot_len)
+        data_time, data = self._reader.retrieve_buffer(frame_ms, plot_len)
         # self._lgr.debug(f'{self._sensor.cfg.name}: data_time is {data_time}')
         if data is None or len(data) == 0:
             return
@@ -144,7 +145,7 @@ class PanelPlotting(wx.Panel):
 
         self._plots = []
         self._leg = []
-        self.list_strategy = wx.ListBox(self, wx.ID_ANY)
+        self.list_readers = wx.ListBox(self, wx.ID_ANY)
 
         self.__do_layout()
         self.__set_bindings()
@@ -168,8 +169,8 @@ class PanelPlotting(wx.Panel):
         self.canvas.SetMinSize(wx.Size(1, 1))
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas, 1, wx.TOP | wx.LEFT | wx.GROW, border=1)
-        sizer.Add(self.list_strategy, 1, wx.ALL)
-        self.list_strategy.Hide()
+        sizer.Add(self.list_readers, 1, wx.ALL)
+        self.list_readers.Hide()
 
         self.SetSizer(sizer)
         self.Layout()

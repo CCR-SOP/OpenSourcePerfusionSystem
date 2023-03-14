@@ -22,7 +22,6 @@ from typing import Protocol, TypeVar, List
 import numpy as np
 import numpy.typing as npt
 
-import pyPerfusion.ProcessingStrategy as ProcessingStrategy
 import pyPerfusion.Strategies as Strategies
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
@@ -113,25 +112,9 @@ class Sensor:
                 self._lgr.error(f'Could not create algorithm {params["algorithm"]} for sensor {self.cfg.name}')
                 self._lgr.error(f'Error message is {e}')
 
-    def add_strategy(self, strategy: ProcessingStrategy):
+    def add_strategy(self, strategy):
         strategy.open(sensor=self)
         self._strategies.append(strategy)
-
-    def get_all_file_strategies(self):
-        file_strategies = [strategy for strategy in self._strategies if isinstance(strategy, StreamToFile)]
-        return file_strategies
-
-    def get_file_strategy(self, name=None):
-        strategy = None
-        if name is None:
-            file_strategies = self.get_all_file_strategies()
-            if len(file_strategies) > 0:
-                strategy = file_strategies[-1]
-        else:
-            strategy = [strategy for strategy in self._strategies if strategy.name == name]
-            if len(strategy) > 0:
-                strategy = strategy[0]
-        return strategy
 
     def get_reader(self, name: str = None):
         writer = self.get_writer(name)

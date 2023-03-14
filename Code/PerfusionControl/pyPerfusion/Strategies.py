@@ -8,25 +8,13 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-from dataclasses import dataclass
-
-import pyPerfusion.ProcessingStrategy as ProcessingStrategy
-import pyPerfusion.FileStrategy as FileStrategy
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.Strategy_Processing as Strategy_Processing
 import pyPerfusion.Strategy_ReadWrite as Strategy_RW
 
 
 def get_class(name: str):
-    if name == 'RMSStrategy':
-        return ProcessingStrategy.RMSStrategy
-    elif name == 'MovingAverageStrategy':
-        return ProcessingStrategy.MovingAverageStrategy
-    elif name == 'StreamToFile':
-        return FileStrategy.StreamToFile
-    elif name == 'PointsToFile':
-        return FileStrategy.PointsToFile
-    elif name == 'RMS':
+    if name == 'RMS':
         return Strategy_Processing.RMS
     elif name == 'MovingAverage':
         return Strategy_Processing.MovingAverage

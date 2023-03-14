@@ -9,14 +9,14 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from time import sleep
 
 import wx
 
-import pyHardware.pyAI as pyAI
-import pyHardware.pyAI_NIDAQ as NIDAQAI
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
+from pyHardware.SystemHardware import SYS_HW
+import pyHardware.pyAI as pyAI
+
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
@@ -198,7 +198,7 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        device.close()
+        SYS_HW.stop()
         self.Destroy()
 
 
@@ -211,19 +211,12 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
     PerfusionConfig.set_test_config()
 
-    #
-    cfg_device = NIDAQAI.AINIDAQDeviceConfig(name='TestAnalogInputDevice',
-                                             sampling_period_ms=100, read_period_ms=500,
-                                             pk2pk_volts=5, offset_volts=2.5)
-    device = NIDAQAI.NIDAQAIDevice()
-    try:
-        device.open(cfg_device)
-    except pyAI.AIDeviceException:
-        # device hasn't been entered so we can ignore an exception here
-        pass
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
+    device = SYS_HW.ni_dev1
 
     app = MyTestApp(0)
     app.MainLoop()

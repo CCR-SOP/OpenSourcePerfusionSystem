@@ -15,12 +15,9 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import pyPerfusion.pyPump11Elite as pyPump11Elite
 from pyPerfusion.panel_syringe import PanelSyringeControls
+from pyHardware.SystemHardware import SYS_HW
 
 drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
-
-# TODO: Insulin, glucagon need the target_vol updated by Dexcom
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-utils.configure_matplotlib_logging()
 
 
 class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
@@ -33,15 +30,12 @@ class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
         # Initialize syringes with corresponding panels
         self.syringes = []
         self.panel = {}
-        for x in range(6):
-            SpecificConfig = pyPump11Elite.SyringeConfig(drug=drugs[x])
-            syringe = pyPump11Elite.Pump11Elite(name=drugs[x], config=SpecificConfig)
-            syringe.read_config()
-
+        for drug in drugs:
+            syringe = SYS_HW.get_hw(drug)
             self.syringes.append(syringe)
-            self.panel[drugs[x]] = PanelSyringeControls(parent=self, syringe=syringe)
-            self.panel[drugs[x]].update_controls_from_config()
-            sizer.Add(self.panel[drugs[x]], 1, wx.ALL | wx.EXPAND, border=1)
+            self.panel[drug] = PanelSyringeControls(parent=self, syringe=syringe)
+            self.panel[drug].update_controls_from_config()
+            sizer.Add(self.panel[drug], 1, wx.ALL | wx.EXPAND, border=1)
 
         self.SetSizer(sizer)
         self.Fit()
@@ -64,6 +58,7 @@ class SyringeFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.panel.OnClose(self)
+        SYS_HW.stop()
         self.Destroy()
 
 
@@ -77,5 +72,10 @@ class MySyringeApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+    utils.configure_matplotlib_logging()
+
+    SYS_HW.load_hardware_from_config()
+
     app = MySyringeApp(0)
     app.MainLoop()

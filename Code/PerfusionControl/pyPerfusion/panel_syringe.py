@@ -15,6 +15,7 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import pyPerfusion.pyPump11Elite as pyPump11Elite
+from pyHardware.SystemHardware import SYS_HW
 
 
 BAUD_RATES = ['9600', '14400', '19200', '38400', '57600', '115200']
@@ -273,19 +274,12 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        # see if there are any available com ports, if not
-        # use a mock for testing.
-        ports = utils.get_avail_com_ports()
-        if len(ports) > 0:
-            self.syringe = pyPump11Elite.Pump11Elite('Example Syringe')
-        else:
-            self.syringe = pyPump11Elite.MockPump11Elite('MOCK Syringe')
 
-        self.panel = PanelSyringe(self, self.syringe)
+        self.panel = PanelSyringe(self, syringe)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.syringe.close()
+        SYS_HW.stop()
         self.Destroy()
 
 class MyTestApp(wx.App):
@@ -300,5 +294,11 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
+
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
+
+    syringe = SYS_HW.get_hw('Insulin')
+
     app = MyTestApp(0)
     app.MainLoop()
