@@ -185,6 +185,8 @@ class Pump11Elite:
             response = ''
             self._serial.timeout = 1.0
             response = self._serial.read_until('\r', size=1000).decode('UTF-8')
+        else:
+            response = '0 0'
         # JWK, we should be checking error responses
         # strip starting \r and ending \r
         return response[1:-1]
