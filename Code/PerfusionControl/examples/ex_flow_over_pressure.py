@@ -34,7 +34,7 @@ class TestFrame(wx.Frame):
         self.panel.plot_frame_ms = 10_000
         self.plot = SensorPlot(sensor_foverp, self.panel.axes, readout=True)
 
-        self.plot.set_strategy(sensor_foverp.get_reader())
+        self.plot.set_reader(sensor_foverp.get_reader())
 
         self.panel.add_plot(self.plot)
 
@@ -55,7 +55,7 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logger, logging.DEBUG)
     utils.configure_matplotlib_logging()
@@ -74,6 +74,7 @@ if __name__ == "__main__":
 
     sensor_foverp.reader_dividend = sensor_flow.get_reader(name=sensor_foverp.cfg.dividend_strategy)
     sensor_foverp.reader_divisor = sensor_pressure.get_reader(name=sensor_foverp.cfg.divisor_strategy)
+    sensor_foverp.hw = sensor_flow.hw
 
     sensor_flow.start()
     sensor_pressure.start()

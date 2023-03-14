@@ -28,8 +28,8 @@ class TestFrame(wx.Frame):
         self.plotvol = SensorPlot(sensor_volume, self.panel.axes, readout=True)
         self.plotflow = SensorPlot(sensor_flow, self.panel.axes, readout=True)
 
-        self.plotflow.set_strategy(sensor_flow.get_reader('RMS_11pt'))
-        self.plotvol.set_strategy(sensor_volume.get_reader('VolumeByFlow'), color='y')
+        self.plotflow.set_reader(sensor_flow.get_reader('RMS_11pt'))
+        self.plotvol.set_reader(sensor_volume.get_reader('VolumeByFlow'), color='y')
 
         self.panel.add_plot(self.plotflow)
         self.panel.add_plot(self.plotvol)
@@ -76,6 +76,7 @@ if __name__ == "__main__":
     sensor_volume = Sensor.CalculatedSensor(name='Hepatic Artery Volume')
     sensor_volume.read_config()
     sensor_volume.reader = sensor_flow.get_reader(sensor_volume.cfg.sensor_strategy)
+    sensor_volume.hw = sensor_flow.hw
 
     app = MyTestApp(0)
     app.MainLoop()

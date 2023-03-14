@@ -29,7 +29,6 @@ class WriterConfig:
     name: str = ''
     algorithm: str = "WriterStream"
     data_type = np.float64
-    sampling_period_ms: int = 0
 
 
 @dataclass
@@ -69,7 +68,7 @@ class Reader:
         return fid, data
 
     def retrieve_buffer(self, last_ms, samples_needed):
-        period = self.cfg.sampling_period_ms
+        period = self.sensor.hw.sampling_period_ms
         _fid, data = self._open_read(self.cfg.data_type)
         file_size = len(data)
         if not _fid or file_size == 0:

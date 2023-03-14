@@ -28,7 +28,7 @@ class TestFrame(wx.Frame):
             panel = PanelPlotting(self)
             self._plots.append(panel)
             plot = SensorPlot(sensor, panel.axes, readout=True)
-            plot.set_strategy(sensor.get_reader())
+            plot.set_reader(sensor.get_reader())
             sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
             panel.add_plot(plot)
             sensor.start()
@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
-    sensor_haflow = Sensor.Sensor(name='Hepatic Artery Flow')
+    sensor_haflow = Sensor.Sensor(name='Hepatic Artery Pressure')
     sensor_haflow.read_config()
     sensor_pvflow = Sensor.Sensor(name='Portal Vein Flow')
     sensor_pvflow.read_config()

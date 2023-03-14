@@ -30,8 +30,8 @@ class TestFrame(wx.Frame):
         self.plotraw = SensorPlot(sensor, self.panel.axes)
 
         # the streaming data will be blue, the events will be a red line
-        self.plotevt.set_strategy(sensor_event.get_reader('RawPoints'), color='r')
-        self.plotraw.set_strategy(sensor.get_reader('Raw'), color='b')
+        self.plotevt.set_reader(sensor_event.get_reader('RawPoints'), color='r')
+        self.plotraw.set_reader(sensor.get_reader('Raw'), color='b')
 
         # add the two plots to the main plotting panel
         # the two plots will be superimposed on each other

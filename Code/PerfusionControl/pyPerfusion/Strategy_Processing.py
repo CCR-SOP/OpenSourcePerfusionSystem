@@ -112,7 +112,7 @@ class RunningSum(Strategy_ReadWrite.WriterStream):
     def _process(self, buffer, t=None):
         if self._calibrating:
             if self._calibration_buffer is None:
-                cal_samples = int(self.cfg.calibration_seconds * 1_000 / self.cfg.sampling_period_ms)
+                cal_samples = int(self.cfg.calibration_seconds * 1_000 / self.sensor.hw.sampling_period_ms)
                 self._calibration_buffer = np.zeros(cal_samples, dtype=self._data_type)
 
             self._processed_buffer = buffer
