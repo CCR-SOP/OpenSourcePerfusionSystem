@@ -70,7 +70,6 @@ DEFAULT_MANUFACTURERS = {
 @dataclass
 class SyringeConfig:
         name: str = 'Syringe'
-        drug: str = ''
         com_port: str = ''
         manufacturer_code: str = ''
         size: str = ''
@@ -112,6 +111,7 @@ class Pump11Elite:
 
         self.name = name
         self.cfg = config
+        self.cfg.name = name
 
         self._serial = serial.Serial()
         self._queue = None

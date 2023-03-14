@@ -60,7 +60,7 @@ class SystemHardware:
             self._lgr.error(f'GasControl exception: {e}')
 
         try:
-            self.cdi = pyCDI.CDIStreaming()
+            self.cdi = pyCDI.CDIStreaming(name='CDI')
 
         except Exception as e:
             self._lgr.error('Error trying to create GasControl')

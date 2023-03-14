@@ -29,7 +29,7 @@ class NIDAQDCDevice(pyDC.DCDevice):
         # recreate from scratch so base naming convention does not need
         # to be consistent with actual hardware naming convention
         if self.cfg:
-            dev_str = f'{self.cfg.Device}/ao{self.cfg.LineName}'
+            dev_str = f'{self.cfg.device}/ao{self.cfg.line}'
         else:
             dev_str = 'None'
         return dev_str

@@ -106,6 +106,7 @@ class Sensor:
                 cfg = strategy_class.get_config_type()()
                 self._lgr.debug(f'Config type is {cfg}')
                 PerfusionConfig.read_into_dataclass('strategies', name, cfg)
+                cfg.name = name
                 self._lgr.debug('adding strategy')
                 self.add_strategy(strategy_class(cfg))
             except AttributeError as e:
