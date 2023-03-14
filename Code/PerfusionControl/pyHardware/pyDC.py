@@ -16,13 +16,17 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from time import perf_counter
+from time import time_ns
 from dataclasses import dataclass
 from collections import deque
 
 import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+
+
+def get_epoch_ms():
+    return int(time_ns() / 1_000_000.0)
 
 
 class DCDeviceException(Exception):
@@ -43,9 +47,7 @@ class DCDevice:
         self.cfg = None
         self._queue = self._queue = deque(maxlen=100)
         self._buffer = np.zeros(1, dtype=np.float64)
-        # stores the perf_counter value at the start of the acquisition which defines the zero-time for all
-        # following samples
-        self.__acq_start_t = 0
+        self.acq_start_ms = 0
         self.buf_len = 1
         self.data_type = float
         self.sampling_period_ms = 0
@@ -53,6 +55,9 @@ class DCDevice:
     @property
     def devname(self):
         return 'dc'
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
 
     def open(self, cfg: DCChannelConfig):
         self.cfg = cfg
@@ -72,15 +77,14 @@ class DCDevice:
         PerfusionConfig.read_into_dataclass('hardware', channel_name, self.cfg)
 
     def start(self):
-        # self.stop()
-        self.__acq_start_t = perf_counter()
+        self.acq_start_ms = get_epoch_ms()
 
     def stop(self):
         self.set_output(0)
 
     def set_output(self, output_volts: float):
         self._buffer[0] = output_volts
-        self._queue.append((self._buffer, perf_counter()-self.__acq_start_t))
+        self._queue.append((self._buffer, get_epoch_ms()))
 
     def get_data(self):
         buf = None

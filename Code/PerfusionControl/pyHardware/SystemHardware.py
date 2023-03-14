@@ -17,6 +17,8 @@ from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 import pyPerfusion.pyCDI as pyCDI
 import pyPerfusion.pyPump11Elite as pyPump11Elite
 from pyPerfusion.pyGB100_SL import GasControl
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+import pyHardware.pyDC as pyDC
 
 
 class SystemHardware:
@@ -31,6 +33,11 @@ class SystemHardware:
 
         self.gas_control = GasControl()
 
+        self.dialysate_outflow = None
+        self.glucose_circuit = None
+        self.dialysate_inflow = None
+        self.dialysis_blood = None
+
         self.mock_device = None
         self.mock_cdi = None
         self.mock_syringe = None
@@ -44,6 +51,25 @@ class SystemHardware:
             self.ni_dev2.cfg = AINIDAQDeviceConfig(name='Dev2')
             self.ni_dev2.read_config()
         except pyAI.AIDeviceException as e:
+            self._lgr.error(e)
+
+        try:
+            self.dialysate_inflow = NIDAQDCDevice()
+            self.dialysate_inflow.cfg = pyDC.DCChannelConfig(name='Dialysate Inflow Pump')
+            self.dialysate_inflow.read_config()
+
+            self.dialysate_outflow = NIDAQDCDevice()
+            self.dialysate_outflow.cfg = pyDC.DCChannelConfig(name='Dialysate Outflow Pump')
+            self.dialysate_outflow.read_config()
+
+            self.dialysis_blood = NIDAQDCDevice()
+            self.dialysis_blood.cfg = pyDC.DCChannelConfig(name='Dialysis Blood Pump')
+            self.dialysis_blood.read_config()
+
+            self.glucose_circuit = NIDAQDCDevice()
+            self.glucose_circuit.cfg = pyDC.DCChannelConfig(name='Glucose Circuit Pump')
+            self.glucose_circuit.read_config()
+        except pyDC.DCDeviceException as e:
             self._lgr.error(e)
 
         all_syringe_names = PerfusionConfig.get_section_names('syringes')
@@ -89,6 +115,15 @@ class SystemHardware:
         except pyAI.AIDeviceException as e:
             self._lgr.error(e)
 
+        try:
+            self.glucose_circuit.stop()
+            self.dialysate_inflow.stop()
+            self.dialysate_outflow.stop()
+            self.dialysis_blood.stop()
+
+        except pyDC.DCDeviceException as e:
+            self._lgr.error(e)
+
         for syringe in self.syringes:
             syringe.stop()
 
@@ -100,14 +135,24 @@ class SystemHardware:
     def get_hw(self, name: str):
         self._lgr.debug(f'Getting hardware named: {name}')
         hw = None
-        if name == 'GasControl':
-            hw = self.gas_control
+        if hw is None:
+            if name == 'Glucose Circuit Pump':
+                hw = self.glucose_circuit
+            elif name == 'Dialysate Inflow Pump':
+                hw = self.dialysate_inflow
+            elif name == 'Dialysate Outflow Pump':
+                hw = self.dialysate_outflow
+            elif name == 'Dialysis Blood Pump':
+                hw = self.dialysis_blood
+            elif name == 'GasControl':
+                hw = self.gas_control
         if hw is None:
             hw = self.ni_dev1.ai_channels.get(name, None)
         if hw is None:
             hw = self.ni_dev2.ai_channels.get(name, None)
         if hw is None:
             hw = next((syringe for syringe in self.syringes if syringe.name == name), None)
+
         if self.mocks_enabled:
             if hw is None:
                 hw = self.mock_device.ai_channels.get(name, None)
