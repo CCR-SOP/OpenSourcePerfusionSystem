@@ -17,6 +17,7 @@ import pyHardware.pyDC as pyDC
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.FileStrategy import StreamToFile
+import pyPerfusion.pyCDI as pyCDI
 
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
@@ -24,15 +25,19 @@ LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelDC(wx.Panel):
-    def __init__(self, parent, sensor):
+    def __init__(self, parent, sensor, cdi_data=None):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.sensor = sensor
+        self.cdi_data = cdi_data
 
-        self._panel_dc = PanelDCControl(self, self.sensor)
+        self._panel_dc = PanelDCControl(self, self.sensor, self.cdi_data)
 
+        font = wx.Font()
+        font.SetPointSize(int(18))
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.sensor.name)
+        static_box.SetFont(font)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
@@ -55,17 +60,29 @@ class PanelDC(wx.Panel):
 
 
 class PanelDCControl(wx.Panel):
-    def __init__(self, parent, sensor):
+    def __init__(self, parent, sensor, cdi_data):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self.sensor = sensor
+        self.cdi_data = cdi_data
+
+        font = wx.Font()
+        font.SetPointSize(int(18))
+        font_btn = wx.Font()
+        font_btn.SetPointSize(int(16))
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.label_offset = wx.StaticText(self, label='Pump Speed (mL/min)')
-        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.001)
+        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5)
+        self.label_offset.SetFont(font)
+        self.entered_offset.SetFont(font)
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
+        self.btn_change_rate.SetFont(font_btn)
+
+        self.btn_stop = wx.Button(self, label='Stop')
+        self.btn_stop.SetFont(font_btn)
 
         self.__do_layout()
         self.__set_bindings()
@@ -79,6 +96,7 @@ class PanelDCControl(wx.Panel):
 
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(self.btn_change_rate)
+        sizer.Add(self.btn_stop)
         self.sizer.Add(sizer, wx.SizerFlags(0).CenterHorizontal().Top())
 
         self.SetSizer(self.sizer)
@@ -87,11 +105,16 @@ class PanelDCControl(wx.Panel):
 
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
+        self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
 
     def on_update(self, evt):
         self._lgr.debug('on_update called')
         new_flow = self.entered_offset.GetValue() / 10
         self.sensor.hw.set_output(new_flow)
+
+    def on_stop(self, evt):
+        self.sensor.hw.set_output(int(0))
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):

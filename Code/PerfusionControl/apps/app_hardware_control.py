@@ -23,22 +23,33 @@ import pyPerfusion.pyCDI as pyCDI
 from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
 from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
 
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+import pyHardware.pyDC as pyDC
+from pyPerfusion.FileStrategy import StreamToFile
+from pyPerfusion.SensorStream import SensorStream
+
+import pyPerfusion.pyPump11Elite as pyPump11Elite
+
 utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, gas_control, cdi_obj):
+    def __init__(self, parent, gas_control, roller_pumps, syringes, cdi_object):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
         self.gas_control = gas_control
-        self.cdi = cdi_obj  # should everything be initialized like this?
+        self.roller_pumps = roller_pumps
+        self.syringes = syringes
+        self.cdi = cdi_object
 
-        self._panel_syringes = SyringePanel(self)
+        self._panel_syringes = SyringePanel(self, self.syringes)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
-        self._panel_dialysate_pumps = DialysisPumpPanel(self)
+        self._panel_dialysate_pumps = DialysisPumpPanel(self, self.roller_pumps, self.cdi)
         self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi)
-        self.sizer = wx.GridSizer(cols=2)  # label="Hardware Control App" - how can we put this in?
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
@@ -46,13 +57,16 @@ class HardwarePanel(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Expand().Border()
 
+        self.sizer = wx.GridSizer(cols=2)
+
         self.sizer.Add(self._panel_syringes, flags.Proportion(2))
         self.sizer.Add(self._panel_centrifugal_pumps, flags.Proportion(2))
         self.sizer.Add(self._panel_dialysate_pumps, flags.Proportion(2))
         self.sizer.Add(self._panel_gas_mixers, flags.Proportion(2))
 
-        self.sizer.SetSizeHints(self.parent)
-        self.SetSizer(self.sizer)
+        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start
+        self.SetSizer(self.wrapper)
         self.Layout()
         self.Fit()
 
@@ -64,11 +78,26 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self, gas_control=gas_controller, cdi_obj=cdi_obj)
+        self.panel = HardwarePanel(self, gas_control=gas_controller, roller_pumps=r_pumps, syringes=syringe_array, cdi_object=cdi_obj)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         self.Destroy()
+
+        self.panel._panel_syringes.OnClose(self)
+
+        self.panel._panel_dialysate_pumps.close()
+        self.panel._panel_dialysate_pumps.cdi_timer.Stop()
+
+        self.panel._panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
+        self.panel._panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
+        self.panel._panel_gas_mixers._panel_HA.cdi_timer.Stop()
+        self.panel._panel_gas_mixers._panel_PV.cdi_timer.Stop()
+        self.panel._panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
+        self.panel._panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
+
+        cdi_obj.stop()
+        stream_cdi_to_file.stop()
 
 
 class MyHardwareApp(wx.App):
@@ -82,19 +111,41 @@ class MyHardwareApp(wx.App):
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
-    gas_controller = GasControl()
-    cdi_obj = pyCDI.CDIStreaming('CDI')
-    cfg = pyCDI.CDIConfig(port='COM13')
-    cdi_obj.open(cfg)
+    # Initialize syringes
+    drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
 
-    # cdi.read_config()
-    # stream_cdi_to_file = SensorPoint(cdi, 'NA')
-    # stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    # ro_sensor = ReadOnlySensorPoint(cdi, 'na')
-    # read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
-    # ro_sensor.add_strategy(strategy=read_from_cdi)
-    # stream_cdi_to_file.start()
-    # cdi.start()
+    syringe_array = []
+    for x in range(6):
+        SpecificConfig = pyPump11Elite.SyringeConfig(drug=drugs[x])
+        new_syringe = pyPump11Elite.Pump11Elite(name=drugs[x], config=SpecificConfig)
+        new_syringe.read_config()
+        syringe_array.append(new_syringe)
+
+    # Initialize gas controllers
+    gas_controller = GasControl()
+
+    # Initialize pumps
+    r_pumps = {}
+    rPumpNames = ["Dialysate Outflow Pump", "Dialysate Inflow Pump",
+                  "Dialysis Blood Pump", "Glucose Circuit Pump"]
+    for pumpName in rPumpNames:
+        hw = NIDAQDCDevice()
+        hw.cfg = pyDC.DCChannelConfig(name=pumpName)
+        hw.read_config()
+        sensor = SensorStream(hw, "ml/min")
+        sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+        r_pumps[pumpName] = sensor
+
+    # Initialize CDI
+    cdi_obj = pyCDI.CDIStreaming('CDI')
+    cdi_obj.read_config()
+    stream_cdi_to_file = SensorPoint(cdi_obj, 'NA')
+    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
+    ro_sensor = ReadOnlySensorPoint(cdi_obj, 'na')
+    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
+    ro_sensor.add_strategy(strategy=read_from_cdi)
+    stream_cdi_to_file.start()
+    cdi_obj.start()
 
     app = MyHardwareApp(0)
     app.MainLoop()

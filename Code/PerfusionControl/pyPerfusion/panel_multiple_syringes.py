@@ -24,26 +24,31 @@ utils.configure_matplotlib_logging()
 
 
 class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
-    def __init__(self, parent):
+    def __init__(self, parent, syringes):
         self.parent = parent
         wx.Panel.__init__(self, parent)
+        self.syringes = syringes
 
+        font_panel_label = wx.Font()
+        font_panel_label.SetPointSize(int(12))
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Infusions")
+        static_box.SetFont(font_panel_label)
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
         sizer = wx.GridSizer(cols=2)
 
-        # Initialize syringes with corresponding panels
-        self.syringes = []
         self.panel = {}
-        for x in range(6):
-            SpecificConfig = pyPump11Elite.SyringeConfig(drug=drugs[x])
-            syringe = pyPump11Elite.Pump11Elite(name=drugs[x], config=SpecificConfig)
-            syringe.read_config()
+        i = 0
+        for syringe in self.syringes:
+            self.panel[drugs[i]] = PanelSyringeControls(parent=self, syringe=syringe)
+            self.panel[drugs[i]].update_controls_from_config()
+            sizer.Add(self.panel[drugs[i]], 1, wx.ALL | wx.EXPAND, border=1)
+            i += 1
 
-            self.syringes.append(syringe)
-            self.panel[drugs[x]] = PanelSyringeControls(parent=self, syringe=syringe)
-            self.panel[drugs[x]].update_controls_from_config()
-            sizer.Add(self.panel[drugs[x]], 1, wx.ALL | wx.EXPAND, border=1)
-
-        self.SetSizer(sizer)
+        sizer.SetSizeHints(self.parent)
+        self.wrapper.Add(sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        self.SetSizer(self.wrapper)
+        # self.SetSizer(sizer)
         self.Fit()
         self.Layout()
 
@@ -59,7 +64,7 @@ class SyringeFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = SyringePanel(self)
+        self.panel = SyringePanel(self, syringes=syringe_array)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -77,5 +82,13 @@ class MySyringeApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
+
+    syringe_array = []
+    for x in range(6):
+        SpecificConfig = pyPump11Elite.SyringeConfig(drug=drugs[x])
+        new_syringe = pyPump11Elite.Pump11Elite(name=drugs[x], config=SpecificConfig)
+        new_syringe.read_config()
+        syringe_array.append(new_syringe)
+
     app = MySyringeApp(0)
     app.MainLoop()
