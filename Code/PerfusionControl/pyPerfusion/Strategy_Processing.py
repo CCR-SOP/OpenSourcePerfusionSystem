@@ -21,6 +21,11 @@ class WindowConfig(Strategy_ReadWrite.WriterConfig):
     window_len: int = 1
 
 
+@dataclass
+class RunningSumConfig(Strategy_ReadWrite.WriterConfig):
+    calibration_seconds: int = 1
+
+
 class RMS(Strategy_ReadWrite.WriterStream):
     def __init__(self, cfg: WindowConfig):
         self._lgr = logging.getLogger(__name__)
@@ -94,7 +99,7 @@ class RunningSum(Strategy_ReadWrite.WriterStream):
         self.cfg.algorithm = "VolumeByFlow"
         self._window_buffer = None
         self._data_type = np.float64
-        self._calibration_buffer = np.zeros(100, dtype=self._data_type)
+        self._calibration_buffer = None
         self._cal_idx = 0
         self._calibrating = False
         self.flow_offset = 0.0
@@ -102,20 +107,23 @@ class RunningSum(Strategy_ReadWrite.WriterStream):
 
     @classmethod
     def get_config_type(cls):
-        return Strategy_ReadWrite.WriterConfig
+        return RunningSumConfig
 
     def _process(self, buffer, t=None):
         if self._calibrating:
-            self._lgr.debug('Calibrating')
+            if self._calibration_buffer is None:
+                cal_samples = int(self.cfg.calibration_seconds * 1_000 / self.cfg.sampling_period_ms)
+                self._calibration_buffer = np.zeros(cal_samples, dtype=self._data_type)
+
+            self._processed_buffer = buffer
             buf_len = len(buffer)
             buf_left = len(self._calibration_buffer) - self._cal_idx
             if buf_len <= buf_left:
                 self._calibration_buffer[self._cal_idx:self._cal_idx + buf_len] = buffer
                 self._cal_idx += buf_len
             else:
-                self._calibrating[self._cal_idx:self._cal_idx + buf_left] = buffer[0:buf_left]
+                self._calibration_buffer[self._cal_idx:self._cal_idx + buf_left] = buffer[0:buf_left]
                 self._cal_idx += buf_left
-            self._lgr.debug(f'Cal_idx is {self._cal_idx}')
             if self._cal_idx >= len(self._calibration_buffer):
                 self._calibrating = False
                 self.flow_offset = np.mean(self._calibration_buffer)

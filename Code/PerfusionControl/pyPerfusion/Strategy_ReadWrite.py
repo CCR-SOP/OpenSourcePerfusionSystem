@@ -49,6 +49,7 @@ class Reader:
         self.cfg = cfg
         self.sensor = sensor
         self._last_idx = 0
+        self._read_last_idx = 0
 
     @property
     def name(self):
@@ -97,6 +98,21 @@ class Reader:
         _fid.close()
         return data_time, data
 
+    def get_data_from_last_read(self, samples):
+        period = self.sensor.hw.sampling_period_ms
+        _fid, data = self._open_read(self.cfg.data_type)
+        file_size = len(data)
+        if not _fid or file_size == 0:
+            return None, None
+        if self._read_last_idx + samples > file_size:
+            return None, None
+        data = data[self._read_last_idx:self._read_last_idx + samples]
+        end_idx = self._read_last_idx + len(data) - 1
+        data_time = np.linspace(self._read_last_idx * period, end_idx * period,
+                                samples, dtype=self.cfg.data_type)
+        self._read_last_idx = end_idx
+        _fid.close()
+        return data_time, data
 
 class ReaderPoints(Reader):
     def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
@@ -195,6 +211,7 @@ class WriterStream:
 
     def _get_stream_info(self):
         # all_params = {**self._params, **self._sensor_params}
+        self._lgr.debug(f'confg is {self.cfg}')
         all_params = asdict(self.cfg)
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)

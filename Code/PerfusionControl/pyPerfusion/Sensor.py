@@ -126,7 +126,11 @@ class Sensor:
 
     def get_reader(self, name: str = None):
         writer = self.get_writer(name)
-        return writer.get_reader()
+        if writer is None:
+            reader = None
+        else:
+            reader = writer.get_reader()
+        return reader
 
     def get_writer(self, name: str = None):
         if name is None:
@@ -173,3 +177,20 @@ class Sensor:
             self.__thread.join(2.0)
             self.__thread = None
 
+
+class SensorChain(Sensor):
+    def __init__(self, name):
+        self._lgr = logging.getLogger(__name__)
+        super().__init__(name)
+        self.reader = None
+
+    def run(self):
+        while not self._evt_halt.is_set():
+            t, data_buf = self.reader.get_data_from_last_read(5)
+            if data_buf is not None:
+                buf = data_buf
+                for strategy in self._strategies:
+                    buf, t = strategy.process_buffer(buf, t)
+
+            else:
+                time.sleep(0.5)

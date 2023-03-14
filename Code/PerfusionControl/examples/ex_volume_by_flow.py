@@ -16,6 +16,7 @@ import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
+import pyPerfusion.Strategy_Processing as Strategy_Processing
 
 
 class TestFrame(wx.Frame):
@@ -25,28 +26,31 @@ class TestFrame(wx.Frame):
 
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
-        self.plotraw = SensorPlot(sensor, self.panel.axes, readout=True)
-        self.plotrms = SensorPlot(sensor, self.panel.axes, readout=True)
+        self.plotvol = SensorPlot(sensor_volume, self.panel.axes, readout=True)
+        self.plotflow = SensorPlot(sensor_flow, self.panel.axes, readout=True)
 
-        self.plotraw.set_strategy(sensor.get_reader('Raw'))
-        self.plotrms.set_strategy(sensor.get_reader('VolumeByFlow'), color='y')
+        self.plotflow.set_strategy(sensor_flow.get_reader('RMS_11pt'))
+        self.plotvol.set_strategy(sensor_volume.get_reader('VolumeByFlow'), color='y')
 
-        self.panel.add_plot(self.plotraw)
-        self.panel.add_plot(self.plotrms)
+        self.panel.add_plot(self.plotflow)
+        self.panel.add_plot(self.plotvol)
 
-        sensor.open()
-        sensor.start()
+        sensor_flow.open()
+        sensor_flow.start()
+        sensor_volume.open()
+        sensor_volume.start()
 
         # example of calibrating the zero flow, normally this would
         # be done using a button on a panel
         print('Calibrating in 2 seconds')
         time.sleep(2.0)
-        sensor.get_writer('VolumeByFlow').reset()
+        sensor_volume.get_writer('VolumeByFlow').reset()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor.stop()
+        sensor_volume.stop()
+        sensor_flow.stop()
         SYS_HW.stop()
         self.panel.Destroy()
         self.Destroy()
@@ -67,8 +71,12 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
-    sensor = Sensor.Sensor(name='Hepatic Artery Flow')
-    sensor.read_config()
+    sensor_flow = Sensor.Sensor(name='Hepatic Artery Flow')
+    sensor_flow.read_config()
+
+    sensor_volume = Sensor.SensorChain(name='Hepatic Artery Volume')
+    sensor_volume.read_config()
+    sensor_volume.reader = sensor_flow.get_reader('RMS_11pt')
 
     app = MyTestApp(0)
     app.MainLoop()
