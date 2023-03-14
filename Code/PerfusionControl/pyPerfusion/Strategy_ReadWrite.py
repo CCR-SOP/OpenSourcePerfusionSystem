@@ -98,7 +98,7 @@ class Reader:
         _fid.close()
         return data_time, data
 
-    def get_data_from_last_read(self, samples):
+    def get_data_from_last_read(self, samples: int):
         period = self.sensor.hw.sampling_period_ms
         _fid, data = self._open_read(self.cfg.data_type)
         file_size = len(data)

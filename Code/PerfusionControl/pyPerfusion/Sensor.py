@@ -51,6 +51,12 @@ class SensorConfig:
     valid_range: List = field(default_factory=lambda: [0, 100])
 
 
+@dataclass
+class CalculatedSensorConfig(SensorConfig):
+    samples_per_calc: int = 1
+    sensor_strategy: str = ''
+
+
 class Sensor:
     def __init__(self, name: str):
         self._lgr = logging.getLogger(__name__)
@@ -178,15 +184,16 @@ class Sensor:
             self.__thread = None
 
 
-class SensorChain(Sensor):
+class CalculatedSensor(Sensor):
     def __init__(self, name):
         self._lgr = logging.getLogger(__name__)
         super().__init__(name)
+        self.cfg = CalculatedSensorConfig(name=name)
         self.reader = None
 
     def run(self):
         while not self._evt_halt.is_set():
-            t, data_buf = self.reader.get_data_from_last_read(5)
+            t, data_buf = self.reader.get_data_from_last_read(self.cfg.samples_per_calc)
             if data_buf is not None:
                 buf = data_buf
                 for strategy in self._strategies:

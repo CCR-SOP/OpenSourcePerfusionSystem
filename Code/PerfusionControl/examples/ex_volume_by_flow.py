@@ -74,9 +74,9 @@ if __name__ == "__main__":
     sensor_flow = Sensor.Sensor(name='Hepatic Artery Flow')
     sensor_flow.read_config()
 
-    sensor_volume = Sensor.SensorChain(name='Hepatic Artery Volume')
+    sensor_volume = Sensor.CalculatedSensor(name='Hepatic Artery Volume')
     sensor_volume.read_config()
-    sensor_volume.reader = sensor_flow.get_reader('RMS_11pt')
+    sensor_volume.reader = sensor_flow.get_reader(sensor_volume.cfg.sensor_strategy)
 
     app = MyTestApp(0)
     app.MainLoop()
