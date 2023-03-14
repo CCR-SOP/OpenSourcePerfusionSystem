@@ -24,10 +24,9 @@ import numpy.typing as npt
 
 import pyPerfusion.ProcessingStrategy as ProcessingStrategy
 import pyPerfusion.Strategies as Strategies
-from pyPerfusion.FileStrategy import StreamToFile, PointsToFile
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.pyCDI import CDIStreaming, MockCDI
 from pyHardware.SystemHardware import SYS_HW
+
 
 class HWProtocol(Protocol):
     T = TypeVar("T", bound=npt.NBitBase)
@@ -55,6 +54,15 @@ class SensorConfig:
 class CalculatedSensorConfig(SensorConfig):
     samples_per_calc: int = 1
     sensor_strategy: str = ''
+
+
+@dataclass
+class DivisionSensorConfig(SensorConfig):
+    dividend_name: str = ''
+    divisor_name: str = ''
+    dividend_strategy: str = ''
+    divisor_strategy: str = ''
+    samples_per_calc: int = 1
 
 
 class Sensor:
@@ -106,12 +114,7 @@ class Sensor:
                 self._lgr.error(f'Error message is {e}')
 
     def add_strategy(self, strategy: ProcessingStrategy):
-        if isinstance(strategy, StreamToFile):
-            strategy.open(self)
-        elif isinstance(strategy, PointsToFile):
-            strategy.open(self)
-        else:
-            strategy.open(sensor=self)
+        strategy.open(sensor=self)
         self._strategies.append(strategy)
 
     def get_all_file_strategies(self):
@@ -199,5 +202,26 @@ class CalculatedSensor(Sensor):
                 for strategy in self._strategies:
                     buf, t = strategy.process_buffer(buf, t)
 
+            else:
+                time.sleep(0.5)
+
+
+class DivisionSensor(Sensor):
+    def __init__(self, name):
+        self._lgr = logging.getLogger(__name__)
+        super().__init__(name)
+        self.cfg = DivisionSensorConfig(name=name)
+        self.reader = None
+        self.reader_dividend = None
+        self.reader_divisor = None
+
+    def run(self):
+        while not self._evt_halt.is_set():
+            t_f, dividend = self.reader_dividend.get_data_from_last_read(self.cfg.samples_per_calc)
+            t_p, divisor = self.reader_divisor.get_data_from_last_read(self.cfg.samples_per_calc)
+            if dividend is not None and divisor is not None:
+                buf = np.divide(dividend, divisor)
+                for strategy in self._strategies:
+                    buf, t = strategy.process_buffer(buf, t_f)
             else:
                 time.sleep(0.5)

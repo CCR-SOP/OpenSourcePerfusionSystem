@@ -21,7 +21,7 @@ import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.CalculatedSensor import FlowOverPressure
+import pyPerfusion.Sensor as Sensor
 
 
 class TestFrame(wx.Frame):
@@ -32,17 +32,16 @@ class TestFrame(wx.Frame):
 
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
-        self.plot = SensorPlot(flow_over_pressure, self.panel.axes, readout=True)
+        self.plot = SensorPlot(sensor_foverp, self.panel.axes, readout=True)
 
-        self.plot.set_strategy(flow_over_pressure.get_file_strategy('Stream2File'))
+        self.plot.set_strategy(sensor_foverp.get_reader())
 
         self.panel.add_plot(self.plot)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor_flow.stop()
-        sensor_pressure.stop()
+        sensor_foverp.stop()
         self.panel.Destroy()
         self.Destroy()
 
@@ -64,18 +63,21 @@ if __name__ == "__main__":
     SYS_HW.load_hardware_from_config()
     SYS_HW.load_mocks()
     SYS_HW.start()
-    sensor_flow = Sensor.Sensor(name='Hepatic Artery Flow')
+
+    sensor_foverp = Sensor.DivisionSensor(name='HA Flow Over Pressure')
+    sensor_foverp.read_config()
+
+    sensor_flow = Sensor.Sensor(name=sensor_foverp.cfg.dividend_name)
     sensor_flow.read_config()
-    sensor_pressure = Sensor.Sensor(name='Hepatic Artery Pressure')
+    sensor_pressure = Sensor.Sensor(name=sensor_foverp.cfg.divisor_name)
     sensor_pressure.read_config()
 
-    f_over_p = FlowOverPressure(name='Flow Over Pressure',
-                                flow=sensor_flow.get_reader(),
-                                pressure=sensor_pressure.get_reader())
-    flow_over_pressure = SensorStream(f_over_p, '')
-    flow_over_pressure.add_strategy(Strategies.get_strategy('Stream2File'))
-    flow_over_pressure.open()
-    flow_over_pressure.start()
+    sensor_foverp.reader_dividend = sensor_flow.get_reader(name=sensor_foverp.cfg.dividend_strategy)
+    sensor_foverp.reader_divisor = sensor_pressure.get_reader(name=sensor_foverp.cfg.divisor_strategy)
+
+    sensor_flow.start()
+    sensor_pressure.start()
+    sensor_foverp.start()
 
     app = MyTestApp(0)
     app.MainLoop()
