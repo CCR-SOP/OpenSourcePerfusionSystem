@@ -37,6 +37,8 @@ class SystemHardware:
         self.dialysate_inflow = None
         self.dialysis_blood = None
 
+        self.cdi = None
+
         self.mock_device = None
         self.mock_cdi = None
         self.mock_syringe = None
@@ -149,6 +151,8 @@ class SystemHardware:
                 hw = self.dialysis_blood
             elif name == 'GasControl':
                 hw = self.gas_control
+            elif name == 'CDI':
+                hw = self.cdi
         if hw is None:
             hw = self.ni_dev1.ai_channels.get(name, None)
         if hw is None:
