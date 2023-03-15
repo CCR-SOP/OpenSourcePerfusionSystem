@@ -17,30 +17,18 @@ Actually port value should be changed to the value of the Dexcom port
 """
 
 import logging
-from time import sleep
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import pyPerfusion.pyDexcom as pyDexcom
+from pyHardware.SystemHardware import SYS_HW
 
 PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)  # add in debugging comments
 
-dexcom = pyDexcom.DexcomReceiver('Hepatic Artery')
-dexcom.read_config()
+SYS_HW.load_hardware_from_config()
+dexcom = SYS_HW.get_hw('DEXCOM_COM6')
+
 print(f'Read config for {dexcom.name}: ComPort={dexcom.cfg.com_port}, ',
       f'Serial # = {dexcom.cfg.serial_number}, ',
       f'Read Period (ms) = {dexcom.cfg.read_period_ms}')
-# print('Attempting to read data')
-# print(f'{dexcom.receiver.ReadRecords("EGV_DATA")}')
-# print(dexcom.receiver.get_data())
-print(dexcom._acq_samples())
-dexcom.start()
-for i in range(3):
-      print('sleeping for 1 second')
-      sleep(1.0)
-      data, t = dexcom.get_data()
-      print(f'Timestamp is {t}')
-      print(f'Data is {data}')
-dexcom.stop()
-dexcom.close()
+

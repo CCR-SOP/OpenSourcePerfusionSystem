@@ -10,7 +10,6 @@
 """
 import logging
 import struct
-from time import perf_counter
 from threading import Thread, Event
 from time import perf_counter, sleep, time
 from collections import deque
@@ -18,6 +17,7 @@ from dataclasses import dataclass, asdict
 
 from dexcom_G6_reader.readdata import Dexcom
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyPerfusion.utils import get_epoch_ms
 
 
 @dataclass
@@ -31,7 +31,7 @@ class DexcomConfig:
 class DexcomReceiver:
     def __init__(self, name):
         self._lgr = logging.getLogger(__name__)
-        self.cfg = DexcomConfig()
+        self.cfg = DexcomConfig(name=name)
         self.name = name
         self.receiver = None
 
@@ -43,11 +43,14 @@ class DexcomReceiver:
         self._last_error = None
         # stores the perf_counter value at the start of the acquisition which defines the zero-time for all
         # following samples
-        self.__acq_start_t = 0
+        self.acq_start = 0
         self.buf_len = 1
         self.data_type = int
         self.sampling_period_ms = 30_000
         self.samples_per_read = 1
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
 
     def read_config(self):
         cfg = DexcomConfig()
@@ -81,7 +84,7 @@ class DexcomReceiver:
     def start(self):
         self.stop()
         self._event_halt.clear()
-        self.__acq_start_t = perf_counter()
+        self.acq_start_ms = get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyDexcom {self.name}'
@@ -109,7 +112,10 @@ class DexcomReceiver:
     def _acq_samples(self):
         self._lgr.debug('in acq_samples')
         data, new_time, error = self.receiver.get_data()
-        ts = struct.pack('i', int(perf_counter() * 1000.0))
+        self._lgr.debug(f'Dexcom time stamp is {new_time}')
+        # JWK, should convert new_time to a epoch time
+        ts = get_epoch_ms()
+
         self._last_error = error
         if new_time != self._last_acq_time:
             self._lgr.debug(f'pushing {data} {ts}')

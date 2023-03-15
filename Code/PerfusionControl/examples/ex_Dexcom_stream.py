@@ -13,29 +13,38 @@ import time
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import pyPerfusion.pyDexcom as pyDexcom
-from pyPerfusion.FileStrategy import PointsToFile
-from pyPerfusion.SensorPoint import SensorPoint
+from pyPerfusion.Sensor import Sensor
+from pyHardware.SystemHardware import SYS_HW
 
 
 def main():
-    dexcom = pyDexcom.DexcomReceiver('Portal Vein')
-    dexcom.read_config()
+    PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)  # add in debugging comments
 
-    sensorpt = SensorPoint(dexcom, 'na')
-    sensorpt.add_strategy(strategy=PointsToFile('write', 1, 1))
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
 
-    sensorpt.start()
-    dexcom.start()
+    sensor = Sensor(name='Hepatic Artery Glucose')
+    sensor.read_config()
 
-    print('Sleeping for 60 seconds')
-    time.sleep(60.0)
-    ts, last_samples = sensorpt.get_strategy('write').retrieve_buffer(60000, 2)
+    sensor.start()
+    reader = sensor.get_reader()
+    print('Sleeping for 5 seconds to collect data')
+    time.sleep(5)
+    cdi_var_index = 3
+    ts, last_samples = reader.retrieve_buffer(5000, 5, index=cdi_var_index)
     for ts, samples in zip(ts, last_samples):
-        print(f'{ts}: sample is {samples}')
+        print(f'{ts}: sample[{cdi_var_index}] is {samples}')
 
-    dexcom.stop()
-    sensorpt.stop()
+    print('Sleeping for 5 seconds to collect data')
+    time.sleep(5)
+    print(f'Getting last acq')
+    ts, samples = reader.get_last_acq()
+    print(f'{ts}: sample is {samples}')
+
+    sensor.stop()
+    SYS_HW.stop()
+
 
 
 if __name__ == '__main__':
