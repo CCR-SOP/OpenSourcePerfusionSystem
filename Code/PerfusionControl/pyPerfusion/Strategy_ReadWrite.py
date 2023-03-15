@@ -10,16 +10,18 @@ and under the public domain.
 from __future__ import annotations
 from typing import TYPE_CHECKING
 import pathlib
-from time import time_ns
 import logging
 import struct
-from os import SEEK_CUR
+from os import SEEK_CUR, SEEK_END, SEEK_SET
 from dataclasses import dataclass, asdict
 from datetime import datetime
 
 import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+import pyPerfusion.utils as utils
+
+
 if TYPE_CHECKING:
     from pyPerfusion.Sensor import Sensor
 
@@ -55,24 +57,36 @@ class Reader:
         return self.cfg.name
 
     def _open_read(self, data_type):
-        fid = None
-        data = []
+        fid = open(self.fqpn, 'rb')
+        return fid
+
+    def _open_mmap(self, data_type):
+        fid = self._open_read(data_type)
         try:
-            fid = open(self.fqpn, 'rb')
             data = np.memmap(fid, dtype=data_type, mode='r')
         except ValueError as e:
             # cannot mmap an empty file
             # this can happen if attempting to read a file before the first data was written
             # ignore the error and continue processing
-            pass
+            data = None
         return fid, data
+
+    @classmethod
+    def get_file_size(cls, fid):
+        cur_pos = fid.tell()
+        fid.seek(0, SEEK_END)
+        file_size = fid.tell()
+        fid.seek(cur_pos, SEEK_SET)
+        return file_size
 
     def retrieve_buffer(self, last_ms, samples_needed):
         period = self.sensor.hw.sampling_period_ms
-        _fid, data = self._open_read(self.cfg.data_type)
-        file_size = len(data)
-        if not _fid or file_size == 0:
+        fid, data = self._open_mmap(self.cfg.data_type)
+
+        if data is None:
             return [], []
+
+        file_size = self.get_file_size(fid)
         if last_ms == 0:
             # if last x samples requested, no timestamps are returned
             data = data[-samples_needed:]
@@ -94,24 +108,23 @@ class Reader:
         start_t = start_idx * period / 1000.0
         stop_t = file_size * period / 1000.0
         data_time = np.linspace(start_t, stop_t, samples_needed, dtype=self.cfg.data_type)
-        _fid.close()
+
+        fid.close()
         return data_time, data
 
     def get_data_from_last_read(self, samples: int):
         period = self.sensor.hw.sampling_period_ms
-        _fid, data = self._open_read(self.cfg.data_type)
-        file_size = len(data)
-        if not _fid or file_size == 0:
-            return None, None
-        if self._read_last_idx + samples > file_size:
+        fid, data = self._open_mmap(self.cfg.data_type)
+        if self._read_last_idx + samples > self.get_file_size(fid):
             return None, None
         data = data[self._read_last_idx:self._read_last_idx + samples]
         end_idx = self._read_last_idx + len(data) - 1
         data_time = np.linspace(self._read_last_idx * period, end_idx * period,
                                 samples, dtype=self.cfg.data_type)
         self._read_last_idx = end_idx
-        _fid.close()
+        fid.close()
         return data_time, data
+
 
 class ReaderPoints(Reader):
     def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
@@ -128,20 +141,30 @@ class ReaderPoints(Reader):
                 self.cfg.samples_per_timestamp * self.cfg.data_type(1).itemsize)
         return bytes_per_chunk
 
+    def read_chunk(self, fid):
+
+        chunk = fid.read(self.cfg.bytes_per_timestamp)
+        if chunk:
+            ts, = struct.unpack('!Q', chunk)
+            data_chunk = np.fromfile(fid, dtype=self.cfg.data_type, count=self.cfg.samples_per_timestamp)
+        else:
+            ts = None
+            data_chunk = None
+        return ts, data_chunk
+
     def retrieve_buffer(self, last_ms, samples_needed, index: int = None):
         data_time = []
         data = []
 
         fid = open(self.fqpn, 'rb')
         fid.seek(0)
-        cur_time = int(time_ns() / 1_000_000.0)
+        cur_time = utils.get_epoch_ms()
         while True:
             chunk = fid.read(self.cfg.bytes_per_timestamp)
             if chunk:
                 ts, = struct.unpack('!Q', chunk)
                 diff_t = cur_time - ts
                 if diff_t <= last_ms:
-                    # self._lgr.debug(f'cur_time = {cur_time}, ts={ts}, diff={diff_t}')
                     data_chunk = np.fromfile(fid, dtype=self.cfg.data_type,
                                              count=self.cfg.samples_per_timestamp)
                     if index is None:
@@ -161,6 +184,47 @@ class ReaderPoints(Reader):
             data_time = data_time[0:-1:inc]
         fid.close()
         return data_time, data
+
+    def get_data_from_last_read(self, chunks_needed: int, index: int = None):
+        fid = self._open_read(self.cfg.data_type)
+        file_size = self.get_file_size(fid)
+        if not fid or file_size == 0:
+            return None, None
+
+        fid.seek(self._last_idx, SEEK_SET)
+        # do not assume a full chunk has been written to the file
+        total_chunks = file_size // self.bytes_per_chunk
+        timestamps = []
+        chunks = []
+        if chunks_needed < total_chunks:
+            total_chunks = chunks_needed
+        for chunk_idx in range(total_chunks):
+            ts, chunk = self.read_chunk(fid)
+            if chunk is not None:
+                if index is not None and index < len(chunk):
+                    chunk = chunk[index]
+                timestamps.append((ts - self.sensor.hw.get_acq_start_ms()) / 1000.0)
+                chunks.append(chunk)
+
+        self._last_idx = fid.tell()
+
+        return timestamps, chunks
+
+    def get_last_acq(self, index: int = None):
+        fid = self._open_read(self.cfg.data_type)
+        file_size = self.get_file_size(fid)
+        if not fid or file_size == 0:
+            return None, None
+
+        # do not assume a full chunk has been written to the file
+        start_of_last_chunk = ((file_size // self.bytes_per_chunk) - 1) * self.bytes_per_chunk
+        fid.seek(start_of_last_chunk)
+        ts, data_chunk = self.read_chunk(fid)
+        if index is not None and index < len(data_chunk):
+            data_chunk = data_chunk[index]
+        fid.close()
+        ts = (ts - self.sensor.hw.get_acq_start_ms()) / 1000.0
+        return ts, data_chunk
 
 
 class WriterStream:
@@ -210,7 +274,6 @@ class WriterStream:
 
     def _get_stream_info(self):
         # all_params = {**self._params, **self._sensor_params}
-        self._lgr.debug(f'confg is {self.cfg}')
         all_params = asdict(self.cfg)
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)

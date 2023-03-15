@@ -29,15 +29,28 @@ def main():
     reader = sensor.get_reader()
     print('Sleeping for 5 seconds to collect data')
     time.sleep(5)
-    ts, last_samples = reader.retrieve_buffer(5000, 5, index=3)
+    cdi_var_index = 3
+    ts, last_samples = reader.retrieve_buffer(5000, 5, index=cdi_var_index)
     for ts, samples in zip(ts, last_samples):
+        print(f'{ts}: sample[{cdi_var_index}] is {samples}')
+
+    print('Sleeping for 5 seconds to collect data')
+    time.sleep(5)
+    print('Reading full CDI variables, starting from t=0')
+    for i in range(3):
+        ts, samples = reader.get_data_from_last_read(1)
         print(f'{ts}: sample is {samples}')
+
+    cdi_var_index = 9
+    print(f'Getting last acq, variable index {cdi_var_index}')
+    ts, samples = reader.get_last_acq(index=cdi_var_index)
+    print(f'{ts}: sample[{cdi_var_index}] is {samples}')
 
     sensor.stop()
     SYS_HW.stop()
 
 
 if __name__ == '__main__':
-    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     PerfusionConfig.set_test_config()
     main()
