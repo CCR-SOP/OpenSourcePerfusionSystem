@@ -1,162 +1,132 @@
-import pathlib
-import datetime
+# -*- coding: utf-8 -*-
+""" Class for reading from a Dexcom G6 sensor
+    Requires dexcom_G6_reader library
+
+    @project: LiverPerfusion NIH
+    @author: John Kakareka, NIH
+
+    This work was created by an employee of the US Federal Gov
+    and under the public domain.
+"""
 import logging
+import struct
 from time import perf_counter
 from threading import Thread, Event
-import struct
+from time import perf_counter, sleep, time
+from collections import deque
+from dataclasses import dataclass, asdict
 
-import numpy as np
+from dexcom_G6_reader.readdata import Dexcom
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
-DATA_VERSION = 6
+
+@dataclass
+class DexcomConfig:
+    name: str = ''
+    com_port: str = ''
+    serial_number: str = ''
+    read_period_ms: int = 0
 
 
-class DexcomSensor:
-    def __init__(self, name, unit, receiver):
+class DexcomReceiver:
+    def __init__(self, name):
         self._lgr = logging.getLogger(__name__)
+        self.cfg = DexcomConfig()
         self.name = name
-        self.unit = unit
-        self.receiver = receiver
-        self._fid_write = None
-        self._full_path = pathlib.Path.cwd()
-        self._filename = pathlib.Path(f'{self.name}')
-        self._ext = '.dat'
-        self._timestamp = None
-        self._timestamp_perf = None
-        self._end_of_header = 0
-        self._last_idx = 0
-        self._datapoints_per_ts = 1
-        self._bytes_per_ts = 4
+        self.receiver = None
 
         self.__thread = None
-        self._lgr_streaming = Event()
+        self._event_halt = Event()
+        self._queue = deque()
 
-        self.old_time = None
-        self.error = None
+        self._last_acq_time = None
+        self._last_error = None
+        # stores the perf_counter value at the start of the acquisition which defines the zero-time for all
+        # following samples
+        self.__acq_start_t = 0
+        self.buf_len = 1
+        self.data_type = int
+        self.sampling_period_ms = 30_000
+        self.samples_per_read = 1
 
-    @property
-    def full_path(self):
-        return self._full_path / self._filename.with_suffix(self._ext)
+    def read_config(self):
+        cfg = DexcomConfig()
+        PerfusionConfig.read_into_dataclass('dexcom', self.name, cfg)
+        self.open(cfg)
 
-    def open(self):
-        pass
+    def write_config(self):
+        PerfusionConfig.write_from_dataclass('dexcom', self.name, self.cfg)
 
-    def open_stream(self, full_path):
-        if not isinstance(full_path, pathlib.Path):
-            full_path = pathlib.Path(full_path)
-        self._full_path = full_path
-        if not self._full_path.exists():
-            self._full_path.mkdir(parents=True, exist_ok=True)
-        self._timestamp = datetime.datetime.now()
-        self._timestamp_perf = perf_counter() * 1000
-        if self._fid_write:
-            self._fid_write.close()
-            self._fid_write = None
+    def open(self, cfg: DexcomConfig = None) -> None:
+        if cfg is not None:
+            self.cfg = cfg
+        self._queue = deque()
+        self._lgr.debug(f'Attempting to open Dexcom at {self.cfg.com_port}')
+        self.receiver = Dexcom(self.cfg.com_port)
+        # JWK, verify SN
+        actual_SN = self.receiver.ReadManufacturingData().get('SerialNumber')
+        if actual_SN != self.cfg.serial_number:
+            self._lgr.error(f'Dexcom sensor {self.name} ({self.cfg.com_port}) did not match serial'
+                            f' number (expected={self.cfg.serial_number}, found={actual_SN}')
+            self.receiver = None
+            self.cfg = DexcomConfig()
+        else:
+            self._lgr.debug(f'connecting...')
+            self.receiver.Connect()
 
-        self._open_write()
-        self._write_to_file(np.array([0]), np.array([0]))
-        self._fid_write.seek(0)
+    def close(self):
+        self.receiver.Disconnect()
+        self.stop()
 
-        self.print_stream_info()
+    def start(self):
+        self.stop()
+        self._event_halt.clear()
+        self.__acq_start_t = perf_counter()
 
-    def _open_write(self):
-        self._lgr.info(f'opening {self.full_path}')
-        self._fid_write = open(self.full_path, 'w+b')
-
-    def print_stream_info(self):
-        hdr_str = self._get_stream_info()
-        filename = self.full_path.with_suffix('.txt')
-        self._lgr.debug(f"printing stream info to {filename}")
-        fid = open(filename, 'wt')
-        fid.write(hdr_str)
-        fid.close()
-
-    def _get_stream_info(self):
-        stamp_str = self._timestamp.strftime('%Y-%m-%d_%H:%M')
-        header = [f'File Format: {DATA_VERSION}',
-                  f'Sensor: {self.name}',
-                  f'Unit: {self.unit}',
-                  f'Data Format: {str(np.dtype(np.float32))}',
-                  f'Datapoints Per Timestamp: {self._datapoints_per_ts}',
-                  f'Bytes Per Sample: {self._bytes_per_ts}',
-                  f'Start of Acquisition: {stamp_str, self._timestamp_perf}'
-                  ]
-        end_of_line = '\n'
-        hdr_str = f'{end_of_line.join(header)}{end_of_line}'
-        return hdr_str
-
-    def _write_to_file(self, data_buf, ts_bytes):
-        self._fid_write.write(ts_bytes)
-        data_buf.tofile(self._fid_write)
-
-    def start_stream(self):
-        self._lgr_streaming.clear()
-        self.__thread = Thread(target=self.OnStreaming)
+        self.__thread = Thread(target=self.run)
+        self.__thread.name = f'pyDexcom {self.name}'
         self.__thread.start()
 
-    def OnStreaming(self):
-        while not self._lgr_streaming.wait(30):
-            self.stream()
-
-    def stream(self):
-        data, new_time, error = self.receiver.get_data()
-        self.error = error
-        if not data or self.old_time == new_time:  # Don't log data unless it is new data and there is not a sensor error
-            return
-        else:
-            ts_bytes = struct.pack('i', int(perf_counter() * 1000.0))
-            data_buf = np.ones(1, dtype=np.float32) * np.float32(data)
-            buf_len = len(data_buf)
-            self._write_to_file(data_buf, ts_bytes)
-            self._last_idx += buf_len
-            self._fid_write.flush()
-            self.old_time = new_time
-
-    def stop_stream(self):
+    def stop(self):
         if self.__thread and self.__thread.is_alive():
-            self._lgr_streaming.set()
+            self._event_halt.set()
             self.__thread.join(2.0)
             self.__thread = None
 
-    def close_stream(self):
-        if self._fid_write:
-            self._fid_write.close()
-        self._fid_write = None
+    def run(self):
+        next_t = time()
+        offset = 0
+        while not self._event_halt.is_set():
+            next_t += offset + self.cfg.read_period_ms / 1000.0
+            delay = next_t - time()
+            if delay > 0:
+                sleep(delay)
+                offset = 0
+            else:
+                offset = -delay
+            self._acq_samples()
+
+    def _acq_samples(self):
+        self._lgr.debug('in acq_samples')
+        data, new_time, error = self.receiver.get_data()
+        ts = struct.pack('i', int(perf_counter() * 1000.0))
+        self._last_error = error
+        if new_time != self._last_acq_time:
+            self._lgr.debug(f'pushing {data} {ts}')
+            self._queue.append((data, ts))
+            self._last_acq_time = new_time
+        self._lgr.debug('done')
 
     def get_data(self):
-        _fid, tmp = self._open_read()
-        _fid.seek(0)
-        chunk = [1]
-        data_time = []
-        data = []
-        while chunk[0]:
-            chunk, ts = self.__read_chunk(_fid)
-            if type(chunk) is list:
-                break
-            elif chunk.any():
-                data.append(chunk)
-                data_time.append(ts)
-        _fid.close()
-        return data_time, data
+        buf = None
+        t = None
+        try:
+            buf, t = self._queue.pop()
+        except IndexError:
+            # this can occur if there are attempts to read data before it has been acquired
+            # this is not unusual, so catch the error but do nothing
+            pass
+        return buf, t
 
-    def _open_read(self):
-        _fid = open(self.full_path, 'rb')
-        data = np.memmap(_fid, dtype=np.float32, mode='r')
-        return _fid, data
-
-    def __read_chunk(self, _fid):
-        ts = 0
-        data_buf = []
-        ts_bytes = _fid.read(self._bytes_per_ts)
-        if len(ts_bytes) == 4:
-            ts, = struct.unpack('i', ts_bytes)
-            data_buf = np.fromfile(_fid, dtype=np.float32, count=self._datapoints_per_ts)
-        return data_buf, ts
-
-    def get_latest(self):
-        data_time, data = self.get_data()
-        if not data:  # If no data has been collected
-            return None, None
-        else:
-            time = data_time[-1]
-            data = data[-1]
-            return time, data
+    def clear(self):
+        self._queue.clear()
