@@ -87,18 +87,20 @@ class SystemHardware:
             self._lgr.error(e)
 
         all_syringe_names = PerfusionConfig.get_section_names('syringes')
-        for name in all_syringe_names:
+        real_syringe_names = all_syringe_names[1:]
+        # self._lgr.debug(f' Excluding mock: {real_syringe_names}')
+        for name in real_syringe_names:
             syringe = pyPump11Elite.Pump11Elite(name=name)
             syringe.read_config()
             self._lgr.debug(f'read syringe {name}: {syringe}')
             self.syringes.append(syringe)
 
-        all_dexcom_names = PerfusionConfig.get_section_names('dexcom')
-        for name in all_dexcom_names:
-            dexcom = pyDexcom.DexcomReceiver(name=name)
-            dexcom.read_config()
-            self._lgr.debug(f'read dexcom {name}: {dexcom}')
-            self.dexcoms.append(dexcom)
+        # all_dexcom_names = PerfusionConfig.get_section_names('dexcom')
+        # for name in all_dexcom_names:
+            # dexcom = pyDexcom.DexcomReceiver(name=name)
+            # dexcom.read_config()
+            # self._lgr.debug(f'read dexcom {name}: {dexcom}')
+            # self.dexcoms.append(dexcom)
 
     def load_mocks(self):
         self.mocks_enabled = True
