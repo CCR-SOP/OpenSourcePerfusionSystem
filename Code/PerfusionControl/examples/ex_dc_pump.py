@@ -26,7 +26,7 @@ utils.setup_stream_logger(logger, logging.DEBUG)
 
 SYS_HW.load_hardware_from_config()
 
-name = 'Dialysate Inflow'
+name = 'Dialysate Outflow'
 try:
     sensor = Sensor(name=name)
     sensor.read_config()
@@ -40,7 +40,7 @@ reader = sensor.get_reader()
 sensor.hw.start()
 sensor.hw.set_output(2.0)
 print('Setting output to 2V, sleeping 2 seconds')
-sleep(2)
+sleep(6)
 sensor.hw.set_output(1.0)
 print('Setting output to 1V, sleeping 2 seconds')
 sleep(2)
