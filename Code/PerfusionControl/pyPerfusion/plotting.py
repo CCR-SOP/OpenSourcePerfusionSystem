@@ -13,9 +13,8 @@ and under the public domain.
 import logging
 
 import wx
-import matplotlib as mpl
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
-import matplotlib.transforms as mtransforms
+import matplotlib.figure
 import numpy as np
 
 import pyPerfusion.utils as utils
@@ -87,10 +86,6 @@ class SensorPlot:
                     txt.set_fontsize('large')
                     # self._display.set_color(readout_color)
 
-        try:
-            self._axes.collections.remove(self._invalid)
-        except ValueError:
-            pass
 
     def set_reader(self, reader, color=None, keep_old_title=False):
         self._reader = reader
@@ -138,7 +133,7 @@ class PanelPlotting(wx.Panel):
         self.__plot_len = 200
         self._plot_frame_ms = 5_000
 
-        self.fig = mpl.figure.Figure()
+        self.fig = matplotlib.figure.Figure()
         self.fig.set_tight_layout(True)
         self._axes = self.fig.add_subplot(111)
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
