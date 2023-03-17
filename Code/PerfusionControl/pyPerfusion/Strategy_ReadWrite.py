@@ -75,7 +75,7 @@ class Reader:
     def get_file_size(cls, fid):
         cur_pos = fid.tell()
         fid.seek(0, SEEK_END)
-        file_size = fid.tell()
+        file_size = int(fid.tell() / np.dtype(np.float64).itemsize)
         fid.seek(cur_pos, SEEK_SET)
         return file_size
 
@@ -101,8 +101,8 @@ class Reader:
                     start_idx = 0
             else:
                 start_idx = 0
-            idx = np.linspace(start_idx, file_size-1, samples_needed,
-                              dtype=np.int32)
+            samples_needed = min(file_size, samples_needed)
+            idx = np.linspace(start_idx, file_size - 1, samples_needed, dtype=np.int32)
             data = data[idx]
 
         start_t = start_idx * period / 1000.0

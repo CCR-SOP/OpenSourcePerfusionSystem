@@ -12,6 +12,7 @@ import time
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyHardware.pyAI as pyAI
+import serial.serialutil
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 import pyPerfusion.pyCDI as pyCDI
 import pyPerfusion.pyPump11Elite as pyPump11Elite
@@ -95,12 +96,16 @@ class SystemHardware:
             self._lgr.debug(f'read syringe {name}: {syringe}')
             self.syringes.append(syringe)
 
-        # all_dexcom_names = PerfusionConfig.get_section_names('dexcom')
-        # for name in all_dexcom_names:
-            # dexcom = pyDexcom.DexcomReceiver(name=name)
-            # dexcom.read_config()
-            # self._lgr.debug(f'read dexcom {name}: {dexcom}')
-            # self.dexcoms.append(dexcom)
+        all_dexcom_names = PerfusionConfig.get_section_names('dexcom')
+        for name in all_dexcom_names:
+            dexcom = pyDexcom.DexcomReceiver(name=name)
+            try:
+                dexcom.read_config()
+                self._lgr.debug(f'read dexcom {name}: {dexcom}')
+                self.dexcoms.append(dexcom)
+            except serial.serialutil.SerialException as e:
+                self._lgr.error(f"Could not open dexcom {name} at port {dexcom.cfg.com_port}")
+
 
     def load_mocks(self):
         self.mocks_enabled = True
