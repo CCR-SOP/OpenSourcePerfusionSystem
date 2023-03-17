@@ -27,9 +27,8 @@ def main():
 
     sensor.start()
     reader = sensor.get_reader()
-    print(f'Reader is {reader}')
-    print('Sleeping for 5 seconds to collect data')
-    time.sleep(5)
+    print('Sleeping for 35 seconds to collect data')
+    time.sleep(35)
     cdi_var_index = 0  # arterial pH
     ts, last_samples = reader.retrieve_buffer(5000, 5, index=cdi_var_index)
     print(f'ts is {ts} and last_samples is {last_samples}')
