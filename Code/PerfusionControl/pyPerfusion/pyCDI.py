@@ -112,6 +112,7 @@ class CDIStreaming:
         return self.__serial.is_open
 
     def open(self, cfg: CDIConfig = None) -> None:
+        self._lgr.debug('Attempting to open CDI')
         if self.__serial.is_open:
             self.__serial.close()
         if cfg is not None:
@@ -126,6 +127,7 @@ class CDIStreaming:
         except serial.serialutil.SerialException as e:
             self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
             self._lgr.error(f'Message: {e}')
+        self._lgr.debug('Serial port opened')
         self._queue = Queue()
 
     def close(self):
@@ -145,6 +147,8 @@ class CDIStreaming:
         self._event_halt.clear()
         self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
+            self._lgr.debug(f'is_open={self.__serial.is_open}')
+            self._lgr.debug(f'in_waiting={self.__serial.in_waiting}')
             if self.__serial.is_open and self.__serial.in_waiting > 0:
                 self._lgr.debug('Attempting to read serial data from CDI')
                 resp = self.__serial.readline().decode('ascii')
@@ -157,6 +161,7 @@ class CDIStreaming:
                 sleep(0.5)
 
     def start(self):
+        self._lgr.debug('attempting to start CDI')
         self.stop()
         self._event_halt.clear()
         self.acq_start_ms = get_epoch_ms()
@@ -164,6 +169,7 @@ class CDIStreaming:
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
         self.__thread.start()
+        self._lgr.debug('CDI started')
 
     def stop(self):
         if self.is_streaming:
