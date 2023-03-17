@@ -27,11 +27,13 @@ def main():
 
     sensor.start()
     reader = sensor.get_reader()
+    print(f'Reader is {reader}')
     print('Sleeping for 5 seconds to collect data')
     time.sleep(5)
-    cdi_var_index = 3
+    cdi_var_index = 0  # arterial pH
     ts, last_samples = reader.retrieve_buffer(5000, 5, index=cdi_var_index)
-    for ts, samples in zip(ts, last_samples):
+    print(f'ts is {ts} and last_samples is {last_samples}')
+    for ts, samples in zip(ts, last_samples):  # this didn't print anything
         print(f'{ts}: sample[{cdi_var_index}] is {samples}')
 
     print('Sleeping for 5 seconds to collect data')
@@ -45,6 +47,7 @@ def main():
     print(f'Getting last acq, variable index {cdi_var_index}')
     ts, samples = reader.get_last_acq(index=cdi_var_index)
     print(f'{ts}: sample[{cdi_var_index}] is {samples}')
+    print(f'{samples}')  # samples is an empty vector
 
     sensor.stop()
     SYS_HW.stop()
