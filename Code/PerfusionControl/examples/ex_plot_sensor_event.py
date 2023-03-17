@@ -68,7 +68,7 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
-    SYS_HW.load_mocks()
+    # SYS_HW.load_mocks()
     SYS_HW.start()
 
     sensor = Sensor.Sensor(name='Hepatic Artery Flow')

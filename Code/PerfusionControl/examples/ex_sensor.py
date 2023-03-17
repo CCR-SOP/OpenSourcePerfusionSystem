@@ -22,7 +22,7 @@ PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
 SYS_HW.load_hardware_from_config()
-SYS_HW.load_mocks()
+# SYS_HW.load_mocks()
 SYS_HW.start()
 sensor = Sensor.Sensor(name='Hepatic Artery Flow')
 sensor.read_config()
