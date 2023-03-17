@@ -17,7 +17,6 @@ import time
 import logging
 
 from pyPerfusion.plotting import SensorPlot, PanelPlotting
-import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
@@ -61,7 +60,7 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
-    SYS_HW.load_mocks()
+    # SYS_HW.load_mocks()
     SYS_HW.start()
 
     sensor_foverp = Sensor.DivisionSensor(name='HA Flow Over Pressure')
