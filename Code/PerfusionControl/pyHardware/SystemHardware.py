@@ -64,6 +64,7 @@ class SystemHardware:
 
         try:
             self.cdi = pyCDI.CDIStreaming(name='CDI')
+            self.cdi.read_config()
         except Exception as e:
             self._lgr.error('Error trying to create CDI')
             self._lgr.error(f'CDI exception: {e}')

@@ -149,7 +149,7 @@ class CDIStreaming:
         while not self._event_halt.is_set():
             if self.__serial.is_open:
                 self._lgr.debug('Attempting to read serial data from CDI')
-                resp = self.__serial.read_until(expected=b'\x03')  # expected=b'\r\n'
+                resp = self.__serial.read_until(expected=b'\r\n')  # expected=b'\x03'
                 self._lgr.debug(f'got response {resp}')
                 if resp[-1] == b'\n':
                     one_cdi_packet = CDIParsedData(resp)
