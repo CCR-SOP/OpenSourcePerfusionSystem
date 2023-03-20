@@ -151,11 +151,18 @@ class CDIStreaming:
                 self._lgr.debug('Attempting to read serial data from CDI')
                 resp = self.__serial.read_until(expected=b'\r\n')  # expected=b'\x03'
                 self._lgr.debug(f'got response {resp}')
-                if resp[-1] == b'\n':
-                    one_cdi_packet = CDIParsedData(resp)
-                    ts = get_epoch_ms()
-                    self._lgr.debug(f'pushing data {one_cdi_packet.get_array()}')
-                    self._queue.put((one_cdi_packet.get_array(), ts))
+                sleep(1)
+                if len(resp) > 0:
+                    self._lgr.debug(f'{len(resp)} > 0')
+                    self._event_halt.set()  # keep only in line 164
+                    self._lgr.debug(f'Type: {type(resp)}')
+                    if resp[-1] == b'\n':
+                        self._lgr.debug(f'Correct packet ending found')
+                        one_cdi_packet = CDIParsedData(resp)
+                        ts = get_epoch_ms()
+                        self._lgr.debug(f'pushing data {one_cdi_packet.get_array()}')
+                        self._queue.put((one_cdi_packet.get_array(), ts))
+                        # self._event_halt.set()  # stop loop after calling data
             else:
                 sleep(0.5)
 
