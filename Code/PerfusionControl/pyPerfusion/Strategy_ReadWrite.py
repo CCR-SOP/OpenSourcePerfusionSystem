@@ -218,6 +218,8 @@ class ReaderPoints(Reader):
 
         # do not assume a full chunk has been written to the file
         start_of_last_chunk = ((file_size // self.bytes_per_chunk) - 1) * self.bytes_per_chunk
+        if start_of_last_chunk < 0:
+            return None, None
         fid.seek(start_of_last_chunk)
         ts, data_chunk = self.read_chunk(fid)
         if index is not None and index < len(data_chunk):
