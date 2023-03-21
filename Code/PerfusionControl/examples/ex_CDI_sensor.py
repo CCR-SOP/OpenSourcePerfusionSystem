@@ -57,7 +57,7 @@ def main():
         print(f'{CDIIndex(0).name} is {cdi_data.arterial_pH}')
     except AttributeError:
         print('arterial_pH is not a valid attribute of CDIData')
-        
+
     sensor.stop()
     SYS_HW.stop()
 

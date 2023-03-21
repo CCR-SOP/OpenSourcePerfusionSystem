@@ -74,7 +74,7 @@ if __name__ == "__main__":
     sensor = Sensor.Sensor(name='Hepatic Artery Flow')
     sensor.read_config()
 
-    sensor_event = Sensor.Sensor(name='Mock Second Event')
+    sensor_event = Sensor.Sensor(name='Example Second Event')
     sensor_event.read_config()
 
     app = MyTestApp(0)
