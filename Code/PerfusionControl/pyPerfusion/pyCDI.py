@@ -30,48 +30,8 @@ class CDIData:
         self._lgr = logging.getLogger(__name__)
         self._lgr.debug(f'Data is {data}')
         for idx in range(17):
-            self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data(idx)}')
+            # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data(idx)}')
             setattr(self, CDIIndex(idx).name, data(idx))
-
-
-code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', '03': 'arterial_temp',
-                '04': 'arterial_sO2', '05': 'arterial_bicarb', '06': 'arterial_BE', '07': 'K', '08': 'VO2',
-                '09': 'venous_pH', '0A': 'venous_CO2', '0B': 'venous_O2', '0C': 'venous_temp', '0D': 'venous_sO2',
-                '0E': 'venous_bicarb', '0F': 'venous_BE', '10': 'hct', '11': 'hgb'}
-
-
-class CDIParsedData:
-    def __init__(self, response):
-        self.valid_data = False
-        # parse raw ASCII output
-        if response is None:
-            return
-        fields = response.strip('\r\n').split(sep='\t')
-        # in addition to codes, there is a header packet
-        # CRC and end packet
-        if len(fields) == len(code_mapping) + 2:
-            # skip first field which is SN and timestamp
-            # timestamp will be ignored and will use the timestamp when the response arrives
-            # self.timestamp = fields[0][-8:]
-            for field in fields[1:-1]:
-                code = field[0:2].upper()
-                try:
-                    value = float(field[4:])
-                except ValueError:
-                    logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
-                    value = -1
-                if code in code_mapping.keys():
-                    setattr(self, code_mapping[code], value)
-            self.valid_data = True
-        else:
-            logging.getLogger(__name__).error(f'Could parse CDI data, '
-                                              f'expected {len(code_mapping) + 2} fields, '
-                                              f'found {len(fields)}')
-
-    def get_array(self):
-        data = [getattr(self, value) for value in code_mapping.values()]
-        # logging.getLogger(__name__).debug(f'data is {data}')
-        return np.float64(data)
 
 
 @dataclass
@@ -149,8 +109,9 @@ class CDIStreaming:
         fields = response.strip('\r\n').split(sep='\t')
         # in addition to codes, there is a start code, CRC, and end code
         expected_vars = max(CDIIndex).value
+        self._lgr.debug(f'Number of expected_vars is {expected_vars}')
 
-        if len(fields) == expected_vars + 2:
+        if len(fields) == expected_vars + 3:
             data = np.zeros(expected_vars, dtype=self.data_type)
             # skip first field which is SN and timestamp
             # timestamp will be ignored,  we will use the timestamp when the response arrives
@@ -166,9 +127,8 @@ class CDIStreaming:
                 data[code] = value
         else:
             logging.getLogger(__name__).error(f'Could parse CDI data, '
-                                              f'expected {len(code_mapping) + 2} fields, '
+                                              f'expected {expected_vars + 3} fields, '
                                               f'found {len(fields)}')
-
         return data
 
     def run(self):  # continuous data stream
@@ -247,7 +207,7 @@ class MockCDI(CDIStreaming):
         ts = datetime.now()
         timestamp = f'{ts.hour:02d}:{ts.minute:02d}:{ts.second:02d}'
         # self._lgr.debug(f'timestamp is {timestamp}')
-        data = [f'{code}{int(code, 16)*2:04d}\t' for code in code_mapping.keys()]
+        data = [f'{idx}{int(idx, 16)*2:04d}\t' for idx in CDIIndex]
         data_str = ''.join(data)
         crc = 0
         pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'
@@ -260,7 +220,7 @@ class MockCDI(CDIStreaming):
         while not self._event_halt.is_set():
             if self._is_open:
                 resp = self._form_pkt()
-                one_cdi_packet = CDIParsedData(resp)
+                one_cdi_packet = int(resp)  # this used to be CDIParsedData but deleted
                 ts = get_epoch_ms()
                 self._queue.put((one_cdi_packet.get_array(), ts))
                 sleep(1.0)
