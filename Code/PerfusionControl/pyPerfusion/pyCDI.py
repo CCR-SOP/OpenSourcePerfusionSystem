@@ -124,6 +124,7 @@ class CDIStreaming:
                     logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
                     value = -1
                 data[code] = value
+            self._lgr.debug(f'{data}')
         else:
             logging.getLogger(__name__).error(f'in parse_response(), could parse CDI response, '
                                               f'expected {expected_vars + 2} fields, '
