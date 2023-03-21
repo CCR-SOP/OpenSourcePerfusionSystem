@@ -147,6 +147,7 @@ class CDIStreaming:
                     self._lgr.debug(f'Type: {type(resp)}')
                     if resp[-1] == '\n':
                         data = self.parse_response(resp)
+                        self._lgr.debug(f'DATA ARRAY IS {data}')
                         ts = get_epoch_ms()
                         self._queue.put((data, ts))
             else:

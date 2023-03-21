@@ -8,7 +8,7 @@ and under the public domain.
 """
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.SystemHardware import SYS_HW
+from pyHardware.SystemHardware import SYS_HW
 
 PerfusionConfig.set_test_config()
 
