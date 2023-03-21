@@ -91,10 +91,10 @@ class CDIStreaming:
         self.__serial.bytesize = serial.EIGHTBITS
         try:
             self.__serial.open()
+            self._lgr.debug('Serial port opened')
         except serial.serialutil.SerialException as e:
             self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
             self._lgr.error(f'Message: {e}')
-        self._lgr.debug('Serial port opened')
         self._queue = Queue()
 
     def close(self):
@@ -109,9 +109,8 @@ class CDIStreaming:
         fields = response.strip('\r\n').split(sep='\t')
         # in addition to codes, there is a start code, CRC, and end code
         expected_vars = max(CDIIndex).value + 1
-        self._lgr.debug(f'expected vars = {expected_vars}')
 
-        if len(fields) == expected_vars + 3:
+        if len(fields) == expected_vars + 2:
             data = np.zeros(expected_vars, dtype=self.data_type)
             # skip first field which is SN and timestamp
             # timestamp will be ignored,  we will use the timestamp when the response arrives
