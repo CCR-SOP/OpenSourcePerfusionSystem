@@ -30,9 +30,9 @@ def main():
     reader = sensor.get_reader()
     print('Sleeping for 5 seconds to collect data')
     time.sleep(5)
-    cdi_var_index = CDIIndex.arterial_pH.value
+    cdi_var_index = CDIIndex.arterial_CO2.value
     ts, last_samples = reader.retrieve_buffer(5000, 5, index=cdi_var_index)
-    print(f'ts is {ts} and last_samples is {last_samples}')
+    print(f'{CDIIndex(cdi_var_index).name}: ts is {ts} and last_samples is {last_samples}')
     for ts, samples in zip(ts, last_samples):  # this didn't print anything
         print(f'{ts}: sample[{cdi_var_index}] is {samples}')
 
@@ -44,7 +44,7 @@ def main():
         print(f'{ts}: sample is {samples}')
 
     cdi_var_index = CDIIndex.venous_O2.value
-    print(f'Getting last acq, variable index {cdi_var_index}')
+    print(f'Getting last acq for {CDIIndex(cdi_var_index).name} index={cdi_var_index}')
     ts, samples = reader.get_last_acq(index=cdi_var_index)
     print(f'{ts}: sample[{cdi_var_index}] is {samples}')
     print(f'{samples}')  # samples is an empty vector
@@ -53,7 +53,7 @@ def main():
     ts, all_vars = reader.get_last_acq()
     cdi_data = CDIData(all_vars)
     try:
-        print(f'arterial_temp is {cdi_data.arterial_temp}')
+        print(f'{CDIIndex(cdi_var_index).name} is {cdi_data.arterial_temp}')
     except AttributeError:
         print('arterial_temp is not a valid attribute of CDIData')
     sensor.stop()
