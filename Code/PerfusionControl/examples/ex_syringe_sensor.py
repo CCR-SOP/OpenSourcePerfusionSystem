@@ -19,22 +19,23 @@ from pyHardware.SystemHardware import SYS_HW
 
 def main():
     SYS_HW.load_hardware_from_config()
-    SYS_HW.load_mocks()
+    # SYS_HW.load_mocks()
     SYS_HW.start()
 
+    name = 'Example Syringe'
     try:
-        name = 'Mock Syringe'
         sensor = Sensor(name=name)
         sensor.read_config()
+        sensor.start()
     except PerfusionConfig.MissingConfigSection:
         print(f'Could not find sensor called {name} in sensors.ini')
         SYS_HW.stop()
         exit()
+        sensor = None
 
-    sensor.start()
     reader = sensor.get_reader()
-
     syringe = sensor.hw
+
     syringe.set_target_volume(volume_ul=10_000)
     syringe.set_infusion_rate(rate_ul_min=1_000)
     syringe.infuse_to_target_volume()
