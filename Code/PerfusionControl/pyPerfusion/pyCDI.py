@@ -64,7 +64,7 @@ class CDIParsedData:
                     setattr(self, code_mapping[code], value)
             self.valid_data = True
         else:
-            logging.getLogger(__name__).error(f'Could parse CDI data, '
+            logging.getLogger(__name__).error(f'CIDParsedData: could parse CDI data, '
                                               f'expected {len(code_mapping) + 2} fields, '
                                               f'found {len(fields)}')
 
@@ -148,7 +148,7 @@ class CDIStreaming:
 
         fields = response.strip('\r\n').split(sep='\t')
         # in addition to codes, there is a start code, CRC, and end code
-        expected_vars = max(CDIIndex).value
+        expected_vars = max(CDIIndex).value + 1
 
         if len(fields) == expected_vars + 2:
             data = np.zeros(expected_vars, dtype=self.data_type)
@@ -165,8 +165,8 @@ class CDIStreaming:
                     value = -1
                 data[code] = value
         else:
-            logging.getLogger(__name__).error(f'Could parse CDI data, '
-                                              f'expected {len(code_mapping) + 2} fields, '
+            logging.getLogger(__name__).error(f'in parse_response(), could parse CDI response, '
+                                              f'expected {expected_vars + 2} fields, '
                                               f'found {len(fields)}')
 
         return data
