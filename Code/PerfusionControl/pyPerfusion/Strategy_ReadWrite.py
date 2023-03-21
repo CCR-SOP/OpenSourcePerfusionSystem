@@ -266,6 +266,7 @@ class WriterStream:
         self._fid = open(self.fqpn, 'w+b')
 
     def _write_to_file(self, data_buf, t=None):
+        self._lgr.debug(f'_write_to_file is being called and data_buf = {data_buf}')
         if self._fid:
             try:
                 data_buf.tofile(self._fid)

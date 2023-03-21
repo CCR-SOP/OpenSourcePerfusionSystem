@@ -124,7 +124,6 @@ class CDIStreaming:
                     logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
                     value = -1
                 data[code] = value
-            self._lgr.debug(f'{data}')
         else:
             logging.getLogger(__name__).error(f'in parse_response(), could parse CDI response, '
                                               f'expected {expected_vars + 2} fields, '
@@ -170,10 +169,12 @@ class CDIStreaming:
             self.is_streaming = False
 
     def get_data(self, timeout=0):
+        # self._lgr.debug(f'get_data is being called')
         buf = None
         t = None
         try:
             buf, t = self._queue.get(timeout=timeout)
+            self._lgr.debug(f'{buf}')
         except Empty:
             pass
         return buf, t

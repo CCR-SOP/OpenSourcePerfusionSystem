@@ -28,25 +28,28 @@ def main():
 
     sensor.start()
     reader = sensor.get_reader()
+
+    # Test retrieve_buffer - works
     print('Sleeping for 5 seconds to collect data')
     time.sleep(5)
     cdi_var_index = CDIIndex.arterial_pH.value
     ts, last_samples = reader.retrieve_buffer(5000, 5, index=cdi_var_index)
     print(f'{CDIIndex(cdi_var_index).name}: ts is {ts} and last_samples is {last_samples}')
 
+    # Test get_data-from_last_read
     print('Sleeping for 5 seconds to collect data')
     time.sleep(5)
     print('Reading full CDI variables, starting from t=0')
-    for i in range(3):
-        ts, samples = reader.get_data_from_last_read(1)
+    for i in range(18):
+        ts, samples = reader.get_data_from_last_read(i)
         print(f'{ts}: sample is {samples}')
 
-    cdi_var_index = CDIIndex.venous_temp.value
+    # Test get_last_acq
     print(f'Getting last acq for {CDIIndex(cdi_var_index).name} index={cdi_var_index}')
     ts, samples = reader.get_last_acq(index=cdi_var_index)
     print(f'{ts}: sample[{cdi_var_index}] is {samples}')
-    print(f'{samples}')
 
+    # Create CDIData object
     print(f'Convert array of data into a CDIData object')
     ts, all_vars = reader.get_last_acq()
     cdi_data = CDIData(all_vars)
@@ -54,6 +57,7 @@ def main():
         print(f'{CDIIndex(0).name} is {cdi_data.arterial_pH}')
     except AttributeError:
         print('arterial_pH is not a valid attribute of CDIData')
+        
     sensor.stop()
     SYS_HW.stop()
 
