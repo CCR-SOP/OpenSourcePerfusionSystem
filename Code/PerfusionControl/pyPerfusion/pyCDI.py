@@ -5,11 +5,12 @@
 
 """
 import logging
-from threading import Thread, Lock, Event
-from time import sleep, time_ns
+from threading import Thread, Event
+from time import sleep
 from queue import Queue, Empty
-from dataclasses import dataclass
+from enum import IntEnum
 from datetime import datetime
+from  dataclasses import dataclass
 
 import numpy as np
 import serial
@@ -17,6 +18,20 @@ import serial.tools.list_ports
 
 from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+
+
+CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'arterial_temp',
+                           'arterial_sO2', 'arterial_bicarb', 'arterial_BE', 'K', 'VO2',
+                           'venous_pH', 'venous_CO2', 'venous_O2', 'venous_temp', 'venous_sO2',
+                           'venous_bicarb', 'venous_BE', 'hct', 'hgb'], start=0)
+
+class CDIData:
+    def __init__(self, data):
+        self._lgr = logging.getLogger(__name__)
+        for idx, value in enumerate(data):
+            # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {value}')
+            setattr(self, CDIIndex(idx).name, value)
+
 
 code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', '03': 'arterial_temp',
                 '04': 'arterial_sO2', '05': 'arterial_bicarb', '06': 'arterial_BE', '07': 'K', '08': 'VO2',
@@ -56,15 +71,6 @@ class CDIParsedData:
         data = [getattr(self, value) for value in code_mapping.values()]
         # logging.getLogger(__name__).debug(f'data is {data}')
         return np.float64(data)
-
-    # test ability to read all 3 sensors on CDI - delete eventually
-    # def print_results(self):
-        # if self.valid_data:
-            # print(f'Arterial pH is {self.arterial_pH}')
-            # print(f'Venous pH is {self.venous_pH}')
-            # print(f'Hemoglobin is {self.hgb}')
-        # else:
-            # print('No valid data to print')
 
 
 @dataclass
@@ -134,13 +140,35 @@ class CDIStreaming:
         if self.__serial:
             self.__serial.close()
 
-    def request_data(self, timeout=30):  # request single data packet
-        if self.__serial.is_open:
-            self.__serial.timeout = timeout
-            CDIpacket = self.__serial.readline().decode('ascii')
+    def parse_response(self, response: str):
+        data = []
+        if response is None:
+            return data
+
+        fields = response.strip('\r\n').split(sep='\t')
+        # in addition to codes, there is a start code, CRC, and end code
+        expected_vars = max(CDIIndex).value
+
+        if len(fields) == expected_vars + 2:
+            data = np.zeros(expected_vars, dtype=self.data_type)
+            # skip first field which is SN and timestamp
+            # timestamp will be ignored,  we will use the timestamp when the response arrives
+            # self.timestamp = fields[0][-8:]
+            for field in fields[1:-1]:
+                # get code and convert string hex value to an actual integer
+                code = int(field[0:2].upper(), 16)
+                try:
+                    value = float(field[4:])
+                except ValueError:
+                    logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
+                    value = -1
+                data[code] = value
         else:
-            CDIpacket = None
-        return CDIpacket
+            logging.getLogger(__name__).error(f'Could parse CDI data, '
+                                              f'expected {len(code_mapping) + 2} fields, '
+                                              f'found {len(fields)}')
+
+        return data
 
     def run(self):  # continuous data stream
         self.is_streaming = True
@@ -157,11 +185,9 @@ class CDIStreaming:
                     self._event_halt.set()
                     self._lgr.debug(f'Type: {type(resp)}')
                     if resp[-1] == '\n':
-                        self._lgr.debug(f'Correct packet ending found')
-                        one_cdi_packet = CDIParsedData(resp)
+                        data = self.parse_response(resp)
                         ts = get_epoch_ms()
-                        self._lgr.debug(f'pushing data {one_cdi_packet.get_array()}')
-                        self._queue.put((one_cdi_packet.get_array(), ts))
+                        self._queue.put((data, ts))
             else:
                 sleep(0.5)
 
