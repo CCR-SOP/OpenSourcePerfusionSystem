@@ -21,18 +21,18 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'arterial_temp',
-                           'arterial_sO2', 'arterial_bicarb', 'arterial_BE', 'K', 'VO2',
-                           'venous_pH', 'venous_CO2', 'venous_O2', 'venous_temp', 'venous_sO2',
-                           'venous_bicarb', 'venous_BE', 'hct', 'hgb'], start=0)
+                                'arterial_sO2', 'arterial_bicarb', 'arterial_BE', 'K', 'VO2',
+                                'venous_pH', 'venous_CO2', 'venous_O2', 'venous_temp', 'venous_sO2',
+                                'venous_bicarb', 'venous_BE', 'hct', 'hgb'], start=0)
 
 class CDIData:
     def __init__(self, data):
         self._lgr = logging.getLogger(__name__)
-        self._lgr.debug(f'Data is {data}')
-        for idx in range(17):
-            # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data(idx)}')
-            setattr(self, CDIIndex(idx).name, data(idx))
-
+        # self._lgr.debug(f'Data is {data}')
+        if data is not None:
+            for idx in range(18):
+                # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data[idx]}')
+                setattr(self, CDIIndex(idx).name, data[idx])
 
 @dataclass
 class CDIConfig:
@@ -108,8 +108,8 @@ class CDIStreaming:
 
         fields = response.strip('\r\n').split(sep='\t')
         # in addition to codes, there is a start code, CRC, and end code
-        expected_vars = max(CDIIndex).value
-        self._lgr.debug(f'Number of expected_vars is {expected_vars}')
+        expected_vars = max(CDIIndex).value + 1
+        self._lgr.debug(f'expected vars = {expected_vars}')
 
         if len(fields) == expected_vars + 3:
             data = np.zeros(expected_vars, dtype=self.data_type)
@@ -126,8 +126,8 @@ class CDIStreaming:
                     value = -1
                 data[code] = value
         else:
-            logging.getLogger(__name__).error(f'Could parse CDI data, '
-                                              f'expected {expected_vars + 3} fields, '
+            logging.getLogger(__name__).error(f'in parse_response(), could parse CDI response, '
+                                              f'expected {expected_vars + 2} fields, '
                                               f'found {len(fields)}')
         return data
 

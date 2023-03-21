@@ -20,6 +20,7 @@ from pyPerfusion.pyCDI import CDIIndex, CDIData
 
 def main():
     SYS_HW.load_hardware_from_config()
+    # SYS_HW.load_mocks()
     SYS_HW.start()
 
     sensor = Sensor(name='CDI')
@@ -48,10 +49,9 @@ def main():
 
     print(f'Convert array of data into a CDIData object')
     ts, all_vars = reader.get_last_acq()
-    print(f'{all_vars}')
     cdi_data = CDIData(all_vars)
     try:
-        print(f'{CDIIndex(cdi_var_index).name} is {cdi_data.arteriaL_pH}')
+        print(f'{CDIIndex(0).name} is {cdi_data.arterial_pH}')
     except AttributeError:
         print('arterial_pH is not a valid attribute of CDIData')
     sensor.stop()
