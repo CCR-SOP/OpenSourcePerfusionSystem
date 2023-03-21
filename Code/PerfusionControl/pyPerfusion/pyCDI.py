@@ -28,9 +28,10 @@ CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'a
 class CDIData:
     def __init__(self, data):
         self._lgr = logging.getLogger(__name__)
-        for idx, value in enumerate(data):
-            # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {value}')
-            setattr(self, CDIIndex(idx).name, value)
+        self._lgr.debug(f'Data is {data}')
+        for idx in range(17):
+            self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data(idx)}')
+            setattr(self, CDIIndex(idx).name, data(idx))
 
 
 code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', '03': 'arterial_temp',

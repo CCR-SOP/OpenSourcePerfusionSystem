@@ -20,21 +20,18 @@ from pyPerfusion.pyCDI import CDIIndex, CDIData
 
 def main():
     SYS_HW.load_hardware_from_config()
-    SYS_HW.load_mocks()
     SYS_HW.start()
 
-    sensor = Sensor(name='Mock CDI')
+    sensor = Sensor(name='CDI')
     sensor.read_config()
 
     sensor.start()
     reader = sensor.get_reader()
     print('Sleeping for 5 seconds to collect data')
     time.sleep(5)
-    cdi_var_index = CDIIndex.arterial_CO2.value
+    cdi_var_index = CDIIndex.arterial_pH.value
     ts, last_samples = reader.retrieve_buffer(5000, 5, index=cdi_var_index)
     print(f'{CDIIndex(cdi_var_index).name}: ts is {ts} and last_samples is {last_samples}')
-    for ts, samples in zip(ts, last_samples):
-        print(f'{ts}: sample[{cdi_var_index}] is {samples}')
 
     print('Sleeping for 5 seconds to collect data')
     time.sleep(5)
@@ -43,7 +40,7 @@ def main():
         ts, samples = reader.get_data_from_last_read(1)
         print(f'{ts}: sample is {samples}')
 
-    cdi_var_index = CDIIndex.venous_O2.value
+    cdi_var_index = CDIIndex.venous_temp.value
     print(f'Getting last acq for {CDIIndex(cdi_var_index).name} index={cdi_var_index}')
     ts, samples = reader.get_last_acq(index=cdi_var_index)
     print(f'{ts}: sample[{cdi_var_index}] is {samples}')
@@ -51,11 +48,12 @@ def main():
 
     print(f'Convert array of data into a CDIData object')
     ts, all_vars = reader.get_last_acq()
+    print(f'{all_vars}')
     cdi_data = CDIData(all_vars)
     try:
-        print(f'{CDIIndex(cdi_var_index).name} is {cdi_data.arteriaL_temp}')
+        print(f'{CDIIndex(cdi_var_index).name} is {cdi_data.arteriaL_pH}')
     except AttributeError:
-        print('arterial_temp is not a valid attribute of CDIData')
+        print('arterial_pH is not a valid attribute of CDIData')
     sensor.stop()
     SYS_HW.stop()
 
