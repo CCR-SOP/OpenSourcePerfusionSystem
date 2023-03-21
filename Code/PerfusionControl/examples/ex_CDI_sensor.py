@@ -20,7 +20,6 @@ from pyPerfusion.pyCDI import CDIIndex, CDIData
 
 def main():
     SYS_HW.load_hardware_from_config()
-    # SYS_HW.load_mocks()
     SYS_HW.start()
 
     sensor = Sensor(name='CDI')
@@ -29,20 +28,15 @@ def main():
     sensor.start()
     reader = sensor.get_reader()
 
-    # Test retrieve_buffer - works
-    print('Sleeping for 5 seconds to collect data')
-    time.sleep(5)
     cdi_var_index = CDIIndex.arterial_pH.value
-    ts, last_samples = reader.retrieve_buffer(5000, 5, index=cdi_var_index)
-    print(f'{CDIIndex(cdi_var_index).name}: ts is {ts} and last_samples is {last_samples}')
 
     # Test get_data-from_last_read
     print('Sleeping for 5 seconds to collect data')
     time.sleep(5)
     print('Reading full CDI variables, starting from t=0')
-    for i in range(18):
-        ts, samples = reader.get_data_from_last_read(i)
-        print(f'{ts}: sample is {samples}')
+    for i in range(3):
+        ts, samples = reader.get_data_from_last_read(1)
+        print(f'ts={ts}: sample is {samples}')
 
     # Test get_last_acq
     print(f'Getting last acq for {CDIIndex(cdi_var_index).name} index={cdi_var_index}')

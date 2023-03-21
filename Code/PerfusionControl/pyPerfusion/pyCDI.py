@@ -119,10 +119,10 @@ class CDIStreaming:
                 # get code and convert string hex value to an actual integer
                 code = int(field[0:2].upper(), 16)
                 try:
-                    value = float(field[4:])
+                    value = self.data_type(field[4:])
                 except ValueError:
                     logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
-                    value = -1
+                    value = self.data_type(-1)
                 data[code] = value
         else:
             logging.getLogger(__name__).error(f'in parse_response(), could parse CDI response, '
@@ -169,12 +169,10 @@ class CDIStreaming:
             self.is_streaming = False
 
     def get_data(self, timeout=0):
-        # self._lgr.debug(f'get_data is being called')
         buf = None
         t = None
         try:
             buf, t = self._queue.get(timeout=timeout)
-            self._lgr.debug(f'{buf}')
         except Empty:
             pass
         return buf, t
@@ -209,7 +207,7 @@ class MockCDI(CDIStreaming):
         ts = datetime.now()
         timestamp = f'{ts.hour:02d}:{ts.minute:02d}:{ts.second:02d}'
         # self._lgr.debug(f'timestamp is {timestamp}')
-        data = [f'{idx}{int(idx, 16)*2:04d}\t' for idx in CDIIndex]
+        data = [f'{idx.value:02x}{idx.value*2:04d}\t' for idx in CDIIndex]
         data_str = ''.join(data)
         crc = 0
         pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'
@@ -222,9 +220,9 @@ class MockCDI(CDIStreaming):
         while not self._event_halt.is_set():
             if self._is_open:
                 resp = self._form_pkt()
-                one_cdi_packet = int(resp)  # this used to be CDIParsedData but deleted
+                data = self.parse_response(resp)
                 ts = get_epoch_ms()
-                self._queue.put((one_cdi_packet.get_array(), ts))
+                self._queue.put((data, ts))
                 sleep(1.0)
             else:
                 sleep(0.5)

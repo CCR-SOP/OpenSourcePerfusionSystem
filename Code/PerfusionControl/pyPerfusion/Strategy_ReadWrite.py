@@ -71,11 +71,18 @@ class Reader:
             data = None
         return fid, data
 
-    @classmethod
-    def get_file_size(cls, fid):
+    def get_file_size(self, fid):
         cur_pos = fid.tell()
         fid.seek(0, SEEK_END)
-        file_size = int(fid.tell() / np.dtype(np.float64).itemsize)
+        file_size = int(fid.tell() / np.dtype(self.cfg.data_type).itemsize)
+        fid.seek(cur_pos, SEEK_SET)
+        return file_size
+
+
+    def get_file_size(self, fid):
+        cur_pos = fid.tell()
+        fid.seek(0, SEEK_END)
+        file_size = int(fid.tell())
         fid.seek(cur_pos, SEEK_SET)
         return file_size
 
@@ -86,27 +93,27 @@ class Reader:
         if data is None:
             return [], []
 
-        file_size = self.get_file_size(fid)
+        file_size_in_samples = int(self.get_file_size(fid) / np.dtype(self.cfg.data_type).itemsize)
         if last_ms == 0:
             # if last x samples requested, no timestamps are returned
             data = data[-samples_needed:]
-            start_idx = file_size - len(data)
+            start_idx = file_size_in_samples - len(data)
         else:
             if last_ms > 0:
                 data_size = int(last_ms / period)
                 if samples_needed > data_size:
                     samples_needed = data_size
-                start_idx = file_size - data_size
+                start_idx = file_size_in_samples - data_size
                 if start_idx < 0:
                     start_idx = 0
             else:
                 start_idx = 0
-            samples_needed = min(file_size, samples_needed)
-            idx = np.linspace(start_idx, file_size - 1, samples_needed, dtype=np.int32)
+            samples_needed = min(file_size_in_samples, samples_needed)
+            idx = np.linspace(start_idx, file_size_in_samples - 1, samples_needed, dtype=np.int32)
             data = data[idx]
 
         start_t = start_idx * period / 1000.0
-        stop_t = file_size * period / 1000.0
+        stop_t = file_size_in_samples * period / 1000.0
         data_time = np.linspace(start_t, stop_t, samples_needed, dtype=self.cfg.data_type)
 
         fid.close()
@@ -144,6 +151,8 @@ class ReaderPoints(Reader):
     def read_chunk(self, fid):
 
         chunk = fid.read(self.cfg.bytes_per_timestamp)
+        # self._lgr.debug(f'bpt={self.cfg.bytes_per_timestamp}')
+        # self._lgr.debug(f'chunk={chunk}')
         if chunk:
             ts, = struct.unpack('!Q', chunk)
             data_chunk = np.fromfile(fid, dtype=self.cfg.data_type, count=self.cfg.samples_per_timestamp)
@@ -188,6 +197,7 @@ class ReaderPoints(Reader):
     def get_data_from_last_read(self, chunks_needed: int, index: int = None):
         fid = self._open_read(self.cfg.data_type)
         file_size = self.get_file_size(fid)
+
         if not fid or file_size == 0:
             return None, None
 
