@@ -8,7 +8,6 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-import serial
 
 import wx
 
@@ -17,8 +16,6 @@ import pyPerfusion.utils as utils
 
 from pyPerfusion.pyGB100_SL import GasControl, GasDevice
 import pyPerfusion.pyCDI as pyCDI
-from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
-from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
 import time
 
 
@@ -306,7 +303,6 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         cdi_object.stop()
-        stream_cdi_to_file.stop()
         self.Destroy()
         self.panel._panel_HA.sync_with_hw_timer.Stop()
         self.panel._panel_PV.sync_with_hw_timer.Stop()
@@ -331,13 +327,6 @@ if __name__ == "__main__":
 
     cdi_object = pyCDI.CDIStreaming('CDI')
     cdi_object.read_config()
-    stream_cdi_to_file = SensorPoint(cdi_object, 'NA')
-    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    ro_sensor = ReadOnlySensorPoint(cdi_object, 'na')
-    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
-    ro_sensor.add_strategy(strategy=read_from_cdi)
-    stream_cdi_to_file.start()
-    cdi_object.start()
 
     app = MyTestApp(0)
     app.MainLoop()
