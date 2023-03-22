@@ -22,7 +22,7 @@ def main():
     # SYS_HW.load_mocks()
     SYS_HW.start()
 
-    name = 'Example Syringe'
+    name = 'Methylprednisone Syringe'
     try:
         sensor = Sensor(name=name)
         sensor.read_config()
