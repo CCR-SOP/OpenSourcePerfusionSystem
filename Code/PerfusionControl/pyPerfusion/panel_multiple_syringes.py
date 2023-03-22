@@ -21,7 +21,7 @@ class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
     def __init__(self, parent, drugs):
         self.parent = parent
         wx.Panel.__init__(self, parent)
-        self.syringes = syringes
+        self.syringes = []
 
         font_panel_label = wx.Font()
         font_panel_label.SetPointSize(int(12))
