@@ -12,26 +12,25 @@ import logging
 
 import wx
 
-import pyHardware.pyAI_NIDAQ as NIDAQAI
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.plotting import PanelPlotting, SensorPlot
-from pyPerfusion.SensorStream import SensorStream
+import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
-from pyPerfusion.FileStrategy import StreamToFile
+from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.Strategy_ReadWrite import Reader
 
 
 class PanelAI(wx.Panel):
-    def __init__(self, parent, sensor, strategy):
+    def __init__(self, parent, sensor: Sensor.Sensor, reader: Reader):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
-        self._strategy = strategy
-        self._dev = None
+        self._reader = reader
 
         self.collapse_pane = wx.CollapsiblePane(self, wx.ID_ANY, 'Calibration')
         self._panel_plot = PanelPlotting(self)
-        self._panel_cal = PanelAICalibration(self, sensor, self._strategy)
+        self._panel_cal = PanelAICalibration(self, sensor, reader)
 
         ch_name = f'{self._sensor.hw.device.cfg.name} Channel: {self._sensor.hw.cfg.name}'
         static_box = wx.StaticBox(self, wx.ID_ANY, label=ch_name)
@@ -40,7 +39,7 @@ class PanelAI(wx.Panel):
 
         self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
         self._panel_plot.add_plot(self._sensorplot)
-        self._sensorplot.set_strategy(self._sensor.get_file_strategy(self._strategy))
+        self._sensorplot.set_reader(self._reader)
         self._sensor.start()
 
         self.__do_layout()
@@ -68,13 +67,14 @@ class PanelAI(wx.Panel):
         self.sizer.Layout()
         self.Layout()
 
+
 class PanelAICalibration(wx.Panel):
-    def __init__(self, parent, sensor, strategy):
+    def __init__(self, parent, sensor: Sensor, reader: Reader):
         super().__init__(parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
-        self._strategy = strategy
+        self._reader = reader
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -139,13 +139,13 @@ class PanelAICalibration(wx.Panel):
         self.update_controls_from_config()
 
     def on_cal_pt1(self, evt):
-        t, val = self._sensor.get_file_strategy(self._strategy).retrieve_buffer(0, 1)
+        t, val = self._reader.retrieve_buffer(0, 1)
         val = float(val)
         self._lgr.debug(f'OnCalPt1: {val}')
         self.label_cal_pt1_val.SetLabel(f'{val:.3f}')
 
     def on_cal_pt2(self, evt):
-        t, val = self._sensor.get_file_strategy(self._strategy).retrieve_buffer(0, 1)
+        t, val = self._reader.retrieve_buffer(0, 1)
         val = float(val)
         self.label_cal_pt2_val.SetLabel(f'{val:.3f}')
 
@@ -185,11 +185,11 @@ class TestFrame(wx.Frame):
         self._lgr = logging.getLogger(__name__)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelAI(self, sensor, strategy='StreamRaw')
+        self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_close(self, evt):
-        sensor.hw.device.close()
+        SYS_HW.stop()
         sensor.close()
         self.Destroy()
 
@@ -204,20 +204,13 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
     utils.configure_matplotlib_logging()
-    PerfusionConfig.set_test_config()
 
-    acq = NIDAQAI.NIDAQAIDevice()
-    acq.cfg = NIDAQAI.AINIDAQDeviceConfig(name='Dev1')
-    acq.read_config()
-
-    ai_channel = acq.ai_channels['Hepatic Artery Flow']
-    sensor = SensorStream(ai_channel, '')
-    raw = StreamToFile('StreamRaw', None, acq.buf_len)
-    sensor.add_strategy(raw)
-
-    acq.start()
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
+    sensor = Sensor.Sensor(name='Hepatic Artery Flow')
+    sensor.read_config()
     sensor.start()
 
     app = MyTestApp(0)

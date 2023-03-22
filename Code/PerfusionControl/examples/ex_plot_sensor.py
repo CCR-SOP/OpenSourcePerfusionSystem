@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" Demonstrate plotting to multiple plots
+"""Test script for testing plotting of Sensor
 
 @project: LiverPerfusion NIH
 @author: John Kakareka, NIH
@@ -8,6 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import wx
+import time
 import logging
 
 from pyPerfusion.plotting import SensorPlot, PanelPlotting
@@ -21,28 +22,27 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self._plots = []
 
-        sizer_plots = wx.GridSizer(cols=2)
-        for idx, sensor in enumerate(sensors):
-            panel = PanelPlotting(self)
-            self._plots.append(panel)
-            plot = SensorPlot(sensor, panel.axes, readout=True)
-            plot.set_reader(sensor.get_reader())
-            sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-            panel.add_plot(plot)
-            sensor.start()
+        self.panel = PanelPlotting(self)
+        self.panel.plot_frame_ms = 10_000
+        self.plotraw = SensorPlot(sensor, self.panel.axes, readout=True)
+        self.plotrms = SensorPlot(sensor, self.panel.axes, readout=True)
 
-        self.SetSizer(sizer_plots)
-        self.Fit()
-        self.Layout()
+        self.plotraw.set_reader(sensor.get_reader('Raw'))
+        self.plotrms.set_reader(sensor.get_reader('RMS_11pt'), color='y')
+
+        self.panel.add_plot(self.plotraw)
+        self.panel.add_plot(self.plotrms)
+
+        sensor.open()
+        sensor.start()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        sensor.stop()
         SYS_HW.stop()
-        for plot in self._plots:
-            plot.Destroy()
+        self.panel.Destroy()
         self.Destroy()
 
 
@@ -51,7 +51,6 @@ class MyTestApp(wx.App):
         frame = TestFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
-
         return True
 
 
@@ -62,12 +61,8 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
-    sensor_haflow = Sensor.Sensor(name='Hepatic Artery Pressure')
-    sensor_haflow.read_config()
-    sensor_pvflow = Sensor.Sensor(name='Portal Vein Flow')
-    sensor_pvflow.read_config()
-
-    sensors = [sensor_haflow, sensor_pvflow]
+    sensor = Sensor.Sensor(name='Hepatic Artery Flow')
+    sensor.read_config()
 
     app = MyTestApp(0)
     app.MainLoop()

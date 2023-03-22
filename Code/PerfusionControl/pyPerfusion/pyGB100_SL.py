@@ -19,7 +19,7 @@ utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 utils.configure_matplotlib_logging()
 
 # dictionary of acceptable value ranges
-physio_ranges = {'pH_lower': 7.4, 'pH_upper': 7.6,  # values shifted up by 0.1 based on experimental tests
+physio_ranges = {'pH_lower': 7.3, 'pH_upper': 7.5,
                  'arterial_CO2_lower': 20, 'arterial_CO2_upper': 60,
                  'arterial_O2_lower_so2': 90, 'arterial_O2_upper_so2': 100,
                  'venous_CO2_lower': 20, 'venous_CO2_upper': 80,

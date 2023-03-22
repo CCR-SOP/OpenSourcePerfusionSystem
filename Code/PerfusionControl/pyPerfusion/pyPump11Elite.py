@@ -9,7 +9,7 @@
 """
 
 import logging
-from time import perf_counter
+from time import time_ns
 from queue import Queue, Empty
 from dataclasses import dataclass, asdict
 
@@ -18,6 +18,7 @@ import serial
 import serial.tools.list_ports
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyPerfusion.utils import get_epoch_ms, get_avail_com_ports
 
 
 DATA_VERSION = 3
@@ -68,7 +69,7 @@ DEFAULT_MANUFACTURERS = {
 
 @dataclass
 class SyringeConfig:
-        drug: str = ''
+        name: str = 'Syringe'
         com_port: str = ''
         manufacturer_code: str = ''
         size: str = ''
@@ -78,13 +79,6 @@ class SyringeConfig:
         initial_target_volume: float = 0.0
         baud: int = 9600
         address: int = 0
-
-
-# utility function to return all available comports in a list
-# typically used in a GUI to provide a selection of com ports
-def get_avail_com_ports() -> list:
-    ports = [comport.device for comport in serial.tools.list_ports.comports()]
-    return ports
 
 
 def get_available_manufacturer_codes() -> list:
@@ -113,14 +107,15 @@ class Pump11Elite:
     def __init__(self, name, config=SyringeConfig()):
         super().__init__()
         self._lgr = logging.getLogger(__name__)
-        self.data_type = np.float32
+        self.data_type = np.float64
 
         self.name = name
         self.cfg = config
+        self.cfg.name = name
 
         self._serial = serial.Serial()
         self._queue = None
-        self.__acq_start_t = None
+        self.acq_start_ms = 0
         self.period_sampling_ms = 0
         self.samples_per_read = 0
 
@@ -133,11 +128,14 @@ class Pump11Elite:
             'Syringe': self.name,
             'Volume Unit': 'ul',
             'Rate Unit': 'ul/min',
-            'Data Format': str(np.dtype(np.int32)),
+            'Data Format': str(np.dtype(np.float64)),
             'Datapoints Per Timestamp': 2,
             'Bytes Per Timestamp': 4,
             'Start of Acquisition': 0
             }
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
 
     def is_open(self):
         return self._serial.is_open
@@ -176,6 +174,9 @@ class Pump11Elite:
             self.stop()
             self._serial.close()
 
+    def start(self):
+        self.acq_start_ms = get_epoch_ms()
+
     def send_wait4response(self, str2send: str) -> str:
         response = ''
         if self._serial.is_open:
@@ -184,6 +185,8 @@ class Pump11Elite:
             response = ''
             self._serial.timeout = 1.0
             response = self._serial.read_until('\r', size=1000).decode('UTF-8')
+        else:
+            response = '0 0'
         # JWK, we should be checking error responses
         # strip starting \r and ending \r
         return response[1:-1]
@@ -249,7 +252,7 @@ class Pump11Elite:
         self.clear_infusion_volume()
         self.clear_target_volume()
 
-    def record_targeted_infusion(self, t: np.float32):
+    def record_targeted_infusion(self, t: np.float64):
         """ targeted infusion actions in ul and ul/min
         """
         target_vol, target_vol_unit = self.get_target_volume()
@@ -275,11 +278,11 @@ class Pump11Elite:
             self._lgr.error(f'Unknown rate unit in syringe {self.name}: ++{rate_unit}++')
             rate = 0
 
-        buf = np.array([target_vol, rate], np.int32)
+        buf = np.array([target_vol, rate], np.float64)
         if self._queue:
             self._queue.put((buf, t))
 
-    def record_continuous_infusion(self, t: np.float32, start: bool):
+    def record_continuous_infusion(self, t: np.float64, start: bool):
         """ targeted infusion actions in ul and ul/min
         """
         rate, rate_unit = self.get_infusion_rate()
@@ -296,7 +299,7 @@ class Pump11Elite:
             rate = 0
 
         flag = INFUSION_START if start else INFUSION_STOP
-        buf = np.array([flag, rate], np.float32)
+        buf = np.array([flag, rate], np.float64)
         if self._queue:
             self._queue.put((buf, t))
 
@@ -305,7 +308,7 @@ class Pump11Elite:
         """
         # JWK, should check if target volume is set
         self.send_wait4response('irun\r')
-        t = perf_counter()
+        t = get_epoch_ms()
         self.record_targeted_infusion(t)
 
     def start_constant_infusion(self):
@@ -313,7 +316,7 @@ class Pump11Elite:
         """
         # JWK, should check if target volume is cleared
         self.send_wait4response('irun\r')
-        t = perf_counter()
+        t = get_epoch_ms()
         self.record_continuous_infusion(t, start=True)
         self.is_infusing = True
 
@@ -323,7 +326,7 @@ class Pump11Elite:
         """
         self.send_wait4response('stop\r')
         self.is_infusing = False
-        t = perf_counter()
+        t = get_epoch_ms()
         # check if targeted volume is 0, if so, then this is a continuous injection
         # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
         target_vol, target_unit = self.get_target_volume()
@@ -407,4 +410,18 @@ class MockPump11Elite(Pump11Elite):
                     response = self._values[parts[0]]
 
         # JWK, we should be checking error responses
+        return response
+
+
+class MockPump11Elite(Pump11Elite):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._last_send = ''
+
+    def send_wait4response(self, str2send: str) -> str:
+        response = ''
+        if str2send == 'tvolume\r':
+            response = '100 ul'
+        elif str2send == 'irate\r':
+            response = '10 ul/min'
         return response

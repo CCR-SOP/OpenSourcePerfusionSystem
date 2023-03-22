@@ -12,40 +12,30 @@ import logging
 import wx
 
 import pyPerfusion.utils as utils
-from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
-import pyHardware.pyDC as pyDC
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.SensorStream import SensorStream
-from pyPerfusion.FileStrategy import StreamToFile
-import pyPerfusion.pyCDI as pyCDI
-
+from pyHardware.SystemHardware import SYS_HW
 
 DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
 LINE_LIST = [f'{line}' for line in range(0, 9)]
 
 
 class PanelDC(wx.Panel):
-    def __init__(self, parent, sensor, cdi_data=None):
+    def __init__(self, parent, hw):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
-        self.sensor = sensor
-        self.cdi_data = cdi_data
+        self.hw = hw
 
-        self._panel_dc = PanelDCControl(self, self.sensor, self.cdi_data)
+        self._panel_dc = PanelDCControl(self, self.hw)
 
-        font = wx.Font()
-        font.SetPointSize(int(18))
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.sensor.name)
-        static_box.SetFont(font)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.hw.cfg.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
         self.__set_bindings()
 
     def close(self):
-        self.sensor.hw.stop()
-        self.sensor.stop()
+        self.hw.stop()
 
     def __do_layout(self):
 
@@ -60,12 +50,11 @@ class PanelDC(wx.Panel):
 
 
 class PanelDCControl(wx.Panel):
-    def __init__(self, parent, sensor, cdi_data):
+    def __init__(self, parent, hw):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-        self.sensor = sensor
-        self.cdi_data = cdi_data
+        self.hw = hw
 
         font = wx.Font()
         font.SetPointSize(int(18))
@@ -110,24 +99,24 @@ class PanelDCControl(wx.Panel):
     def on_update(self, evt):
         self._lgr.debug('on_update called')
         new_flow = self.entered_offset.GetValue() / 10
-        self.sensor.hw.set_output(new_flow)
+        self.hw.set_output(new_flow)
 
     def on_stop(self, evt):
-        self.sensor.hw.set_output(int(0))
+        self.hw.set_output(int(0))
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelDC(self, temp_sensor)
+        self.panel = PanelDC(self, pump)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
+        SYS_HW.stop()
         self.Destroy()
-        temp_hw.stop()
-        temp_sensor.stop()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -142,13 +131,11 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    temp_name = 'Dialysate Inflow Pump'
-    temp_hw = NIDAQDCDevice()
-    temp_hw.cfg = pyDC.DCChannelConfig(name=temp_name)
-    temp_hw.read_config()
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
 
-    temp_sensor = SensorStream(temp_hw, 'ml/min')
-    temp_sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
+    pump = SYS_HW.get_hw(name='Dialysate Inflow Pump')
+    pump.read_config()
 
     app = MyTestApp(0)
     app.MainLoop()

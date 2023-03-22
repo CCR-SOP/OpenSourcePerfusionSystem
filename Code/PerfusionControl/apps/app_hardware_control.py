@@ -17,21 +17,7 @@ from pyPerfusion.panel_multiple_syringes import SyringePanel
 from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_SPCStockertPumps import CentrifugalPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
-
-from pyPerfusion.pyGB100_SL import GasControl
-import pyPerfusion.pyCDI as pyCDI
-from pyPerfusion.SensorPoint import SensorPoint, ReadOnlySensorPoint
-from pyPerfusion.FileStrategy import MultiVarToFile, MultiVarFromFile
-
-from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
-import pyHardware.pyDC as pyDC
-from pyPerfusion.FileStrategy import StreamToFile
-from pyPerfusion.SensorStream import SensorStream
-
-import pyPerfusion.pyPump11Elite as pyPump11Elite
-
-utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-utils.configure_matplotlib_logging()
+from pyHardware.SystemHardware import SYS_HW
 
 class HardwarePanel(wx.Panel):
     def __init__(self, parent, gas_control, roller_pumps, syringes, cdi_object):
@@ -43,7 +29,9 @@ class HardwarePanel(wx.Panel):
         self.syringes = syringes
         self.cdi = cdi_object
 
-        self._panel_syringes = SyringePanel(self, self.syringes)
+        drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
+
+        self._panel_syringes = SyringePanel(self, drugs)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self, self.roller_pumps, self.cdi)
         self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi)
@@ -73,6 +61,7 @@ class HardwarePanel(wx.Panel):
     def __set_bindings(self):
         pass
 
+
 class HardwareFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
@@ -97,7 +86,6 @@ class HardwareFrame(wx.Frame):
         self.panel._panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
 
         cdi_obj.stop()
-        stream_cdi_to_file.stop()
 
 
 class MyHardwareApp(wx.App):
@@ -110,42 +98,14 @@ class MyHardwareApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+    utils.configure_matplotlib_logging()
 
-    # Initialize syringes
-    drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
+    SYS_HW.load_hardware_from_config()
+    gas_controller = SYS_HW.get_hw('GasControl')
+    cdi_obj = SYS_HW.get_hw('CDI')
 
-    syringe_array = []
-    for x in range(6):
-        SpecificConfig = pyPump11Elite.SyringeConfig(drug=drugs[x])
-        new_syringe = pyPump11Elite.Pump11Elite(name=drugs[x], config=SpecificConfig)
-        new_syringe.read_config()
-        syringe_array.append(new_syringe)
-
-    # Initialize gas controllers
-    gas_controller = GasControl()
-
-    # Initialize pumps
-    r_pumps = {}
-    rPumpNames = ["Dialysate Outflow Pump", "Dialysate Inflow Pump",
-                  "Dialysis Blood Pump", "Glucose Circuit Pump"]
-    for pumpName in rPumpNames:
-        hw = NIDAQDCDevice()
-        hw.cfg = pyDC.DCChannelConfig(name=pumpName)
-        hw.read_config()
-        sensor = SensorStream(hw, "ml/min")
-        sensor.add_strategy(strategy=StreamToFile('Raw', 1, 10))
-        r_pumps[pumpName] = sensor
-
-    # Initialize CDI
-    cdi_obj = pyCDI.CDIStreaming('CDI')
-    cdi_obj.read_config()
-    stream_cdi_to_file = SensorPoint(cdi_obj, 'NA')
-    stream_cdi_to_file.add_strategy(strategy=MultiVarToFile('write', 1, 17))
-    ro_sensor = ReadOnlySensorPoint(cdi_obj, 'na')
-    read_from_cdi = MultiVarFromFile('multi_var', 1, 17, 1)
-    ro_sensor.add_strategy(strategy=read_from_cdi)
-    stream_cdi_to_file.start()
-    cdi_obj.start()
+    # look at ex_CDI_sensor
 
     app = MyHardwareApp(0)
     app.MainLoop()

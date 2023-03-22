@@ -5,70 +5,34 @@
 
 """
 import logging
-from threading import Thread, Lock, Event
-from time import perf_counter, sleep
+from threading import Thread, Event
+from time import sleep
 from queue import Queue, Empty
-from dataclasses import dataclass
+from enum import IntEnum
+from datetime import datetime
+from  dataclasses import dataclass
 
 import numpy as np
 import serial
 import serial.tools.list_ports
 
-import pyPerfusion.utils as utils
+from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
-utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-utils.configure_matplotlib_logging()
+CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'arterial_temp',
+                                'arterial_sO2', 'arterial_bicarb', 'arterial_BE', 'K', 'VO2',
+                                'venous_pH', 'venous_CO2', 'venous_O2', 'venous_temp', 'venous_sO2',
+                                'venous_bicarb', 'venous_BE', 'hct', 'hgb'], start=0)
 
-code_mapping = {'00': 'arterial_pH', '01': 'arterial_CO2', '02': 'arterial_O2', '03': 'arterial_temp',
-                '04': 'arterial_sO2', '05': 'arterial_bicarb', '06': 'arterial_BE', '07': 'K', '08': 'VO2',
-                '09': 'venous_pH', '0A': 'venous_CO2', '0B': 'venous_O2', '0C': 'venous_temp', '0D': 'venous_sO2',
-                '0E': 'venous_bicarb', '0F': 'venous_BE', '10': 'hct', '11': 'hgb'}
-
-
-class CDIParsedData:
-    def __init__(self, response):
-        self.valid_data = False
-        # parse raw ASCII output
-        if response is None:
-            return
-        fields = response.strip('\r\n').split(sep='\t')
-        # in addition to codes, there is a header packet
-        # CRC and end packet
-        if len(fields) == len(code_mapping) + 2:
-            # skip first field which is SN and timestamp
-            # timestamp will be ignored and will use the timestamp when the response arrives
-            # self.timestamp = fields[0][-8:]
-            for field in fields[1:-1]:
-                code = field[0:2].upper()
-                try:
-                    # logging.getLogger(__name__).debug(f'code is {code}')
-                    value = float(field[4:])
-                except ValueError:
-                    # logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
-                    value = -1
-                if code in code_mapping.keys():
-                    setattr(self, code_mapping[code], value)
-            self.valid_data = True
-        else:
-            logging.getLogger(__name__).error(f'Could parse CDI data, '
-                                              f'expected {len(code_mapping) + 2} fields, '
-                                              f'found {len(fields)}')
-
-    def get_array(self):
-        data = [getattr(self, value) for value in code_mapping.values()]
-        return data
-
-    # test ability to read all 3 sensors on CDI - delete eventually
-    # def print_results(self):
-        # if self.valid_data:
-            # print(f'Arterial pH is {self.arterial_pH}')
-            # print(f'Venous pH is {self.venous_pH}')
-            # print(f'Hemoglobin is {self.hgb}')
-        # else:
-            # print('No valid data to print')
-
+class CDIData:
+    def __init__(self, data):
+        self._lgr = logging.getLogger(__name__)
+        # self._lgr.debug(f'Data is {data}')
+        if data is not None:
+            for idx in range(18):
+                # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data[idx]}')
+                setattr(self, CDIIndex(idx).name, data[idx])
 
 @dataclass
 class CDIConfig:
@@ -81,10 +45,11 @@ class CDIStreaming:
     def __init__(self, name):
         self._lgr = logging.getLogger(__name__)
         self.name = name
-        self._queue = None
-        self.data_type = np.float32
+        self._queue = Queue()
+        self.data_type = np.float64
         self.buf_len = 18
         self.samples_per_read = 18
+        self.acq_start_ms = 0
 
         self.cfg = CDIConfig()
 
@@ -99,6 +64,9 @@ class CDIStreaming:
     def sampling_period_ms(self):
         return self.cfg.sampling_period_ms
 
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
+
     def write_config(self):
         PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
 
@@ -111,6 +79,7 @@ class CDIStreaming:
         return self.__serial.is_open
 
     def open(self, cfg: CDIConfig = None) -> None:
+        self._lgr.debug('Attempting to open CDI')
         if self.__serial.is_open:
             self.__serial.close()
         if cfg is not None:
@@ -122,6 +91,7 @@ class CDIStreaming:
         self.__serial.bytesize = serial.EIGHTBITS
         try:
             self.__serial.open()
+            self._lgr.debug('Serial port opened')
         except serial.serialutil.SerialException as e:
             self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
             self._lgr.error(f'Message: {e}')
@@ -131,45 +101,128 @@ class CDIStreaming:
         if self.__serial:
             self.__serial.close()
 
-    def request_data(self, timeout=30):  # request single data packet
-        if self.__serial.is_open:
-            self.__serial.timeout = timeout
-            CDIpacket = self.__serial.readline().decode('ascii')
+    def parse_response(self, response: str):
+        data = []
+        if response is None:
+            return data
+
+        fields = response.strip('\r\n').split(sep='\t')
+        # in addition to codes, there is a start code, CRC, and end code
+        expected_vars = max(CDIIndex).value + 1
+
+        if len(fields) == expected_vars + 2:
+            data = np.zeros(expected_vars, dtype=self.data_type)
+            # skip first field which is SN and timestamp
+            # timestamp will be ignored,  we will use the timestamp when the response arrives
+            # self.timestamp = fields[0][-8:]
+            for field in fields[1:-1]:
+                # get code and convert string hex value to an actual integer
+                code = int(field[0:2].upper(), 16)
+                try:
+                    value = self.data_type(field[4:])
+                except ValueError:
+                    logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
+                    value = self.data_type(-1)
+                data[code] = value
         else:
-            CDIpacket = None
-        return CDIpacket
+            logging.getLogger(__name__).error(f'in parse_response(), could parse CDI response, '
+                                              f'expected {expected_vars + 2} fields, '
+                                              f'found {len(fields)}')
+        return data
 
     def run(self):  # continuous data stream
         self.is_streaming = True
         self._event_halt.clear()
         self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
-            if self.__serial.is_open and self.__serial.in_waiting > 0:
-                resp = self.__serial.readline().decode('ascii')
-                one_cdi_packet = CDIParsedData(resp)
-                ts = perf_counter()
-                self._queue.put((one_cdi_packet, ts))
+            if self.__serial.is_open:
+                self._lgr.debug('Attempting to read serial data from CDI')
+                resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
+                self._lgr.debug(f'got response {resp}')
+                sleep(1)
+                if len(resp) > 0:
+                    self._lgr.debug(f'{len(resp)} > 0')
+                    self._event_halt.set()
+                    self._lgr.debug(f'Type: {type(resp)}')
+                    if resp[-1] == '\n':
+                        data = self.parse_response(resp)
+                        self._lgr.debug(f'DATA ARRAY IS {data}')
+                        ts = get_epoch_ms()
+                        self._queue.put((data, ts))
             else:
                 sleep(0.5)
 
     def start(self):
+        self._lgr.debug('attempting to start CDI')
         self.stop()
         self._event_halt.clear()
+        self.acq_start_ms = get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
         self.__thread.start()
+        self._lgr.debug('CDI started')
 
     def stop(self):
         if self.is_streaming:
             self._event_halt.set()
             self.is_streaming = False
 
-    def get_data(self, timeout=0):  # from Pump11Elite. Might make sense so have this in the CDIParsedData class?
-        buf = None  # not sure what buf and t do?
+    def get_data(self, timeout=0):
+        buf = None
         t = None
         try:
-            buf, t = self._queue.get(timeout)
+            buf, t = self._queue.get(timeout=timeout)
         except Empty:
             pass
         return buf, t
+
+
+class MockCDI(CDIStreaming):
+    def __init__(self, name):
+        self._lgr = logging.getLogger(__name__)
+        super().__init__(name)
+        self._is_open = False
+
+    def is_open(self):
+        return self._is_open
+
+    def open(self, cfg: CDIConfig = None) -> None:
+        if cfg is not None:
+            self.cfg = cfg
+        self._is_open = True
+        self._lgr.debug('here')
+        self._queue = Queue()
+
+    def close(self):
+        pass
+
+    def request_data(self, timeout=30):  # request single data packet
+        return self._form_pkt()
+
+    def _form_pkt(self):
+        pkt_stx = 0x2
+        pkt_etx = 0x3
+        pkt_dev = 'X2000A5A0'
+        ts = datetime.now()
+        timestamp = f'{ts.hour:02d}:{ts.minute:02d}:{ts.second:02d}'
+        # self._lgr.debug(f'timestamp is {timestamp}')
+        data = [f'{idx.value:02x}{idx.value*2:04d}\t' for idx in CDIIndex]
+        data_str = ''.join(data)
+        crc = 0
+        pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'
+        # self._lgr.debug(f'pkt is {pkt}')
+        return pkt
+
+    def run(self):  # continuous data stream
+        self.is_streaming = True
+        self._event_halt.clear()
+        while not self._event_halt.is_set():
+            if self._is_open:
+                resp = self._form_pkt()
+                data = self.parse_response(resp)
+                ts = get_epoch_ms()
+                self._queue.put((data, ts))
+                sleep(1.0)
+            else:
+                sleep(0.5)

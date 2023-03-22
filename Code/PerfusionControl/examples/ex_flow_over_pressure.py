@@ -17,12 +17,10 @@ import time
 import logging
 
 from pyPerfusion.plotting import SensorPlot, PanelPlotting
-from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
-from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.CalculatedSensor import FlowOverPressure
-import pyPerfusion.Strategies as Strategies
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyHardware.SystemHardware import SYS_HW
+import pyPerfusion.Sensor as Sensor
 
 
 class TestFrame(wx.Frame):
@@ -33,17 +31,16 @@ class TestFrame(wx.Frame):
 
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
-        self.plot = SensorPlot(flow_over_pressure, self.panel.axes, readout=True)
+        self.plot = SensorPlot(sensor_foverp, self.panel.axes, readout=True)
 
-        self.plot.set_strategy(flow_over_pressure.get_file_strategy('Stream2File'))
+        self.plot.set_reader(sensor_foverp.get_reader())
 
         self.panel.add_plot(self.plot)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor_flow.stop()
-        sensor_pressure.stop()
+        sensor_foverp.stop()
         self.panel.Destroy()
         self.Destroy()
 
@@ -57,29 +54,30 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    logger = logging.getLogger()
+    logger = logging.getLogger(__name__)
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logger, logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    hw = NIDAQAIDevice()
-    hw.cfg = AINIDAQDeviceConfig(name='TestAnalogInputDevice')
-    hw.read_config()
-    hw.start()
-    sensor_flow = SensorStream(hw.ai_channels['HA Flow'], 'ml/min')
+    SYS_HW.load_hardware_from_config()
+    # SYS_HW.load_mocks()
+    SYS_HW.start()
+
+    sensor_foverp = Sensor.DivisionSensor(name='HA Flow Over Pressure')
+    sensor_foverp.read_config()
+
+    sensor_flow = Sensor.Sensor(name=sensor_foverp.cfg.dividend_name)
     sensor_flow.read_config()
-    sensor_pressure = SensorStream(hw.ai_channels['HA Pressure'], 'mmHg')
+    sensor_pressure = Sensor.Sensor(name=sensor_foverp.cfg.divisor_name)
     sensor_pressure.read_config()
+
+    sensor_foverp.reader_dividend = sensor_flow.get_reader(name=sensor_foverp.cfg.dividend_strategy)
+    sensor_foverp.reader_divisor = sensor_pressure.get_reader(name=sensor_foverp.cfg.divisor_strategy)
+    sensor_foverp.hw = sensor_flow.hw
+
     sensor_flow.start()
     sensor_pressure.start()
-
-    f_over_p = FlowOverPressure(name='Flow Over Pressure',
-                                flow=sensor_flow.get_file_strategy('Stream2File'),
-                                pressure=sensor_pressure.get_file_strategy('Stream2File'))
-    flow_over_pressure = SensorStream(f_over_p, '')
-    flow_over_pressure.add_strategy(Strategies.get_strategy('Stream2File'))
-    flow_over_pressure.open()
-    flow_over_pressure.start()
+    sensor_foverp.start()
 
     app = MyTestApp(0)
     app.MainLoop()

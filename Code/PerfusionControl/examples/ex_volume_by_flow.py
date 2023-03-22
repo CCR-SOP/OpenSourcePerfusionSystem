@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
-""" Example to show how to create a calculated streams from 2 other streams
+"""Test script for testing plotting of Sensor
 
-Assumes that the test configuration folder contains a config
-"TestAnalogInputDevice.ini" with a 2 channels called "Flow" and a
-config called "sensors.ini" with a section called "HA Flow" and a
-section called "HA Pressure"
-
-@project: Project NIH
+@project: LiverPerfusion NIH
 @author: John Kakareka, NIH
 
 This work was created by an employee of the US Federal Gov
@@ -17,34 +12,45 @@ import time
 import logging
 
 from pyPerfusion.plotting import SensorPlot, PanelPlotting
-from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
-from pyPerfusion.SensorStream import SensorStream
-import pyPerfusion.PerfusionConfig as PerfusionConfig
+import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
-from pyPerfusion.CalculatedSensor import VolumeByFlow
-import pyPerfusion.Strategies as Strategies
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyHardware.SystemHardware import SYS_HW
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        self._lgr = logging.getLogger(__name__)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
-        self.plot = SensorPlot(vol_stream, self.panel.axes, readout=True)
+        self.plotvol = SensorPlot(sensor_volume, self.panel.axes, readout=True)
+        self.plotflow = SensorPlot(sensor_flow, self.panel.axes, readout=True)
 
-        self.plot.set_strategy(vol_stream.get_file_strategy('Stream2File'))
+        self.plotflow.set_reader(sensor_flow.get_reader('RMS_11pt'))
+        self.plotvol.set_reader(sensor_volume.get_reader('VolumeByFlow'), color='y')
 
-        self.panel.add_plot(self.plot)
+        self.panel.add_plot(self.plotflow)
+        self.panel.add_plot(self.plotvol)
+
+        sensor_flow.open()
+        sensor_flow.start()
+        sensor_volume.open()
+        sensor_volume.start()
+
+        # example of calibrating the zero flow, normally this would
+        # be done using a button on a panel
+        print('Calibrating in 2 seconds')
+        time.sleep(2.0)
+        sensor_volume.get_writer('VolumeByFlow').reset()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        hw.stop()
+        sensor_volume.stop()
         sensor_flow.stop()
-        vol_stream.stop()
+        SYS_HW.stop()
         self.panel.Destroy()
         self.Destroy()
 
@@ -58,29 +64,20 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    logger = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logger, logging.DEBUG)
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    hw = NIDAQAIDevice()
-    hw.cfg = AINIDAQDeviceConfig(name='Dev1')
-    hw.read_config()
-    hw.start()
-    sensor_flow = SensorStream(hw.ai_channels['Inferior Vena Cava Flow'], 'ml/min')
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
+    sensor_flow = Sensor.Sensor(name='Hepatic Artery Flow')
     sensor_flow.read_config()
-    sensor_flow.start()
 
-    vol = VolumeByFlow(name='Urine Volume', flow=sensor_flow)
-    vol_stream = SensorStream(vol, '')
-    vol_stream.add_strategy(Strategies.get_strategy('Stream2File'))
-    vol_stream.open()
-    vol_stream.start()
+    sensor_volume = Sensor.CalculatedSensor(name='Hepatic Artery Volume')
+    sensor_volume.read_config()
+    sensor_volume.reader = sensor_flow.get_reader(sensor_volume.cfg.sensor_strategy)
+    sensor_volume.hw = sensor_flow.hw
 
-    print('calibrating flow offset')
-    time.sleep(2.0)
-    vol.calibrate_offset()
-    print(f'offset is {vol.flow_offset}')
-    print('done')
     app = MyTestApp(0)
     app.MainLoop()
+

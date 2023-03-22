@@ -39,24 +39,6 @@ def set_study_config():
     ACTIVE_CONFIG = StudyConfig
 
 
-class MissingConfigFile(Exception):
-    """Exception used to indicate a configuration file is not available"""
-
-
-class MissingConfigSection(Exception):
-    """Exception used to indicate a section within a file is not available"""
-
-
-def set_test_config():
-    global ACTIVE_CONFIG, TestConfig
-    ACTIVE_CONFIG = TestConfig
-
-
-def set_study_config():
-    global ACTIVE_CONFIG, StudyConfig
-    ACTIVE_CONFIG = StudyConfig
-
-
 def get_date_folder():
     global ACTIVE_CONFIG
     return ACTIVE_CONFIG.get_folder('date')
@@ -97,7 +79,12 @@ def read_into_dataclass(cfg_name: str, section_name: str, cfg):
         # print(section)
         # print(section.items())
         for key, value in section.items():
-            dummy = getattr(cfg, key)
+            try:
+                dummy = getattr(cfg, key)
+            except AttributeError as e:
+                logging.getLogger(__name__).debug(f'Config contained entry {key} which is not part of dataclass {cfg}')
+                # this can occur in the case of derived classes, so continue on
+                continue
             try:
                 setattr(cfg, key, type(dummy)(value))
             except ValueError:

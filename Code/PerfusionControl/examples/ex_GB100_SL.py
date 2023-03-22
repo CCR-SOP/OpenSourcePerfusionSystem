@@ -7,31 +7,37 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 
-from pyPerfusion.pyGB100_SL import GB100
-import mcqlib_GB100.mcqlib.main as mcq
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyHardware.SystemHardware import SYS_HW
 
 PerfusionConfig.set_test_config()
 
+SYS_HW.load_hardware_from_config()
+gas_control = SYS_HW.get_hw('GasControl')
+ha_device = gas_control.HA
+pv_device = gas_control.PV
+
 sample_CDI_output = [1] * 18
 
-HA_mixer = mcq.Main('Arterial Gas Mixer')
-HA_mixer_shift = GB100_shift('HA', HA_mixer)
-HA_mixer_shift.check_pH(sample_CDI_output)
-HA_mixer_shift.check_CO2(sample_CDI_output)
-HA_mixer_shift.check_O2(sample_CDI_output)
-working_status = HA_mixer.get_working_status()
-if working_status == 1:  # 1 is off
-    HA_mixer.set_working_status_ON()
+working_status = ha_device.get_working_status()
+print(f'HA device working status is {working_status}')
+working_status = pv_device.get_working_status()
+print(f'PV device working status is {working_status}')
 
-PV_mixer = mcq.Main('Venous Gas Mixer')
-PV_mixer_shift = GB100_shift('PV', PV_mixer)
-# PV_mixer_shift.check_pH(sample_CDI_output)
-# PV_mixer_shift.check_CO2(sample_CDI_output)
-# PV_mixer_shift.check_O2(sample_CDI_output)
-working_status = PV_mixer.get_working_status()
-print(working_status)
-if working_status == 0:  # 0 is off
-    PV_mixer.set_working_status_ON()
-    working_status = PV_mixer.get_working_status()
-    print(working_status)
+print('Turn on HA device')
+ha_device.set_working_status(turn_on=True)
+working_status = ha_device.get_working_status()
+print(f'HA device working status is {working_status}')
+
+total_flow = 100
+print(f'Setting HA total flow to {total_flow}')
+ha_device.set_total_flow(total_flow)
+
+percent = 30
+print(f'Setting HA second channel to 30%')
+ha_device.set_percent_value(2, percent)
+
+print('Turn off HA device')
+ha_device.set_working_status(turn_on=False)
+working_status = ha_device.get_working_status()
+print(f'HA device working status is {working_status}')
