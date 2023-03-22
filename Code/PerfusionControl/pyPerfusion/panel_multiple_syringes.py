@@ -14,6 +14,7 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.panel_syringe import PanelSyringeControls
+# TODO: integrate from pyPerfusion.Sensor import Sensor
 from pyHardware.SystemHardware import SYS_HW
 
 

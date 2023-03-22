@@ -8,34 +8,33 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-
+from time import sleep
 import wx
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
-
-DEV_LIST = ['Dev1', 'Dev2', 'Dev3', 'Dev4', 'Dev5']
-LINE_LIST = [f'{line}' for line in range(0, 9)]
+from pyPerfusion.Sensor import Sensor
 
 
 class PanelDC(wx.Panel):
-    def __init__(self, parent, hw):
+    def __init__(self, parent, name, sensor):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
-        self.hw = hw
+        self.name = name
+        self.sensor = sensor
 
-        self._panel_dc = PanelDCControl(self, self.hw)
+        self._panel_dc = PanelDCControl(self, self.name, self.sensor)
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.hw.cfg.name)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
         self.__set_bindings()
 
     def close(self):
-        self.hw.stop()
+        self.sensor.hw.stop()
 
     def __do_layout(self):
 
@@ -50,11 +49,14 @@ class PanelDC(wx.Panel):
 
 
 class PanelDCControl(wx.Panel):
-    def __init__(self, parent, hw):
+    def __init__(self, parent, name, sensor):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-        self.hw = hw
+        self.name = name
+        self.sensor = sensor
+        self.reader = self.sensor.get_reader()
+        self.sensor.hw.start()
 
         font = wx.Font()
         font.SetPointSize(int(18))
@@ -99,22 +101,28 @@ class PanelDCControl(wx.Panel):
     def on_update(self, evt):
         self._lgr.debug('on_update called')
         new_flow = self.entered_offset.GetValue() / 10
-        self.hw.set_output(new_flow)
+        self.sensor.hw.set_output(new_flow)
+
+        sleep(2)
+        ts, last_samples = self.reader.retrieve_buffer(5000, 5)
+        for ts, samples in zip(ts, last_samples):
+            self._lgr.debug(f' At time {ts}, {self.name} Pump was changed to {samples*10} mL/min')
 
     def on_stop(self, evt):
-        self.hw.set_output(int(0))
+        self.sensor.hw.set_output(int(0))
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelDC(self, pump)
+        self.panel = PanelDC(self, pump_name, trial_sensor)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         SYS_HW.stop()
+        trial_sensor.stop()
         self.Destroy()
 
 
@@ -132,10 +140,19 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
-    SYS_HW.start()
 
     pump = SYS_HW.get_hw(name='Dialysate Inflow Pump')
     pump.read_config()
+
+    pump_name = 'Dialysate Inflow'
+    try:
+        trial_sensor = Sensor(name=pump_name)
+        trial_sensor.read_config()
+    except PerfusionConfig.MissingConfigSection:
+        print(f'Could not find sensor called {pump_name} in sensors.ini')
+        SYS_HW.stop()
+        raise SystemExit(1)
+    trial_sensor.start()
 
     app = MyTestApp(0)
     app.MainLoop()
