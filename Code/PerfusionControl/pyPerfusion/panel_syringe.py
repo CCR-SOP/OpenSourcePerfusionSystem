@@ -19,11 +19,8 @@ from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
 
 
-BAUD_RATES = ['9600', '14400', '19200', '38400', '57600', '115200']
-
-
 class PanelSyringe(wx.Panel):
-    def __init__(self, parent, sensor):  # syringe: pyPump11Elite.Pump11Elite):
+    def __init__(self, parent, sensor):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
@@ -31,7 +28,7 @@ class PanelSyringe(wx.Panel):
         syringe = self.sensor.hw
 
         self._panel_cfg = PanelSyringeConfig(self, syringe)
-        self._panel_ctrl = PanelSyringeControls(self, syringe, self.sensor)  # redundant
+        self._panel_ctrl = PanelSyringeControls(self, syringe, self.sensor)
         static_box = wx.StaticBox(self, wx.ID_ANY, label=syringe.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
@@ -315,7 +312,7 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
 
-    name = 'Insulin Syringe'
+    name = 'Insulin'
     try:
         trial_sensor = Sensor(name=name)
         trial_sensor.read_config()

@@ -14,19 +14,19 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.panel_syringe import PanelSyringeControls
-# TODO: integrate from pyPerfusion.Sensor import Sensor
+from pyPerfusion.Sensor import Sensor
 from pyHardware.SystemHardware import SYS_HW
 
 
-class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
+class SyringePanel(wx.Panel):
     def __init__(self, parent, drugs):
         self.parent = parent
         wx.Panel.__init__(self, parent)
         self.syringes = []
+        self.sensors = []
 
         font_panel_label = wx.Font()
         font_panel_label.SetPointSize(int(12))
-
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Infusions")
         static_box.SetFont(font_panel_label)
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -35,11 +35,25 @@ class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
         self.panel = {}
 
         for drug in drugs:
-            syringe = SYS_HW.get_hw(drug)
-            self.syringes.append(syringe)
-            self.panel[drug] = PanelSyringeControls(parent=self, syringe=syringe)
+            # Initialize sensor
+            try:
+                sensor = Sensor(name=drug)
+                sensor.read_config()
+                sensor.start()
+                self.sensors.append(sensor)
+            except PerfusionConfig.MissingConfigSection:
+                print(f'Could not find sensor called {drug} in sensors.ini')
+                SYS_HW.stop()
+                exit()
+                sensor = None
+
+            # Initialize panel
+            syringe = sensor.hw
+            self.syringes.append(syringe)  # is this redundant?
+            self.panel[drug] = PanelSyringeControls(parent=self, syringe=syringe, sensor=sensor)
             self.panel[drug].update_controls_from_config()
             sizer.Add(self.panel[drug], 1, wx.ALL | wx.EXPAND, border=1)
+
 
         sizer.SetSizeHints(self.parent)
         self.wrapper.Add(sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
@@ -52,6 +66,8 @@ class SyringePanel(wx.Panel):  # does not expand to correct size by itself now
             syringe.stop()
         for panel in self.panel.keys():
             self.panel[panel].Destroy()
+        for sensor in self.sensors:
+            sensor.stop()
 
 
 class SyringeFrame(wx.Frame):
