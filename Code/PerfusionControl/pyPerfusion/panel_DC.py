@@ -27,7 +27,11 @@ class PanelDC(wx.Panel):
 
         self._panel_dc = PanelDCControl(self, self.name, self.sensor)
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
+        font = wx.Font()
+        font.SetPointSize(int(16))
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name + " Pump")
+        static_box.SetFont(font)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
@@ -140,9 +144,6 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
-
-    pump = SYS_HW.get_hw(name='Dialysate Inflow Pump')
-    pump.read_config()
 
     pump_name = 'Dialysate Inflow'
     try:

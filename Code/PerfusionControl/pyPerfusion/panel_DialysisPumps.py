@@ -10,7 +10,6 @@ and under the public domain.
 import logging
 import wx
 from time import sleep
-from threading import enumerate
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -19,64 +18,57 @@ from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
 
 class DialysisPumpPanel(wx.Panel):
-    def __init__(self, parent, sensors, **kwds):
+    def __init__(self, parent, pump_sensors, **kwds):
         self._lgr = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         self.parent = parent
-        self.sensors = sensors
+        self.sensors = pump_sensors
+
+        font = wx.Font()
+        font.SetPointSize(int(16))
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
+        static_box.SetFont(font)
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
+        flagsExpand = wx.SizerFlags(1)
+        flagsExpand.Expand().Border(wx.ALL, 10)
+        self.sizer = wx.FlexGridSizer(rows=3, cols=2, vgap=1, hgap=1)
+
+        self.panels = []
 
         for sensor in self.sensors:
             sensor.start()
-            reader = sensor.get_reader()  # TODO: use reader when a button is pressed
             sensor.hw.start()
-
-        self._panel_outflow = PanelDC(self, self.roller_pumps['Dialysate Outflow Pump'])
-        self._panel_glucose = PanelDC(self, self.roller_pumps['Glucose Circuit Pump'])
-        self._panel_inflow = PanelDC(self, self.roller_pumps['Dialysate Inflow Pump'])
-        self._panel_bloodflow = PanelDC(self, self.roller_pumps['Dialysis Blood Pump'])
+            self.panel = PanelDC(self, sensor.name, sensor)
+            self.sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, border=1)
+            self.panels.append(self.panel)
 
         # Add auto start button as 5th panel
-        font_btn = wx.Font()
-        font_btn.SetPointSize(int(16))
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
-        self.btn_auto_dialysis.SetFont(font_btn)
+        self.btn_auto_dialysis.SetFont(font)
         self.cdi_timer = wx.Timer(self)
-
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
-        static_box.SetFont(font_btn)
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
+        self.sizer.Add(self.btn_auto_dialysis, flagsExpand)
 
         self.__do_layout()
         self.__set_bindings()
 
     def close(self):
-        self._panel_outflow.close()
-        self._panel_inflow.close()
-        self._panel_glucose.close()
-        self._panel_bloodflow.close()
+        for panel in self.panels:
+            panel.close()
 
     def __do_layout(self):
-        flagsExpand = wx.SizerFlags(1)
-        flagsExpand.Expand().Border(wx.ALL, 10)
-        self.sizer = wx.FlexGridSizer(rows=3, cols=2, vgap=1, hgap=1)
-
-        self.sizer.Add(self._panel_inflow, flagsExpand)
-        self.sizer.Add(self._panel_outflow, flagsExpand)
-        self.sizer.Add(self._panel_bloodflow, flagsExpand)
-        self.sizer.Add(self._panel_glucose, flagsExpand)
-        self.sizer.Add(self.btn_auto_dialysis, flagsExpand)
-
         self.sizer.AddGrowableRow(0, 3)
         self.sizer.AddGrowableRow(1, 3)
         self.sizer.AddGrowableRow(2, 1)
         self.sizer.AddGrowableCol(0, 1)
         self.sizer.AddGrowableCol(1, 1)
 
+        self.sizer.SetSizeHints(self.parent)
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.SetSizer(self.wrapper)
-        self.Layout()
         self.Fit()
+        self.Layout()
 
     def __set_bindings(self):
         self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
@@ -146,8 +138,10 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.panel.close()
-        SYS_HW.close()
+        SYS_HW.stop()
         self.panel.cdi_timer.Stop()
+        for sensor in self.panel.sensors:
+            sensor.stop()
         self.Destroy()
 
 class MyTestApp(wx.App):
@@ -164,17 +158,16 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
-    SYS_HW.start()
 
     rPumpNames = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
     sensors = []
-    for name in rPumpNames:
+    for pump_name in rPumpNames:
         try:
-            sensor = Sensor(name=name)
-            sensor.read_config()
-            sensors.append(sensor)
+            temp_sensor = Sensor(name=pump_name)
+            temp_sensor.read_config()
+            sensors.append(temp_sensor)
         except PerfusionConfig.MissingConfigSection:
-            print(f'Could not find sensor called {name} in sensors.ini')
+            print(f'Could not find sensor called {pump_name} in sensors.ini')
             SYS_HW.stop()
             raise SystemExit(1)
 
