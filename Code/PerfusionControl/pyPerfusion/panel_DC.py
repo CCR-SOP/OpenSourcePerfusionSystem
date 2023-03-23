@@ -113,49 +113,56 @@ class PanelDCControl(wx.Panel):
             self._lgr.debug(f' At time {ts}, {self.name} Pump was changed to {samples*10} mL/min')
 
     def update_dialysis_rates(self, cdi_input):
-        # TODO: Add ceilings and error cases
         self._lgr.debug(f'{cdi_input.K} is K and {cdi_input.hgb} is hgb. Name is {self.name}')
 
-        if cdi_input.hgb == -1:
-            self._lgr.warning(f'Hemoglobin is out of range. Cannot be adjusted automatically')
-        # elif 0 < cdi_input.hgb < 7:
-            self._lgr.debug(f'Hemoglobin is low at {cdi_input.hgb}. Increasing dialysate outflow')
-            sleep(2)
-            ts, last_samples = self.reader.get_last_acq()
-            current_flow_rate = last_samples * 10
-            self._lgr.debug(f'{current_flow_rate} mL/min')
-            new_flow_rate = (current_flow_rate + 1) / 10
-            self._lgr.debug(f'{new_flow_rate} V')
-            self.sensor.hw.set_output(new_flow_rate)
-            # TODO: update auto-only boxes
-        elif cdi_input.hgb > 12:
-            self._lgr.debug(f'Hemoglobin is high at {cdi_input.hgb}. Increasing dialysate inflow')
-            # current_flow_rate = something
-            # new_flow_rate = current_flow_rate + 1
-            # self._panel_inflow.sensor.hw.set_output(int(new_flow_rate))
-        else:
-            self._lgr.debug(f'No need to increase or decrease relative inflow/outflow rates')
+        if self.name == "Dialysate Outflow" or self.name == "Dialysate Inflow":
 
-        if cdi_input.K == -1:
-            self._lgr.warning(f'K is out of range. Cannot be adjusted automatically')
-        elif 0 < cdi_input.K > 6:
-            self._lgr.debug(f'K is high at {cdi_input.K}. Increasing rates of dialysis')
-            # current_inflow_rate = something
-            # new_inflow_rate = current_flow_rate + 1
-            # self._panel_inflow.sensor.hw.set_output(int(new_inflow_rate))
-            # current_outflow_rate = something
-            # new_outflow_rate = current_flow_rate + 1
-            # self._panel_outflow.sensor.hw.set_output(int(new_outflow_rate))
-        elif cdi_input.K < 2:
-            self._lgr.debug(f'K is stable {cdi_input.K}. Decreasing rates of dialysis')
-            # current_inflow_rate = something
-            # new_inflow_rate = current_flow_rate - 1
-            # self._panel_inflow.sensor.hw.set_output(int(new_inflow_rate))
-            # current_outflow_rate = something
-            # new_outflow_rate = current_flow_rate - 1
-            # self._panel_outflow.sensor.hw.set_output(int(new_outflow_rate))
+            if cdi_input.hgb == -1:
+                self._lgr.warning(f'Hemoglobin is out of range. Cannot be adjusted automatically')
+            elif 0 < cdi_input.hgb < 7 and self.name == "Dialysate Outflow":
+                self._lgr.info(f'Hemoglobin is low at {cdi_input.hgb}. Increasing dialysate outflow')
+                self.increase_dc_pump_speed()
+            elif cdi_input.hgb > 12 and self.name == "Dialysate Inflow":
+                self._lgr.info(f'Hemoglobin is high at {cdi_input.hgb}. Increasing dialysate inflow')
+                self.increase_dc_pump_speed()
+            else:
+                self._lgr.info(f'No need to increase or decrease relative inflow/outflow rates')
+
+            if cdi_input.K == -1:
+                self._lgr.warning(f'K is out of range. Cannot be adjusted automatically')
+            elif cdi_input.K > 6:
+                self._lgr.info(f'K is high at {cdi_input.K}. Increasing rates of dialysis')
+                self.increase_dc_pump_speed()
+            elif 0 < cdi_input.K < 2:
+                self._lgr.info(f'K is stable at {cdi_input.K}. Decreasing rates of dialysis to conserve dialysate')
+                self.decrease_dc_pump_speed()
+            else:
+                self._lgr.info(f'Dialysis can continue at a stable rate')
+    
+    def increase_dc_pump_speed(self):
+        sleep(1)
+        ts, last_samples = self.reader.get_last_acq()
+        current_flow_rate = last_samples * 10
+        self._lgr.info(f'{current_flow_rate} mL/min')
+        if current_flow_rate <= 9.5:
+            new_voltage = (current_flow_rate + 0.5) / 10
+            self._lgr.info(f'{new_voltage} V')
+            self.sensor.hw.set_output(new_voltage)
         else:
-            self._lgr.debug(f'Dialysis can continue at a stable rate')
+            self._lgr.warning(f'Current flow rate is {current_flow_rate}. '
+                              f'At ceiling - cannot be automatically exceeded')
+        
+    def decrease_dc_pump_speed(self):
+        sleep(1)
+        ts, last_samples = self.reader.get_last_acq()
+        current_flow_rate = last_samples * 10
+        self._lgr.info(f'{current_flow_rate} mL/min')
+        if current_flow_rate >= 0.5:
+            new_voltage = (current_flow_rate - 0.5) / 10
+            self._lgr.info(f'{new_voltage} V')
+            self.sensor.hw.set_output(new_voltage)
+        else:
+            self._lgr.warning(f'Current flow rate is {current_flow_rate}. Cannot go negative')
 
     def on_stop(self, evt):
         self.sensor.hw.set_output(int(0))

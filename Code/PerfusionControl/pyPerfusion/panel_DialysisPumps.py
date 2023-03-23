@@ -90,13 +90,11 @@ class DialysisPumpPanel(wx.Panel):
     def readDataFromCDI(self, evt):
         if evt.GetId() == self.cdi_timer.GetId():
             cdi_reader = self.cdi_sensor.get_reader()
-
             ts, all_vars = cdi_reader.get_last_acq()
             cdi_data = CDIData(all_vars)
             if cdi_data is not None:
-                # TODO: split methods appropriately among pumps
                 for panel in self.panels:
-                    if panel.name == "Dialysate Outflow":
+                    if panel.name == "Dialysate Outflow" or panel.name == "Dialysate Inflow":
                         panel.panel_dc.update_dialysis_rates(cdi_data)
             else:
                 self._lgr.debug(f'No CDI data. Cannot run dialysis automatically')
