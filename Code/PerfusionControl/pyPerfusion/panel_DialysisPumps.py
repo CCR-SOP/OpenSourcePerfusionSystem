@@ -18,13 +18,24 @@ from pyPerfusion.Sensor import Sensor
 from pyPerfusion.pyCDI import CDIData
 
 class DialysisPumpPanel(wx.Panel):
-    def __init__(self, parent, pump_sensors, cdi, **kwds):
+    def __init__(self, parent, pump_names, cdi, **kwds):
         self._lgr = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         self.parent = parent
-        self.sensors = pump_sensors
         self.cdi_sensor = cdi
+
+        # Load sensors from pump_names
+        self.sensors = []
+        for pump_name in pump_names:
+            try:
+                temp_sensor = Sensor(name=pump_name)
+                temp_sensor.read_config()
+                self.sensors.append(temp_sensor)
+            except PerfusionConfig.MissingConfigSection:
+                print(f'Could not find sensor called {pump_name} in sensors.ini')
+                SYS_HW.stop()
+                raise SystemExit(1)
 
         font = wx.Font()
         font.SetPointSize(int(16))
@@ -37,7 +48,6 @@ class DialysisPumpPanel(wx.Panel):
         self.sizer = wx.FlexGridSizer(rows=3, cols=2, vgap=1, hgap=1)
 
         self.panels = []
-
         for sensor in self.sensors:
             sensor.start()
             sensor.hw.start()
@@ -103,7 +113,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = DialysisPumpPanel(self, sensors, cdi_sensor)
+        self.panel = DialysisPumpPanel(self, rPumpNames, cdi_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -130,18 +140,7 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
 
-    # Load roller pumps wrapped in sensors
     rPumpNames = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
-    sensors = []
-    for pump_name in rPumpNames:
-        try:
-            temp_sensor = Sensor(name=pump_name)
-            temp_sensor.read_config()
-            sensors.append(temp_sensor)
-        except PerfusionConfig.MissingConfigSection:
-            print(f'Could not find sensor called {pump_name} in sensors.ini')
-            SYS_HW.stop()
-            raise SystemExit(1)
 
     # Load CDI sensor
     cdi_sensor = Sensor(name='CDI')

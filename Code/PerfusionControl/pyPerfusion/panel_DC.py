@@ -65,12 +65,12 @@ class PanelDCControl(wx.Panel):
         self.sensor.hw.start()
 
         font = wx.Font()
-        font.SetPointSize(int(16))
+        font.SetPointSize(int(12))
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.label_offset = wx.StaticText(self, label='Set Pump Speed (mL/min):')
+        self.label_offset = wx.StaticText(self, label='Set Speed (mL/min):')
         self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5, initial=0)
-        self.label_real = wx.StaticText(self, label='Actual Pump Speed (mL/min):')
+        self.label_real = wx.StaticText(self, label='Actual Speed (mL/min):')
         self.real_offset = wx.TextCtrl(self, style=wx.TE_READONLY, value=str(0))
         self.label_offset.SetFont(font)
         self.entered_offset.SetFont(font)
