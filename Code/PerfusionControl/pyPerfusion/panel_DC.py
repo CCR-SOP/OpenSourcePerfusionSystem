@@ -113,17 +113,18 @@ class PanelDCControl(wx.Panel):
 
     def on_update(self, evt):
         new_voltage = self.entered_offset.GetValue() / 10
-        self.sensor.hw.set_output(new_voltage)
+        self.sensor.hw.set_output(new_voltage+0.03)  # add 0.03 V to account for offset
 
         sleep(2)
         ts, last_samples = self.reader.retrieve_buffer(5000, 5)
         for ts, samples in zip(ts, last_samples):
-            self._lgr.info(f' At time {ts}, {self.name} Pump was changed to {samples*10} mL/min')
+            self._lgr.info(f' At time {ts}, {self.name} Pump was changed to {(samples*10)-0.3} mL/min')
 
         self.real_offset.SetValue(str(new_voltage*10))
 
     def on_stop(self, evt):
         self.sensor.hw.set_output(int(0))
+        self.real_offset.SetValue(str(0))
 
     def CheckHardwareForAccuracy(self, evt):
         if evt.GetId() == self.sync_with_hw_timer.GetId():
@@ -137,7 +138,7 @@ class PanelDCControl(wx.Panel):
 
             if cdi_input.hgb == -1:
                 self._lgr.warning(f'Hemoglobin is out of range. Cannot be adjusted automatically')
-            if cdi_input.hgb < physio_ranges['hgb_lower'] and self.name == "Dialysate Outflow":
+            elif 0 < cdi_input.hgb < physio_ranges['hgb_lower'] and self.name == "Dialysate Outflow":
                 self._lgr.info(f'Hemoglobin is low at {cdi_input.hgb}. Increasing dialysate outflow')
                 self.increase_dc_pump_speed()
             elif cdi_input.hgb > physio_ranges['hgb_upper'] and self.name == "Dialysate Inflow":
@@ -163,10 +164,10 @@ class PanelDCControl(wx.Panel):
         current_flow_rate = last_samples * 10
         self._lgr.info(f'{current_flow_rate} mL/min')
         if current_flow_rate <= 9.5:
-            new_voltage = (current_flow_rate + 0.5) / 10
+            new_voltage = ((current_flow_rate + 0.5) / 10)
             self._lgr.info(f'{new_voltage} V')
             self.sensor.hw.set_output(new_voltage)
-            self.real_offset.SetValue(str(new_voltage * 10))
+            self.real_offset.SetValue(str((new_voltage - 0.03) * 10))
         else:
             self._lgr.warning(f'Current flow rate is {current_flow_rate}. '
                               f'At ceiling - cannot be automatically exceeded')
@@ -177,10 +178,10 @@ class PanelDCControl(wx.Panel):
         current_flow_rate = last_samples * 10
         self._lgr.info(f'{current_flow_rate} mL/min')
         if current_flow_rate >= 0.5:
-            new_voltage = (current_flow_rate - 0.5) / 10
+            new_voltage = ((current_flow_rate - 0.5) / 10)
             self._lgr.info(f'{new_voltage} V')
             self.sensor.hw.set_output(new_voltage)
-            self.real_offset.SetValue(str(new_voltage * 10))
+            self.real_offset.SetValue(str((new_voltage - 0.03) * 10))
         else:
             self._lgr.warning(f'Current flow rate is {current_flow_rate}. Cannot go negative')
 
