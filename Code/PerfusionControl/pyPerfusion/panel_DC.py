@@ -65,37 +65,41 @@ class PanelDCControl(wx.Panel):
         self.sensor.hw.start()
 
         font = wx.Font()
-        font.SetPointSize(int(18))
-        font_btn = wx.Font()
-        font_btn.SetPointSize(int(16))
+        font.SetPointSize(int(16))
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.label_offset = wx.StaticText(self, label='Pump Speed (mL/min)')
-        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5)
+        self.label_offset = wx.StaticText(self, label='Set Pump Speed (mL/min):')
+        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5, initial=0)
+        self.label_real = wx.StaticText(self, label='Actual Pump Speed (mL/min):')
+        self.real_offset = wx.TextCtrl(self, style=wx.TE_READONLY, value=str(0))
         self.label_offset.SetFont(font)
         self.entered_offset.SetFont(font)
+        self.label_real.SetFont(font)
+        self.real_offset.SetFont(font)
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
-        self.btn_change_rate.SetFont(font_btn)
+        self.btn_change_rate.SetFont(font)
 
         self.btn_stop = wx.Button(self, label='Stop')
-        self.btn_stop.SetFont(font_btn)
+        self.btn_stop.SetFont(font)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
+        flags = wx.SizerFlags().Border(wx.ALL, 2).Center()
+        sizer_cfg = wx.GridSizer(rows=3, cols=2, vgap=1, hgap=1)
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.label_offset, wx.SizerFlags().CenterHorizontal())
-        sizer.Add(self.entered_offset, wx.SizerFlags(1).Expand())
-        self.sizer.Add(sizer, wx.SizerFlags(0).Expand())
+        sizer_cfg.Add(self.label_offset, flags)
+        sizer_cfg.Add(self.label_real, flags)
+        sizer_cfg.Add(self.entered_offset, flags)
+        sizer_cfg.Add(self.real_offset, flags)
+        sizer_cfg.Add(self.btn_change_rate, flags)
+        sizer_cfg.Add(self.btn_stop, flags)
 
-        sizer = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(self.btn_change_rate)
-        sizer.Add(self.btn_stop)
-        self.sizer.Add(sizer, wx.SizerFlags(0).CenterHorizontal().Top())
+        self.sizer.Add(sizer_cfg)
 
+        self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
@@ -105,23 +109,23 @@ class PanelDCControl(wx.Panel):
         self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
 
     def on_update(self, evt):
-        self._lgr.debug('on_update called')
         new_flow = self.entered_offset.GetValue() / 10
         self.sensor.hw.set_output(new_flow)
 
         sleep(2)
         ts, last_samples = self.reader.retrieve_buffer(5000, 5)
         for ts, samples in zip(ts, last_samples):
-            self._lgr.debug(f' At time {ts}, {self.name} Pump was changed to {samples*10} mL/min')
+            self._lgr.info(f' At time {ts}, {self.name} Pump was changed to {samples*10} mL/min')
+
+        self.real_offset.SetValue(str(new_flow*10))
 
     def update_dialysis_rates(self, cdi_input):
-        self._lgr.debug(f'{cdi_input.K} is K and {cdi_input.hgb} is hgb. Name is {self.name}')
 
         if self.name == "Dialysate Outflow" or self.name == "Dialysate Inflow":
 
             if cdi_input.hgb == -1:
                 self._lgr.warning(f'Hemoglobin is out of range. Cannot be adjusted automatically')
-            elif 0 < cdi_input.hgb < physio_ranges['hgb_lower'] and self.name == "Dialysate Outflow":
+            if cdi_input.hgb < physio_ranges['hgb_lower'] and self.name == "Dialysate Outflow":
                 self._lgr.info(f'Hemoglobin is low at {cdi_input.hgb}. Increasing dialysate outflow')
                 self.increase_dc_pump_speed()
             elif cdi_input.hgb > physio_ranges['hgb_upper'] and self.name == "Dialysate Inflow":
@@ -150,6 +154,7 @@ class PanelDCControl(wx.Panel):
             new_voltage = (current_flow_rate + 0.5) / 10
             self._lgr.info(f'{new_voltage} V')
             self.sensor.hw.set_output(new_voltage)
+            self.real_offset.SetValue(str(new_voltage * 10))
         else:
             self._lgr.warning(f'Current flow rate is {current_flow_rate}. '
                               f'At ceiling - cannot be automatically exceeded')
@@ -163,6 +168,7 @@ class PanelDCControl(wx.Panel):
             new_voltage = (current_flow_rate - 0.5) / 10
             self._lgr.info(f'{new_voltage} V')
             self.sensor.hw.set_output(new_voltage)
+            self.real_offset.SetValue(str(new_voltage * 10))
         else:
             self._lgr.warning(f'Current flow rate is {current_flow_rate}. Cannot go negative')
 

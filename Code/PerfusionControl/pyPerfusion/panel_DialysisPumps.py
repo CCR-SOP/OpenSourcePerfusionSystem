@@ -9,7 +9,6 @@ and under the public domain.
 """
 import logging
 import wx
-from time import sleep
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -79,7 +78,7 @@ class DialysisPumpPanel(wx.Panel):
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
             self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
-            self.cdi_timer.Start(10_000, wx.TIMER_CONTINUOUS)  # TODO: make this 5 mins
+            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
             self.cdi_sensor.hw.start()
             self.cdi_sensor.start()
         else:
