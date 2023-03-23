@@ -95,7 +95,7 @@ class GasDevice:
         # as it will be read in as a list of characters
         self.cfg.CO2_range = [int(x) for x in ''.join(self.cfg.CO2_range).strip(' ').split(',')]
         self.cfg.O2_range = [int(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
-        self.cfg.pH_range = [int(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
+        self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
 
     def open(self, cfg):
         if cfg is not None:
