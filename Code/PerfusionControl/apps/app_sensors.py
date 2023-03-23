@@ -14,7 +14,6 @@ import wx
 from pyPerfusion.panel_AI import PanelAI
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import pyPerfusion.pyCDI as pyCDI
 import pyPerfusion.Sensor as Sensor
 from pyHardware.SystemHardware import SYS_HW
 
@@ -39,12 +38,12 @@ class SensorFrame(wx.Frame):
             self.panels.append(panel)
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
-        try:
-            self.cdi_sensor = Sensor.Sensor(name='CDI')
-            self.cdi_sensor.start()
-        except PerfusionConfig.MissingConfigSection:
-            wx.MessageBox(f'Could not find CDI config: {self.cdi.name}. CDI functionality will not be enabled')
-            self.cdi_sensor = None
+        # try:
+            # self.cdi_sensor = Sensor.Sensor(name='CDI')
+            # self.cdi_sensor.start()
+        # except PerfusionConfig.MissingConfigSection:
+            # wx.MessageBox(f'Could not find CDI config: {self.cdi.name}. CDI functionality will not be enabled')
+            # self.cdi_sensor = None
 
         self.SetSizer(sizer)
         self.Fit()
@@ -57,8 +56,8 @@ class SensorFrame(wx.Frame):
             sensor.stop()
         for panel in self.panels:
             panel.Destroy()
-        if self.cdi_sensor:
-            self.cdi_sensor.stop()
+        # if self.cdi_sensor:
+            # self.cdi_sensor.stop()
         self.Destroy()
 
 
