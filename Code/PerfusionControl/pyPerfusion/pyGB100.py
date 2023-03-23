@@ -13,11 +13,14 @@ import logging
 from dataclasses import dataclass, field
 from typing import List
 from enum import IntEnum
+from queue import Queue, Empty
 
 import minimalmodbus as modbus
 import serial
+import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+from pyPerfusion.utils import get_epoch_ms
 
 # addresses are taken from Gas Blender GB3000 series Modbus communication protocol manual
 ChannelAddr = [10, 25, 40, 55, 70, 85]
@@ -63,8 +66,8 @@ class GasDeviceConfig:
 class GasControl:
     def __init__(self):
         # self._lgr = logging.getLogger(__name__)
-        self.HA = GasDevice('HA')
-        self.PV = GasDevice('PV')
+        self.HA = GasDevice('Arterial Gas Mixer')
+        self.PV = GasDevice('Venous Gas Mixer')
 
 
 class GasDevice:
@@ -74,9 +77,17 @@ class GasDevice:
         self.hw = None
         self.cfg = GasDeviceConfig(name=name)
 
+        self._queue = None
+        self.acq_start_ms = 0
+
+        self.data_type = np.uint32
+
         self.co2_adjust = 1  # %
         self.o2_adjust = 1  # %
         self.flow_adjust = 2  # mL/min
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass('hardware', self.cfg.name, self.cfg)
@@ -100,6 +111,18 @@ class GasDevice:
             self.hw.serial.parity = serial.PARITY_NONE
             self.hw.serial.stopbits = 1
             self.hw.serial.timeout = 3
+        self._queue = Queue()
+
+    def close(self):
+        if self.hw:
+            self.hw.serial.close()
+            self.stop()
+
+    def start(self):
+        self.acq_start_ms = get_epoch_ms()
+
+    def stop(self):
+        pass
 
     # channel id's are assumed to start numbering at 1 to match GB100 notation
     def get_gas_type(self, channel_num: int) -> str:
@@ -129,6 +152,9 @@ class GasDevice:
         if self.hw is not None:
             addr = MainBoardOffsets['Total flow'].value
             self.hw.write_long(addr, total_flow)
+            if self._queue:
+                buf = [addr, self.data_type(total_flow)]
+                self._queue.push((buf, get_epoch_ms()))
 
     def get_percent_value(self, channel_num:int) -> float:
         value = 0.0
@@ -140,7 +166,11 @@ class GasDevice:
     def set_percent_value(self, channel_num: int, new_percent: float):
         if self.hw is not None:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
-            self.hw.write_register(addr, int(new_percent * 100))
+            percent = np.uint32(int(new_percent * 100))
+            self.hw.write_register(addr, percent)
+            if self._queue:
+                buf = [addr, percent]
+                self._queue.push((buf, get_epoch_ms()))
 
     def get_sccm(self, channel_num:int) -> float:
         value = 0.0
@@ -150,7 +180,7 @@ class GasDevice:
             value /= 100
         return value
 
-    def get_sccm_av(self, channel_number):
+    def get_sccm_av(self, channel_num:int) -> float:
         value = 0.0
         if self.hw is not None:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM'].value
@@ -177,6 +207,9 @@ class GasDevice:
         if self.hw is not None:
             addr = MainBoardOffsets['Working status']
             self.hw.write_register(addr, int(turn_on))
+            if self._queue:
+                buf = [addr, self.data_type(turn_on)]
+                self._queue.push((buf, get_epoch_ms()))
 
     def update_pH(self, pH: float) -> float:
         total_flow = self.get_total_flow()
@@ -252,3 +285,14 @@ class GasDevice:
             self._lgr.warning(f'{self.name}: O2 % is out of range and cannot be changed automatically')
 
         return new_percentage_mix
+
+    def get_data(self):
+        buf = None
+        t = None
+        try:
+            buf, t = self._queue.get(timeout=1.0)
+        except Empty:
+            # this can occur if there are attempts to read data before it has been acquired
+            # this is not unusual, so catch the error but do nothing
+            pass
+        return buf, t
