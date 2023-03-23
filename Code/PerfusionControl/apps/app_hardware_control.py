@@ -20,11 +20,12 @@ from pyPerfusion.panel_gas_mixers import GasMixerPanel
 from pyHardware.SystemHardware import SYS_HW
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, gas_control, roller_pumps, syringes, cdi_object):
+    def __init__(self, parent, mixers, roller_pumps, syringes, cdi_object):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self.gas_control = gas_control
+        self.ha_mixer = mixers['HA']
+        self.pv_mixer = mixers['PV']
         self.roller_pumps = roller_pumps
         self.syringes = syringes
         self.cdi = cdi_object
@@ -34,7 +35,7 @@ class HardwarePanel(wx.Panel):
         self._panel_syringes = SyringePanel(self, drugs)
         self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self, self.roller_pumps, self.cdi)
-        self._panel_gas_mixers = GasMixerPanel(self, self.gas_control, self.cdi)
+        self._panel_gas_mixers = GasMixerPanel(self, self.ha_mixer, self.pv_mixer, self.cdi)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -67,7 +68,7 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self, gas_control=gas_controller, roller_pumps=r_pumps, syringes=syringe_array, cdi_object=cdi_obj)
+        self.panel = HardwarePanel(self, mixers=mixers, roller_pumps=r_pumps, syringes=syringe_array, cdi_object=cdi_obj)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -102,7 +103,9 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
-    gas_controller = SYS_HW.get_hw('GasControl')
+    mixers = []
+    mixers = {'HA': SYS_HW.get_hw('Arterial Gas Mixer'), 'PV': SYS_HW.get_hw('Venous Gas Mixer')}
+
     cdi_obj = SYS_HW.get_hw('CDI')
 
     # look at ex_CDI_sensor

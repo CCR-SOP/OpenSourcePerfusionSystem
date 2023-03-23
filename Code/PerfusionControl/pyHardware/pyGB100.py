@@ -31,12 +31,14 @@ class WriteAddr(IntEnum):
     TotalFlow = 7
     WorkingStatus = 9
 
+
 # names and ordering are taken from Gas Blender GB3000 series Modbus communication protocol manual
 MainBoardOffsets = IntEnum('MainBoardOffsets',
                            ['FW Version', 'HW Version', 'Status', 'Alert',
                             'Temperature', 'Number of channels', 'Idx channel balance',
                             'Total flow', 'dummy', 'Working status'],
                            start=0)
+
 
 # names and ordering are taken from Gas Blender GB3000 series Modbus communication protocol manual
 ChannelRegisterOffsets = IntEnum('ChannelRegisterOffsets',
@@ -45,6 +47,7 @@ ChannelRegisterOffsets = IntEnum('ChannelRegisterOffsets',
                                   'Channel Enabled', 'Percent value', 'Id gas',
                                   'K factor gas', 'SCCM', 'dummy', 'Target SCCM'],
                                   start=0)
+
 
 # The names and order need to match the GB100 instrument
 GasNames = IntEnum('GasNames', ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide',
@@ -61,13 +64,6 @@ class GasDeviceConfig:
     CO2_range: List = field(default_factory=lambda: [0, 100])
     O2_range: List = field(default_factory=lambda: [0, 100])
     pH_range: List = field(default_factory=lambda: [0, 100])
-
-
-class GasControl:
-    def __init__(self):
-        # self._lgr = logging.getLogger(__name__)
-        self.HA = GasDevice('Arterial Gas Mixer')
-        self.PV = GasDevice('Venous Gas Mixer')
 
 
 class GasDevice:

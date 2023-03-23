@@ -8,26 +8,24 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import time
 
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-
-from pyPerfusion.pyGB100_SL import GasControl, GasDevice
 import pyPerfusion.pyCDI as pyCDI
-import time
+from pyHardware.SystemHardware import SYS_HW
 
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent, gas_controller, cdi_data):
+    def __init__(self, parent, ha_mixer, pv_mixer, cdi_data):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
         self.cdi_data = cdi_data
-        self.gas_control = gas_controller
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=self.gas_control.HA, cdi_data=self.cdi_data)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=self.gas_control.PV, cdi_data=self.cdi_data)
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=ha_mixer, cdi_data=self.cdi_data)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=pv_mixer, cdi_data=self.cdi_data)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -55,7 +53,7 @@ class GasMixerPanel(wx.Panel):
 
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, gas_device: GasDevice, cdi_data, **kwds):
+    def __init__(self, parent, name, gas_device, cdi_data, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
 
@@ -298,7 +296,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self, gas_control, cdi_data=cdi_object)  # ro_sensor
+        self.panel = GasMixerPanel(self, ha_mixer, pv_mixer, cdi_data=cdi_object)  # ro_sensor
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -323,7 +321,9 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
 
-    gas_control = GasControl()
+    SYS_HW.load_hardware_from_config()
+    ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
+    pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
 
     cdi_object = pyCDI.CDIStreaming('CDI')
     cdi_object.read_config()
