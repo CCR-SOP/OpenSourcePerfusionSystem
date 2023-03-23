@@ -16,14 +16,16 @@ import pyPerfusion.utils as utils
 from pyPerfusion.panel_DC import PanelDC
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
+from pyPerfusion.pyCDI import CDIData
 
 class DialysisPumpPanel(wx.Panel):
-    def __init__(self, parent, pump_sensors, **kwds):
+    def __init__(self, parent, pump_sensors, cdi, **kwds):
         self._lgr = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         self.parent = parent
         self.sensors = pump_sensors
+        self.cdi_sensor = cdi
 
         font = wx.Font()
         font.SetPointSize(int(16))
@@ -72,74 +74,46 @@ class DialysisPumpPanel(wx.Panel):
 
     def __set_bindings(self):
         self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
-        self.Bind(wx.EVT_TIMER, self.pullDataFromCDI, self.cdi_timer)
+        self.Bind(wx.EVT_TIMER, self.readDataFromCDI, self.cdi_timer)
 
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
             self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
-            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
+            self.cdi_timer.Start(10_000, wx.TIMER_CONTINUOUS)  # TODO: make this 5 mins
+            self.cdi_sensor.hw.start()
+            self.cdi_sensor.start()
         else:
             self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
             self.cdi_timer.Stop()
+            self.cdi_sensor.stop()
 
-    def pullDataFromCDI(self, evt):
+    def readDataFromCDI(self, evt):
         if evt.GetId() == self.cdi_timer.GetId():
-            if self.cdi_data is not None:
-                # TODO: add stuff from ex_CDI_sensor
-                self.update_dialysis(data)  # says this is missing attributes but it's not
+            cdi_reader = self.cdi_sensor.get_reader()
+
+            ts, all_vars = cdi_reader.get_last_acq()
+            cdi_data = CDIData(all_vars)
+            if cdi_data is not None:
+                # TODO: split methods appropriately among pumps
+                for panel in self.panels:
+                    if panel.name == "Dialysate Outflow":
+                        panel.panel_dc.update_dialysis_rates(cdi_data)
             else:
                 self._lgr.debug(f'No CDI data. Cannot run dialysis automatically')
-
-    def update_dialysis(self, cdi_input):
-        # TODO: Add ceilings and error cases
-        if cdi_input.hgb == -1:
-            self._lgr.warning(f'Hemoglobin is out of range. Cannot be adjusted automatically')
-        elif 0 < cdi_input.hgb < 7:
-            self._lgr.debug(f'Hemoglobin is low at {cdi_input.hgb}. Increasing dialysate outflow')
-            # current_flow_rate = 10  # TODO: GET CURRENT FLOW RATE
-            # new_flow_rate = current_flow_rate + 1
-            # self._panel_outflow.sensor.hw.set_output(int(new_flow_rate))
-        elif cdi_input.hgb > 12:
-            self._lgr.debug(f'Hemoglobin is high at {cdi_input.hgb}. Increasing dialysate inflow')
-            # current_flow_rate = something
-            # new_flow_rate = current_flow_rate + 1
-            # self._panel_inflow.sensor.hw.set_output(int(new_flow_rate))
-        else:
-            self._lgr.debug(f'No need to increase or decrease relative inflow/outflow rates')
-
-        if cdi_input.K == -1:
-            self._lgr.warning(f'K is out of range. Cannot be adjusted automatically')
-        elif 0 < cdi_input.K > 6:
-            self._lgr.debug(f'K is high at {cdi_input.K}. Increasing rates of dialysis')
-            # current_inflow_rate = something
-            # new_inflow_rate = current_flow_rate + 1
-            # self._panel_inflow.sensor.hw.set_output(int(new_inflow_rate))
-            # current_outflow_rate = something
-            # new_outflow_rate = current_flow_rate + 1
-            # self._panel_outflow.sensor.hw.set_output(int(new_outflow_rate))
-        elif cdi_input.K < 2:
-            self._lgr.debug(f'K is stable {cdi_input.K}. Decreasing rates of dialysis')
-            # current_inflow_rate = something
-            # new_inflow_rate = current_flow_rate - 1
-            # self._panel_inflow.sensor.hw.set_output(int(new_inflow_rate))
-            # current_outflow_rate = something
-            # new_outflow_rate = current_flow_rate - 1
-            # self._panel_outflow.sensor.hw.set_output(int(new_outflow_rate))
-        else:
-            self._lgr.debug(f'Dialysis can continue at a stable rate')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = DialysisPumpPanel(self, sensors)
+        self.panel = DialysisPumpPanel(self, sensors, cdi_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         self.panel.close()
         SYS_HW.stop()
         self.panel.cdi_timer.Stop()
+        self.panel.cdi_sensor.stop()
         for sensor in self.panel.sensors:
             sensor.stop()
         self.Destroy()
@@ -159,6 +133,7 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
 
+    # Load roller pumps wrapped in sensors
     rPumpNames = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
     sensors = []
     for pump_name in rPumpNames:
@@ -170,6 +145,10 @@ if __name__ == "__main__":
             print(f'Could not find sensor called {pump_name} in sensors.ini')
             SYS_HW.stop()
             raise SystemExit(1)
+
+    # Load CDI sensor
+    cdi_sensor = Sensor(name='CDI')
+    cdi_sensor.read_config()
 
     app = MyTestApp(0)
     app.MainLoop()
