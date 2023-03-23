@@ -16,6 +16,8 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
 
+physio_ranges = {'hgb_lower': 7, 'hgb_upper': 12,
+                 'K_lower': 2, 'K_upper': 6}
 
 class PanelDC(wx.Panel):
     def __init__(self, parent, name, sensor):
@@ -119,10 +121,10 @@ class PanelDCControl(wx.Panel):
 
             if cdi_input.hgb == -1:
                 self._lgr.warning(f'Hemoglobin is out of range. Cannot be adjusted automatically')
-            elif 0 < cdi_input.hgb < 7 and self.name == "Dialysate Outflow":
+            elif 0 < cdi_input.hgb < physio_ranges['hgb_lower'] and self.name == "Dialysate Outflow":
                 self._lgr.info(f'Hemoglobin is low at {cdi_input.hgb}. Increasing dialysate outflow')
                 self.increase_dc_pump_speed()
-            elif cdi_input.hgb > 12 and self.name == "Dialysate Inflow":
+            elif cdi_input.hgb > physio_ranges['hgb_upper'] and self.name == "Dialysate Inflow":
                 self._lgr.info(f'Hemoglobin is high at {cdi_input.hgb}. Increasing dialysate inflow')
                 self.increase_dc_pump_speed()
             else:
@@ -130,10 +132,10 @@ class PanelDCControl(wx.Panel):
 
             if cdi_input.K == -1:
                 self._lgr.warning(f'K is out of range. Cannot be adjusted automatically')
-            elif cdi_input.K > 6:
+            elif cdi_input.K > physio_ranges['K_upper']:
                 self._lgr.info(f'K is high at {cdi_input.K}. Increasing rates of dialysis')
                 self.increase_dc_pump_speed()
-            elif 0 < cdi_input.K < 2:
+            elif 0 < cdi_input.K < physio_ranges['K_lower']:
                 self._lgr.info(f'K is stable at {cdi_input.K}. Decreasing rates of dialysis to conserve dialysate')
                 self.decrease_dc_pump_speed()
             else:
