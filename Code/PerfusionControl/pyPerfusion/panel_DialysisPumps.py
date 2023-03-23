@@ -9,7 +9,6 @@ and under the public domain.
 """
 import logging
 import wx
-from time import sleep
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -79,7 +78,7 @@ class DialysisPumpPanel(wx.Panel):
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
             self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
-            self.cdi_timer.Start(10_000, wx.TIMER_CONTINUOUS)  # TODO: make this 5 mins
+            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
             self.cdi_sensor.hw.start()
             self.cdi_sensor.start()
         else:
@@ -90,13 +89,11 @@ class DialysisPumpPanel(wx.Panel):
     def readDataFromCDI(self, evt):
         if evt.GetId() == self.cdi_timer.GetId():
             cdi_reader = self.cdi_sensor.get_reader()
-
             ts, all_vars = cdi_reader.get_last_acq()
             cdi_data = CDIData(all_vars)
             if cdi_data is not None:
-                # TODO: split methods appropriately among pumps
                 for panel in self.panels:
-                    if panel.name == "Dialysate Outflow":
+                    if panel.name == "Dialysate Outflow" or panel.name == "Dialysate Inflow":
                         panel.panel_dc.update_dialysis_rates(cdi_data)
             else:
                 self._lgr.debug(f'No CDI data. Cannot run dialysis automatically')
