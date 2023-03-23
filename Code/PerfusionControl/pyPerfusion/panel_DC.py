@@ -79,9 +79,11 @@ class PanelDCControl(wx.Panel):
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
         self.btn_change_rate.SetFont(font)
-
         self.btn_stop = wx.Button(self, label='Stop')
         self.btn_stop.SetFont(font)
+
+        self.sync_with_hw_timer = wx.Timer(self)
+        self.sync_with_hw_timer.Start(1_200_000, wx.TIMER_CONTINUOUS)
 
         self.__do_layout()
         self.__set_bindings()
@@ -107,17 +109,27 @@ class PanelDCControl(wx.Panel):
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
         self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
+        self.Bind(wx.EVT_TIMER, self.CheckHardwareForAccuracy, self.sync_with_hw_timer)
 
     def on_update(self, evt):
-        new_flow = self.entered_offset.GetValue() / 10
-        self.sensor.hw.set_output(new_flow)
+        new_voltage = self.entered_offset.GetValue() / 10
+        self.sensor.hw.set_output(new_voltage)
 
         sleep(2)
         ts, last_samples = self.reader.retrieve_buffer(5000, 5)
         for ts, samples in zip(ts, last_samples):
             self._lgr.info(f' At time {ts}, {self.name} Pump was changed to {samples*10} mL/min')
 
-        self.real_offset.SetValue(str(new_flow*10))
+        self.real_offset.SetValue(str(new_voltage*10))
+
+    def on_stop(self, evt):
+        self.sensor.hw.set_output(int(0))
+
+    def CheckHardwareForAccuracy(self, evt):
+        if evt.GetId() == self.sync_with_hw_timer.GetId():
+            sleep(1)
+            ts, new_voltage = self.reader.get_last_acq()
+            self.real_offset.SetValue(str(new_voltage * 10))
 
     def update_dialysis_rates(self, cdi_input):
 
@@ -172,9 +184,6 @@ class PanelDCControl(wx.Panel):
         else:
             self._lgr.warning(f'Current flow rate is {current_flow_rate}. Cannot go negative')
 
-    def on_stop(self, evt):
-        self.sensor.hw.set_output(int(0))
-
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -188,7 +197,7 @@ class TestFrame(wx.Frame):
         SYS_HW.stop()
         trial_sensor.stop()
         self.Destroy()
-
+        self.panel.panel_dc.sync_with_hw_timer.Stop()
 
 class MyTestApp(wx.App):
     def OnInit(self):
