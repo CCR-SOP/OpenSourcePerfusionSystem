@@ -101,7 +101,7 @@ class GasDevice:
         if cfg is not None:
             self.cfg = cfg
         if self.cfg.port != '':
-            self.hw = modbus.Instrument(self.cfg, 1, modbus.MODE_RTU, debug=False)
+            self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
             self.hw.serial.baudrate = self.cfg.baud
             self.hw.serial.bytesize = 8
             self.hw.serial.parity = serial.PARITY_NONE
