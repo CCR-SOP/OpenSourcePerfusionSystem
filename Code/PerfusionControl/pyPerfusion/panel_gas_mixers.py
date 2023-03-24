@@ -77,6 +77,9 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_total_flow.SetFont(font)
         self.input_total_flow.SetFont(font)
 
+        self.label_real_total_flow = wx.StaticText(self, label='Actual total gas flow (mL/min):')
+        self.real_total_flow = wx.TextCtrl(self, style=wx.TE_READONLY, value=str(total_flow))
+
         # Pull initial gas mix percentages and flow rates
         channel_nr = 1  # always just change the first channel and the rest will follow
         gas1_mix_perc = self.gas_device.get_percent_value(channel_nr)
@@ -91,6 +94,9 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
         self.label_gas1.SetFont(font)
         self.input_percent_gas1.SetFont(font)
+
+        self.label_real_gas1 = wx.StaticText(self, label=f'Actual {self.gas1} % Mix:')  # in case someone changes hardware, or runs auto
+        self.percent_real_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=str(gas1_mix_perc))
         self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} actual flow (mL/min):')
         self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_flow)
         self.label_target_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} target flow (mL/min):')
@@ -126,7 +132,7 @@ class BaseGasMixerPanel(wx.Panel):
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 2).Center()
-        sizer_cfg = wx.GridSizer(cols=2)
+        sizer_cfg = wx.FlexGridSizer(cols=2)
 
         sizer_cfg.Add(self.label_total_flow, flags)
         sizer_cfg.Add(self.input_total_flow, flags)
@@ -134,6 +140,11 @@ class BaseGasMixerPanel(wx.Panel):
         sizer_cfg.Add(self.label_gas1, flags)
         sizer_cfg.Add(self.input_percent_gas1, flags)
 
+        sizer_cfg.Add(self.label_real_total_flow, flags)
+        sizer_cfg.Add(self.real_total_flow, flags)
+
+        sizer_cfg.Add(self.label_real_gas1, flags)
+        sizer_cfg.Add(self.percent_real_gas1, flags)
         sizer_cfg.Add(self.label_target_flow_gas1, flags)
         sizer_cfg.Add(self.target_flow_gas1, flags)
         sizer_cfg.Add(self.label_flow_gas1, flags)
@@ -151,7 +162,10 @@ class BaseGasMixerPanel(wx.Panel):
         sizer_cfg.Add(self.manual_start_btn, flags)
         sizer_cfg.Add(self.automatic_start_btn, flags)
 
-        self.sizer.Add(sizer_cfg)
+        sizer_cfg.AddGrowableCol(0, 2)
+        sizer_cfg.AddGrowableCol(1, 1)
+
+        self.sizer.Add(sizer_cfg, proportion=1, flag=wx.ALL| wx.EXPAND, border=1)
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
@@ -243,8 +257,12 @@ class BaseGasMixerPanel(wx.Panel):
 
     def UpdateApp(self, new_perc=None):
         if new_perc is not None:
+            self.percent_real_gas1.SetValue(str(new_perc))
             gas2_mix_perc = str(100 - new_perc)
             self.percent_gas2.SetValue(gas2_mix_perc)
+
+        total_gas_flow = str(self.gas_device.get_total_flow())
+        self.real_total_flow.SetValue(total_gas_flow)
 
         gas1_flow = str(self.gas_device.get_sccm_av(1))
         gas2_flow = str(self.gas_device.get_sccm_av(2))
@@ -281,14 +299,14 @@ class BaseGasMixerPanel(wx.Panel):
                 tolerance = [target_flows[x]*0.95, target_flows[x]*1.05]
                 if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
                     wx.MessageBox(f'Actual flow of {self.gas_device.channel_type} mixer, channel {x+1} not within '
-                                  f'5% of target flow. Check gas tank flow')  # TODO: implement loggers again
+                                  f'5% of target flow. Check gas tank flow')  # make a Lgr.warning
                     self.UpdateApp()
 
             if not self.input_percent_gas1.GetValue() == self.gas_device.get_percent_value(1):
-                wx.MessageBox(f'Please update gas 1 mix % on application to match hardware')
+                self.UpdateApp(self.gas_device.get_percent_value(1))
 
             if not self.input_total_flow.GetValue() == self.gas_device.get_total_flow():
-                wx.MessageBox(f'Please update total flow on application to match hardware')
+                self.UpdateApp()
 
 
 class TestFrame(wx.Frame):
@@ -296,7 +314,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self, ha_mixer, pv_mixer, cdi_data=cdi_object)  # ro_sensor
+        self.panel = GasMixerPanel(self, ha_mixer, pv_mixer, cdi_data=cdi_object)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
