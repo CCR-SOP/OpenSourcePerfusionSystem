@@ -15,7 +15,7 @@ from pyPerfusion.panel_AI import PanelAI
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import pyPerfusion.Sensor as Sensor
-from pyHardware.SystemHardware import SYS_HW
+from apps.app_hardware_control import SYS_HW
 
 
 class SensorFrame(wx.Frame):
