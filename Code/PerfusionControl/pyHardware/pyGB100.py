@@ -75,6 +75,7 @@ class GasDevice:
 
         self._queue = None
         self.acq_start_ms = 0
+        self.baud = 115200
 
         self.data_type = np.uint32
 
@@ -101,12 +102,13 @@ class GasDevice:
         self.open()
 
     def open(self, cfg=None):
+        self._lgr.debug(f'Attempting to open {self.name} with config {cfg}')
         if cfg is not None:
             self.cfg = cfg
         if self.cfg.port != '':
             self._lgr.debug(f'Opening modbus instrument at {self.cfg.port}')
             self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=True)
-            self.hw.serial.baudrate = self.cfg.baud
+            self.hw.serial.baudrate = self.baud
             self.hw.serial.bytesize = 8
             self.hw.serial.parity = serial.PARITY_NONE
             self.hw.serial.stopbits = 1
