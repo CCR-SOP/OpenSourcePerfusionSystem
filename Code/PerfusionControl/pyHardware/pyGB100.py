@@ -156,7 +156,7 @@ class GasDevice:
             self.hw.write_long(addr, total_flow)
             if self._queue:
                 buf = [addr, self.data_type(total_flow)]
-                self._queue.push((buf, get_epoch_ms()))
+                self._queue.put((buf, get_epoch_ms()))
 
     def get_percent_value(self, channel_num:int) -> float:
         value = 0.0
@@ -172,7 +172,7 @@ class GasDevice:
             self.hw.write_register(addr, percent)
             if self._queue:
                 buf = [addr, percent]
-                self._queue.push((buf, get_epoch_ms()))
+                self._queue.put((buf, get_epoch_ms()))
 
     def get_sccm(self, channel_num:int) -> float:
         value = 0.0
@@ -211,7 +211,7 @@ class GasDevice:
             self.hw.write_register(addr, int(turn_on))
             if self._queue:
                 buf = [addr, self.data_type(turn_on)]
-                self._queue.push((buf, get_epoch_ms()))
+                self._queue.put((buf, get_epoch_ms()))
 
     def update_pH(self, pH: float) -> float:
         total_flow = self.get_total_flow()
