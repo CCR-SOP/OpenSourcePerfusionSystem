@@ -18,14 +18,13 @@ from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
-from pyPerfusion.pyGB100_SL import GasControl
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, rPumpNames, cdi, gas_controller):
+    def __init__(self, parent, rPumpNames, cdi):
         self.parent = parent
         self.pump_names = rPumpNames
         self.cdi_sensor = cdi
-        self.gas_mixers = gas_controller
+        # self.gas_mixers = gas_controller
         wx.Panel.__init__(self, parent)
 
 
@@ -33,7 +32,7 @@ class HardwarePanel(wx.Panel):
 
         self.panel_syringes = SyringePanel(self, drugs)
         self.panel_dialysate_pumps = DialysisPumpPanel(self, self.pump_names, self.cdi_sensor)
-        self.panel_gas_mixers = GasMixerPanel(self, self.gas_mixers, self.cdi_sensor)
+        # self.panel_gas_mixers = GasMixerPanel(self, self.gas_mixers, self.cdi_sensor)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -48,7 +47,7 @@ class HardwarePanel(wx.Panel):
 
         self.sizer.Add(self.panel_syringes, flags.Proportion(2))
         self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(2))
-        self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
+        # self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
 
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start
@@ -65,7 +64,7 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self, rPumpNames, cdi_sensor, gas_control)
+        self.panel = HardwarePanel(self, rPumpNames, cdi_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -77,12 +76,12 @@ class HardwareFrame(wx.Frame):
         for sensor in self.panel.panel_dialysate_pumps.sensors:
             sensor.stop()
 
-        self.panel.panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
-        self.panel.panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
-        self.panel.panel_gas_mixers._panel_HA.cdi_timer.Stop()
-        self.panel.panel_gas_mixers._panel_PV.cdi_timer.Stop()
-        self.panel.panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
-        self.panel.panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
+        # self.panel.panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
+        # self.panel.panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
+        # self.panel.panel_gas_mixers._panel_HA.cdi_timer.Stop()
+        # self.panel.panel_gas_mixers._panel_PV.cdi_timer.Stop()
+        # self.panel.panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
+        # self.panel.panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
 
         self.Destroy()
 
@@ -100,8 +99,14 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
+    # SYS_HW.get_hw("Glucose Circuit Pump")
+    # SYS_HW.get_hw("Dialysate Inflow Pump")
+    # SYS_HW.get_hw("Dialysate Outflow Pump")
+    # SYS_HW.get_hw("Dialysis Blood Pump")
     SYS_HW.load_hardware_from_config()
-    gas_control = GasControl()  # TODO: update gas mixer initialization, OnClose
+    SYS_HW.start()
+    # gas_control = SYS_HW.get_hw("GasControl")  # TODO: update gas mixer initialization, OnClose
+    # SYS_HW.get_hw("CDI")
     rPumpNames = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
 
     # Load CDI sensor

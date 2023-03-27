@@ -171,7 +171,7 @@ class SystemHardware:
             self.mock_cdi.stop()
             self.mock_syringe.stop()
 
-    def get_hw(self, name: str):
+    def get_hw(self, name: str = None):
         self._lgr.debug(f'Getting hardware named: {name}')
         hw = None
         if hw is None:

@@ -75,8 +75,7 @@ class MySensorApp(wx.App):
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
 
-    SYS_HW.load_hardware_from_config()
-    SYS_HW.start()
+    SYS_HW.get_hw("CDI")
 
     app = MySensorApp(0)
     app.MainLoop()
