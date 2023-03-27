@@ -34,7 +34,10 @@ class SensorFrame(wx.Frame):
             sensor = Sensor.Sensor(name)
             self.sensors[name] = sensor
             self.sensors[name].read_config()
-            panel = PanelAI(self, sensor, reader=sensor.get_reader())
+            if name == "Hepatic Artery Flow":
+                panel = PanelAI(self, sensor, reader=sensor.get_reader('MovAvg_11pt'))
+            else:
+                panel = PanelAI(self, sensor, reader=sensor.get_reader())
             self.panels.append(panel)
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
