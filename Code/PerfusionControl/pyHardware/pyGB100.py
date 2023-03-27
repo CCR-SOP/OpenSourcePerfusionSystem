@@ -153,7 +153,7 @@ class GasDevice:
     def set_total_flow(self, total_flow: int):
         if self.hw is not None:
             addr = MainBoardOffsets['Total flow'].value
-            self.hw.write_long(addr, total_flow)
+            self.hw.write_long(addr, int(total_flow))
             if self._queue:
                 buf = [addr, self.data_type(total_flow)]
                 self._queue.put((buf, get_epoch_ms()))
@@ -165,13 +165,14 @@ class GasDevice:
             value = self.hw.read_register(addr, number_of_decimals=2)
         return value
 
-    def set_percent_value(self, channel_num: int, new_percent: float):
+    def set_percent_value(self, channel_num: int, new_percent: int):
         if self.hw is not None:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
-            percent = np.uint32(int(new_percent * 100))
+            percent = int(new_percent)
+            self._lgr.debug(f'percent is {percent}, type is {type(percent)}')
             self.hw.write_register(addr, percent)
             if self._queue:
-                buf = [addr, percent]
+                buf = [addr, self.data_type(percent)]
                 self._queue.put((buf, get_epoch_ms()))
 
     def get_sccm(self, channel_num:int) -> float:
