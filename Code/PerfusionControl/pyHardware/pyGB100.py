@@ -100,7 +100,7 @@ class GasDevice:
         self._lgr.debug(f'CO2_range is {self.cfg.CO2_range}, O2_range is {self.cfg.O2_range}, ph_range is {self.cfg.pH_range}')
         self.open()
 
-    def open(self, cfg):
+    def open(self, cfg=None):
         if cfg is not None:
             self.cfg = cfg
         if self.cfg.port != '':
