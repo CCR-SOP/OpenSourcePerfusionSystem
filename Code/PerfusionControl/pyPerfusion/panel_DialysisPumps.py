@@ -9,7 +9,6 @@ and under the public domain.
 """
 import logging
 import wx
-from time import sleep
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" Application to display dialysis pump controls
+""" Application to display gas mixer controls
 
 @project: LiverPerfusion NIH
 @author: Stephie Lux, NIH
@@ -14,18 +14,24 @@ import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import pyPerfusion.pyCDI as pyCDI
 from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.Sensor import Sensor
+from pyPerfusion.pyCDI import CDIData
+
+PerfusionConfig.set_test_config()
+utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+utils.configure_matplotlib_logging()
 
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent, ha_mixer, pv_mixer, cdi_data):
+    def __init__(self, parent, HA_mixer, PV_mixer, cdi):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self.cdi_data = cdi_data
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=ha_mixer, cdi_data=self.cdi_data)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=pv_mixer, cdi_data=self.cdi_data)
+        self.cdi_sensor = cdi
+
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=HA_mixer, cdi=self.cdi_sensor)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=PV_mixer, cdi=self.cdi_sensor)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -53,14 +59,15 @@ class GasMixerPanel(wx.Panel):
 
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, gas_device, cdi_data, **kwds):
+    def __init__(self, parent, name, gas_device, cdi, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
+        self._lgr = logging.getLogger(__name__)
 
         self.parent = parent
         self.name = name
         self.gas_device = gas_device
-        self.cdi_data = cdi_data
+        self.cdi_sensor = cdi
         if self.gas_device is not None:
             self.gas1 = self.gas_device.get_gas_type(1)
             self.gas2 = self.gas_device.get_gas_type(2)
@@ -165,7 +172,7 @@ class BaseGasMixerPanel(wx.Panel):
         sizer_cfg.AddGrowableCol(0, 2)
         sizer_cfg.AddGrowableCol(1, 1)
 
-        self.sizer.Add(sizer_cfg, proportion=1, flag=wx.ALL| wx.EXPAND, border=1)
+        self.sizer.Add(sizer_cfg, proportion=1, flag=wx.ALL | wx.EXPAND, border=1)
 
         self.sizer.SetSizeHints(self.parent)
         self.SetSizer(self.sizer)
@@ -178,7 +185,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.update_gas1_perc_btn.Bind(wx.EVT_BUTTON, self.OnChangePercentMix)
         self.update_total_flow_btn.Bind(wx.EVT_BUTTON, self.OnChangeTotalFlow)
         self.Bind(wx.EVT_TIMER, self.CheckHardwareForAccuracy, self.sync_with_hw_timer)
-        self.Bind(wx.EVT_TIMER, self.pullDataFromCDI, self.cdi_timer)
+        self.Bind(wx.EVT_TIMER, self.readDataFromCDI, self.cdi_timer)
 
     def OnManualStart(self, evt):
         working_status = self.gas_device.get_working_status()
@@ -203,32 +210,37 @@ class BaseGasMixerPanel(wx.Panel):
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.manual_start_btn.Disable()
             self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
+            self.cdi_sensor.hw.start()
+            self.cdi_sensor.start()
         else:
             self.gas_device.set_working_status(turn_on=False)
             self.automatic_start_btn.SetLabel('Start Automatic')
             self.manual_start_btn.Enable()
             self.cdi_timer.Stop()
+            self.cdi_sensor.stop()
 
         time.sleep(3.0)
         self.UpdateApp()
     
-    def pullDataFromCDI(self, evt):        
+    def readDataFromCDI(self, evt):
         if evt.GetId() == self.cdi_timer.GetId():
-            packet = self.cdi_data.request_data()
-            data = pyCDI.CDIParsedData(packet)
-            # data = self.cdi_data.retrieve_buffer()
-
-            if self.gas_device.channel_type == "PV":
-                new_flow = self.gas_device.update_pH(data)
-                new_mix_perc_pv = self.gas_device.update_O2(data)
-                if new_flow is not None:
-                    self.UpdateApp()
-                if new_mix_perc_pv is not None:
-                    self.UpdateApp(new_mix_perc_pv)
-            elif self.gas_device.channel_type == "HA":
-                new_mix_perc_ha = self.gas_device.update_CO2(data)
-                if new_mix_perc_ha is not None:
-                    self.UpdateApp(100-new_mix_perc_ha)
+            cdi_reader = self.cdi_sensor.get_reader()
+            ts, all_vars = cdi_reader.get_last_acq()
+            cdi_data = CDIData(all_vars)
+            if cdi_data is not None:
+                if self.gas_device.name == "Venous Gas Mixer":  # channel_type == "PV":
+                    new_flow = self.update_pH(cdi_data)
+                    new_mix_perc_pv = self.update_O2(cdi_data)
+                    if new_flow is not None:
+                        self.UpdateApp()
+                    if new_mix_perc_pv is not None:
+                        self.UpdateApp(new_mix_perc_pv)
+                elif self.gas_device.name == "Arterial Gas Mixer":  # channel_type == "HA":
+                    new_mix_perc_ha = self.update_CO2(cdi_data)
+                    if new_mix_perc_ha is not None:
+                        self.UpdateApp(100 - new_mix_perc_ha)
+            else:
+                self._lgr.debug(f'No CDI data. Cannot run gas mixers automatically')
 
             if self.automatic_start_btn.GetLabel() == "Stop Automatic":
                 self.EnsureTurnedOn()
@@ -308,17 +320,92 @@ class BaseGasMixerPanel(wx.Panel):
             if not self.input_total_flow.GetValue() == self.gas_device.get_total_flow():
                 self.UpdateApp()
 
+    def update_pH(self, CDI_input):
+        total_flow = self.gas_device.get_total_flow()
+        if 5 < total_flow < 250:
+            if CDI_input.venous_pH == -1:
+                self._lgr.warning(f'Venous pH is out of range. Cannot be adjusted automatically')
+                return None
+            elif CDI_input.venous_pH < self.gas_device.ph_range[0]:
+                new_flow = total_flow + 5  # TODO: do not hard code
+                self.gas_device.set_total_flow(new_flow)
+                self._lgr.info(f'Total flow in PV increased to {new_flow}')
+                return new_flow
+            elif CDI_input.venous_pH > self.gas_device.ph_range[1]:
+                new_flow = total_flow - 5
+                self.gas_device.set_total_flow(new_flow)
+                self._lgr.info(f'Total flow in PV decreased to {new_flow}')
+                return new_flow
+        elif total_flow >= 250:
+            self._lgr.warning(f'Total flow in PV at or above 250 mL/min. Cannot be run automatically')
+            return None
+        elif total_flow <= 5:
+            self._lgr.warning(f'Total flow in portal vein at or below 5 mL/min. Cannot be run automatically')
+            return None
+        else:
+            return None
+
+    def update_CO2(self, CDI_input):
+        new_percentage_mix = None
+
+        gas = self.gas_device.get_gas_type(2)
+        if gas == "Carbon Dioxide":  # assumes 2-channel gas mixer with Carbon Dioxide as one of the options
+            gas_index = 2
+        else:
+            gas_index = 1
+
+        percentage_mix = self.gas_device.get_percent_value(gas_index)
+        if 0 < percentage_mix < 100:
+            if CDI_input.arterial_pH == -1:
+                self._lgr.warning(f'Arterial pH is out of range. Cannot be adjusted automatically')
+            elif CDI_input.arterial_CO2 == -1:
+                self._lgr.warning(f'Arterial CO2 is out of range. Cannot be adjusted automatically')
+            elif CDI_input.arterial_pH > self.gas_device.ph_range[1] or CDI_input.arterial_CO2 < self.gas_device.co2_range[0]:
+                new_percentage_mix = percentage_mix + 1  # TODO: not hard code
+                self._lgr.warning(f'CO2 low, blood alkalotic')
+            elif CDI_input.arterial_pH < self.gas_device.co2_range[0] or CDI_input.arterial_CO2 > self.gas_device.co2_range[1]:
+                new_percentage_mix = percentage_mix - 1  # to do: not hard code
+                self._lgr.warning(f'CO2 high, blood acidotic')
+        else:
+            self._lgr.warning(f'CO2 % is out of range and cannot be changed automatically')
+
+        return new_percentage_mix
+
+    def update_O2(self, CDI_input):
+        new_percentage_mix = None
+
+        gas = self.gas_device.get_gas_type(1)
+        if gas == "Oxygen":  # assumes 2-channel gas mixer with Oxygen as one of the options
+            gas_index = 1
+        else:
+            gas_index = 2
+
+        percentage_mix = self.gas_device.get_percent_value(gas_index)
+        if 0 < percentage_mix < 100:
+            if CDI_input.venous_O2 == -1:
+                self._lgr.warning(f'Venous O2 is out of range. Cannot be adjusted automatically')
+            elif CDI_input.venous_O2 < self.gas_device.o2_range[0]:
+                new_percentage_mix = percentage_mix + 2  # TODO: not hard code
+                self._lgr.warning(f'Venous O2 is low')
+            elif CDI_input.venous_O2 > self.gas_device.o2_range[1]:
+                new_percentage_mix = percentage_mix - 2
+                self._lgr.warning(f'Venous O2 is high')
+        else:
+            self._lgr.warning(f'O2 % is out of range and cannot be changed automatically')
+
+        return new_percentage_mix
+
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self, ha_mixer, pv_mixer, cdi_data=cdi_object)
+        self.panel = GasMixerPanel(self, ha_mixer, pv_mixer, cdi=cdi_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        cdi_object.stop()
+        self.panel.cdi_sensor.stop()
         self.Destroy()
         self.panel._panel_HA.sync_with_hw_timer.Stop()
         self.panel._panel_PV.sync_with_hw_timer.Stop()
@@ -343,8 +430,9 @@ if __name__ == "__main__":
     ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
     pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
 
-    cdi_object = pyCDI.CDIStreaming('CDI')
-    cdi_object.read_config()
+    # Load CDI sensor
+    cdi_sensor = Sensor(name='CDI')
+    cdi_sensor.read_config()
 
     app = MyTestApp(0)
     app.MainLoop()
