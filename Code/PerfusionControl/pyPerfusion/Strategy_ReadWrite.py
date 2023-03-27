@@ -87,6 +87,8 @@ class Reader:
         return file_size
 
     def retrieve_buffer(self, last_ms, samples_needed):
+        if self.sensor.hw is None:
+            return [], []
         period = self.sensor.hw.sampling_period_ms
         fid, data = self._open_mmap(self.cfg.data_type)
 

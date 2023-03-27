@@ -32,7 +32,10 @@ class PanelAI(wx.Panel):
         self._panel_plot = PanelPlotting(self)
         self._panel_cal = PanelAICalibration(self, sensor, reader)
 
-        ch_name = f'{self._sensor.hw.device.cfg.name} Channel: {self._sensor.hw.cfg.name}'
+        if self._sensor.hw is not None:
+            ch_name = f'{self._sensor.hw.device.cfg.name} Channel: {self._sensor.hw.cfg.name}'
+        else:
+            ch_name = "NA"
         static_box = wx.StaticBox(self, wx.ID_ANY, label=ch_name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
         self.sizer_pane = wx.BoxSizer(wx.VERTICAL)
@@ -166,10 +169,14 @@ class PanelAICalibration(wx.Panel):
         self._sensor.hw.cfg.cal_pt2_reading = float(self.label_cal_pt2_val.GetLabel())
 
     def update_controls_from_config(self):
-        self.spin_cal_pt1.SetValue(self._sensor.hw.cfg.cal_pt1_target)
-        self.label_cal_pt1_val.SetLabel(str(self._sensor.hw.cfg.cal_pt1_reading))
-        self.spin_cal_pt2.SetValue(self._sensor.hw.cfg.cal_pt2_target)
-        self.label_cal_pt2_val.SetLabel(str(self._sensor.hw.cfg.cal_pt2_reading))
+        try:
+            self.spin_cal_pt1.SetValue(self._sensor.hw.cfg.cal_pt1_target)
+            self.label_cal_pt1_val.SetLabel(str(self._sensor.hw.cfg.cal_pt1_reading))
+            self.spin_cal_pt2.SetValue(self._sensor.hw.cfg.cal_pt2_target)
+            self.label_cal_pt2_val.SetLabel(str(self._sensor.hw.cfg.cal_pt2_reading))
+        except AttributeError:
+            # this should only happen if the hardware didn't load
+            pass
 
     def on_save_cfg(self, evt):
         self.update_config_from_controls()
