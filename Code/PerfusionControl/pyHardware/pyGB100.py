@@ -91,17 +91,19 @@ class GasDevice:
     def read_config(self):
         self._lgr.debug(f'Reading config for {self.cfg.name}')
         PerfusionConfig.read_into_dataclass('hardware', self.cfg.name, self.cfg)
+        self._lgr.debug(f'Config = {self.cfg}')
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
         self.cfg.CO2_range = [int(x) for x in ''.join(self.cfg.CO2_range).strip(' ').split(',')]
         self.cfg.O2_range = [int(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
         self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
+        self._lgr.debug(f'CO2_range is {self.cfg.CO2_range}, O2_range is {self.cfg.O2_range}, ph_range is {self.cfg.pH_range}')
 
     def open(self, cfg):
         if cfg is not None:
             self.cfg = cfg
         if self.cfg.port != '':
-            self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
+            self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=True)
             self.hw.serial.baudrate = self.cfg.baud
             self.hw.serial.bytesize = 8
             self.hw.serial.parity = serial.PARITY_NONE
