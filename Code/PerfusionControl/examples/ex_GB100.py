@@ -6,12 +6,15 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+import logging
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
+import pyPerfusion.utils as utils
 from time import sleep
 
 PerfusionConfig.set_test_config()
+utils.setup_file_logger(logging.getLogger(), logging.DEBUG, filename='ex_gb100')
 
 SYS_HW.load_hardware_from_config()
 ha_device = SYS_HW.get_hw('Arterial Gas Mixer')
