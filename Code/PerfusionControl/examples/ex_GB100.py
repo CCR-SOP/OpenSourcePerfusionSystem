@@ -35,16 +35,17 @@ sleep(4)
 working_status = ha_device.get_working_status()
 print(f'HA device working status is {working_status}')
 
-total_flow = 100
+total_flow = 50
 print(f'Setting HA total flow to {total_flow}')
 ha_device.set_total_flow(total_flow)
 
-percent = 30
+percent = 5
 print(f'Setting HA second channel to 30%')
 ha_device.set_percent_value(2, percent)
 
-sleep(3)
+sleep(2)
 ha_device.set_working_status(turn_on=True)
+sleep(2)
 
 print('Turn off HA device')
 ha_device.set_working_status(turn_on=False)
