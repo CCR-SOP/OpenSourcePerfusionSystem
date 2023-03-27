@@ -131,6 +131,7 @@ class GasDevice:
         gas_type = 'NA'
         if self.hw is not None:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Id gas'].value
+            self._lgr.debug(f'addr is {addr}')
             gas_id = self.hw.read_register(self.hw, addr)
             try:
                 gas_type = GasNames[gas_id]
