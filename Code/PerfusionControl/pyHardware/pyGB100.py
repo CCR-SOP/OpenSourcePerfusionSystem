@@ -98,11 +98,13 @@ class GasDevice:
         self.cfg.O2_range = [int(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
         self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
         self._lgr.debug(f'CO2_range is {self.cfg.CO2_range}, O2_range is {self.cfg.O2_range}, ph_range is {self.cfg.pH_range}')
+        self.open()
 
     def open(self, cfg):
         if cfg is not None:
             self.cfg = cfg
         if self.cfg.port != '':
+            self._lgr.debug(f'Opening modbus instrument at {self.cfg.port}')
             self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=True)
             self.hw.serial.baudrate = self.cfg.baud
             self.hw.serial.bytesize = 8
