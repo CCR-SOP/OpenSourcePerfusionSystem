@@ -165,10 +165,10 @@ class GasDevice:
             value = self.hw.read_register(addr, number_of_decimals=2)
         return value
 
-    def set_percent_value(self, channel_num: int, new_percent: int):
+    def set_percent_value(self, channel_num: int, new_percent: float):
         if self.hw is not None:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
-            percent = int(new_percent)
+            percent = int(new_percent * 100)
             self._lgr.debug(f'percent is {percent}, type is {type(percent)}')
             self.hw.write_register(addr, percent)
             if self._queue:
