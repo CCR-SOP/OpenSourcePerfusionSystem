@@ -20,6 +20,8 @@ SYS_HW.load_hardware_from_config()
 ha_device = SYS_HW.get_hw('Arterial Gas Mixer')
 pv_device = SYS_HW.get_hw('Venous Gas Mixer')
 
+print(f'ha device config is {ha_device.cfg}')
+
 sample_CDI_output = [1] * 18
 
 working_status = ha_device.get_working_status()
