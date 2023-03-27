@@ -20,17 +20,21 @@ from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, rPumpNames, cdi):
+    def __init__(self, parent):
         self.parent = parent
-        self.pump_names = rPumpNames
-        self.cdi_sensor = cdi
+        self.pump_names = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
+
+        self.cdi_sensor = SYS_HW.get_hw('CDI')
         # self.gas_mixers = gas_controller
         wx.Panel.__init__(self, parent)
 
 
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
 
-        self.panel_syringes = SyringePanel(self, drugs)
+        try:
+            self.panel_syringes = SyringePanel(self, drugs)
+        except:
+            pass
         self.panel_dialysate_pumps = DialysisPumpPanel(self, self.pump_names, self.cdi_sensor)
         # self.panel_gas_mixers = GasMixerPanel(self, self.gas_mixers, self.cdi_sensor)
 
@@ -64,7 +68,7 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = HardwarePanel(self, rPumpNames, cdi_sensor)
+        self.panel = HardwarePanel(self)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -99,19 +103,10 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    # SYS_HW.get_hw("Glucose Circuit Pump")
-    # SYS_HW.get_hw("Dialysate Inflow Pump")
-    # SYS_HW.get_hw("Dialysate Outflow Pump")
-    # SYS_HW.get_hw("Dialysis Blood Pump")
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
     # gas_control = SYS_HW.get_hw("GasControl")  # TODO: update gas mixer initialization, OnClose
     # SYS_HW.get_hw("CDI")
-    rPumpNames = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
-
-    # Load CDI sensor
-    cdi_sensor = Sensor(name='CDI')
-    cdi_sensor.read_config()
 
     app = MyHardwareApp(0)
     app.MainLoop()

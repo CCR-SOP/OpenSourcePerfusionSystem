@@ -23,8 +23,9 @@ class MyMainApp(wx.App):
     def OnInit(self):
         frame_hw = HardwareFrame(None, wx.ID_ANY, "")
         frame_sensor = SensorFrame(None, wx.ID_ANY, "")
-        self.SetTopWindow(frame_hw)
+        self.SetTopWindow(frame_sensor)
         frame_hw.Show()
+        frame_sensor.Show()
         return True
 
 
