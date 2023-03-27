@@ -56,7 +56,7 @@ class NIDAQDCDevice(pyDC.DCDevice):
             raise(pyDC.AODeviceException(msg))
         except PyDAQmx.DAQmxFunctions.InvalidDeviceIDError:
             if self.cfg:
-                name = self.cfg.Device
+                name = self.cfg.device
             else:
                 name = 'None'
             msg = f'Device "{name}" is not a valid device ID'
