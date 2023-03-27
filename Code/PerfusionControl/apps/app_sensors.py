@@ -74,8 +74,8 @@ class MySensorApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-
-    SYS_HW.get_hw("CDI")
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.configure_matplotlib_logging()
 
     app = MySensorApp(0)
     app.MainLoop()

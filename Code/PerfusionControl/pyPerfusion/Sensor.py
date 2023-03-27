@@ -138,14 +138,15 @@ class Sensor:
 
     def run(self):
         while not self._evt_halt.is_set():
-            data_buf, t = self.hw.get_data()
-            if data_buf is not None:
-                buf = data_buf
-                for strategy in self._strategies:
-                    buf, t = strategy.process_buffer(buf, t)
+            if self.hw is not None:
+                data_buf, t = self.hw.get_data()
+                if data_buf is not None:
+                  buf = data_buf
+                  for strategy in self._strategies:
+                        buf, t = strategy.process_buffer(buf, t)
 
-            else:
-                time.sleep(0.5)
+                else:
+                   time.sleep(0.5)
 
     def open(self):
         pass
