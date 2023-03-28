@@ -134,7 +134,7 @@ class GasDevice:
             self._lgr.debug(f'addr is {addr}')
             gas_id = self.hw.read_register(addr)
             try:
-                gas_type = GasNames[gas_id]
+                gas_type = GasNames(gas_id).name
             except IndexError:
                 self._lgr.error(f'Channel {channel_num} at addr {addr} ahd invalid gas id {gas_id}')
         return gas_type
