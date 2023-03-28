@@ -28,7 +28,6 @@ class HardwarePanel(wx.Panel):
         # self.gas_mixers = gas_controller
         wx.Panel.__init__(self, parent)
 
-
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
 
         try:
@@ -106,7 +105,6 @@ if __name__ == "__main__":
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
     # gas_control = SYS_HW.get_hw("GasControl")  # TODO: update gas mixer initialization, OnClose
-    # SYS_HW.get_hw("CDI")
 
     app = MyHardwareApp(0)
     app.MainLoop()
