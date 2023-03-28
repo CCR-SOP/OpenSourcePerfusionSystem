@@ -77,5 +77,8 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
+
     app = MySensorApp(0)
     app.MainLoop()

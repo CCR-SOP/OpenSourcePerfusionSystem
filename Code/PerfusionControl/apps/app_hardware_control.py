@@ -26,7 +26,7 @@ class HardwarePanel(wx.Panel):
 
         self.pump_names = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
 
-        # self.cdi_sensor = SYS_HW.get_hw('CDI')
+        # self.cdi_sensor = SYS_HW.get_hw('CDI')  # TODO: it doesn't like this here for some reason?
         # self.cdi_sensor.read_config()
         # wx.MessageBox(f'CDI hardware loaded')
         wx.Panel.__init__(self, parent)
@@ -67,10 +67,9 @@ class HardwarePanel(wx.Panel):
 class HardwareFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, cdi_sensor, *args, **kwds)
+        wx.Frame.__init__(self, *args, **kwds)
 
-        self.cdi_sensor = cdi_sensor
-        self.panel = HardwarePanel(self, self.cdi_sensor)
+        self.panel = HardwarePanel(self, cdi_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -94,7 +93,7 @@ class HardwareFrame(wx.Frame):
 
 class MyHardwareApp(wx.App):
     def OnInit(self):
-        frame = HardwareFrame(None, cdi_sensor, wx.ID_ANY, "")
+        frame = HardwareFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
         return True
