@@ -210,6 +210,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.manual_start_btn.Disable()
             self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
+            self._lgr.debug(f'CDI timer starting')
             self.cdi_sensor.hw.start()
             self.cdi_sensor.start()
         else:
@@ -224,6 +225,7 @@ class BaseGasMixerPanel(wx.Panel):
     
     def readDataFromCDI(self, evt):
         if evt.GetId() == self.cdi_timer.GetId():
+            self._lgr.debug(f'CDI Timer going off!')
             cdi_reader = self.cdi_sensor.get_reader()
             ts, all_vars = cdi_reader.get_last_acq()
             cdi_data = CDIData(all_vars)

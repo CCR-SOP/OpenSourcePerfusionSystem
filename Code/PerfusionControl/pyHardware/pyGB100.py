@@ -50,8 +50,8 @@ ChannelRegisterOffsets = IntEnum('ChannelRegisterOffsets',
 
 
 # The names and order need to match the GB100 instrument
-GasNames = IntEnum('GasNames', ['Air', 'Nitrogen', 'Oxygen', 'Carbon Dioxide',
-                                'Nitric Oxide', 'Argon', 'Methane', 'Ethylene',
+GasNames = IntEnum('GasNames', ['Air', 'Nitric Oxide', 'Nitrogen', 'Oxygen',
+                                'Carbon Dioxide', 'Argon', 'Methane', 'Ethylene',
                                 'Ethane', 'Hydrogen', 'Helium', 'Sulfur Exafluoride',
                                 'Propane', 'Butane', 'DME'],
                    start=0)
