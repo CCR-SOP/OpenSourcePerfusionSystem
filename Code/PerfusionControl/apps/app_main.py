@@ -16,11 +16,12 @@ import pyPerfusion.utils as utils
 from apps.app_sensors import SensorFrame
 from apps.app_hardware_control import HardwareFrame
 from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.Sensor import Sensor
 
 
 class MyMainApp(wx.App):
     def OnInit(self):
-        frame_hw = HardwareFrame(None, wx.ID_ANY, "")
+        frame_hw = HardwareFrame(None, cdi_sensor, wx.ID_ANY, "")
         frame_sensor = SensorFrame(None, wx.ID_ANY, "")
         self.SetTopWindow(frame_sensor)
         frame_hw.Show()
@@ -35,6 +36,10 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
+
+    # Load CDI sensor
+    cdi_sensor = Sensor(name='CDI')
+    cdi_sensor.read_config()
 
     app = MyMainApp(0)
     app.MainLoop()

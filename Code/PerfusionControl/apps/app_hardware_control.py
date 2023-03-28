@@ -17,15 +17,18 @@ from pyPerfusion.panel_multiple_syringes import SyringePanel
 from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
 from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.Sensor import Sensor
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent):
+    def __init__(self, parent, cdi_Sensor):
         self.parent = parent
+        self.cdi_sensor = cdi_Sensor
+
         self.pump_names = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
 
-        self.cdi_sensor = SYS_HW.get_hw('CDI')
-        self.cdi_sensor.read_config()
-        wx.MessageBox(f'CDI hardware loaded')
+        # self.cdi_sensor = SYS_HW.get_hw('CDI')
+        # self.cdi_sensor.read_config()
+        # wx.MessageBox(f'CDI hardware loaded')
         wx.Panel.__init__(self, parent)
 
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
@@ -64,9 +67,10 @@ class HardwarePanel(wx.Panel):
 class HardwareFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, *args, **kwds)
+        wx.Frame.__init__(self, cdi_sensor, *args, **kwds)
 
-        self.panel = HardwarePanel(self)
+        self.cdi_sensor = cdi_sensor
+        self.panel = HardwarePanel(self, self.cdi_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -90,7 +94,7 @@ class HardwareFrame(wx.Frame):
 
 class MyHardwareApp(wx.App):
     def OnInit(self):
-        frame = HardwareFrame(None, wx.ID_ANY, "")
+        frame = HardwareFrame(None, cdi_sensor, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
         return True
@@ -103,6 +107,10 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
+
+    # Load CDI sensor
+    cdi_sensor = Sensor(name='CDI')
+    cdi_sensor.read_config()
 
     app = MyHardwareApp(0)
     app.MainLoop()
