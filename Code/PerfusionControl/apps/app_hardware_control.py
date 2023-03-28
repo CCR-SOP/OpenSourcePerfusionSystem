@@ -29,13 +29,15 @@ class HardwarePanel(wx.Panel):
         wx.Panel.__init__(self, parent)
 
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
+        self.ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
+        self.pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
 
         try:
             self.panel_syringes = SyringePanel(self, drugs)
         except:
             pass
         self.panel_dialysate_pumps = DialysisPumpPanel(self, self.pump_names, self.cdi_sensor)
-        # self.panel_gas_mixers = GasMixerPanel(self, self.gas_mixers, self.cdi_sensor)
+        self.panel_gas_mixers = GasMixerPanel(self, self.ha_mixer, self.pv_mixer, self.cdi_sensor)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -50,7 +52,7 @@ class HardwarePanel(wx.Panel):
 
         self.sizer.Add(self.panel_syringes, flags.Proportion(2))
         self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(2))
-        # self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
+        self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
 
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start
@@ -79,12 +81,12 @@ class HardwareFrame(wx.Frame):
         for sensor in self.panel.panel_dialysate_pumps.sensors:
             sensor.stop()
 
-        # self.panel.panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
-        # self.panel.panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
-        # self.panel.panel_gas_mixers._panel_HA.cdi_timer.Stop()
-        # self.panel.panel_gas_mixers._panel_PV.cdi_timer.Stop()
-        # self.panel.panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
-        # self.panel.panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
+        self.panel.panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
+        self.panel.panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
+        self.panel.panel_gas_mixers._panel_HA.cdi_timer.Stop()
+        self.panel.panel_gas_mixers._panel_PV.cdi_timer.Stop()
+        self.panel.panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
+        self.panel.panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
 
         self.Destroy()
 
