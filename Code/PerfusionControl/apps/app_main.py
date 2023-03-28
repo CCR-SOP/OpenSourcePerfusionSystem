@@ -16,7 +16,6 @@ import pyPerfusion.utils as utils
 from apps.app_sensors import SensorFrame
 from apps.app_hardware_control import HardwareFrame
 from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.Sensor import Sensor
 
 
 class MyMainApp(wx.App):
@@ -36,11 +35,6 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
-    rPumpNames = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
-
-    # Load CDI sensor
-    cdi_sensor = Sensor(name='CDI')
-    cdi_sensor.read_config()
 
     app = MyMainApp(0)
     app.MainLoop()

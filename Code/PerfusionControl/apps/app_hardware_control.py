@@ -17,7 +17,6 @@ from pyPerfusion.panel_multiple_syringes import SyringePanel
 from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
 from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.Sensor import Sensor
 
 class HardwarePanel(wx.Panel):
     def __init__(self, parent):
@@ -25,17 +24,15 @@ class HardwarePanel(wx.Panel):
         self.pump_names = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
 
         self.cdi_sensor = SYS_HW.get_hw('CDI')
-        # self.gas_mixers = gas_controller
+        self.cdi_sensor.read_config()
+        wx.MessageBox(f'CDI hardware loaded')
         wx.Panel.__init__(self, parent)
 
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
         self.ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
         self.pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
 
-        try:
-            self.panel_syringes = SyringePanel(self, drugs)
-        except:
-            pass
+        self.panel_syringes = SyringePanel(self, drugs)
         self.panel_dialysate_pumps = DialysisPumpPanel(self, self.pump_names, self.cdi_sensor)
         self.panel_gas_mixers = GasMixerPanel(self, self.ha_mixer, self.pv_mixer, self.cdi_sensor)
 
@@ -106,7 +103,6 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
-    # gas_control = SYS_HW.get_hw("GasControl")  # TODO: update gas mixer initialization, OnClose
 
     app = MyHardwareApp(0)
     app.MainLoop()
