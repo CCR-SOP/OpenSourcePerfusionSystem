@@ -107,7 +107,7 @@ class GasDevice:
             self.cfg = cfg
         if self.cfg.port != '':
             self._lgr.debug(f'Opening modbus instrument at {self.cfg.port}')
-            self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=True)
+            self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
             self.hw.serial.baudrate = self.baud
             self.hw.serial.bytesize = 8
             self.hw.serial.parity = serial.PARITY_NONE
