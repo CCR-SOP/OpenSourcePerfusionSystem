@@ -69,6 +69,11 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
+        # Load CDI sensor
+        cdi_sensor = Sensor(name='CDI')
+        cdi_sensor.read_config()
+        wx.MessageBox(f'CDI loaded')
+
         self.panel = HardwarePanel(self, cdi_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -106,10 +111,6 @@ if __name__ == "__main__":
 
     SYS_HW.load_hardware_from_config()
     SYS_HW.start()
-
-    # Load CDI sensor
-    cdi_sensor = Sensor(name='CDI')
-    cdi_sensor.read_config()
 
     app = MyHardwareApp(0)
     app.MainLoop()
