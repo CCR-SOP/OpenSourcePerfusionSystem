@@ -72,10 +72,7 @@ class GasDevice:
         self.name = name
         self.hw = None
         self.cfg = GasDeviceConfig(name=name)
-
-        self.pH_range = GasDeviceConfig.pH_range
-        self.CO2_range = GasDeviceConfig.CO2_range
-        self.O2_range = GasDeviceConfig.O2_range
+        
 
         self._queue = None
         self.acq_start_ms = 0

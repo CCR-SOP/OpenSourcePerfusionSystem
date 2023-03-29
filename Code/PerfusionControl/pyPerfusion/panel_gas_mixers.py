@@ -238,6 +238,7 @@ class BaseGasMixerPanel(wx.Panel):
                     if new_mix_perc_pv is not None:
                         self.UpdateApp(new_mix_perc_pv)
                 elif self.gas_device.name == "Arterial Gas Mixer":  # channel_type == "HA":
+                    self._lgr.debug(f'CALLING UPDATE_CO2')
                     new_mix_perc_ha = self.update_CO2(cdi_data)
                     if new_mix_perc_ha is not None:
                         self.UpdateApp(100 - new_mix_perc_ha)
@@ -328,12 +329,12 @@ class BaseGasMixerPanel(wx.Panel):
             if CDI_input.venous_pH == -1:
                 self._lgr.warning(f'Venous pH is out of range. Cannot be adjusted automatically')
                 return None
-            elif CDI_input.venous_pH < self.gas_device.pH_range[0]:
+            elif CDI_input.venous_pH < self.gas_device.cfg.pH_range[0]:
                 new_flow = total_flow + 5  # TODO: do not hard code
                 self.gas_device.set_total_flow(new_flow)
                 self._lgr.info(f'Total flow in PV increased to {new_flow}')
                 return new_flow
-            elif CDI_input.venous_pH > self.gas_device.pH_range[1]:
+            elif CDI_input.venous_pH > self.gas_device.cfg.pH_range[1]:
                 new_flow = total_flow - 5
                 self.gas_device.set_total_flow(new_flow)
                 self._lgr.info(f'Total flow in PV decreased to {new_flow}')
@@ -362,10 +363,10 @@ class BaseGasMixerPanel(wx.Panel):
                 self._lgr.warning(f'Arterial pH is out of range. Cannot be adjusted automatically')
             elif CDI_input.arterial_CO2 == -1:
                 self._lgr.warning(f'Arterial CO2 is out of range. Cannot be adjusted automatically')
-            elif CDI_input.arterial_pH > self.gas_device.pH_range[1] or CDI_input.arterial_CO2 < self.gas_device.CO2_range[0]:
+            elif CDI_input.arterial_pH > self.gas_device.cfg.pH_range[1] or CDI_input.arterial_CO2 < self.gas_device.cfg.CO2_range[0]:
                 new_percentage_mix = percentage_mix + 1  # TODO: not hard code
                 self._lgr.warning(f'CO2 low, blood alkalotic')
-            elif CDI_input.arterial_pH < self.gas_device.pH_range[0] or CDI_input.arterial_CO2 > self.gas_device.CO2_range[1]:
+            elif CDI_input.arterial_pH < self.gas_device.cfg.pH_range[0] or CDI_input.arterial_CO2 > self.gas_device.cfg.CO2_range[1]:
                 new_percentage_mix = percentage_mix - 1  # to do: not hard code
                 self._lgr.warning(f'CO2 high, blood acidotic')
         else:
@@ -386,10 +387,10 @@ class BaseGasMixerPanel(wx.Panel):
         if 0 <= percentage_mix <= 100:
             if CDI_input.venous_O2 == -1:
                 self._lgr.warning(f'Venous O2 is out of range. Cannot be adjusted automatically')
-            elif CDI_input.venous_O2 < self.gas_device.O2_range[0]:
+            elif CDI_input.venous_O2 < self.gas_device.cfg.O2_range[0]:
                 new_percentage_mix = percentage_mix + 2  # TODO: not hard code
                 self._lgr.warning(f'Venous O2 is low')
-            elif CDI_input.venous_O2 > self.gas_device.O2_range[1]:
+            elif CDI_input.venous_O2 > self.gas_device.cfg.O2_range[1]:
                 new_percentage_mix = percentage_mix - 2
                 self._lgr.warning(f'Venous O2 is high')
         else:
