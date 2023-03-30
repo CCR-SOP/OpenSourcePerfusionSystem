@@ -83,10 +83,6 @@ class GasDevice:
 
         self.data_type = np.uint32
 
-        self.co2_adjust = 1  # %
-        self.o2_adjust = 2  # %
-        self.flow_adjust = 5  # mL/min
-
     def get_acq_start_ms(self):
         return self.acq_start_ms
 
@@ -178,7 +174,6 @@ class GasDevice:
                 buf = [addr, self.data_type(total_flow)]
                 self._queue.put((buf, get_epoch_ms()))
 
-
     def get_percent_value(self, channel_num:int) -> float:
         value = 0.0
         if self.hw is not None:
@@ -192,7 +187,6 @@ class GasDevice:
                 new_percent = 0
                 self._lgr.warning(f'{self.name}: Attempt to set channel percent to '
                                   f'{new_percent}. Capping at 0')
-
             if new_percent > 0:
                 new_percent = 100
                 self._lgr.warning(f'{self.name}: Attempt to set channel percent to '
@@ -244,8 +238,6 @@ class GasDevice:
             if self._queue:
                 buf = [addr, self.data_type(turn_on)]
                 self._queue.put((buf, get_epoch_ms()))
-
-
 
     def get_data(self):
         buf = None

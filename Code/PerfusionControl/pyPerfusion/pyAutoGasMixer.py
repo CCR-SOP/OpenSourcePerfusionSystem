@@ -10,11 +10,9 @@ and under the public domain.
 """
 import logging
 from threading import Thread, Event
-from time import sleep, time_ns
-
+from time import sleep
 
 from pyPerfusion.utils import get_epoch_ms
-import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.pyCDI import CDIData
 
 
@@ -31,6 +29,10 @@ class AutoGasMixer:
         self._event_halt = Event()
         self.__thread = None
         self.is_streaming = False
+
+    @property
+    def is_running(self):
+        return self.is_streaming
 
     def run(self):
         next_t = self.acq_start_ms + self.adjust_rate_ms
@@ -75,11 +77,12 @@ class AutoGasMixerVenous(AutoGasMixer):
         super().__init__(name, gas_device, cdi_reader)
         self.o2_ch = 1
         self.co2_ch = 2
+        self.o2_adjust = 2  # in %
 
     def update_gas_on_cdi(self, cdi_data):
-        self.update_O2(cdi_data.venous_O2)
+        self._update_O2(cdi_data.venous_O2)
 
-    def update_O2(self, O2: float) -> float:
+    def _update_O2(self, O2: float):
         o2_adjust = 0
         if O2 == -1:
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
@@ -100,20 +103,22 @@ class AutoGasMixerArterial(AutoGasMixer):
         super().__init__(name, gas_device, cdi_reader)
         self.o2_ch = 1
         self.co2_ch = 2
+        self.co2_adjust = 1  # in %
+        self.flow_adjust = 5  # in ml/min
 
     def update_gas_on_cdi(self, cdi_data):
-        self.update_flow(cdi_data.arterial_pH)
-        self.update_CO2(cdi_data.arterial_pH, cdi_data.arterial_CO2)
+        self._update_flow(cdi_data.arterial_pH)
+        self._update_CO2(cdi_data.arterial_pH, cdi_data.arterial_CO2)
 
-    def update_flow(self, pH: float) -> float:
+    def _update_flow(self, pH: float):
         if pH == -1:
             self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
         elif pH < self.gas_device.cfg.pH_range[0]:
-            self.gas_device.adjust_flow(self.cfg.flow_adjust)
+            self.gas_device.adjust_flow(self.flow_adjust)
         elif pH > self.gas_device.cfg.pH_range[1]:
-            self.gas_device.adjust_flow(-self.cfg.flow_adjust)
+            self.gas_device.adjust_flow(-self.flow_adjust)
 
-    def update_CO2(self, pH: float, CO2: float) -> float:
+    def _update_CO2(self, pH: float, CO2: float):
         co2_adjust = 0
         if pH == -1:
             self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
