@@ -16,7 +16,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
-from panel_GB100 import BaseGasMixerPanel
+from pyPerfusion.panel_GB100 import BaseGasMixerPanel
 
 
 class GasMixerPanel(wx.Panel):
@@ -65,9 +65,6 @@ class TestFrame(wx.Frame):
     def OnClose(self, evt):
         self.panel.cdi_sensor.stop()
         self.Destroy()
-
-        self.panel._panel_HA.OnClose()
-        self.panel._panel_PV.OnClose()
 
         self.panel._panel_HA.sync_with_hw_timer.Stop()
         self.panel._panel_PV.sync_with_hw_timer.Stop()
