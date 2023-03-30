@@ -23,16 +23,26 @@ from pyHardware.SystemHardware import SYS_HW
 
 
 class GasMixerPanel(wx.Panel):
+<<<<<<< HEAD
     def __init__(self, parent, ha_gasmixer, pv_gasmixer, cdi_reader):
+=======
+    def __init__(self, parent, HA_mixer, PV_mixer, cdi_reader):
+>>>>>>> e2ef3bc (use cdi_reader only, do not start/stop CDI sensor in the panels)
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
         self.cdi_reader = cdi_reader
+<<<<<<< HEAD
         self.ha_autogasmixer = ha_gasmixer
         self.pv_autogasmixer = pv_gasmixer
         self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', autogasmixer=ha_gasmixer, cdi_reader=self.cdi_reader)
         self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', autogasmixer=pv_gasmixer, cdi_reader=self.cdi_reader)
 
+=======
+
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=HA_mixer, cdi_reader=self.cdi_reader)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=PV_mixer, cdi_reader=self.cdi_reader)
+>>>>>>> e2ef3bc (use cdi_reader only, do not start/stop CDI sensor in the panels)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -272,7 +282,7 @@ class BaseGasMixerPanel(wx.Panel):
 
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, gas_device, cdi, **kwds):
+    def __init__(self, parent, name, gas_device, cdi_reader, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         self._lgr = logging.getLogger(__name__)
@@ -280,7 +290,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.parent = parent
         self.name = name
         self.gas_device = gas_device
-        self.cdi_sensor = cdi
+        self.cdi_reader = cdi_reader
         if self.gas_device is not None:
             self.gas1 = self.gas_device.get_gas_type(1)
             self.gas2 = self.gas_device.get_gas_type(2)
@@ -423,15 +433,10 @@ class BaseGasMixerPanel(wx.Panel):
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.manual_start_btn.Disable()
             self.cdi_timer.Start(10_000, wx.TIMER_CONTINUOUS)
-            self._lgr.debug(f'CDI timer starting')
-            self.cdi_sensor.hw.start()
-            self.cdi_sensor.start()
         else:
             self.gas_device.set_working_status(turn_on=False)
             self.automatic_start_btn.SetLabel('Start Automatic')
             self.manual_start_btn.Enable()
-            self.cdi_timer.Stop()
-            self.cdi_sensor.stop()
 
         time.sleep(3.0)
         self.UpdateApp()
@@ -439,8 +444,7 @@ class BaseGasMixerPanel(wx.Panel):
     def readDataFromCDI(self, evt):
         if evt.GetId() == self.cdi_timer.GetId():
             self._lgr.debug(f'CDI Timer going off!')
-            cdi_reader = self.cdi_sensor.get_reader()
-            ts, all_vars = cdi_reader.get_last_acq()
+            ts, all_vars = self.cdi_reader.get_last_acq()
             cdi_data = CDIData(all_vars)
             if cdi_data is not None:
                 if self.gas_device.name == "Venous Gas Mixer":  # channel_type == "PV":
@@ -619,9 +623,12 @@ if __name__ == "__main__":
     cdi_sensor = Sensor(name=cdi_name)
     cdi_sensor.read_config()
     cdi_sensor.start()
+<<<<<<< HEAD
 
     ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=ha_mixer, cdi_reader=cdi_sensor.get_reader())
     pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer', gas_device=pv_mixer, cdi_reader=cdi_sensor.get_reader())
+=======
+>>>>>>> e2ef3bc (use cdi_reader only, do not start/stop CDI sensor in the panels)
 
     app = MyTestApp(0)
     app.MainLoop()
