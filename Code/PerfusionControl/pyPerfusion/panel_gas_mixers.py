@@ -15,7 +15,7 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.Sensor import Sensor
-<<<<<<< HEAD
+
 import pyPerfusion.pyCDI as pyCDI
 import pyHardware.pyGB100 as pyGB100
 from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
@@ -289,22 +289,9 @@ class TestFrame(wx.Frame):
         ha_autogasmixer.gas_device.stop()
         pv_autogasmixer.gas_device.stop()
         self.Destroy()
-<<<<<<< HEAD
         for thread in enumerate():
             print(thread.name)
 
-=======
-
-        self.panel._panel_HA.OnClose()
-        self.panel._panel_PV.OnClose()
-
-        self.panel._panel_HA.sync_with_hw_timer.Stop()
-        self.panel._panel_PV.sync_with_hw_timer.Stop()
-        self.panel._panel_HA.cdi_timer.Stop()
-        self.panel._panel_PV.cdi_timer.Stop()
-        self.panel._panel_HA.gas_device.set_working_status(turn_on=False)
-        self.panel._panel_PV.gas_device.set_working_status(turn_on=False)
->>>>>>> 4c31635 (Separated BaseGasMixerPanel)
 
 class MyTestApp(wx.App):
     def OnInit(self):
