@@ -19,7 +19,6 @@ import pyPerfusion.pyPump11Elite as pyPump11Elite
 from pyHardware.pyGB100 import GasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 import pyHardware.pyDC as pyDC
-import pyPerfusion.pyDexcom as pyDexcom
 
 
 class SystemHardware:
@@ -41,7 +40,6 @@ class SystemHardware:
         self.dialysis_blood = None
 
         self.cdi = None
-        self.dexcoms = []
 
         self.mock_device = None
         self.mock_cdi = None
@@ -106,16 +104,6 @@ class SystemHardware:
             self._lgr.debug(f'read syringe {name}: {syringe}')
             self.syringes.append(syringe)
 
-        # all_dexcom_names = PerfusionConfig.get_section_names('dexcom')
-        # for name in all_dexcom_names:
-            # dexcom = pyDexcom.DexcomReceiver(name=name)
-            # try:
-                # dexcom.read_config()
-                # self._lgr.debug(f'read dexcom {name}: {dexcom}')
-                # self.dexcoms.append(dexcom)
-            # except serial.serialutil.SerialException as e:
-                # self._lgr.error(f"Could not open dexcom {name} at port {dexcom.cfg.com_port}")
-
 
     def load_mocks(self):
         self.mocks_enabled = True
@@ -138,9 +126,6 @@ class SystemHardware:
             self._lgr.error(e)
         for syringe in self.syringes:
             syringe.start()
-
-        for dexcom in self.dexcoms:
-            dexcom.start()
 
         if self.cdi:
             self.cdi.start()
@@ -173,9 +158,6 @@ class SystemHardware:
 
         for syringe in self.syringes:
             syringe.stop()
-
-        for dexcom in self.dexcoms:
-            dexcom.stop()
 
         if self.cdi:
             self.cdi.stop()
@@ -214,8 +196,6 @@ class SystemHardware:
             hw = self.ni_dev2.ai_channels.get(name, None)
         if hw is None:
             hw = next((syringe for syringe in self.syringes if syringe.name == name), None)
-        if hw is None:
-            hw = next((dexcom for dexcom in self.dexcoms if dexcom.name == name), None)
 
         if self.mocks_enabled:
             if hw is None:
