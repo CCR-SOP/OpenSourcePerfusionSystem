@@ -32,6 +32,7 @@ class GasMixerPanel(wx.Panel):
         self.pv_autogasmixer = pv_gasmixer
         self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', autogasmixer=ha_gasmixer, cdi_reader=self.cdi_reader)
         self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', autogasmixer=pv_gasmixer, cdi_reader=self.cdi_reader)
+
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -42,8 +43,8 @@ class GasMixerPanel(wx.Panel):
         flags = wx.SizerFlags().Expand().Border()
         self.sizer = wx.FlexGridSizer(rows=1, cols=2, vgap=1, hgap=1)
 
-        self.sizer.Add(self._panel_HA, flags)
-        self.sizer.Add(self._panel_PV, flags)
+        self.sizer.Add(self.panel_HA, flags)
+        self.sizer.Add(self.panel_PV, flags)
 
         self.sizer.AddGrowableCol(0, 1)
         self.sizer.AddGrowableCol(1, 1)

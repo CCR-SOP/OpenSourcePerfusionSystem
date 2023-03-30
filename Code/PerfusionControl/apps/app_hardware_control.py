@@ -54,6 +54,7 @@ class HardwarePanel(wx.Panel):
         self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(2))
         self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
 
+
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start
         self.SetSizer(self.wrapper)

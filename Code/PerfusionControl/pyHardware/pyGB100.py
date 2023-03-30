@@ -101,6 +101,7 @@ class GasDevice:
         self.percent = [0, 0, 0]
         self.status = False
 
+
     def get_acq_start_ms(self):
         return self.acq_start_ms
 
