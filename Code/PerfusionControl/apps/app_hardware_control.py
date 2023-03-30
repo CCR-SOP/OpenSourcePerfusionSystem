@@ -15,7 +15,6 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.panel_multiple_syringes import SyringePanel
 from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
-from pyPerfusion.panel_SPCStockertPumps import CentrifugalPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
 from pyHardware.SystemHardware import SYS_HW
 
@@ -33,7 +32,6 @@ class HardwarePanel(wx.Panel):
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
 
         self._panel_syringes = SyringePanel(self, drugs)
-        self._panel_centrifugal_pumps = CentrifugalPumpPanel(self)
         self._panel_dialysate_pumps = DialysisPumpPanel(self, self.roller_pumps, self.cdi)
         self._panel_gas_mixers = GasMixerPanel(self, self.ha_mixer, self.pv_mixer, self.cdi)
 
@@ -49,7 +47,6 @@ class HardwarePanel(wx.Panel):
         self.sizer = wx.GridSizer(cols=2)
 
         self.sizer.Add(self._panel_syringes, flags.Proportion(2))
-        self.sizer.Add(self._panel_centrifugal_pumps, flags.Proportion(2))
         self.sizer.Add(self._panel_dialysate_pumps, flags.Proportion(2))
         self.sizer.Add(self._panel_gas_mixers, flags.Proportion(2))
 
@@ -79,12 +76,12 @@ class HardwareFrame(wx.Frame):
         self.panel._panel_dialysate_pumps.close()
         self.panel._panel_dialysate_pumps.cdi_timer.Stop()
 
-        self.panel._panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
-        self.panel._panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
-        self.panel._panel_gas_mixers._panel_HA.cdi_timer.Stop()
-        self.panel._panel_gas_mixers._panel_PV.cdi_timer.Stop()
-        self.panel._panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
-        self.panel._panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
+        self.panel._panel_gas_mixers.panel_HA.sync_with_hw_timer.Stop()
+        self.panel._panel_gas_mixers.panel_PV.sync_with_hw_timer.Stop()
+        self.panel._panel_gas_mixers.panel_HA.cdi_timer.Stop()
+        self.panel._panel_gas_mixers.panel_PV.cdi_timer.Stop()
+        self.panel._panel_gas_mixers.panel_HA.gas_device.set_working_status(turn_on=False)
+        self.panel._panel_gas_mixers.panel_PV.gas_device.set_working_status(turn_on=False)
 
         cdi_obj.stop()
 

@@ -8,7 +8,6 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-import time
 
 import wx
 
@@ -26,8 +25,8 @@ class GasMixerPanel(wx.Panel):
 
         self.cdi_sensor = cdi
 
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=HA_mixer, cdi=self.cdi_sensor)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=PV_mixer, cdi=self.cdi_sensor)
+        self.panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=HA_mixer, cdi=self.cdi_sensor)
+        self.panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=PV_mixer, cdi=self.cdi_sensor)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -38,8 +37,8 @@ class GasMixerPanel(wx.Panel):
         flags = wx.SizerFlags().Expand().Border()
         self.sizer = wx.FlexGridSizer(rows=1, cols=2, vgap=1, hgap=1)
 
-        self.sizer.Add(self._panel_HA, flags)
-        self.sizer.Add(self._panel_PV, flags)
+        self.sizer.Add(self.panel_HA, flags)
+        self.sizer.Add(self.panel_PV, flags)
 
         self.sizer.AddGrowableCol(0, 1)
         self.sizer.AddGrowableCol(1, 1)
@@ -66,12 +65,12 @@ class TestFrame(wx.Frame):
         self.panel.cdi_sensor.stop()
         self.Destroy()
 
-        self.panel._panel_HA.sync_with_hw_timer.Stop()
-        self.panel._panel_PV.sync_with_hw_timer.Stop()
-        self.panel._panel_HA.cdi_timer.Stop()
-        self.panel._panel_PV.cdi_timer.Stop()
-        self.panel._panel_HA.gas_device.set_working_status(turn_on=False)
-        self.panel._panel_PV.gas_device.set_working_status(turn_on=False)
+        self.panel.panel_HA.sync_with_hw_timer.Stop()
+        self.panel.panel_PV.sync_with_hw_timer.Stop()
+        self.panel.panel_HA.cdi_timer.Stop()
+        self.panel.panel_PV.cdi_timer.Stop()
+        self.panel.panel_HA.gas_device.set_working_status(turn_on=False)
+        self.panel.panel_PV.gas_device.set_working_status(turn_on=False)
 
 class MyTestApp(wx.App):
     def OnInit(self):
