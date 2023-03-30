@@ -69,8 +69,10 @@ class BaseGasMixerPanel(wx.Panel):
         self.gas_device = gas_device
         self.cdi_reader = cdi_reader
         if self.gas_device is not None:
-            self.gas1 = self.gas_device.get_gas_type(1)
-            self.gas2 = self.gas_device.get_gas_type(2)
+            # TODO we should verify the gas mixer is configured
+            # for the gases we want (O2, CO2)
+            self.gas1_name = self.gas_device.get_gas_type(1)
+            self.gas2_name = self.gas_device.get_gas_type(2)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
@@ -97,24 +99,24 @@ class BaseGasMixerPanel(wx.Panel):
         gas2_target_flow = str(self.gas_device.get_target_sccm(2))
 
         # Gas 1 display
-        self.label_gas1 = wx.StaticText(self, label=f'{self.gas1} % Mix:')
+        self.label_gas1 = wx.StaticText(self, label=f'{self.gas1_name} % Mix:')
         self.input_percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=gas1_mix_perc, inc=1)
         self.label_gas1.SetFont(font)
         self.input_percent_gas1.SetFont(font)
 
-        self.label_real_gas1 = wx.StaticText(self, label=f'Actual {self.gas1} % Mix:')  # in case someone changes hardware, or runs auto
+        self.label_real_gas1 = wx.StaticText(self, label=f'Actual {self.gas1_name} % Mix:')  # in case someone changes hardware, or runs auto
         self.percent_real_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=str(gas1_mix_perc))
-        self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} actual flow (mL/min):')
+        self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1_name} actual flow (mL/min):')
         self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_flow)
-        self.label_target_flow_gas1 = wx.StaticText(self, label=f'{self.gas1} target flow (mL/min):')
+        self.label_target_flow_gas1 = wx.StaticText(self, label=f'{self.gas1_name} target flow (mL/min):')
         self.target_flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas1_target_flow)
 
         # Gas 2 display
-        self.label_gas2 = wx.StaticText(self, label=f'{self.gas2} % Mix:')
+        self.label_gas2 = wx.StaticText(self, label=f'{self.gas2_name} % Mix:')
         self.percent_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_mix_perc)
-        self.label_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} actual flow (mL/min):')
+        self.label_flow_gas2 = wx.StaticText(self, label=f'{self.gas2_name} actual flow (mL/min):')
         self.flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_flow)
-        self.label_target_flow_gas2 = wx.StaticText(self, label=f'{self.gas2} target flow (mL/min):')
+        self.label_target_flow_gas2 = wx.StaticText(self, label=f'{self.gas2_name} target flow (mL/min):')
         self.target_flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY, value=gas2_target_flow)
 
         # Buttons for functionality
