@@ -56,6 +56,8 @@ GasNames = IntEnum('GasNames', ['Air', 'Nitric Oxide', 'Nitrogen', 'Oxygen',
                                 'Propane', 'Butane', 'DME'],
                    start=0)
 
+def get_gas_index(gas_name: str):
+    return [gas.value for gas in GasNames if gas.name == gas_name][0]
 
 @dataclass
 class GasDeviceConfig:
@@ -153,13 +155,29 @@ class GasDevice:
             flow = self.hw.read_long(MainBoardOffsets['Total flow'].value)
         return flow
 
+    def adjust_flow(self, adjust_flow: int):
+        flow = self.get_total_flow()
+        self.set_total_flow(flow + adjust_flow)
+
     def set_total_flow(self, total_flow: int):
         if self.hw is not None:
+            if total_flow < self.cfg.flow_limits[0]:
+                total_flow = self.cfg.flow_limits[0]
+                self._lgr.warning(f'{self.name}: Attempt set flow {total_flow} '
+                                  f'lower than limit {self.cfg.flow_limits[0]}. '
+                                  f'Flow being set to limit.')
+            if total_flow > self.cfg.flow_limits[1]:
+                total_flow = self.cfg.flow_limits[1]
+                self._lgr.warning(f'{self.name}: Attempt set flow {total_flow} '
+                                  f'higher than limit {self.cfg.flow_limits[1]}. '
+                                  f'Flow being set to limit.')
             addr = MainBoardOffsets['Total flow'].value
             self.hw.write_long(addr, int(total_flow))
+            self._lgr.info(f'{self.name}: Total flow changed to {int(total_flow)}')
             if self._queue:
                 buf = [addr, self.data_type(total_flow)]
                 self._queue.put((buf, get_epoch_ms()))
+
 
     def get_percent_value(self, channel_num:int) -> float:
         value = 0.0
@@ -170,10 +188,20 @@ class GasDevice:
 
     def set_percent_value(self, channel_num: int, new_percent: float):
         if self.hw is not None:
+            if new_percent < 0:
+                new_percent = 0
+                self._lgr.warning(f'{self.name}: Attempt to set channel percent to '
+                                  f'{new_percent}. Capping at 0')
+
+            if new_percent > 0:
+                new_percent = 100
+                self._lgr.warning(f'{self.name}: Attempt to set channel percent to '
+                                  f'{new_percent}. Capping at 100')
+
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
             percent = int(new_percent * 100)
-            self._lgr.debug(f'percent is {percent}, type is {type(percent)}')
             self.hw.write_register(addr, percent)
+            self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent} %')
             if self._queue:
                 buf = [addr, self.data_type(percent)]
                 self._queue.put((buf, get_epoch_ms()))
@@ -217,90 +245,7 @@ class GasDevice:
                 buf = [addr, self.data_type(turn_on)]
                 self._queue.put((buf, get_epoch_ms()))
 
-    def update_flow(self, pH: float) -> float:
-        total_flow = self.get_total_flow()
-        if self.cfg.flow_limits[0] <= total_flow <= self.cfg.flow_limits[1]:
-            if pH == -1:
-                self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
-                return None
-            elif pH < self.cfg.pH_range[0]:
-                new_flow = total_flow + self.flow_adjust
-                self.set_total_flow(new_flow)
-                self._lgr.info(f'{self.name}: Total flow increased to {new_flow}')
-                return new_flow
-            elif pH > self.cfg.pH_range[1]:
-                new_flow = total_flow - self.flow_adjust
-                self.set_total_flow(new_flow)
-                self._lgr.info(f'{self.name}: Total flow decreased to {new_flow}')
-                return new_flow
-        elif total_flow >= self.cfg.flow_limits[1]:
-            self._lgr.warning(f'Total flow in PV at or above 250 mL/min. Cannot be run automatically')
-            return None
-        elif total_flow <= self.cfg.flow_limits[0]:
-            self._lgr.warning(f'Total flow in portal vein at or below 5 mL/min. Cannot be run automatically')
-            return None
-        else:
-            return None
 
-    def update_CO2(self, pH: float, CO2: float) -> float:
-        new_percentage_mix = None
-
-        try:
-            gas_index = [gas.value for gas in GasNames if gas.name == 'Carbon Dioxide'][0]
-        except IndexError:
-            self._lgr.error(f'{self.name}: Failed to find gas Carbon Dioxide in list of names')
-            return None
-        self._lgr.debug(f'Carbon Dioxide gas has index {gas_index}')
-
-        percentage_mix = self.get_percent_value(gas_index)
-        if 0 <= percentage_mix <= 100:
-            if pH == -1:
-                self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
-            elif CO2 == -1:
-                self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
-            elif self.cfg.CO2_range[0] <= pH <= self.cfg.CO2_range[1]:
-                new_percentage_mix = percentage_mix + self.co2_adjust
-                self._lgr.warning(f'{self.name}: CO2 low, blood alkalotic')
-            elif self.cfg.pH_range[0] <= pH <= self.cfg.pH_range[1]:
-                new_percentage_mix = percentage_mix - self.co2_adjust
-                self._lgr.warning(f'{self.name}: CO2 high, blood acidotic')
-
-            if new_percentage_mix is not None:
-                self.set_percent_value(gas_index, new_percentage_mix)
-                self._lgr.info(f'{self.name}: CO2 updated to {new_percentage_mix}%')
-        else:
-            self._lgr.warning(f'{self.name}: CO2 % is out of range and cannot be changed automatically')
-
-        return new_percentage_mix
-
-    def update_O2(self, O2: float) -> float:
-        new_percentage_mix = None
-
-        try:
-            gas_index = [gas.value for gas in GasNames if gas.name == 'Oxygen'][0]
-        except IndexError:
-            self._lgr.error(f'{self.name}: Failed to find gas Oxygen in list of names')
-            return None
-        self._lgr.debug(f'Oxygen gas has index {gas_index}')
-
-        percentage_mix = self.get_percent_value(gas_index)
-        if 0 <= percentage_mix <= 100:
-            if O2 == -1:
-                self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
-            elif O2 <= self.cfg.O2_range[0]:
-                new_percentage_mix = percentage_mix + self.o2_adjust
-                self._lgr.warning(f'{self.name}:  O2 is low')
-            elif O2 >= self.cfg.O2_range[1]:
-                new_percentage_mix = percentage_mix - self.o2_adjust
-                self._lgr.warning(f'{self.name}: O2 is high')
-
-            if new_percentage_mix is not None:
-                self.set_percent_value(gas_index, 100-new_percentage_mix)
-                self._lgr.info(f'{self.name}: O2 updated to {new_percentage_mix}%')
-        else:
-            self._lgr.warning(f'{self.name}: O2 % is out of range and cannot be changed automatically')
-
-        return new_percentage_mix
 
     def get_data(self):
         buf = None
