@@ -8,7 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-import time
+from threading import enumerate
 
 import wx
 
@@ -53,9 +53,9 @@ class GasMixerPanel(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.Bind(wx.EVT_CLOSE, self.on_close)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
-    def on_close(self, evt):
+    def OnClose(self, evt):
         self._panel_PV.Close()
         self._panel_HA.Close()
 
@@ -177,10 +177,9 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_total_flow.Bind(wx.EVT_TEXT, self.OnChangeFlow)
         self.input_percent_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeGas)
         self.input_percent_gas1.Bind(wx.EVT_TEXT, self.OnChangeGas)
-        self.chk_auto.Bind(wx.EVT_CHECKBOX, self.OnAuto)
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
         self.Bind(wx.EVT_TIMER, self.CheckHardwareForAccuracy, self.sync_with_hw_timer)
-        self.Bind(wx.EVT_CLOSE, self.on_close)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnFlow(self, evt):
         working_status = self.autogasmixer.gas_device.get_working_status()
@@ -188,9 +187,12 @@ class BaseGasMixerPanel(wx.Panel):
         self.btn_update.Enable(False)
         if working_status == 0:  # 0 is off
             self.autogasmixer.gas_device.set_working_status(turn_on=True)
+            if self.chk_auto.IsChecked():
+                self.autogasmixer.start()
             self.btn_flow.SetLabel('Disable Flow')
         else:
             self.autogasmixer.gas_device.set_working_status(turn_on=False)
+            self.autogasmixer.stop()
             self.btn_flow.SetLabel('Enable Flow')
 
     def OnChangeFlow(self, evt):
@@ -209,12 +211,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_percent_gas1.SetBackgroundColour(wx.WHITE)
         self.input_percent_gas1.Refresh()
 
-    def OnAuto(self, evt):
-        if evt.IsChecked():
-            self.autogasmixer.start()
-        else:
-            self.autogasmixer.stop()
-
     def update_controls_from_hardware(self, evt):
         self.real_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
 
@@ -227,27 +223,14 @@ class BaseGasMixerPanel(wx.Panel):
         self.target_flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_target_sccm(1)}')
         self.target_flow_gas2.SetValue(f'{self.autogasmixer.gas_device.get_target_sccm(2)}')
 
-        update_allowed = not self.chk_auto.IsChecked() and self.autogasmixer.gas_device.get_working_status()
+        mixer_on = self.autogasmixer.gas_device.get_working_status()
+        update_allowed = not self.chk_auto.IsChecked() and mixer_on
         self.btn_update.Enable(update_allowed)
         self.input_percent_gas1.Enable(update_allowed)
         self.input_total_flow.Enable(update_allowed)
 
+        self.chk_auto.Enable(mixer_on)
 
-
-    def UpdateApp(self, new_perc=None):
-        if new_perc is not None:
-            self.percent_real_gas1.SetValue(str(new_perc))
-            gas2_mix_perc = str(100 - new_perc)
-            self.percent_gas2.SetValue(gas2_mix_perc)
-
-    def EnableButtons(self):
-        if not self.automatic_start_btn.IsEnabled() and not self.manual_start_btn.IsEnabled():  # starting condition
-            self.manual_start_btn.Enable()
-            self.automatic_start_btn.Enable()
-
-    def EnsureTurnedOn(self):
-        if self.autogasmixer.gas_device.get_working_status() == 0:
-            self.autogasmixer.gas_device.set_working_status(turn_on=True)
 
     def CheckHardwareForAccuracy(self, evt):
         if evt.GetId() == self.sync_with_hw_timer.GetId():
@@ -271,9 +254,10 @@ class BaseGasMixerPanel(wx.Panel):
             if not self.input_total_flow.GetValue() == self.autogasmixer.gas_device.get_total_flow():
                 self.UpdateApp()
 
-    def on_close(self, evt):
+    def OnClose(self, evt):
         self.timer_gui_update.Stop()
         self.sync_with_hw_timer.Stop()
+        self.autogasmixer.stop()
         self.autogasmixer.gas_device.set_working_status(turn_on=False)
 
 
@@ -289,6 +273,8 @@ class TestFrame(wx.Frame):
         self.panel.Close()
         cdi_sensor.stop()
         self.Destroy()
+        for thread in enumerate():
+            print(thread.name)
 
 
 class MyTestApp(wx.App):

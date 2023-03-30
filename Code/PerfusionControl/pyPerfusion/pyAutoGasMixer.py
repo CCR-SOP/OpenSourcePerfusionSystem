@@ -35,6 +35,7 @@ class AutoGasMixer:
         return self.is_streaming
 
     def run(self):
+        self.is_streaming = True
         next_t = self.acq_start_ms + self.adjust_rate_ms
         # sleep only 1 second so the thread can be terminated
         # in a quicker fashion. if adjust_rate is smaller, then use that
@@ -50,7 +51,7 @@ class AutoGasMixer:
                         self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
                 next_t += self.adjust_rate_ms
             else:
-                sleep(sleep_time)
+                sleep(sleep_time/1_000)
 
     def start(self):
         self.stop()
@@ -66,6 +67,7 @@ class AutoGasMixer:
         if self.is_streaming:
             self._event_halt.set()
             self.is_streaming = False
+            self._lgr.debug(f'AutoGasMixer {self.name} stopped')
 
     def update_gas_on_cdi(self, cdi_data):
         # this is the base class, so do nothing
