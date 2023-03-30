@@ -24,14 +24,14 @@ utils.configure_matplotlib_logging()
 
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent, HA_mixer, PV_mixer, cdi):
+    def __init__(self, parent, HA_mixer, PV_mixer, cdi_reader):
         self.parent = parent
         wx.Panel.__init__(self, parent)
 
-        self.cdi_sensor = cdi
+        self.cdi_reader = cdi_reader
 
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=HA_mixer, cdi=self.cdi_sensor)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=PV_mixer, cdi=self.cdi_sensor)
+        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', gas_device=HA_mixer, cdi_reader=self.cdi_reader)
+        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', gas_device=PV_mixer, cdi_reader=self.cdi_reader)
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -59,7 +59,7 @@ class GasMixerPanel(wx.Panel):
 
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, gas_device, cdi, **kwds):
+    def __init__(self, parent, name, gas_device, cdi_reader, **kwds):
         wx.Panel.__init__(self, parent, -1)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         self._lgr = logging.getLogger(__name__)
@@ -67,7 +67,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.parent = parent
         self.name = name
         self.gas_device = gas_device
-        self.cdi_sensor = cdi
+        self.cdi_reader = cdi_reader
         if self.gas_device is not None:
             self.gas1 = self.gas_device.get_gas_type(1)
             self.gas2 = self.gas_device.get_gas_type(2)
@@ -210,15 +210,10 @@ class BaseGasMixerPanel(wx.Panel):
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.manual_start_btn.Disable()
             self.cdi_timer.Start(10_000, wx.TIMER_CONTINUOUS)
-            self._lgr.debug(f'CDI timer starting')
-            self.cdi_sensor.hw.start()
-            self.cdi_sensor.start()
         else:
             self.gas_device.set_working_status(turn_on=False)
             self.automatic_start_btn.SetLabel('Start Automatic')
             self.manual_start_btn.Enable()
-            self.cdi_timer.Stop()
-            self.cdi_sensor.stop()
 
         time.sleep(3.0)
         self.UpdateApp()
@@ -226,8 +221,7 @@ class BaseGasMixerPanel(wx.Panel):
     def readDataFromCDI(self, evt):
         if evt.GetId() == self.cdi_timer.GetId():
             self._lgr.debug(f'CDI Timer going off!')
-            cdi_reader = self.cdi_sensor.get_reader()
-            ts, all_vars = cdi_reader.get_last_acq()
+            ts, all_vars = self.cdi_reader.get_last_acq()
             cdi_data = CDIData(all_vars)
             if cdi_data is not None:
                 if self.gas_device.name == "Venous Gas Mixer":  # channel_type == "PV":
@@ -329,18 +323,20 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self, ha_mixer, pv_mixer, cdi=cdi_sensor)
+        self.panel = GasMixerPanel(self, ha_mixer, pv_mixer, cdi_reader=cdi_sensor.get_reader())
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.panel.cdi_sensor.stop()
-        self.Destroy()
+        cdi_sensor.stop()
+
         self.panel._panel_HA.sync_with_hw_timer.Stop()
         self.panel._panel_PV.sync_with_hw_timer.Stop()
         self.panel._panel_HA.cdi_timer.Stop()
         self.panel._panel_PV.cdi_timer.Stop()
         self.panel._panel_HA.gas_device.set_working_status(turn_on=False)
         self.panel._panel_PV.gas_device.set_working_status(turn_on=False)
+        self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -362,6 +358,7 @@ if __name__ == "__main__":
     # Load CDI sensor
     cdi_sensor = Sensor(name='CDI')
     cdi_sensor.read_config()
+    cdi_sensor.start()
 
     app = MyTestApp(0)
     app.MainLoop()
