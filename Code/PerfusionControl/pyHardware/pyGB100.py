@@ -104,10 +104,6 @@ class GasDevice:
         self.status = False
 
 
-        self.co2_adjust = 1  # %
-        self.o2_adjust = 2  # %
-        self.flow_adjust = 5  # mL/min
-
     def get_acq_start_ms(self):
         return self.acq_start_ms
 
@@ -225,7 +221,7 @@ class GasDevice:
         return value
 
     def set_percent_value(self, channel_num: int, new_percent: float):
-        if self.hw is not None:
+        if self.hw is not None:D
             if 0 <= channel_num <= 3:
                 if new_percent < 0:
                     new_percent = 0
@@ -301,8 +297,6 @@ class GasDevice:
                 self.hw.write_register(addr, int(turn_on))
                 self.status = turn_on
                 self.push_data()
-
-
 
     def get_data(self):
         buf = None
