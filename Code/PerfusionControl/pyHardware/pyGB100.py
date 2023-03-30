@@ -45,7 +45,8 @@ ChannelRegisterOffsets = IntEnum('ChannelRegisterOffsets',
                                  ['FW Version', 'HW Version', 'Alert',
                                   'ID gas - calibration', 'K factor - calibration',
                                   'Channel Enabled', 'Percent value', 'Id gas',
-                                  'K factor gas', 'SCCM', 'dummy', 'Target SCCM'],
+                                  'K factor gas', 'SCCM', 'dummy', 'Target SCCM',
+                                  'dummy', 'SCCM AV'],
                                   start=0)
 
 
@@ -211,7 +212,7 @@ class GasDevice:
     def get_sccm_av(self, channel_num:int) -> float:
         value = 0.0
         if self.hw is not None:
-            addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM'].value
+            addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM AV'].value
             value = self.hw.read_long(addr)
             value /= 100
         return value
@@ -249,3 +250,86 @@ class GasDevice:
             # this is not unusual, so catch the error but do nothing
             pass
         return buf, t
+
+
+class MockGasDevice(GasDevice):
+    def __init__(self, name):
+        super().__init__(name)
+        self._serial.is_open = False
+        self._values = {'tvolume': '0 ul', 'irate': '0 ul/min'}
+
+    def open(self, cfg: SyringeConfig = None) -> None:
+        self.cfg = cfg
+        self._queue = Queue()
+        self._serial.is_open = True
+
+    def send_wait4response(self, str2send: str) -> str:
+        response = ''
+        if self._serial.is_open:
+            # strip off trailing \r
+            str2send = str2send[:-1]
+            parts = str2send.split(' ', 1)
+            if parts[0] == 'syrmanu':
+                if parts[1] == '?':
+                    response = DEFAULT_MANUFACTURERS_STR
+                else:
+                    code = parts[1].split(' ')[0]
+                    response = DEFAULT_SYRINGES[code]
+            elif parts[0] in ['tvolume', 'irate']:
+                if len(parts) == 2:
+                    self._values[parts[0]] = parts[1]
+                else:
+                    response = self._values[parts[0]]
+
+        # JWK, we should be checking error responses
+        return response
+
+
+class MockGB100:
+    def __init__(self):
+        self.total_flow = 0
+        self.percent = [0, 0]
+        self.sccm = [0, 0]
+        self.sccm_av = [0, 0]
+        self.status = False
+
+    def read_register(self, addr):
+        if addr == ChannelAddr[0] + ChannelRegisterOffsets['Id gas'].value:
+            return 3
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Id gas'].value:
+            return 4
+        elif addr == MainBoardOffsets['Number of channels'].value:
+            return 2
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']
+            return self.percent[0]
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']
+            return self.percent[1]
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['SCCM'].value
+            return self.sccm[0]
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM'].value
+            return self.sccm[1]
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['SCCM AV'].value
+            return self.sccm_av[0]
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM AV'].value
+            return self.sccm_av[1]
+        elif addr == MainBoardOffsets['Working status']:
+            return self.status
+
+    def write_register(self, addr, value):
+        if addr == MainBoardOffsets['Working status']:
+            self.status = value == True
+
+    def read_long(self, addr):
+        if addr == MainBoardOffsets['Total flow'].value:
+            return self.total_flow
+
+    def write_long(self, addr, value):
+        if addr == MainBoardOffsets['Total flow'].value:
+            self.total_flow = value
+        elif addr = ChannelAddr[0] + ChannelRegisterOffsets['Percent value']
+        self.percent[0] = value
+
+    elif addr = ChannelAddr[1] + ChannelRegisterOffsets['Percent value']
+    self.percent[1] = value
+
+
