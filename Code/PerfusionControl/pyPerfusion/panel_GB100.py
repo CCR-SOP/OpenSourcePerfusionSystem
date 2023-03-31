@@ -169,7 +169,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.gas_device.set_working_status(turn_on=True)
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.manual_start_btn.Disable()
-            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
+            self.cdi_timer.Start(60_000, wx.TIMER_CONTINUOUS)
             self._lgr.debug(f'CDI timer starting')
             self.cdi_sensor.hw.start()
             self.cdi_sensor.start()
@@ -185,7 +185,7 @@ class BaseGasMixerPanel(wx.Panel):
 
     def readDataFromCDI(self, evt):
         if evt.GetId() == self.cdi_timer.GetId():
-            self._lgr.debug(f'CDI Timer going off!')
+            # self._lgr.debug(f'CDI Timer going off!')
             cdi_reader = self.cdi_sensor.get_reader()
             ts, all_vars = cdi_reader.get_last_acq()
             cdi_data = CDIData(all_vars)
@@ -195,13 +195,25 @@ class BaseGasMixerPanel(wx.Panel):
                     new_mix_perc_pv = self.gas_device.update_O2(cdi_data)
                     self._lgr.debug(f'Changed mix to {new_mix_perc_pv}')
                     if new_flow is not None:
+                        self.gas_device.set_total_flow(new_flow)
+                        if self.manual_start_btn.GetLabel() == "Stop Manual":
+                            self.EnsureTurnedOn()
+                            time.sleep(1.0)
                         self.UpdateApp()
-                    if new_mix_perc_pv is not None:
+                    if new_mix_perc_pv is not None and 0 <= new_mix_perc_pv <= 100:
+                        self.gas_device.set_percent_value(2, 100 - new_mix_perc_pv)  # set channel 2 only
+                        time.sleep(2.0)
+                        self.EnsureTurnedOn()
+                        time.sleep(1.0)
                         self.UpdateApp(new_mix_perc_pv)
                 elif self.gas_device.name == "Arterial Gas Mixer":
                     new_mix_perc_ha = self.gas_device.update_CO2(cdi_data)
                     self._lgr.debug(f'Changed mix to {new_mix_perc_ha}')
-                    if new_mix_perc_ha is not None:
+                    if new_mix_perc_ha is not None and 0 <= new_mix_perc_ha <= 100:
+                        self.gas_device.set_percent_value(2, new_mix_perc_ha)
+                        time.sleep(2.0)
+                        self.EnsureTurnedOn()
+                        time.sleep(1.0)
                         self.UpdateApp(100 - new_mix_perc_ha)
             else:
                 self._lgr.debug(f'No CDI data. Cannot run gas mixers automatically')
