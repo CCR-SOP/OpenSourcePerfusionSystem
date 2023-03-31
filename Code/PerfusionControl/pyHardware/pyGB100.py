@@ -142,7 +142,6 @@ class GasDevice:
         gas_type = 'NA'
         if self.hw is not None:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Id gas'].value
-            self._lgr.debug(f'addr is {addr}')
             gas_id = self.hw.read_register(addr)
             try:
                 gas_type = GasNames(gas_id).name
@@ -198,7 +197,7 @@ class GasDevice:
                 new_percent = 0
                 self._lgr.warning(f'{self.name}: Attempt to set channel percent to '
                                   f'{new_percent}. Capping at 0')
-            if new_percent > 0:
+            if new_percent > 100:
                 new_percent = 100
                 self._lgr.warning(f'{self.name}: Attempt to set channel percent to '
                                   f'{new_percent}. Capping at 100')
@@ -206,7 +205,7 @@ class GasDevice:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
             percent = int(new_percent * 100)
             self.hw.write_register(addr, percent)
-            self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent} %')
+            self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent/100} %')
             if self._queue:
                 buf = [addr, self.data_type(percent)]
                 self._queue.put((buf, get_epoch_ms()))
@@ -266,12 +265,9 @@ class MockGB100:
     def __init__(self):
         self.total_flow = 0
         self.percent = [0, 0]
-        self.sccm = [0, 0]
-        self.target_sccm = [0, 0]
-        self.sccm_av = [0, 0]
         self.status = False
 
-    def read_register(self, addr):
+    def read_register(self, addr, number_of_decimals=0):
         if addr == ChannelAddr[0] + ChannelRegisterOffsets['Id gas'].value:
             return 3
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Id gas'].value:
@@ -279,38 +275,38 @@ class MockGB100:
         elif addr == MainBoardOffsets['Number of channels'].value:
             return 2
         elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']:
-            return self.percent[0]
+            return self.percent[0] / 100
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
-            return self.percent[1]
+            return self.percent[1] / 100
         elif addr == MainBoardOffsets['Working status']:
             return self.status
 
     def write_register(self, addr, value):
         if addr == MainBoardOffsets['Working status']:
             self.status = bool(value)
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']:
+            self.percent[0] = value
+            self.percent[1] = 10_000 - value
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
+            self.percent[1] = value
+            self.percent[0] = 10_000 - value
 
     def read_long(self, addr):
         if addr == MainBoardOffsets['Total flow'].value:
             return self.total_flow
         elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Target SCCM'].value:
-            return self.sccm[0]
+            return self.total_flow * (self.percent[0] / 100)
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Target SCCM'].value:
-            return self.sccm[1]
+            return self.total_flow * (self.percent[1] / 100)
         elif addr == ChannelAddr[0] + ChannelRegisterOffsets['SCCM'].value:
-            return self.sccm[0]
+            return self.total_flow * (self.percent[0] / 100)
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM'].value:
-            return self.sccm[1]
+            return self.total_flow * (self.percent[1] / 100)
         elif addr == ChannelAddr[0] + ChannelRegisterOffsets['SCCM AV'].value:
-            return self.sccm_av[0]
+            return self.total_flow * (self.percent[0] / 100)
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM AV'].value:
-            return self.sccm_av[1]
+            return self.total_flow * (self.percent[1] / 100)
 
     def write_long(self, addr, value):
         if addr == MainBoardOffsets['Total flow'].value:
             self.total_flow = value
-        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']:
-            self.percent[0] = value
-        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
-            self.percent[1] = value
-
-

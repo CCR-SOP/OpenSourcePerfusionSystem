@@ -44,8 +44,9 @@ class AutoGasMixer:
             if get_epoch_ms() > next_t:
                 if self.gas_device and self.cdi_reader:
                     ts, all_vars = self.cdi_reader.get_last_acq()
-                    cdi_data = CDIData(all_vars)
-                    if cdi_data is not None:
+                    if all_vars is not None:
+                        cdi_data = CDIData(all_vars)
+                        self._lgr.debug(f'all_vars = {all_vars}, cdi_data={cdi_data}')
                         self.update_gas_on_cdi(cdi_data)
                     else:
                         self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
@@ -109,8 +110,12 @@ class AutoGasMixerArterial(AutoGasMixer):
         self.flow_adjust = 5  # in ml/min
 
     def update_gas_on_cdi(self, cdi_data):
-        self._update_flow(cdi_data.arterial_pH)
-        self._update_CO2(cdi_data.arterial_pH, cdi_data.arterial_CO2)
+        try:
+            self._update_flow(cdi_data.arterial_pH)
+            self._update_CO2(cdi_data.arterial_pH, cdi_data.arterial_CO2)
+        except AttributeError:
+            # this will happen if there is invalid CDI data
+            pass
 
     def _update_flow(self, pH: float):
         if pH == -1:

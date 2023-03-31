@@ -83,7 +83,6 @@ class BaseGasMixerPanel(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
         self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400, initial=0, inc=1)
         self.label_total_flow.SetFont(font)
@@ -99,7 +98,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_percent_gas1.SetFont(font)
 
         self.label_real_gas1 = wx.StaticText(self, label=f'Actual {self.gas1_name} % Mix:')
-        self.percent_real_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value='0')
+        self.percent_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value='0')
         self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1_name} actual flow (mL/min):')
         self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY)
         self.label_target_flow_gas1 = wx.StaticText(self, label=f'{self.gas1_name} target flow (mL/min):')
@@ -141,7 +140,7 @@ class BaseGasMixerPanel(wx.Panel):
         sizer_cfg.Add(self.real_total_flow, flags)
 
         sizer_cfg.Add(self.label_real_gas1, flags)
-        sizer_cfg.Add(self.percent_real_gas1, flags)
+        sizer_cfg.Add(self.percent_gas1, flags)
         sizer_cfg.Add(self.label_target_flow_gas1, flags)
         sizer_cfg.Add(self.target_flow_gas1, flags)
         sizer_cfg.Add(self.label_flow_gas1, flags)
@@ -178,8 +177,20 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_percent_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeGas)
         self.input_percent_gas1.Bind(wx.EVT_TEXT, self.OnChangeGas)
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
+        self.Bind(wx.EVT_CHECKBOX, self.OnAuto)
         self.Bind(wx.EVT_TIMER, self.CheckHardwareForAccuracy, self.sync_with_hw_timer)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def _update_manual_entries(self):
+        self.input_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
+        self.input_percent_gas1.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(1)}')
+
+    def OnAuto(self, evt):
+        if self.chk_auto.IsChecked():
+            self.autogasmixer.start()
+        else:
+            self.autogasmixer.stop()
+            self._update_manual_entries()
 
     def OnFlow(self, evt):
         working_status = self.autogasmixer.gas_device.get_working_status()
@@ -189,6 +200,8 @@ class BaseGasMixerPanel(wx.Panel):
             self.autogasmixer.gas_device.set_working_status(turn_on=True)
             if self.chk_auto.IsChecked():
                 self.autogasmixer.start()
+            else:
+                self._update_manual_entries()
             self.btn_flow.SetLabel('Disable Flow')
         else:
             self.autogasmixer.gas_device.set_working_status(turn_on=False)
@@ -210,27 +223,24 @@ class BaseGasMixerPanel(wx.Panel):
         self.autogasmixer.gas_device.set_percent_value(2, 100 - float(self.input_percent_gas1.GetValue()))
         self.input_percent_gas1.SetBackgroundColour(wx.WHITE)
         self.input_percent_gas1.Refresh()
+        self.btn_update.Enable(False)
 
     def update_controls_from_hardware(self, evt):
         self.real_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
 
-        self.flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(1)}')
-        self.flow_gas2.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(2)}')
-
-        self.target_flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_target_sccm(1)}')
-        self.target_flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_target_sccm(2)}')
+        self.percent_gas1.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(1)}')
+        self.percent_gas2.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(2)}')
 
         self.target_flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_target_sccm(1)}')
         self.target_flow_gas2.SetValue(f'{self.autogasmixer.gas_device.get_target_sccm(2)}')
 
+        self.flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(1)}')
+        self.flow_gas2.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(2)}')
+
         mixer_on = self.autogasmixer.gas_device.get_working_status()
         update_allowed = not self.chk_auto.IsChecked() and mixer_on
-        self.btn_update.Enable(update_allowed)
         self.input_percent_gas1.Enable(update_allowed)
         self.input_total_flow.Enable(update_allowed)
-
-        self.chk_auto.Enable(mixer_on)
-
 
     def CheckHardwareForAccuracy(self, evt):
         if evt.GetId() == self.sync_with_hw_timer.GetId():
