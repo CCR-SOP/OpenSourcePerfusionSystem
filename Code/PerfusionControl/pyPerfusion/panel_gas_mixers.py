@@ -192,6 +192,8 @@ class BaseGasMixerPanel(wx.Panel):
         else:
             self.autogasmixer.stop()
             self._update_manual_entries()
+        self.input_percent_gas1.Enable(not self.chk_auto.IsChecked())
+        self.input_total_flow.Enable(not self.chk_auto.IsChecked())
 
     def OnFlow(self, evt):
         working_status = self.autogasmixer.gas_device.get_working_status()
@@ -238,11 +240,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(1)}')
         self.flow_gas2.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(2)}')
 
-        mixer_on = self.autogasmixer.gas_device.get_working_status()
-        update_allowed = not self.chk_auto.IsChecked() and mixer_on
-        self.input_percent_gas1.Enable(update_allowed)
-        self.input_total_flow.Enable(update_allowed)
-
     def CheckHardwareForAccuracy(self, evt):
         if evt.GetId() == self.sync_with_hw_timer.GetId():
             # Update actual flows
@@ -282,7 +279,12 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.panel.Close()
+        cdi_sensor.hw.stop()
         cdi_sensor.stop()
+        ha_autogasmixer.stop()
+        pv_autogasmixer.stop()
+        ha_autogasmixer.gas_device.stop()
+        pv_autogasmixer.gas_device.stop()
         self.Destroy()
         for thread in enumerate():
             print(thread.name)

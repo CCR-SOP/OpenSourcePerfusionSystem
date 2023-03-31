@@ -46,7 +46,6 @@ class AutoGasMixer:
                     ts, all_vars = self.cdi_reader.get_last_acq()
                     if all_vars is not None:
                         cdi_data = CDIData(all_vars)
-                        self._lgr.debug(f'all_vars = {all_vars}, cdi_data={cdi_data}')
                         self.update_gas_on_cdi(cdi_data)
                     else:
                         self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
