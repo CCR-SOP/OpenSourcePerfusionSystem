@@ -22,6 +22,11 @@ import numpy as np
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.utils import get_epoch_ms
 
+
+class GasDeviceException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
+
+
 # addresses are taken from Gas Blender GB3000 series Modbus communication protocol manual
 ChannelAddr = [10, 25, 40, 55, 70, 85]
 
@@ -45,8 +50,8 @@ ChannelRegisterOffsets = IntEnum('ChannelRegisterOffsets',
                                  ['FW Version', 'HW Version', 'Alert',
                                   'ID gas - calibration', 'K factor - calibration',
                                   'Channel Enabled', 'Percent value', 'Id gas',
-                                  'K factor gas', 'SCCM', 'dummy', 'Target SCCM',
-                                  'dummy', 'SCCM AV'],
+                                  'K factor gas', 'SCCM', 'sccmdummy', 'Target SCCM',
+                                  'targetsccmdummy', 'SCCM AV'],
                                   start=0)
 
 
@@ -107,13 +112,18 @@ class GasDevice:
         if cfg is not None:
             self.cfg = cfg
         if self.cfg.port != '':
-            self._lgr.debug(f'Opening modbus instrument at {self.cfg.port}')
-            self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
-            self.hw.serial.baudrate = self.baud
-            self.hw.serial.bytesize = 8
-            self.hw.serial.parity = serial.PARITY_NONE
-            self.hw.serial.stopbits = 1
-            self.hw.serial.timeout = 3
+            self._lgr.info(f'Opening GB100 gas mixer at {self.cfg.port}')
+            try:
+                self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
+                self.hw.serial.baudrate = self.baud
+                self.hw.serial.bytesize = 8
+                self.hw.serial.parity = serial.PARITY_NONE
+                self.hw.serial.stopbits = 1
+                self.hw.serial.timeout = 3
+            except serial.serialutil.SerialException as e:
+                self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
+                                f'Exception: {e}')
+                raise GasDeviceException('Could not open gas device')
         self._queue = Queue()
 
     def close(self):
@@ -201,7 +211,7 @@ class GasDevice:
                 buf = [addr, self.data_type(percent)]
                 self._queue.put((buf, get_epoch_ms()))
 
-    def get_sccm(self, channel_num:int) -> float:
+    def get_sccm(self, channel_num: int) -> float:
         value = 0.0
         if self.hw is not None:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM'].value
@@ -209,7 +219,7 @@ class GasDevice:
             value /= 100
         return value
 
-    def get_sccm_av(self, channel_num:int) -> float:
+    def get_sccm_av(self, channel_num: int) -> float:
         value = 0.0
         if self.hw is not None:
             addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM AV'].value
@@ -252,44 +262,12 @@ class GasDevice:
         return buf, t
 
 
-class MockGasDevice(GasDevice):
-    def __init__(self, name):
-        super().__init__(name)
-        self._serial.is_open = False
-        self._values = {'tvolume': '0 ul', 'irate': '0 ul/min'}
-
-    def open(self, cfg: SyringeConfig = None) -> None:
-        self.cfg = cfg
-        self._queue = Queue()
-        self._serial.is_open = True
-
-    def send_wait4response(self, str2send: str) -> str:
-        response = ''
-        if self._serial.is_open:
-            # strip off trailing \r
-            str2send = str2send[:-1]
-            parts = str2send.split(' ', 1)
-            if parts[0] == 'syrmanu':
-                if parts[1] == '?':
-                    response = DEFAULT_MANUFACTURERS_STR
-                else:
-                    code = parts[1].split(' ')[0]
-                    response = DEFAULT_SYRINGES[code]
-            elif parts[0] in ['tvolume', 'irate']:
-                if len(parts) == 2:
-                    self._values[parts[0]] = parts[1]
-                else:
-                    response = self._values[parts[0]]
-
-        # JWK, we should be checking error responses
-        return response
-
-
 class MockGB100:
     def __init__(self):
         self.total_flow = 0
         self.percent = [0, 0]
         self.sccm = [0, 0]
+        self.target_sccm = [0, 0]
         self.sccm_av = [0, 0]
         self.status = False
 
@@ -300,36 +278,39 @@ class MockGB100:
             return 4
         elif addr == MainBoardOffsets['Number of channels'].value:
             return 2
-        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']:
             return self.percent[0]
-        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
             return self.percent[1]
-        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['SCCM'].value
-            return self.sccm[0]
-        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM'].value
-            return self.sccm[1]
-        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['SCCM AV'].value
-            return self.sccm_av[0]
-        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM AV'].value
-            return self.sccm_av[1]
         elif addr == MainBoardOffsets['Working status']:
             return self.status
 
     def write_register(self, addr, value):
         if addr == MainBoardOffsets['Working status']:
-            self.status = value == True
+            self.status = bool(value)
 
     def read_long(self, addr):
         if addr == MainBoardOffsets['Total flow'].value:
             return self.total_flow
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Target SCCM'].value:
+            return self.sccm[0]
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Target SCCM'].value:
+            return self.sccm[1]
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['SCCM'].value:
+            return self.sccm[0]
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM'].value:
+            return self.sccm[1]
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['SCCM AV'].value:
+            return self.sccm_av[0]
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM AV'].value:
+            return self.sccm_av[1]
 
     def write_long(self, addr, value):
         if addr == MainBoardOffsets['Total flow'].value:
             self.total_flow = value
-        elif addr = ChannelAddr[0] + ChannelRegisterOffsets['Percent value']
-        self.percent[0] = value
-
-    elif addr = ChannelAddr[1] + ChannelRegisterOffsets['Percent value']
-    self.percent[1] = value
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']:
+            self.percent[0] = value
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
+            self.percent[1] = value
 
 

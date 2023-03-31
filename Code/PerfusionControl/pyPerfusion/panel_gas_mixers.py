@@ -14,9 +14,9 @@ import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
-from pyPerfusion.pyCDI import CDIData
+import pyPerfusion.pyCDI as pyCDI
+import pyHardware.pyGB100 as pyGB100
 from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
 
 
@@ -286,15 +286,28 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.setup_file_logger(logging.getLogger(), logging.DEBUG, 'panel_gas_mixers_debug')
+    utils.setup_stream_logger(lgr, logging.DEBUG)
+    utils.setup_file_logger(lgr, logging.DEBUG, 'panel_gas_mixers_debug')
 
-    SYS_HW.load_hardware_from_config()
-    ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
-    pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
+    ha_mixer = pyGB100.GasDevice(name='Arterial Gas Mixer')
+    try:
+        ha_mixer.read_config()
+    except pyGB100.GasDeviceException:
+        lgr.warning(f'{ha_mixer.name} not found. Loading mock')
+        ha_mixer.hw = pyGB100.MockGB100()
+
+    pv_mixer = pyGB100.GasDevice('Venous Gas Mixer')
+    try:
+        pv_mixer.read_config()
+    except pyGB100.GasDeviceException:
+        lgr.warning(f'{pv_mixer.name} not found. Loading mock')
+        pv_mixer.hw = pyGB100.MockGB100()
 
     # Load CDI sensor
+    cdi = pyCDI.CDIStreaming(name='CDI')
+    cdi.read_config()
     cdi_sensor = Sensor(name='CDI')
     cdi_sensor.read_config()
     cdi_sensor.start()
