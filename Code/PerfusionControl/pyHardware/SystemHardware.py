@@ -218,7 +218,7 @@ class SystemHardware:
             hw = next((dexcom for dexcom in self.dexcoms if dexcom.name == name), None)
 
         if self.mocks_enabled:
-            if hw is None:
+            if hw is None and self.mock_device is not None:
                 hw = self.mock_device.ai_channels.get(name, None)
             if hw is None:
                 if name == "mock_cdi":

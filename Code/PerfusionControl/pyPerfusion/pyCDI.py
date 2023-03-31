@@ -20,6 +20,10 @@ from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
+class CDIDeviceException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
+
+
 CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'arterial_temp',
                                 'arterial_sO2', 'arterial_bicarb', 'arterial_BE', 'K', 'VO2',
                                 'venous_pH', 'venous_CO2', 'venous_O2', 'venous_temp', 'venous_sO2',
@@ -95,6 +99,7 @@ class CDIStreaming:
         except serial.serialutil.SerialException as e:
             self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
             self._lgr.error(f'Message: {e}')
+            raise CDIDeviceException(f'Could not open serial port {self.cfg.port}')
         self._queue = Queue()
 
     def close(self):
@@ -191,7 +196,6 @@ class MockCDI(CDIStreaming):
         if cfg is not None:
             self.cfg = cfg
         self._is_open = True
-        self._lgr.debug('here')
         self._queue = Queue()
 
     def close(self):

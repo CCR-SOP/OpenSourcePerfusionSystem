@@ -18,6 +18,7 @@ from pyPerfusion.Sensor import Sensor
 import pyPerfusion.pyCDI as pyCDI
 import pyHardware.pyGB100 as pyGB100
 from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
+from pyHardware.SystemHardware import SYS_HW
 
 
 class GasMixerPanel(wx.Panel):
@@ -317,8 +318,21 @@ if __name__ == "__main__":
 
     # Load CDI sensor
     cdi = pyCDI.CDIStreaming(name='CDI')
-    cdi.read_config()
-    cdi_sensor = Sensor(name='CDI')
+    try:
+        cdi.read_config()
+        cdi_name = 'CDI'
+    except pyCDI.CDIDeviceException:
+        lgr.warning(f'CDI not found. Loading mock')
+        cdi = pyCDI.MockCDI(name='mock_cdi')
+        cdi.read_config()
+        cdi_name = 'Mock CDI'
+        # Sensor class uses SYS_HW to get the hardware
+        # so override the cdi so it picks the right one
+        SYS_HW.mocks_enabled = True
+        SYS_HW.mock_cdi = cdi
+
+    cdi.start()
+    cdi_sensor = Sensor(name=cdi_name)
     cdi_sensor.read_config()
     cdi_sensor.start()
 
