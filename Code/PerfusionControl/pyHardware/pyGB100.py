@@ -341,7 +341,6 @@ class MockGB100:
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
             self.percent[1] = value
             self.percent[0] = 10_000 - value
-
     def read_long(self, addr):
         if addr == MainBoardOffsets['Total flow'].value:
             return self.total_flow
@@ -357,7 +356,6 @@ class MockGB100:
             return self.total_flow * (self.percent[0] / 100)
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM AV'].value:
             return self.total_flow * (self.percent[1] / 100)
-
     def write_long(self, addr, value):
         if addr == MainBoardOffsets['Total flow'].value:
             self.total_flow = value
