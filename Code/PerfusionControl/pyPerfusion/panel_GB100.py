@@ -193,12 +193,14 @@ class BaseGasMixerPanel(wx.Panel):
                 if self.gas_device.name == "Venous Gas Mixer":
                     new_flow = self.gas_device.update_pH(cdi_data)
                     new_mix_perc_pv = self.gas_device.update_O2(cdi_data)
+                    self._lgr.debug(f'Changed mix to {new_mix_perc_pv}')
                     if new_flow is not None:
                         self.UpdateApp()
                     if new_mix_perc_pv is not None:
                         self.UpdateApp(new_mix_perc_pv)
                 elif self.gas_device.name == "Arterial Gas Mixer":
                     new_mix_perc_ha = self.gas_device.update_CO2(cdi_data)
+                    self._lgr.debug(f'Changed mix to {new_mix_perc_ha}')
                     if new_mix_perc_ha is not None:
                         self.UpdateApp(100 - new_mix_perc_ha)
             else:

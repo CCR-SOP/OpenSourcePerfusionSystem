@@ -219,7 +219,7 @@ class GasDevice:
     def update_pH(self, CDI_input):
         pH = CDI_input.venous_pH
         total_flow = self.get_total_flow()
-        if 5 < total_flow < 250:
+        if 5 <= total_flow <= 250:
             if pH == -1:
                 self._lgr.warning(f'Venous pH is out of range. Cannot be adjusted automatically')
                 return None
@@ -257,22 +257,23 @@ class GasDevice:
         if 0 <= percentage_mix <= 100:
             if pH == -1:
                 self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
-            elif CO2 == -1:
-                self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
             elif pH >= self.cfg.pH_range[1]:
                 new_percentage_mix = percentage_mix + self.co2_adjust
                 self._lgr.warning(f'{self.name}: Blood alkalotic, increasing CO2')
             elif pH <= self.cfg.pH_range[0]:
                 new_percentage_mix = percentage_mix - self.co2_adjust
                 self._lgr.warning(f'{self.name}: Blood acidotic, decreasing CO2')
-            elif CO2 >= self.cfg.CO2_range[1]:
-                new_percentage_mix = percentage_mix - self.co2_adjust
-                self._lgr.warning(f'{self.name}: CO2 high, decreasing CO2')
-            elif CO2 <= self.cfg.CO2_range[0]:
-                new_percentage_mix = percentage_mix + self.co2_adjust
-                self._lgr.warning(f'{self.name}: CO2 low, increasing CO2')
             else:
-                self._lgr.warning(f'pH and CO2 in arterial gas mixer are stable')
+                if CO2 == -1:
+                    self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
+                elif CO2 >= self.cfg.CO2_range[1]:
+                    new_percentage_mix = percentage_mix - self.co2_adjust
+                    self._lgr.warning(f'{self.name}: CO2 high, decreasing CO2')
+                elif CO2 <= self.cfg.CO2_range[0]:
+                    new_percentage_mix = percentage_mix + self.co2_adjust
+                    self._lgr.warning(f'{self.name}: CO2 low, increasing CO2')
+                else:
+                    self._lgr.warning(f'pH and CO2 in arterial gas mixer are stable')
         else:
             self._lgr.warning(f'{self.name}: CO2 % is out of range and cannot be changed automatically')
 

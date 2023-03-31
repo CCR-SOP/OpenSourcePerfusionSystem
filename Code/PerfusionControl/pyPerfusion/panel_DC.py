@@ -142,9 +142,9 @@ class PanelDCControl(wx.Panel):
             elif 0 < cdi_input.hct < physio_ranges['hct_lower'] and self.name == "Dialysate Outflow":
                 self._lgr.info(f'Hematocrit is low at {cdi_input.hct}. Increasing dialysate outflow')
                 self.increase_dc_pump_speed()
-            elif cdi_input.hgb > physio_ranges['hct_upper'] and self.name == "Dialysate Inflow":
-                self._lgr.info(f'Hematocrit is high at {cdi_input.hct}. Increasing dialysate inflow')
-                self.increase_dc_pump_speed()
+            elif cdi_input.hgb > physio_ranges['hct_upper'] and self.name == "Dialysate Outflow":
+                self._lgr.info(f'Hematocrit is high at {cdi_input.hct}. Decreasing dialysate outflow')
+                self.decrease_dc_pump_speed()
             else:
                 self._lgr.info(f'No need to increase or decrease relative inflow/outflow rates')
 
