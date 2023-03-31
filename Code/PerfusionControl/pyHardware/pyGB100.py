@@ -69,8 +69,6 @@ GasNames = IntEnum('GasNames', ['Air', 'Nitric Oxide', 'Nitrogen', 'Oxygen',
                                 'Propane', 'Butane', 'DME'],
                    start=0)
 
-def get_gas_index(gas_name: str):
-    return [gas.value for gas in GasNames if gas.name == gas_name][0]
 
 def get_gas_index(gas_name: str):
     return [gas.value for gas in GasNames if gas.name == gas_name][0]
@@ -102,7 +100,6 @@ class GasDevice:
         # assume a max of 3 channels
         self.percent = [0, 0, 0]
         self.status = False
-
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -207,7 +204,7 @@ class GasDevice:
                 self._lgr.info(f'{self.name}: Total flow changed to {int(total_flow)}')
                 self.push_data()
 
-    def get_percent_value(self, channel_num:int) -> float:
+    def get_percent_value(self, channel_num: int) -> float:
         value = 0.0
         if self.hw is not None:
             if 0 <= channel_num <= 3:
@@ -221,7 +218,7 @@ class GasDevice:
         return value
 
     def set_percent_value(self, channel_num: int, new_percent: float):
-        if self.hw is not None:D
+        if self.hw is not None:
             if 0 <= channel_num <= 3:
                 if new_percent < 0:
                     new_percent = 0
@@ -298,6 +295,12 @@ class GasDevice:
                 self.status = turn_on
                 self.push_data()
 
+    def push_data(self):
+        if self._queue:
+            buf = self.data_type([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
+            self._lgr.debug(f'{self.name}: pushed {buf}')
+            self._queue.put((buf, get_epoch_ms()))
+
     def get_data(self):
         buf = None
         t = None
@@ -341,6 +344,7 @@ class MockGB100:
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
             self.percent[1] = value
             self.percent[0] = 10_000 - value
+
     def read_long(self, addr):
         if addr == MainBoardOffsets['Total flow'].value:
             return self.total_flow
@@ -356,6 +360,7 @@ class MockGB100:
             return self.total_flow * (self.percent[0] / 100)
         elif addr == ChannelAddr[1] + ChannelRegisterOffsets['SCCM AV'].value:
             return self.total_flow * (self.percent[1] / 100)
+
     def write_long(self, addr, value):
         if addr == MainBoardOffsets['Total flow'].value:
             self.total_flow = value

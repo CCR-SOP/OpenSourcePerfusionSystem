@@ -311,13 +311,9 @@ if __name__ == "__main__":
         ha_mixer.read_config()
     except pyGB100.GasDeviceException:
         lgr.warning(f'{ha_mixer.name} not found. Loading mock')
-<<<<<<< HEAD
         SYS_HW.mocks_enabled = True
         ha_mixer.hw = pyGB100.MockGB100()
         SYS_HW.ha_mixer = ha_mixer
-=======
-        ha_mixer.hw = pyGB100.MockGB100()
->>>>>>> 290bfa7 (add mock GB100 for testing outside of hardware. Update panel_gas_mixers __main__ function to directly load hardware (instead of using SYS_HW) and load mocks if no hardware found.)
 
     pv_mixer = pyGB100.GasDevice('Venous Gas Mixer')
     try:
@@ -325,7 +321,6 @@ if __name__ == "__main__":
     except pyGB100.GasDeviceException:
         lgr.warning(f'{pv_mixer.name} not found. Loading mock')
         pv_mixer.hw = pyGB100.MockGB100()
-<<<<<<< HEAD
         SYS_HW.pv_mixer = pv_mixer
 
 
@@ -353,13 +348,6 @@ if __name__ == "__main__":
 
     cdi.start()
     cdi_sensor = Sensor(name=cdi_name)
-=======
-
-    # Load CDI sensor
-    cdi = pyCDI.CDIStreaming(name='CDI')
-    cdi.read_config()
-    cdi_sensor = Sensor(name='CDI')
->>>>>>> 290bfa7 (add mock GB100 for testing outside of hardware. Update panel_gas_mixers __main__ function to directly load hardware (instead of using SYS_HW) and load mocks if no hardware found.)
     cdi_sensor.read_config()
     cdi_sensor.start()
 
