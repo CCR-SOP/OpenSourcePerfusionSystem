@@ -169,7 +169,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.gas_device.set_working_status(turn_on=True)
             self.automatic_start_btn.SetLabel('Stop Automatic')
             self.manual_start_btn.Disable()
-            self.cdi_timer.Start(60_000, wx.TIMER_CONTINUOUS)
+            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
             self._lgr.debug(f'CDI timer starting')
             self.cdi_sensor.hw.start()
             self.cdi_sensor.start()
@@ -229,7 +229,7 @@ class BaseGasMixerPanel(wx.Panel):
 
         if self.manual_start_btn.GetLabel() == "Stop Manual":  # prevents turning on if user hasn't hit start
             self.EnsureTurnedOn()
-            time.sleep(1.0)
+            time.sleep(2.0)
 
         self.UpdateApp(new_percent)
 
@@ -239,7 +239,7 @@ class BaseGasMixerPanel(wx.Panel):
 
         if self.manual_start_btn.GetLabel() == "Stop Manual":
             self.EnsureTurnedOn()
-            time.sleep(1.0)
+            time.sleep(2.0)
 
         self.UpdateApp()
 
