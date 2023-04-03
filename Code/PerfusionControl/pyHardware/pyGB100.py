@@ -254,9 +254,11 @@ class GasDevice:
             gas_index = 1
 
         percentage_mix = self.get_percent_value(gas_index)
+        check_CO2 = False
         if 0 <= percentage_mix <= 100:
             if pH == -1:
                 self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
+                check_CO2 = True
             elif pH >= self.cfg.pH_range[1]:
                 new_percentage_mix = percentage_mix + self.co2_adjust
                 self._lgr.warning(f'{self.name}: Blood alkalotic, increasing CO2')
@@ -264,6 +266,10 @@ class GasDevice:
                 new_percentage_mix = percentage_mix - self.co2_adjust
                 self._lgr.warning(f'{self.name}: Blood acidotic, decreasing CO2')
             else:
+                self._lgr.debug(f' Arterial pH is stable at {pH}.')
+                check_CO2 = True
+
+            if check_CO2 is True:
                 if CO2 == -1:
                     self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
                 elif CO2 >= self.cfg.CO2_range[1]:
@@ -273,7 +279,7 @@ class GasDevice:
                     new_percentage_mix = percentage_mix + self.co2_adjust
                     self._lgr.warning(f'{self.name}: CO2 low, increasing CO2')
                 else:
-                    self._lgr.warning(f'pH and CO2 in arterial gas mixer are stable')
+                    self._lgr.warning(f'Arterial CO2 is stable at {CO2}.')
         else:
             self._lgr.warning(f'{self.name}: CO2 % is out of range and cannot be changed automatically')
 
