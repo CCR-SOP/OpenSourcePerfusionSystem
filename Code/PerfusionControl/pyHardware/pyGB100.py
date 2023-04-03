@@ -296,11 +296,99 @@ class GasDevice:
                 self.status = turn_on
                 self.push_data()
 
-    def push_data(self):
-        if self._queue:
-            buf = self.data_type([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
-            self._lgr.debug(f'{self.name}: pushed {buf}')
-            self._queue.put((buf, get_epoch_ms()))
+    def update_pH(self, CDI_input):
+        pH = CDI_input.venous_pH
+        total_flow = self.get_total_flow()
+        if 5 <= total_flow <= 250:
+            if pH == -1:
+                self._lgr.warning(f'Venous pH is out of range. Cannot be adjusted automatically')
+                return None
+            elif pH < self.cfg.pH_range[0]:
+                new_flow = total_flow + self.flow_adjust
+                self.set_total_flow(new_flow)
+                self._lgr.info(f'Total flow in PV increased to {new_flow}')
+                return new_flow
+            elif pH > self.cfg.pH_range[1]:
+                new_flow = total_flow - self.flow_adjust
+                self.set_total_flow(new_flow)
+                self._lgr.info(f'Total flow in PV decreased to {new_flow}')
+                return new_flow
+        elif total_flow >= 250:
+            self._lgr.warning(f'Total flow in PV at or above 250 mL/min. Cannot be run automatically')
+            return None
+        elif total_flow <= 5:
+            self._lgr.warning(f'Total flow in portal vein at or below 5 mL/min. Cannot be run automatically')
+            return None
+        else:
+            return None
+
+    def update_CO2(self, CDI_input):
+        new_percentage_mix = None
+        pH = CDI_input.arterial_pH
+        CO2 = CDI_input.arterial_CO2
+
+        gas = self.get_gas_type(2)
+        if gas == "Carbon Dioxide":
+            gas_index = 2
+        else:
+            gas_index = 1
+
+        percentage_mix = self.get_percent_value(gas_index)
+        check_CO2 = False
+        if 0 <= percentage_mix <= 100:
+            if pH == -1:
+                self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
+                check_CO2 = True
+            elif pH >= self.cfg.pH_range[1]:
+                new_percentage_mix = percentage_mix + self.co2_adjust
+                self._lgr.warning(f'{self.name}: Blood alkalotic, increasing CO2')
+            elif pH <= self.cfg.pH_range[0]:
+                new_percentage_mix = percentage_mix - self.co2_adjust
+                self._lgr.warning(f'{self.name}: Blood acidotic, decreasing CO2')
+            else:
+                self._lgr.debug(f' Arterial pH is stable at {pH}.')
+                check_CO2 = True
+
+            if check_CO2 is True:
+                if CO2 == -1:
+                    self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
+                elif CO2 >= self.cfg.CO2_range[1]:
+                    new_percentage_mix = percentage_mix - self.co2_adjust
+                    self._lgr.warning(f'{self.name}: CO2 high, decreasing CO2')
+                elif CO2 <= self.cfg.CO2_range[0]:
+                    new_percentage_mix = percentage_mix + self.co2_adjust
+                    self._lgr.warning(f'{self.name}: CO2 low, increasing CO2')
+                else:
+                    self._lgr.warning(f'Arterial CO2 is stable at {CO2}.')
+        else:
+            self._lgr.warning(f'{self.name}: CO2 % is out of range and cannot be changed automatically')
+
+        return new_percentage_mix
+
+    def update_O2(self, CDI_input):
+        new_percentage_mix = None
+        O2 = CDI_input.venous_sO2
+
+        gas = self.get_gas_type(1)
+        if gas == "Oxygen":
+            gas_index = 1
+        else:
+            gas_index = 2
+
+        percentage_mix = self.get_percent_value(gas_index)
+        if 0 <= percentage_mix < 100:
+            if O2 == -1:
+                self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
+            elif O2 <= self.cfg.O2_range[0]:
+                new_percentage_mix = percentage_mix + self.o2_adjust
+                self._lgr.warning(f'{self.name}: O2 is low. Increasing oxygen flow')
+            elif O2 >= self.cfg.O2_range[1]:
+                new_percentage_mix = percentage_mix - self.o2_adjust
+                self._lgr.warning(f'{self.name}: O2 is high. Decreasing oxygen flow')
+        else:
+            self._lgr.warning(f'{self.name}: O2 % is out of range and cannot be changed automatically')
+
+        return new_percentage_mix
 
     def get_data(self):
         buf = None
