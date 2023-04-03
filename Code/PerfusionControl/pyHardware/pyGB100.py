@@ -281,7 +281,7 @@ class GasDevice:
 
     def update_O2(self, CDI_input):
         new_percentage_mix = None
-        O2 = CDI_input.venous_O2
+        O2 = CDI_input.venous_sO2
 
         gas = self.get_gas_type(1)
         if gas == "Oxygen":
