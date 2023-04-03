@@ -16,7 +16,7 @@ import serial.serialutil
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 import pyPerfusion.pyCDI as pyCDI
 import pyPerfusion.pyPump11Elite as pyPump11Elite
-from pyHardware.pyGB100 import GasDevice
+import pyHardware.pyGB100 as pyGB100
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 import pyHardware.pyDC as pyDC
 import pyPerfusion.pyDexcom as pyDexcom
@@ -46,6 +46,8 @@ class SystemHardware:
         self.mock_device = None
         self.mock_cdi = None
         self.mock_syringe = None
+        self.mock_ha_mixer = None
+        self.mock_pv_mixer = None
 
 
     def load_hardware_from_config(self):
@@ -58,14 +60,14 @@ class SystemHardware:
             self._lgr.error(e)
 
         try:
-            self.ha_mixer = GasDevice(name='Arterial Gas Mixer')
+            self.ha_mixer = pyGB100.GasDevice(name='Arterial Gas Mixer')
             self.ha_mixer.read_config()
         except Exception as e:
             self._lgr.error(f'Error trying to create {self.ha_mixer.name}')
             self._lgr.error(f'GasDevice exception: {e}')
 
         try:
-            self.pv_mixer = GasDevice(name='Venous Gas Mixer')
+            self.pv_mixer = pyGB100.GasDevice(name='Venous Gas Mixer')
             self.pv_mixer.read_config()
         except Exception as e:
             self._lgr.error(f'Error trying to create {self.pv_mixer.name}')
@@ -130,6 +132,11 @@ class SystemHardware:
         self.mock_syringe.cfg = pyPump11Elite.SyringeConfig(name='mock_syringe')
         self.mock_syringe.read_config()
 
+        self.mock_ha_mixer = pyGB100.GasDevice(name='Arterial Gas Mixer')
+        self.mock_ha_mixer.hw = pyGB100.MockGB100()
+        self.mock_pv_mixer = pyGB100.GasDevice(name='Venous Gas Mixer')
+        self.mock_pv_mixer.hw = pyGB100.MockGB100()
+
     def start(self):
         try:
             self.ni_dev1.start()
@@ -154,6 +161,8 @@ class SystemHardware:
             self.mock_device.start()
             self.mock_cdi.start()
             self.mock_syringe.start()
+            self.mock_ha_mixer.start()
+            self.mock_pv_mixer.start()
 
     def stop(self):
         try:
@@ -189,6 +198,8 @@ class SystemHardware:
             self.mock_device.stop()
             self.mock_cdi.stop()
             self.mock_syringe.stop()
+            self.mock_ha_mixer.stop()
+            self.mock_pv_mixer.stop()
 
     def get_hw(self, name: str = None):
         self._lgr.debug(f'Getting hardware named: {name}')
@@ -225,6 +236,11 @@ class SystemHardware:
                     hw = self.mock_cdi
                 elif name == "mock_syringe":
                     hw = self.mock_syringe
+                elif name == "mock_ha_mixer":
+                    hw = self.mock_ha_mixer
+                elif name == "mock_pv_mixer":
+                    hw = self.mock_pv_mixer
+
         self._lgr.debug(f'Found {hw}')
         return hw
 

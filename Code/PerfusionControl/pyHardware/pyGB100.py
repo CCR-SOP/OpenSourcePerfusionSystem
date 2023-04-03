@@ -37,6 +37,12 @@ class WriteAddr(IntEnum):
     WorkingStatus = 9
 
 
+# Ordering of values saved to queue (and Sensor). Can be used by a reader to easily select
+# the right index for the variable of interest
+ReaderIndex = IntEnum('ReaderIndex',
+                      ['Status', 'TotalFlow', 'Ch1Percent', 'Ch2Percent', 'Ch3Percent'], start=0)
+
+
 # names and ordering are taken from Gas Blender GB3000 series Modbus communication protocol manual
 MainBoardOffsets = IntEnum('MainBoardOffsets',
                            ['FW Version', 'HW Version', 'Status', 'Alert',
@@ -62,6 +68,7 @@ GasNames = IntEnum('GasNames', ['Air', 'Nitric Oxide', 'Nitrogen', 'Oxygen',
                                 'Propane', 'Butane', 'DME'],
                    start=0)
 
+
 def get_gas_index(gas_name: str):
     return [gas.value for gas in GasNames if gas.name == gas_name][0]
 
@@ -81,13 +88,16 @@ class GasDevice:
         self.name = name
         self.hw = None
         self.cfg = GasDeviceConfig(name=name)
-        
 
         self._queue = None
         self.acq_start_ms = 0
         self.baud = 115200
 
         self.data_type = np.uint32
+        self.total_flow = 0
+        # assume a max of 3 channels
+        self.percent = [0, 0, 0]
+        self.status = False
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -111,6 +121,8 @@ class GasDevice:
         self._lgr.debug(f'Attempting to open {self.name} with config {cfg}')
         if cfg is not None:
             self.cfg = cfg
+        self._queue = Queue()
+
         if self.cfg.port != '':
             self._lgr.info(f'Opening GB100 gas mixer at {self.cfg.port}')
             try:
@@ -124,7 +136,7 @@ class GasDevice:
                 self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
                                 f'Exception: {e}')
                 raise GasDeviceException('Could not open gas device')
-        self._queue = Queue()
+
 
     def close(self):
         if self.hw:
@@ -159,6 +171,7 @@ class GasDevice:
         flow = 0
         if self.hw is not None:
             flow = self.hw.read_long(MainBoardOffsets['Total flow'].value)
+            self.total_flow = flow
         return flow
 
     def adjust_flow(self, adjust_flow: int):
@@ -179,59 +192,77 @@ class GasDevice:
                                   f'Flow being set to limit.')
             addr = MainBoardOffsets['Total flow'].value
             self.hw.write_long(addr, int(total_flow))
+            self.total_flow = total_flow
             self._lgr.info(f'{self.name}: Total flow changed to {int(total_flow)}')
-            if self._queue:
-                buf = [addr, self.data_type(total_flow)]
-                self._queue.put((buf, get_epoch_ms()))
+            self.push_data()
 
-    def get_percent_value(self, channel_num:int) -> float:
+    def get_percent_value(self, channel_num: int) -> float:
         value = 0.0
         if self.hw is not None:
-            addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
-            value = self.hw.read_register(addr, number_of_decimals=2)
+            if 0 <= channel_num <= 3:
+                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
+                value = self.hw.read_register(addr, number_of_decimals=2)
+                self.percent[channel_num - 1] = value
+            else:
+                self._lgr.warning(f'{self.name}: Attempt to read percent value from unsupported channel {channel_num}')
+
         return value
 
     def set_percent_value(self, channel_num: int, new_percent: float):
         if self.hw is not None:
-            if new_percent < 0:
-                new_percent = 0
-                self._lgr.warning(f'{self.name}: Attempt to set channel percent to '
-                                  f'{new_percent}. Capping at 0')
-            if new_percent > 100:
-                new_percent = 100
-                self._lgr.warning(f'{self.name}: Attempt to set channel percent to '
-                                  f'{new_percent}. Capping at 100')
+            if 0 <= channel_num <= 3:
+                if new_percent < 0:
+                    new_percent = 0
+                    self._lgr.warning(f'{self.name}: Attempt to set channel {channel_num} percent to '
+                                      f'{new_percent}. Capping at 0')
+                if new_percent > 100:
+                    new_percent = 100
+                    self._lgr.warning(f'{self.name}: Attempt to set channel {channel_num} percent to '
+                                      f'{new_percent}. Capping at 100')
 
-            addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
-            percent = int(new_percent * 100)
-            self.hw.write_register(addr, percent)
-            self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent/100} %')
-            if self._queue:
-                buf = [addr, self.data_type(percent)]
-                self._queue.put((buf, get_epoch_ms()))
+                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
+                percent = int(new_percent * 100)
+                self.hw.write_register(addr, percent)
+                self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent/100} %')
+                self.push_data()
+            else:
+                self._lgr.warning(f'{self.name}: Attempt to set percent value from unsupported channel {channel_num}')
 
     def get_sccm(self, channel_num: int) -> float:
         value = 0.0
         if self.hw is not None:
-            addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM'].value
-            value = self.hw.read_long(addr)
-            value /= 100
+            if 0 <= channel_num <= 3:
+                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM'].value
+                value = self.hw.read_long(addr)
+                value /= 100
+            else:
+                self._lgr.warning(f'{self.name}: Attempt to get sccm value from unsupported channel {channel_num}')
+
         return value
 
     def get_sccm_av(self, channel_num: int) -> float:
         value = 0.0
         if self.hw is not None:
-            addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM AV'].value
-            value = self.hw.read_long(addr)
-            value /= 100
+            if 0 <= channel_num <= 3:
+                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM AV'].value
+                value = self.hw.read_long(addr)
+                value /= 100
+            else:
+                self._lgr.warning(f'{self.name}: Attempt to get sccm_av value from unsupported channel {channel_num}')
+
         return value
 
     def get_target_sccm(self, channel_num: int) -> float:
         value = 0.0
         if self.hw is not None:
-            addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Target SCCM'].value
-            value = self.hw.read_long(addr)
-            value /= 100
+            if 0 <= channel_num <= 3:
+                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Target SCCM'].value
+                value = self.hw.read_long(addr)
+                value /= 100
+            else:
+                self._lgr.warning(f'{self.name}: Attempt to get target sccm value from unsupported channel {channel_num}')
+
+
         return value
 
     def get_working_status(self):
@@ -239,21 +270,28 @@ class GasDevice:
         if self.hw is not None:
             addr = MainBoardOffsets['Working status']
             status_on = self.hw.read_register(addr) == 1
+            self.status = status_on
         return status_on
 
     def set_working_status(self, turn_on: bool):
         if self.hw is not None:
             addr = MainBoardOffsets['Working status']
             self.hw.write_register(addr, int(turn_on))
-            if self._queue:
-                buf = [addr, self.data_type(turn_on)]
-                self._queue.put((buf, get_epoch_ms()))
+            self.status = turn_on
+            self.push_data()
+
+    def push_data(self):
+        if self._queue:
+            buf = self.data_type([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
+            self._lgr.debug(f'{self.name}: pushed {buf}')
+            self._queue.put((buf, get_epoch_ms()))
 
     def get_data(self):
         buf = None
         t = None
         try:
-            buf, t = self._queue.get(timeout=1.0)
+            if self._queue:
+                buf, t = self._queue.get(timeout=1.0)
         except Empty:
             # this can occur if there are attempts to read data before it has been acquired
             # this is not unusual, so catch the error but do nothing
@@ -263,6 +301,7 @@ class GasDevice:
 
 class MockGB100:
     def __init__(self):
+        self._lgr = logging.getLogger(__name__)
         self.total_flow = 0
         self.percent = [0, 0]
         self.status = False

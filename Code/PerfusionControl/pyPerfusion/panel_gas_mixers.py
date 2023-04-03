@@ -281,6 +281,8 @@ class TestFrame(wx.Frame):
         self.panel.Close()
         cdi_sensor.hw.stop()
         cdi_sensor.stop()
+        ha_sensor.stop()
+        pv_sensor.stop()
         ha_autogasmixer.stop()
         pv_autogasmixer.stop()
         ha_autogasmixer.gas_device.stop()
@@ -309,7 +311,9 @@ if __name__ == "__main__":
         ha_mixer.read_config()
     except pyGB100.GasDeviceException:
         lgr.warning(f'{ha_mixer.name} not found. Loading mock')
+        SYS_HW.mocks_enabled = True
         ha_mixer.hw = pyGB100.MockGB100()
+        SYS_HW.ha_mixer = ha_mixer
 
     pv_mixer = pyGB100.GasDevice('Venous Gas Mixer')
     try:
@@ -317,6 +321,15 @@ if __name__ == "__main__":
     except pyGB100.GasDeviceException:
         lgr.warning(f'{pv_mixer.name} not found. Loading mock')
         pv_mixer.hw = pyGB100.MockGB100()
+        SYS_HW.pv_mixer = pv_mixer
+
+
+    ha_sensor = Sensor(name='Arterial Gas Mixer')
+    ha_sensor.read_config()
+    pv_sensor = Sensor(name='Venous Gas Mixer')
+    pv_sensor.read_config()
+    ha_sensor.start()
+    pv_sensor.start()
 
     # Load CDI sensor
     cdi = pyCDI.CDIStreaming(name='CDI')
