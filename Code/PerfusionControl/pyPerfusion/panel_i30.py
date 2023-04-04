@@ -14,22 +14,22 @@ import wx
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
-from pyHardware.pyPuraLevi30 import PuraLevi30
+from pyHardware.pyPuraLevi30 import PuraLevi30, Mocki30, i30Exception
 
 
 class Paneli30(wx.Panel):
-    def __init__(self, parent, name, hw):
+    def __init__(self, parent, hw):
         wx.Panel.__init__(self, parent, -1)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
-        self.name = name
+        self.name = hw.name
 
         self.panel_i30 = Paneli30Control(self, self.name, hw)
 
         font = wx.Font()
         font.SetPointSize(int(16))
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name + " Pump")
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         static_box.SetFont(font)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
@@ -104,14 +104,24 @@ class Paneli30Control(wx.Panel):
 
     def __set_bindings(self):
         self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
-        self.timer_update.Bind(wx.EVT_TIMER, self.update_controls_from_hardware)
+        self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_rate_change)
+        self.Bind(wx.EVT_TIMER, self.on_timer, self.timer_update)
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
+
+    def on_rate_change(self, evt):
+        speed = self.spin_speed.GetValue()
+        self.hw.set_speed(speed)
+
     def on_stop(self, evt):
-        self.hw.set_output(int(0))
+        self.hw.set_speed(int(0))
+
+    def on_timer(self, evt):
+        self.update_controls_from_hardware()
 
     def update_controls_from_hardware(self):
-        value = self.hw.get_current_output()
+        value = self.hw.get_speed()
+        self._lgr.debug(f'value = {value}')
         self.txt_actual.SetValue(f'{value}')
 
     def on_close(self, evt):
@@ -123,9 +133,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.pump = PuraLevi30(pump_name)
-        self.pump.read_config()
-        self.panel = Paneli30(self, self.pump)
+        self.panel = Paneli30(self, pump)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -143,13 +151,21 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.setup_stream_logger(lgr, logging.DEBUG)
+    utils.setup_file_logger(lgr, logging.DEBUG, filename='panel_i30_debug')
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
 
-    pump_name = 'Test i30'
+    pump = PuraLevi30('Pump 1')
+    try:
+        pump.read_config()
+    except i30Exception:
+        lgr.warning(f'{pump.name} not found. Loading mock')
+        pump.hw = Mocki30()
+        SYS_HW.pump1 = pump
 
     app = MyTestApp(0)
     app.MainLoop()
