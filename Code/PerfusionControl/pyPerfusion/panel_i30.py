@@ -63,10 +63,12 @@ class Paneli30Control(wx.Panel):
         font.SetPointSize(int(12))
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.label_speed = wx.StaticText(self, label='Set Speed (mL/min):')
+        self.label_speed = wx.StaticText(self, label='Set Speed (rpm):')
         self.spin_speed = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5, initial=0)
-        self.label_actual = wx.StaticText(self, label='Actual Speed (mL/min):')
+        self.label_actual = wx.StaticText(self, label='Actual Speed (rpm):')
         self.txt_actual = wx.TextCtrl(self, style=wx.TE_READONLY)
+
+        self.chk_flow = wx.CheckBox(self, label='Flow control')
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
         self.btn_stop = wx.Button(self, label='Stop')
@@ -86,7 +88,7 @@ class Paneli30Control(wx.Panel):
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 2).Center()
-        sizer_cfg = wx.GridSizer(rows=3, cols=2, vgap=1, hgap=1)
+        sizer_cfg = wx.GridSizer(rows=4, cols=2, vgap=1, hgap=1)
 
         sizer_cfg.Add(self.label_speed, flags)
         sizer_cfg.Add(self.label_actual, flags)
@@ -94,6 +96,9 @@ class Paneli30Control(wx.Panel):
         sizer_cfg.Add(self.txt_actual, flags)
         sizer_cfg.Add(self.btn_change_rate, flags)
         sizer_cfg.Add(self.btn_stop, flags)
+
+        sizer_cfg.Add(self.chk_flow, flags)
+        sizer_cfg.AddSpacer(1)
 
         self.sizer.Add(sizer_cfg)
 
@@ -107,22 +112,38 @@ class Paneli30Control(wx.Panel):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_rate_change)
         self.Bind(wx.EVT_TIMER, self.on_timer, self.timer_update)
         self.Bind(wx.EVT_CLOSE, self.on_close)
-
+        self.chk_flow.Bind(wx.EVT_CHECKBOX, self.on_flow)
 
     def on_rate_change(self, evt):
-        speed = self.spin_speed.GetValue()
-        self.hw.set_speed(speed)
+        value = self.spin_speed.GetValue()
+        if self.chk_flow.IsChecked():
+            self.hw.set_flow(value)
+        else:
+            self.hw.set_speed(value)
 
     def on_stop(self, evt):
-        self.hw.set_speed(int(0))
+        if self.chk_flow.IsChecked():
+            self.hw.set_flow(0)
+        else:
+            self.hw.set_speed(0)
 
     def on_timer(self, evt):
         self.update_controls_from_hardware()
 
     def update_controls_from_hardware(self):
-        value = self.hw.get_speed()
-        self._lgr.debug(f'value = {value}')
+        if self.chk_flow.IsChecked():
+            value = self.hw.get_flow()
+        else:
+            value = self.hw.get_speed()
         self.txt_actual.SetValue(f'{value}')
+
+    def on_flow(self, evt):
+        if self.chk_flow.IsChecked():
+            self.label_actual.SetLabel('Set Flow (ml/min):')
+            self.label_speed.SetLabel('Actual Flow (ml/min):')
+        else:
+            self.label_actual.SetLabel('Set Speed (rpm):')
+            self.label_speed.SetLabel('Actual Speed (rpm):')
 
     def on_close(self, evt):
         self.timer_update.Stop()
