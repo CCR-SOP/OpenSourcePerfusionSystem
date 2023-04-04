@@ -11,10 +11,10 @@ and under the public domain.
 """
 
 import logging
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import dataclass
 from enum import IntEnum
 from queue import Queue, Empty
+from threading import Lock
 
 import minimalmodbus as modbus
 import serial
@@ -130,6 +130,7 @@ class PuraLevi30:
 
         self._queue = None
         self.acq_start_ms = 0
+        self.mutex = Lock()
 
         self.data_type = np.uint32
 
@@ -152,12 +153,13 @@ class PuraLevi30:
         if self.cfg.port != '':
             self._lgr.info(f'{self.name}: Opening PuraLev i30 at {self.cfg.port}')
             try:
-                self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
-                self.hw.serial.baudrate = self.cfg.baud
-                self.hw.serial.bytesize = 8
-                self.hw.serial.parity = serial.PARITY_EVEN
-                self.hw.serial.stopbits = 1
-                self.hw.serial.timeout = 3
+                with self.mutex:
+                    self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
+                    self.hw.serial.baudrate = self.cfg.baud
+                    self.hw.serial.bytesize = 8
+                    self.hw.serial.parity = serial.PARITY_EVEN
+                    self.hw.serial.stopbits = 1
+                    self.hw.serial.timeout = 3
             except serial.serialutil.SerialException as e:
                 self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
                                 f'Exception: {e}')
@@ -166,37 +168,43 @@ class PuraLevi30:
 
     def close(self):
         if self.hw:
-            self.hw.serial.close()
+            with self.mutex:
+                self.hw.serial.close()
             self.stop()
 
     def start(self):
         self.acq_start_ms = get_epoch_ms()
 
     def stop(self):
-        reg = WriteRegisters['State']
-        self.hw.write_register(reg.addr, PumpState.Off)
+        with self.mutex:
+            reg = WriteRegisters['State']
+            self.hw.write_register(reg.addr, PumpState.Off)
 
     def set_speed(self, rpm: int):
-        reg = WriteRegisters['SetpointSpeed']
-        self.hw.write_register(reg.addr, rpm)
-        reg = WriteRegisters['State']
-        self.hw.write_register(reg.addr, PumpState.SpeedControl)
+        with self.mutex:
+            reg = WriteRegisters['SetpointSpeed']
+            self.hw.write_register(reg.addr, rpm)
+            reg = WriteRegisters['State']
+            self.hw.write_register(reg.addr, PumpState.SpeedControl)
 
     def set_flow(self, percent_of_max: float):
-        reg = WriteRegisters['SetpointProcess']
-        self.hw.write_register(reg.addr, int(percent_of_max*100))
-        reg = WriteRegisters['State']
-        self.hw.write_register(reg.addr, PumpState.SpeedControl)
+        with self.mutex:
+            reg = WriteRegisters['SetpointProcess']
+            self.hw.write_register(reg.addr, int(percent_of_max*100))
+            reg = WriteRegisters['State']
+            self.hw.write_register(reg.addr, PumpState.SpeedControl)
 
     def get_speed(self) -> int:
-        reg = ReadRegisters['SetpointSpeed']
-        rpm = self.hw.read_register(reg.addr)
-        return rpm
+        with self.mutex:
+            reg = ReadRegisters['SetpointSpeed']
+            rpm = self.hw.read_register(reg.addr)
+            return rpm
 
     def get_flow(self) -> float:
-        reg = ReadRegisters['SetpointProcess']
-        percent = self.hw.read_register(reg.addr)
-        return percent / 100.0
+        with self.mutex:
+            reg = ReadRegisters['SetpointProcess']
+            percent = self.hw.read_register(reg.addr)
+            return percent / 100.0
 
     def get_data(self):
         buf = None
