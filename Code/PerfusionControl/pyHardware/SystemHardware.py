@@ -132,6 +132,11 @@ class SystemHardware:
         if self.pump3:
             self.pump3.start()
 
+        if self.leviflow1:
+            self.leviflow1.start()
+        if self.leviflow2:
+            self.leviflow2.start()
+
         if self.mocks_enabled:
             self.mock_device.start()
             self.mock_cdi.start()
@@ -172,6 +177,11 @@ class SystemHardware:
         if self.pump3:
             self.pump3.stop()
 
+        if self.leviflow1:
+            self.leviflow1.stop()
+        if self.leviflow2:
+            self.leviflow2.stop()
+
         if self.mocks_enabled:
             self.mock_device.stop()
             self.mock_cdi.stop()
@@ -201,7 +211,10 @@ class SystemHardware:
                 hw = self.pump2
             elif name == 'Pump 3':
                 hw = self.pump3
-
+            elif name == 'LeviFlow1':
+                hw = self.leviflow1
+            elif name == 'LeviFlow2':
+                hw = self.leviflow2
 
         if hw is None:
             hw = self.ni_dev1.ai_channels.get(name, None)
