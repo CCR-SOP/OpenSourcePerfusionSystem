@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import List
 from enum import IntEnum
 from queue import Queue, Empty
+from threading import Lock
 
 import minimalmodbus as modbus
 import serial
@@ -92,6 +93,7 @@ class GasDevice:
         self._queue = None
         self.acq_start_ms = 0
         self.baud = 115200
+        self.mutex = Lock()
 
         self.data_type = np.uint32
         self.total_flow = 0
@@ -126,12 +128,13 @@ class GasDevice:
         if self.cfg.port != '':
             self._lgr.info(f'Opening GB100 gas mixer at {self.cfg.port}')
             try:
-                self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
-                self.hw.serial.baudrate = self.baud
-                self.hw.serial.bytesize = 8
-                self.hw.serial.parity = serial.PARITY_NONE
-                self.hw.serial.stopbits = 1
-                self.hw.serial.timeout = 3
+                with self.mutex:
+                    self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
+                    self.hw.serial.baudrate = self.baud
+                    self.hw.serial.bytesize = 8
+                    self.hw.serial.parity = serial.PARITY_NONE
+                    self.hw.serial.stopbits = 1
+                    self.hw.serial.timeout = 3
             except serial.serialutil.SerialException as e:
                 self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
                                 f'Exception: {e}')
@@ -140,7 +143,8 @@ class GasDevice:
 
     def close(self):
         if self.hw:
-            self.hw.serial.close()
+            with self.mutex:
+                self.hw.serial.close()
             self.stop()
 
     def start(self):
@@ -153,8 +157,9 @@ class GasDevice:
     def get_gas_type(self, channel_num: int) -> str:
         gas_type = 'NA'
         if self.hw is not None:
-            addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Id gas'].value
-            gas_id = self.hw.read_register(addr)
+            with self.mutex:
+                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Id gas'].value
+                gas_id = self.hw.read_register(addr)
             try:
                 gas_type = GasNames(gas_id).name
             except IndexError:
@@ -164,14 +169,16 @@ class GasDevice:
     def get_total_channels(self):
         channels = 0
         if self.hw is not None:
-            channels = self.hw.read_register(MainBoardOffsets['Number of channels'].value)
+            with self.mutex:
+                channels = self.hw.read_register(MainBoardOffsets['Number of channels'].value)
         return channels
 
     def get_total_flow(self) -> int:
         flow = 0
         if self.hw is not None:
-            flow = self.hw.read_long(MainBoardOffsets['Total flow'].value)
-            self.total_flow = flow
+            with self.mutex:
+                flow = self.hw.read_long(MainBoardOffsets['Total flow'].value)
+                self.total_flow = flow
         return flow
 
     def adjust_flow(self, adjust_flow: int):
@@ -190,19 +197,21 @@ class GasDevice:
                 self._lgr.warning(f'{self.name}: Attempt set flow {total_flow} '
                                   f'higher than limit {self.cfg.flow_limits[1]}. '
                                   f'Flow being set to limit.')
-            addr = MainBoardOffsets['Total flow'].value
-            self.hw.write_long(addr, int(total_flow))
-            self.total_flow = total_flow
-            self._lgr.info(f'{self.name}: Total flow changed to {int(total_flow)}')
-            self.push_data()
+            with self.mutex:
+                addr = MainBoardOffsets['Total flow'].value
+                self.hw.write_long(addr, int(total_flow))
+                self.total_flow = total_flow
+                self._lgr.info(f'{self.name}: Total flow changed to {int(total_flow)}')
+                self.push_data()
 
     def get_percent_value(self, channel_num: int) -> float:
         value = 0.0
         if self.hw is not None:
             if 0 <= channel_num <= 3:
-                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
-                value = self.hw.read_register(addr, number_of_decimals=2)
-                self.percent[channel_num - 1] = value
+                with self.mutex:
+                    addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
+                    value = self.hw.read_register(addr, number_of_decimals=2)
+                    self.percent[channel_num - 1] = value
             else:
                 self._lgr.warning(f'{self.name}: Attempt to read percent value from unsupported channel {channel_num}')
 
@@ -220,11 +229,12 @@ class GasDevice:
                     self._lgr.warning(f'{self.name}: Attempt to set channel {channel_num} percent to '
                                       f'{new_percent}. Capping at 100')
 
-                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
-                percent = int(new_percent * 100)
-                self.hw.write_register(addr, percent)
-                self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent/100} %')
-                self.push_data()
+                with self.mutex:
+                    addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
+                    percent = int(new_percent * 100)
+                    self.hw.write_register(addr, percent)
+                    self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent/100} %')
+                    self.push_data()
             else:
                 self._lgr.warning(f'{self.name}: Attempt to set percent value from unsupported channel {channel_num}')
 
@@ -232,9 +242,10 @@ class GasDevice:
         value = 0.0
         if self.hw is not None:
             if 0 <= channel_num <= 3:
-                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM'].value
-                value = self.hw.read_long(addr)
-                value /= 100
+                with self.mutex:
+                    addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM'].value
+                    value = self.hw.read_long(addr)
+                    value /= 100
             else:
                 self._lgr.warning(f'{self.name}: Attempt to get sccm value from unsupported channel {channel_num}')
 
@@ -244,9 +255,10 @@ class GasDevice:
         value = 0.0
         if self.hw is not None:
             if 0 <= channel_num <= 3:
-                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM AV'].value
-                value = self.hw.read_long(addr)
-                value /= 100
+                with self.mutex:
+                    addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['SCCM AV'].value
+                    value = self.hw.read_long(addr)
+                    value /= 100
             else:
                 self._lgr.warning(f'{self.name}: Attempt to get sccm_av value from unsupported channel {channel_num}')
 
@@ -256,9 +268,10 @@ class GasDevice:
         value = 0.0
         if self.hw is not None:
             if 0 <= channel_num <= 3:
-                addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Target SCCM'].value
-                value = self.hw.read_long(addr)
-                value /= 100
+                with self.mutex:
+                    addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Target SCCM'].value
+                    value = self.hw.read_long(addr)
+                    value /= 100
             else:
                 self._lgr.warning(f'{self.name}: Attempt to get target sccm value from unsupported channel {channel_num}')
 
@@ -268,17 +281,19 @@ class GasDevice:
     def get_working_status(self):
         status_on = False
         if self.hw is not None:
-            addr = MainBoardOffsets['Working status']
-            status_on = self.hw.read_register(addr) == 1
-            self.status = status_on
+            with self.mutex:
+                addr = MainBoardOffsets['Working status']
+                status_on = self.hw.read_register(addr) == 1
+                self.status = status_on
         return status_on
 
     def set_working_status(self, turn_on: bool):
         if self.hw is not None:
-            addr = MainBoardOffsets['Working status']
-            self.hw.write_register(addr, int(turn_on))
-            self.status = turn_on
-            self.push_data()
+            with self.mutex:
+                addr = MainBoardOffsets['Working status']
+                self.hw.write_register(addr, int(turn_on))
+                self.status = turn_on
+                self.push_data()
 
     def push_data(self):
         if self._queue:
