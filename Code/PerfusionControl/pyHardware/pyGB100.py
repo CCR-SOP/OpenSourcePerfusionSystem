@@ -218,6 +218,7 @@ class GasDevice:
 
     def update_pH(self, CDI_input):
         pH = CDI_input.venous_pH
+        self._lgr.debug(f'pH is {pH}')
         total_flow = self.get_total_flow()
         if 5 <= total_flow <= 250:
             if pH == -1:
@@ -246,6 +247,7 @@ class GasDevice:
         new_percentage_mix = None
         pH = CDI_input.arterial_pH
         CO2 = CDI_input.arterial_CO2
+        self._lgr.debug(f'pH is {pH} and Co2 is {CO2}')
 
         gas = self.get_gas_type(2)
         if gas == "Carbon Dioxide":
