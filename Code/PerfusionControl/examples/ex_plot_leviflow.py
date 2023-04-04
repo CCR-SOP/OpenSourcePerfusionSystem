@@ -16,6 +16,7 @@ import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
+import pyHardware.pyLeviFlow as pyLeviFlow
 
 
 class TestFrame(wx.Frame):
@@ -26,22 +27,16 @@ class TestFrame(wx.Frame):
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
         self.plotraw = SensorPlot(sensor, self.panel.axes, readout=True)
-        self.plotrms = SensorPlot(sensor, self.panel.axes, readout=True)
 
-        self.plotraw.set_reader(sensor.get_reader('Raw'))
-        self.plotrms.set_reader(sensor.get_reader('RMS_11pt'), color='y')
+        self.plotraw.set_reader(sensor.get_reader())
 
         self.panel.add_plot(self.plotraw)
-        self.panel.add_plot(self.plotrms)
-
-        sensor.open()
-        sensor.start()
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         sensor.stop()
-        SYS_HW.stop()
+        leviflow.stop()
         self.panel.Destroy()
         self.Destroy()
 
@@ -55,14 +50,24 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    SYS_HW.load_hardware_from_config()
-    SYS_HW.start()
+    leviflow = pyLeviFlow.LeviFlow(name='LeviFlow1')
+    try:
+        leviflow.read_config()
+    except pyLeviFlow.LeviFlowException:
+        lgr.warning(f'LeviFlow1 not found. Loading mock')
+        SYS_HW.mocks_enabled = True
+        leviflow.hw = pyLeviFlow.MockLeviFlow()
+        SYS_HW.leviflow1 = leviflow
+
+    leviflow.start()
     sensor = Sensor.Sensor(name='Test LeviFlow')
     sensor.read_config()
+    sensor.start()
 
     app = MyTestApp(0)
     app.MainLoop()

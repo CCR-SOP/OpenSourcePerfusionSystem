@@ -159,7 +159,7 @@ class LeviFlow:
         self._event_halt = Event()
         self.mutex = Lock()
 
-        self.data_type = np.int32
+        self.data_type = np.float64
         self.buffer = np.zeros(1, dtype=self.data_type)
 
     @property
@@ -201,7 +201,6 @@ class LeviFlow:
                 self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
                                 f'Exception: {e}')
             raise LeviFlowException(f'Could not open LeviFlow {self.name} - {self.cfg}')
-
 
     def close(self):
         if self.hw:
@@ -258,7 +257,7 @@ class LeviFlow:
         if self.hw:
             with self.mutex:
                 reg = ReadRegisters['Flow']
-                flow = self.hw.read_long(reg.addr)
+                flow = self.hw.read_long(reg.addr) / 1_000.0
         return flow
 
     def _acq_samples(self):
@@ -279,8 +278,9 @@ class MockLeviFlow:
         pass
 
     def read_long(self, addr):
-        if addr == ReadRegisters['Flow']:
-            return self.flow + np.random.random_sample() * 10
+        if addr == ReadRegisters['Flow'].addr:
+            rand = np.random.random_sample() * 10_000
+            return self.flow + rand
 
     def write_long(self, addr, value):
         pass
