@@ -24,6 +24,11 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.utils import get_epoch_ms
 
 
+
+class i30Exception(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
+
+
 class PumpState(IntEnum):
     Off = 1
     SpeedControl = 2
@@ -145,13 +150,18 @@ class PuraLevi30:
         if cfg is not None:
             self.cfg = cfg
         if self.cfg.port != '':
-            self._lgr.debug(f'Opening modbus instrument at {self.cfg.port}')
-            self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
-            self.hw.serial.baudrate = self.cfg.baud
-            self.hw.serial.bytesize = 8
-            self.hw.serial.parity = serial.PARITY_EVEN
-            self.hw.serial.stopbits = 1
-            self.hw.serial.timeout = 3
+            self._lgr.info(f'{self.name}: Opening PuraLev i30 at {self.cfg.port}')
+            try:
+                self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
+                self.hw.serial.baudrate = self.cfg.baud
+                self.hw.serial.bytesize = 8
+                self.hw.serial.parity = serial.PARITY_EVEN
+                self.hw.serial.stopbits = 1
+                self.hw.serial.timeout = 3
+            except serial.serialutil.SerialException as e:
+                self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
+                                f'Exception: {e}')
+            raise i30Exception(f'Could not open Puralev {self.name} - {self.cfg}')
         self._queue = Queue()
 
     def close(self):
@@ -164,19 +174,19 @@ class PuraLevi30:
 
     def stop(self):
         reg = WriteRegisters['State']
-        self.hw.write_register(reg, PumpState.Off)
+        self.hw.write_register(reg.addr, PumpState.Off)
 
     def set_speed(self, rpm: int):
         reg = WriteRegisters['SetpointSpeed']
         self.hw.write_register(reg.addr, rpm)
         reg = WriteRegisters['State']
-        self.hw.write_register(reg, PumpState.SpeedControl)
+        self.hw.write_register(reg.addr, PumpState.SpeedControl)
 
     def set_flow(self, percent_of_max: float):
         reg = WriteRegisters['SetpointProcess']
         self.hw.write_register(reg.addr, int(percent_of_max*100))
         reg = WriteRegisters['State']
-        self.hw.write_register(reg, PumpState.SpeedControl)
+        self.hw.write_register(reg.addr, PumpState.SpeedControl)
 
     def get_speed(self) -> int:
         reg = ReadRegisters['SetpointSpeed']
@@ -208,15 +218,15 @@ class Mocki30:
         self.process = 0
 
     def read_register(self, addr, number_of_decimals=0):
-        if addr == ReadRegisters['SetpointProcess']:
+        if addr == ReadRegisters['SetpointProcess'].addr:
             return self.process
-        elif addr == ReadRegisters['SetpointSpeed']:
+        elif addr == ReadRegisters['SetpointSpeed'].addr:
             return self.speed
 
     def write_register(self, addr, value):
-        if addr ==  WriteRegisters['State']:
+        if addr == WriteRegisters['State'].addr:
             self.state = value
-        elif addr == WriteRegisters['SetpointSpeed']:
+        elif addr == WriteRegisters['SetpointSpeed'].addr:
             self.speed = value
-        elif addr == WriteRegisters['SetpointProcess']:
+        elif addr == WriteRegisters['SetpointProcess'].addr:
             self.process = value
