@@ -24,9 +24,6 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.utils import get_epoch_ms
 
 
-BROADCAST_ADDR = 0x0
-
-
 class PumpState(IntEnum):
     Off = 1
     SpeedControl = 2
