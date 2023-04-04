@@ -176,9 +176,10 @@ class PuraLevi30:
         self.acq_start_ms = get_epoch_ms()
 
     def stop(self):
-        with self.mutex:
-            reg = WriteRegisters['State']
-            self.hw.write_register(reg.addr, PumpState.Off)
+        if self.hw:
+            with self.mutex:
+                reg = WriteRegisters['State']
+                self.hw.write_register(reg.addr, PumpState.Off)
 
     def set_speed(self, rpm: int):
         with self.mutex:
