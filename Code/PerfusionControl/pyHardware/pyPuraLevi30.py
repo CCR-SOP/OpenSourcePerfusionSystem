@@ -198,3 +198,25 @@ class PuraLevi30:
             # this is not unusual, so catch the error but do nothing
             pass
         return buf, t
+
+
+class Mocki30:
+    def __init__(self):
+        self._lgr = logging.getLogger(__name__)
+        self.state = PumpState.Off
+        self.speed = 0
+        self.process = 0
+
+    def read_register(self, addr, number_of_decimals=0):
+        if addr == ReadRegisters['SetpointProcess']:
+            return self.process
+        elif addr == ReadRegisters['SetpointSpeed']:
+            return self.speed
+
+    def write_register(self, addr, value):
+        if addr ==  WriteRegisters['State']:
+            self.state = value
+        elif addr == WriteRegisters['SetpointSpeed']:
+            self.speed = value
+        elif addr == WriteRegisters['SetpointProcess']:
+            self.process = value
