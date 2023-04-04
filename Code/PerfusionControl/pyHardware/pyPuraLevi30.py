@@ -182,30 +182,34 @@ class PuraLevi30:
                 self.hw.write_register(reg.addr, PumpState.Off)
 
     def set_speed(self, rpm: int):
-        with self.mutex:
-            reg = WriteRegisters['SetpointSpeed']
-            self.hw.write_register(reg.addr, rpm)
-            reg = WriteRegisters['State']
-            self.hw.write_register(reg.addr, PumpState.SpeedControl)
+        if self.hw:
+            with self.mutex:
+                reg = WriteRegisters['SetpointSpeed']
+                self.hw.write_register(reg.addr, rpm)
+                reg = WriteRegisters['State']
+                self.hw.write_register(reg.addr, PumpState.SpeedControl)
 
     def set_flow(self, percent_of_max: float):
-        with self.mutex:
-            reg = WriteRegisters['SetpointProcess']
-            self.hw.write_register(reg.addr, int(percent_of_max*100))
-            reg = WriteRegisters['State']
-            self.hw.write_register(reg.addr, PumpState.SpeedControl)
+        if self.hw:
+            with self.mutex:
+                reg = WriteRegisters['SetpointProcess']
+                self.hw.write_register(reg.addr, int(percent_of_max*100))
+                reg = WriteRegisters['State']
+                self.hw.write_register(reg.addr, PumpState.SpeedControl)
 
     def get_speed(self) -> int:
-        with self.mutex:
-            reg = ReadRegisters['SetpointSpeed']
-            rpm = self.hw.read_register(reg.addr)
-            return rpm
+        if self.hw:
+            with self.mutex:
+                reg = ReadRegisters['SetpointSpeed']
+                rpm = self.hw.read_register(reg.addr)
+                return rpm
 
     def get_flow(self) -> float:
-        with self.mutex:
-            reg = ReadRegisters['SetpointProcess']
-            percent = self.hw.read_register(reg.addr)
-            return percent / 100.0
+        if self.hw:
+            with self.mutex:
+                reg = ReadRegisters['SetpointProcess']
+                percent = self.hw.read_register(reg.addr)
+                return percent / 100.0
 
     def get_data(self):
         buf = None
