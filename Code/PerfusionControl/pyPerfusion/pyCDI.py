@@ -253,5 +253,5 @@ class MockCDI(CDIStreaming):
             else:
                 self.last_pkt = ''
                 self.last_pkt_index = 0
-        sleep(1.0)
+        sleep(30)
         return pkt
