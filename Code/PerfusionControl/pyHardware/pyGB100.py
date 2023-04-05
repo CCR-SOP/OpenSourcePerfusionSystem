@@ -116,11 +116,9 @@ class GasDevice:
         self.cfg.CO2_range = [int(x) for x in ''.join(self.cfg.CO2_range).strip(' ').split(',')]
         self.cfg.O2_range = [int(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
         self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
-        self._lgr.debug(f'CO2_range is {self.cfg.CO2_range}, O2_range is {self.cfg.O2_range}, ph_range is {self.cfg.pH_range}')
         self.open()
 
     def open(self, cfg=None):
-        self._lgr.debug(f'Attempting to open {self.name} with config {cfg}')
         if cfg is not None:
             self.cfg = cfg
         self._queue = Queue()
@@ -298,7 +296,6 @@ class GasDevice:
     def push_data(self):
         if self._queue:
             buf = self.data_type([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
-            self._lgr.debug(f'{self.name}: pushed {buf}')
             self._queue.put((buf, get_epoch_ms()))
 
     def get_data(self):

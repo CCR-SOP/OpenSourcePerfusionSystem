@@ -121,9 +121,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.timer_gui_update = wx.Timer(self)
         self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
 
-        self.sync_with_hw_timer = wx.Timer(self)
-        self.sync_with_hw_timer.Start(1_200_000, wx.TIMER_CONTINUOUS)
-
         self.__do_layout()
         self.__set_bindings()
 
@@ -179,7 +176,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_percent_gas1.Bind(wx.EVT_TEXT, self.OnChangeGas)
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
         self.Bind(wx.EVT_CHECKBOX, self.OnAuto)
-        self.Bind(wx.EVT_TIMER, self.CheckHardwareForAccuracy, self.sync_with_hw_timer)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def _update_manual_entries(self):
@@ -240,31 +236,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(1)}')
         self.flow_gas2.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(2)}')
 
-    def CheckHardwareForAccuracy(self, evt):
-        if evt.GetId() == self.sync_with_hw_timer.GetId():
-            # Update actual flows
-            target_flows = [0] * 2
-            target_flows[0] = self.autogasmixer.gas_device.get_target_sccm(1)
-            target_flows[1] = self.autogasmixer.gas_device.get_target_sccm(2)
-            actual_flows = [0] * 2
-            actual_flows[0] = self.autogasmixer.gas_device.get_sccm_av(1)
-            actual_flows[1] = self.autogasmixer.gas_device.get_sccm_av(2)
-
-            for x in range(2):
-                tolerance = [target_flows[x]*0.95, target_flows[x]*1.05]
-                if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
-                    wx.MessageBox(f'Actual flow of {self.autogasmixer.gas_device.channel_type} mixer, channel {x+1} not within '
-                                  f'5% of target flow. Check gas tank flow')  # make a Lgr.warning
-
-            if not self.input_percent_gas1.GetValue() == self.autogasmixer.gas_device.get_percent_value(1):
-                self.UpdateApp(self.autogasmixer.gas_device.get_percent_value(1))
-
-            if not self.input_total_flow.GetValue() == self.autogasmixer.gas_device.get_total_flow():
-                self.UpdateApp()
-
     def OnClose(self, evt):
         self.timer_gui_update.Stop()
-        self.sync_with_hw_timer.Stop()
         self.autogasmixer.stop()
         self.autogasmixer.gas_device.set_working_status(turn_on=False)
 
@@ -322,7 +295,6 @@ if __name__ == "__main__":
         lgr.warning(f'{pv_mixer.name} not found. Loading mock')
         pv_mixer.hw = pyGB100.MockGB100()
         SYS_HW.pv_mixer = pv_mixer
-
 
     ha_sensor = Sensor(name='Arterial Gas Mixer')
     ha_sensor.read_config()
