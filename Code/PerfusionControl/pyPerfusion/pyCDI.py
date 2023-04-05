@@ -141,10 +141,10 @@ class CDIStreaming:
         self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
             if self.__serial.is_open:
-                self._lgr.debug('Attempting to read serial data from CDI')
+                # self._lgr.debug('Attempting to read serial data from CDI')
                 resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
-                self._lgr.debug(f'got response {resp}')
-                sleep(1)
+                # self._lgr.debug(f'got response {resp}')\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+                sleep(2)
                 if len(resp) > 0:
                     self._lgr.debug(f'{len(resp)} > 0')
                     self._event_halt.set()
@@ -154,6 +154,8 @@ class CDIStreaming:
                         self._lgr.debug(f'DATA ARRAY IS {data}')
                         ts = get_epoch_ms()
                         self._queue.put((data, ts))
+                        self._event_halt.clear()
+                        sleep(2)
             else:
                 sleep(0.5)
 
