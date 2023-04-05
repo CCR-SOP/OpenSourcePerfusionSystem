@@ -10,7 +10,7 @@ from time import sleep
 from queue import Queue, Empty
 from enum import IntEnum
 from datetime import datetime
-from  dataclasses import dataclass
+from dataclasses import dataclass
 
 import numpy as np
 import serial
@@ -20,10 +20,15 @@ from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
+class CDIException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
+
+
 CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'arterial_temp',
                                 'arterial_sO2', 'arterial_bicarb', 'arterial_BE', 'K', 'VO2',
                                 'venous_pH', 'venous_CO2', 'venous_O2', 'venous_temp', 'venous_sO2',
                                 'venous_bicarb', 'venous_BE', 'hct', 'hgb'], start=0)
+
 
 class CDIData:
     def __init__(self, data):
@@ -54,7 +59,7 @@ class CDIStreaming:
         self.cfg = CDIConfig()
 
         self.__serial = serial.Serial()
-        self._timeout = 0.5
+        self._timeout = 5.0
 
         self._event_halt = Event()
         self.__thread = None
@@ -76,10 +81,10 @@ class CDIStreaming:
         self.open(cfg)
 
     def is_open(self):
-        return self.__serial.is_open
+        return self.__serial and self.__serial.is_open
 
     def open(self, cfg: CDIConfig = None) -> None:
-        self._lgr.debug('Attempting to open CDI')
+        self._queue = Queue()
         if self.__serial.is_open:
             self.__serial.close()
         if cfg is not None:
@@ -89,20 +94,22 @@ class CDIStreaming:
         self.__serial.stopbits = serial.STOPBITS_ONE
         self.__serial.parity = serial.PARITY_NONE
         self.__serial.bytesize = serial.EIGHTBITS
+        self.__serial.timeout = self._timeout
         try:
             self.__serial.open()
-            self._lgr.debug('Serial port opened')
         except serial.serialutil.SerialException as e:
-            self._lgr.error(f'Could not open serial port {self.__serial.portstr}')
-            self._lgr.error(f'Message: {e}')
-        self._queue = Queue()
+            self.__serial = None
+            self._lgr.error(f'CDI: Could not open serial port {self.cfg.port}')
+            self._lgr.error(f'CDI: Message: {e}')
+            raise CDIException(f'CDI: Could not open serial port at {self.cfg.port}')
 
     def close(self):
+        self.stop()
         if self.__serial:
             self.__serial.close()
 
     def parse_response(self, response: str):
-        data = []
+        data = np.zeros(0, dtype=self.data_type)
         if response is None:
             return data
 
@@ -121,41 +128,61 @@ class CDIStreaming:
                 try:
                     value = self.data_type(field[4:])
                 except ValueError:
-                    logging.getLogger(__name__).error(f'Field {code} (value={field[4:]}) is out-of-range')
+                    self._lgr.error(f'Field {code} (value={field[4:]}) is out-of-range')
                     value = self.data_type(-1)
                 data[code] = value
         else:
-            logging.getLogger(__name__).error(f'in parse_response(), could parse CDI response, '
-                                              f'expected {expected_vars + 2} fields, '
-                                              f'found {len(fields)}')
+            # this may be a result of an incomplete serial response.
+            # Assume it is a random occurrence so log the response, but
+            # do not raise the exception further. Calling code will know it is
+            # a bad response due to data = None
+            self._lgr.error(f'CDI: could parse CDI response, '
+                            f'expected {expected_vars + 2} fields, found {len(fields)}')
+
         return data
+
+    def read_from_serial(self):
+        self._lgr.debug('Attempting to read serial data from CDI')
+        resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
+        return resp
 
     def run(self):  # continuous data stream
         self.is_streaming = True
         self._event_halt.clear()
-        self.__serial.timeout = self._timeout
+        good_response = False
+        loops = 0
         while not self._event_halt.is_set():
-            if self.__serial.is_open:
-                # self._lgr.debug('Attempting to read serial data from CDI')
-                resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
-                # self._lgr.debug(f'got response {resp}')\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-                sleep(2)
-                if len(resp) > 0:
-                    self._lgr.debug(f'{len(resp)} > 0')
-                    self._event_halt.set()
-                    self._lgr.debug(f'Type: {type(resp)}')
-                    if resp[-1] == '\n':
-                        data = self.parse_response(resp)
-                        self._lgr.debug(f'DATA ARRAY IS {data}')
-                        ts = get_epoch_ms()
-                        self._queue.put((data, ts))
-                        self._event_halt.clear()
-                        sleep(2)
+            if self.is_open():
+                resp = ''
+                try:
+                    while not good_response:
+                        resp += self.read_from_serial()
+                        if len(resp) > 0:
+                            if resp[-1] == '\n':
+                                good_response = True
+                                loops = 0
+                            else:
+                                loops += 1
+                        elif loops > 10:
+                            break
+                except serial.SerialException as e:
+                    self._lgr.error(f'CDI: error attempting to read response. Message {e}')
+                    # assuming this is an occasional glitch so log, but keep going
+                if good_response:
+                    data = self.parse_response(resp)
+                    ts = get_epoch_ms()
+                    self._queue.put((data, ts))
+                    good_response = False
+                else:
+                    msg = f'CDI: Failed to read good response after multiple attempts. ' \
+                          f'Something may be wrong with CDI interface'
+                    self._lgr.error(msg)
+                    raise CDIException(msg)
             else:
-                sleep(0.5)
+                sleep(1.0)
+        self.is_streaming = False
 
     def start(self):
-        self._lgr.debug('attempting to start CDI')
         self.stop()
         self._event_halt.clear()
         self.acq_start_ms = get_epoch_ms()
@@ -163,12 +190,10 @@ class CDIStreaming:
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
         self.__thread.start()
-        self._lgr.debug('CDI started')
 
     def stop(self):
         if self.is_streaming:
             self._event_halt.set()
-            self.is_streaming = False
 
     def get_data(self, timeout=0):
         buf = None
@@ -185,6 +210,8 @@ class MockCDI(CDIStreaming):
         self._lgr = logging.getLogger(__name__)
         super().__init__(name)
         self._is_open = False
+        self.last_pkt = ''
+        self.last_pkt_index = 0
 
     def is_open(self):
         return self._is_open
@@ -202,7 +229,7 @@ class MockCDI(CDIStreaming):
     def request_data(self, timeout=30):  # request single data packet
         return self._form_pkt()
 
-    def _form_pkt(self):
+    def read_from_serial(self):
         pkt_stx = 0x2
         pkt_etx = 0x3
         pkt_dev = 'X2000A5A0'
@@ -213,18 +240,18 @@ class MockCDI(CDIStreaming):
         data_str = ''.join(data)
         crc = 0
         pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'
-        # self._lgr.debug(f'pkt is {pkt}')
-        return pkt
-
-    def run(self):  # continuous data stream
-        self.is_streaming = True
-        self._event_halt.clear()
-        while not self._event_halt.is_set():
-            if self._is_open:
-                resp = self._form_pkt()
-                data = self.parse_response(resp)
-                ts = get_epoch_ms()
-                self._queue.put((data, ts))
-                sleep(1.0)
+        rand = np.random.randint(10, size=1)[0]
+        if self.last_pkt:
+            pkt = self.last_pkt[self.last_pkt_index:]
+            self.last_pkt_index = 0
+            self.last_pkt = ''
+        else:
+            if rand < 5:
+                self.last_pkt = pkt
+                self.last_pkt_index = np.random.randint(low=0, high=len(pkt)-2, size=1)[0]
+                pkt = pkt[0:self.last_pkt_index]
             else:
-                sleep(0.5)
+                self.last_pkt = ''
+                self.last_pkt_index = 0
+        sleep(30)
+        return pkt
