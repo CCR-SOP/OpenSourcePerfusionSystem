@@ -20,10 +20,10 @@ from pyPerfusion.pyCDI import CDIIndex, CDIData
 
 def main():
     SYS_HW.load_hardware_from_config()
-    SYS_HW.load_mocks()
+    # SYS_HW.load_mocks()
     SYS_HW.start()
 
-    sensor = Sensor(name='Mock CDI')
+    sensor = Sensor(name='CDI')
     sensor.read_config()
 
     sensor.start()
