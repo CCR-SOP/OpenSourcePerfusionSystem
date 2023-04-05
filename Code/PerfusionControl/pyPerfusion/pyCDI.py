@@ -58,7 +58,7 @@ class CDIStreaming:
         self.cfg = CDIConfig()
 
         self.__serial = serial.Serial()
-        self._timeout = 0.5
+        self._timeout = 5.0
 
         self._event_halt = Event()
         self.__thread = None
