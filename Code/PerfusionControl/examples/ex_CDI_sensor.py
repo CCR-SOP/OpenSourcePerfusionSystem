@@ -10,6 +10,7 @@ and under the public domain.
 """
 import logging
 import time
+import threading
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -32,8 +33,9 @@ def main():
     cdi_var_index = CDIIndex.arterial_pH.value
 
     # Test get_data-from_last_read
-    print('Sleeping for 5 seconds to collect data')
-    time.sleep(5)
+    collect_time_sec = 180
+    print(f'Sleeping for {collect_time_sec} seconds to collect data')
+    time.sleep(collect_time_sec)
     print('Reading full CDI variables, starting from t=0')
     for i in range(3):
         ts, samples = reader.get_data_from_last_read(1)
@@ -61,3 +63,5 @@ if __name__ == '__main__':
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     PerfusionConfig.set_test_config()
     main()
+    for thread in threading.enumerate():
+        print(thread.name)

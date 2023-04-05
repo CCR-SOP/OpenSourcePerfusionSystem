@@ -157,10 +157,12 @@ class CDIStreaming:
                 try:
                     while not good_response:
                         resp += self.read_from_serial()
-                        loops += 1
-                        if len(resp) > 0 and resp[-1] == '\n':
-                            good_response = True
-                            loops = 0
+                        if len(resp) > 0:
+                            if resp[-1] == '\n':
+                                good_response = True
+                                loops = 0
+                            else:
+                                loops += 1
                         elif loops > 10:
                             break
                 except serial.SerialException as e:
@@ -251,5 +253,5 @@ class MockCDI(CDIStreaming):
             else:
                 self.last_pkt = ''
                 self.last_pkt_index = 0
-        sleep(1.0)
+        sleep(30)
         return pkt
