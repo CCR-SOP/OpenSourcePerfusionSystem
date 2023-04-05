@@ -284,10 +284,10 @@ class BaseGasMixerPanel(wx.Panel):
             actual_flows[1] = self.gas_device.get_sccm_av(2)
 
             for x in range(2):
-                tolerance = [target_flows[x ] * 0.95, target_flows[x ] * 1.05]
+                tolerance = [target_flows[x] * 0.95, target_flows[x] * 1.05]
                 if not tolerance[0] <= actual_flows[x] <= tolerance[1]:
-                    wx.MessageBox(f'Actual flow of {self.gas_device.channel_type} mixer, channel { x +1} not within '
-                                  f'5% of target flow. Check gas tank flow')  # make a Lgr.warning
+                    self._lgr.warning(f'Actual flow of {self.gas_device.name} mixer, channel {x+1} not within '
+                                  f'5% of target flow. Check gas tank flow')
                     self.UpdateApp()
 
             if not self.input_percent_gas1.GetValue() == self.gas_device.get_percent_value(1):
