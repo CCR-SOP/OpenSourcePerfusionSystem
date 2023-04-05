@@ -325,20 +325,20 @@ class MockGB100:
             return 4
         elif addr == MainBoardOffsets['Number of channels'].value:
             return 2
-        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']:
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value'].value:
             return self.percent[0] / 100
-        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value'].value:
             return self.percent[1] / 100
-        elif addr == MainBoardOffsets['Working status']:
+        elif addr == MainBoardOffsets['Working status'].value:
             return self.status
 
     def write_register(self, addr, value):
-        if addr == MainBoardOffsets['Working status']:
+        if addr == MainBoardOffsets['Working status'].value:
             self.status = bool(value)
-        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value']:
+        elif addr == ChannelAddr[0] + ChannelRegisterOffsets['Percent value'].value:
             self.percent[0] = value
             self.percent[1] = 10_000 - value
-        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value']:
+        elif addr == ChannelAddr[1] + ChannelRegisterOffsets['Percent value'].value:
             self.percent[1] = value
             self.percent[0] = 10_000 - value
 

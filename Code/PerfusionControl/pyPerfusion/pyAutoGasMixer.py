@@ -37,8 +37,6 @@ class AutoGasMixer:
 
     def run(self):
         self.is_streaming = True
-
-    def run(self):
         next_t = self.acq_start_ms + self.adjust_rate_ms
         # sleep only 1 second so the thread can be terminated
         # in a quicker fashion. if adjust_rate is smaller, then use that
@@ -85,14 +83,13 @@ class AutoGasMixerVenous(AutoGasMixer):
         self.o2_adjust = 2  # in %
 
     def update_gas_on_cdi(self, cdi_data):
-        self._update_O2(cdi_data.venous_O2)
+        try:
+            self._update_O2(cdi_data.venous_O2)
+        except AttributeError:
+            # this will happen if there is invalid CDI data
+            pass
 
     def _update_O2(self, O2: float):
-        self.o2_adjust = 2  # in %
-
-    def update_gas_on_cdi(self, cdi_data):
-        self._update_O2(cdi_data.venous_O2)
-
         o2_adjust = 0
         if O2 == -1:
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
@@ -124,22 +121,6 @@ class AutoGasMixerArterial(AutoGasMixer):
         except AttributeError:
             # this will happen if there is invalid CDI data
             pass
-
-    def _update_flow(self, pH: float):
-        if pH == -1:
-            self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
-        elif pH < self.gas_device.cfg.pH_range[0]:
-            self.gas_device.adjust_flow(self.flow_adjust)
-        elif pH > self.gas_device.cfg.pH_range[1]:
-            self.gas_device.adjust_flow(-self.flow_adjust)
-
-    def _update_CO2(self, pH: float, CO2: float):
-        self.co2_adjust = 1  # in %
-        self.flow_adjust = 5  # in ml/min
-
-    def update_gas_on_cdi(self, cdi_data):
-        self._update_flow(cdi_data.arterial_pH)
-        self._update_CO2(cdi_data.arterial_pH, cdi_data.arterial_CO2)
 
     def _update_flow(self, pH: float):
         if pH == -1:
