@@ -29,6 +29,7 @@ CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'a
                                 'venous_pH', 'venous_CO2', 'venous_O2', 'venous_temp', 'venous_sO2',
                                 'venous_bicarb', 'venous_BE', 'hct', 'hgb'], start=0)
 
+
 class CDIData:
     def __init__(self, data):
         self._lgr = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ class CDIStreaming:
         self.open(cfg)
 
     def is_open(self):
-        return self.__serial.is_open
+        return self.__serial and self.__serial.is_open
 
     def open(self, cfg: CDIConfig = None) -> None:
         self._queue = Queue()
@@ -108,7 +109,7 @@ class CDIStreaming:
             self.__serial.close()
 
     def parse_response(self, response: str):
-        data = []
+        data = np.zeros(0, dtype=self.data_type)
         if response is None:
             return data
 
@@ -140,23 +141,41 @@ class CDIStreaming:
 
         return data
 
+    def read_from_serial(self):
+        self._lgr.debug('Attempting to read serial data from CDI')
+        resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
+        return resp
+
     def run(self):  # continuous data stream
         self.is_streaming = True
         self._event_halt.clear()
+        good_response = False
+        loops = 0
         while not self._event_halt.is_set():
-            if self.__serial and self.__serial.is_open:
+            if self.is_open():
                 resp = ''
                 try:
-                    self._lgr.debug('Attempting to read serial data from CDI')
-                    resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
-                    self._lgr.debug(f'got response {resp}')
+                    while not good_response:
+                        resp += self.read_from_serial()
+                        loops += 1
+                        if len(resp) > 0 and resp[-1] == '\n':
+                            good_response = True
+                            loops = 0
+                        elif loops > 10:
+                            break
                 except serial.SerialException as e:
                     self._lgr.error(f'CDI: error attempting to read response. Message {e}')
                     # assuming this is an occasional glitch so log, but keep going
-                if len(resp) > 0 and resp[-1] == '\n':
+                if good_response:
                     data = self.parse_response(resp)
                     ts = get_epoch_ms()
                     self._queue.put((data, ts))
+                    good_response = False
+                else:
+                    msg = f'CDI: Failed to read good response after multiple attempts. ' \
+                          f'Something may be wrong with CDI interface'
+                    self._lgr.error(msg)
+                    raise CDIException(msg)
             else:
                 sleep(1.0)
         self.is_streaming = False
@@ -189,6 +208,8 @@ class MockCDI(CDIStreaming):
         self._lgr = logging.getLogger(__name__)
         super().__init__(name)
         self._is_open = False
+        self.last_pkt = ''
+        self.last_pkt_index = 0
 
     def is_open(self):
         return self._is_open
@@ -206,7 +227,7 @@ class MockCDI(CDIStreaming):
     def request_data(self, timeout=30):  # request single data packet
         return self._form_pkt()
 
-    def _form_pkt(self):
+    def read_from_serial(self):
         pkt_stx = 0x2
         pkt_etx = 0x3
         pkt_dev = 'X2000A5A0'
@@ -217,19 +238,18 @@ class MockCDI(CDIStreaming):
         data_str = ''.join(data)
         crc = 0
         pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'
-        # self._lgr.debug(f'pkt is {pkt}')
-        return pkt
-
-    def run(self):  # continuous data stream
-        self.is_streaming = True
-        self._event_halt.clear()
-        while not self._event_halt.is_set():
-            if self._is_open:
-                resp = self._form_pkt()
-                data = self.parse_response(resp)
-                ts = get_epoch_ms()
-                self._queue.put((data, ts))
-                sleep(1.0)
+        rand = np.random.randint(10, size=1)[0]
+        if self.last_pkt:
+            pkt = self.last_pkt[self.last_pkt_index:]
+            self.last_pkt_index = 0
+            self.last_pkt = ''
+        else:
+            if rand < 5:
+                self.last_pkt = pkt
+                self.last_pkt_index = np.random.randint(low=0, high=len(pkt)-2, size=1)[0]
+                pkt = pkt[0:self.last_pkt_index]
             else:
-                sleep(0.5)
-        self.is_streaming = False
+                self.last_pkt = ''
+                self.last_pkt_index = 0
+        sleep(1.0)
+        return pkt
