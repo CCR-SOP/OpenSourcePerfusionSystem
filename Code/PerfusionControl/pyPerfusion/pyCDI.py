@@ -10,7 +10,7 @@ from time import sleep
 from queue import Queue, Empty
 from enum import IntEnum
 from datetime import datetime
-from  dataclasses import dataclass
+from dataclasses import dataclass
 
 import numpy as np
 import serial
@@ -93,6 +93,7 @@ class CDIStreaming:
         self.__serial.stopbits = serial.STOPBITS_ONE
         self.__serial.parity = serial.PARITY_NONE
         self.__serial.bytesize = serial.EIGHTBITS
+        self.__serial.timeout = self._timeout
         try:
             self.__serial.open()
         except serial.serialutil.SerialException as e:
@@ -102,6 +103,7 @@ class CDIStreaming:
             raise CDIException(f'CDI: Could not open serial port at {self.cfg.port}')
 
     def close(self):
+        self.stop()
         if self.__serial:
             self.__serial.close()
 
@@ -141,7 +143,6 @@ class CDIStreaming:
     def run(self):  # continuous data stream
         self.is_streaming = True
         self._event_halt.clear()
-        self.__serial.timeout = self._timeout
         while not self._event_halt.is_set():
             if self.__serial and self.__serial.is_open:
                 resp = ''
