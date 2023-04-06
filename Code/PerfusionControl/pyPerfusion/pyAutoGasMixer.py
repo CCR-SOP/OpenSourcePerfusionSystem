@@ -80,14 +80,24 @@ class AutoGasMixerVenous(AutoGasMixer):
         super().__init__(name, gas_device, cdi_reader)
         self.o2_ch = 1
         self.co2_ch = 2
-        self.o2_adjust = 2  # in %
+        self.o2_adjust = 1  # in %
+        self.flow_adjust = 5
 
     def update_gas_on_cdi(self, cdi_data):
         try:
-            self._update_O2(cdi_data.venous_O2)
+            self._update_O2(cdi_data.venous_sO2)
+            self._update_flow(cdi_data.venous_pH)
         except AttributeError:
             # this will happen if there is invalid CDI data
             pass
+
+    def _update_flow(self, pH: float):
+        if pH == -1:
+            self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
+        elif pH < self.gas_device.cfg.pH_range[0]:
+            self.gas_device.adjust_flow(self.flow_adjust)
+        elif pH > self.gas_device.cfg.pH_range[1]:
+            self.gas_device.adjust_flow(-self.flow_adjust)
 
     def _update_O2(self, O2: float):
         o2_adjust = 0
@@ -112,23 +122,13 @@ class AutoGasMixerArterial(AutoGasMixer):
         self.co2_ch = 2
 
         self.co2_adjust = 1  # in %
-        self.flow_adjust = 5  # in ml/min
 
     def update_gas_on_cdi(self, cdi_data):
         try:
-            self._update_flow(cdi_data.arterial_pH)
-            self._update_CO2(cdi_data.arterial_pH, cdi_data.arterial_CO2)
+            self.update_CO2(cdi_data.arterial_pH, cdi_data.arterial_CO2)
         except AttributeError:
             # this will happen if there is invalid CDI data
             pass
-
-    def _update_flow(self, pH: float):
-        if pH == -1:
-            self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
-        elif pH < self.gas_device.cfg.pH_range[0]:
-            self.gas_device.adjust_flow(self.flow_adjust)
-        elif pH > self.gas_device.cfg.pH_range[1]:
-            self.gas_device.adjust_flow(-self.flow_adjust)
 
     def update_CO2(self, pH: float, CO2: float) -> float:
         co2_adjust = 0

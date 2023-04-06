@@ -129,7 +129,7 @@ class CDIStreaming:
                 try:
                     value = self.data_type(field[4:])
                 except ValueError:
-                    self._lgr.error(f'Field {code} (value={field[4:]}) is out-of-range')
+                    # self._lgr.error(f'Field {code} (value={field[4:]}) is out-of-range')
                     value = self.data_type(-1)
                 data[code] = value
         else:
@@ -143,7 +143,7 @@ class CDIStreaming:
         return data
 
     def read_from_serial(self):
-        self._lgr.debug('Attempting to read serial data from CDI')
+        #self._lgr.debug('Attempting to read serial data from CDI')
         resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
         return resp
 
@@ -172,8 +172,10 @@ class CDIStreaming:
 
                 if good_response:
                     data = self.parse_response(resp)
+                    self._lgr.debug(f'data is {data}')
                     ts = get_epoch_ms()
                     self._queue.put((data, ts))
+                    self._lgr.debug('put data')
                     good_response = False
                 else:
                     msg = f'CDI: Failed to read good response after multiple attempts. ' \

@@ -217,10 +217,11 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_percent_gas1.SetBackgroundColour(wx.RED)
 
     def OnUpdate(self, evt):
+        self.autogasmixer.gas_device.set_percent_value(2, 100 - float(self.input_percent_gas1.GetValue()))
         self.autogasmixer.gas_device.set_total_flow(int(self.input_total_flow.GetValue()))
         self.input_total_flow.SetBackgroundColour(wx.WHITE)
         self.input_total_flow.Refresh()
-        self.autogasmixer.gas_device.set_percent_value(2, 100 - float(self.input_percent_gas1.GetValue()))
+
         self.input_percent_gas1.SetBackgroundColour(wx.WHITE)
         self.input_percent_gas1.Refresh()
         self.btn_update.Enable(False)
@@ -253,10 +254,7 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.panel.Close()
-        cdi_sensor.hw.stop()
-        cdi_sensor.stop()
-        ha_sensor.stop()
-        pv_sensor.stop()
+        SYS_HW.stop()
         ha_autogasmixer.stop()
         pv_autogasmixer.stop()
         ha_autogasmixer.gas_device.stop()
@@ -281,47 +279,12 @@ if __name__ == "__main__":
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.setup_file_logger(lgr, logging.DEBUG, 'panel_gas_mixers_debug')
 
-    ha_mixer = pyGB100.GasDevice(name='Arterial Gas Mixer')
-    try:
-        ha_mixer.read_config()
-    except pyGB100.GasDeviceException:
-        lgr.warning(f'{ha_mixer.name} not found. Loading mock')
-        SYS_HW.mocks_enabled = True
-        ha_mixer.hw = pyGB100.MockGB100()
-        SYS_HW.ha_mixer = ha_mixer
+    SYS_HW.load_hardware_from_config()
+    SYS_HW.start()
 
-    pv_mixer = pyGB100.GasDevice('Venous Gas Mixer')
-    try:
-        pv_mixer.read_config()
-    except pyGB100.GasDeviceException:
-        lgr.warning(f'{pv_mixer.name} not found. Loading mock')
-        pv_mixer.hw = pyGB100.MockGB100()
-        SYS_HW.pv_mixer = pv_mixer
-
-    ha_sensor = Sensor(name='Arterial Gas Mixer')
-    ha_sensor.read_config()
-    pv_sensor = Sensor(name='Venous Gas Mixer')
-    pv_sensor.read_config()
-    ha_sensor.start()
-    pv_sensor.start()
-
-    # Load CDI sensor
-    cdi = pyCDI.CDIStreaming(name='CDI')
-    try:
-        cdi.read_config()
-        cdi_name = 'CDI'
-    except pyCDI.CDIException:
-        lgr.warning(f'CDI not found. Loading mock')
-        cdi = pyCDI.MockCDI(name='mock_cdi')
-        cdi.read_config()
-        cdi_name = 'Mock CDI'
-        # Sensor class uses SYS_HW to get the hardware
-        # so override the cdi so it picks the right one
-        SYS_HW.mocks_enabled = True
-        SYS_HW.mock_cdi = cdi
-
-    cdi.start()
-    cdi_sensor = Sensor(name=cdi_name)
+    ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
+    pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
+    cdi_sensor = Sensor(name="CDI")
     cdi_sensor.read_config()
     cdi_sensor.start()
 

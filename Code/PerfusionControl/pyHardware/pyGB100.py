@@ -15,6 +15,7 @@ from typing import List
 from enum import IntEnum
 from queue import Queue, Empty
 from threading import Lock
+from time import sleep
 
 import minimalmodbus as modbus
 import serial
@@ -198,12 +199,15 @@ class GasDevice:
                 self._lgr.warning(f'{self.name}: Attempt set flow {total_flow} '
                                   f'higher than limit {self.cfg.flow_limits[1]}. '
                                   f'Flow being set to limit.')
+            self.set_working_status(turn_on=False)
             with self.mutex:
                 addr = MainBoardOffsets['Total flow'].value
+
                 self.hw.write_long(addr, int(total_flow))
                 self.total_flow = total_flow
                 self._lgr.info(f'{self.name}: Total flow changed to {int(total_flow)}')
                 self.push_data()
+            self.set_working_status(turn_on=True)
 
     def get_percent_value(self, channel_num: int) -> float:
         value = 0.0
@@ -230,12 +234,17 @@ class GasDevice:
                     self._lgr.warning(f'{self.name}: Attempt to set channel {channel_num} percent to '
                                       f'{new_percent}. Capping at 100')
 
+                self.set_working_status(turn_on=False)
                 with self.mutex:
                     addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
+                    self._lgr.debug(f'requesting new percent {new_percent}')
                     percent = int(new_percent * 100)
+                    self._lgr.debug(f'writing {percent}')
                     self.hw.write_register(addr, percent)
                     self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent/100} %')
                     self.push_data()
+                    sleep(3.0)
+                self.set_working_status(turn_on=True)
             else:
                 self._lgr.warning(f'{self.name}: Attempt to set percent value from unsupported channel {channel_num}')
 
