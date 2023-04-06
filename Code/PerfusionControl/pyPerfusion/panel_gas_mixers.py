@@ -29,8 +29,8 @@ class GasMixerPanel(wx.Panel):
         self.cdi_reader = cdi_reader
         self.ha_autogasmixer = ha_gasmixer
         self.pv_autogasmixer = pv_gasmixer
-        self._panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', autogasmixer=ha_gasmixer, cdi_reader=self.cdi_reader)
-        self._panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', autogasmixer=pv_gasmixer, cdi_reader=self.cdi_reader)
+        self.panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', autogasmixer=ha_gasmixer, cdi_reader=self.cdi_reader)
+        self.panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', autogasmixer=pv_gasmixer, cdi_reader=self.cdi_reader)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -58,8 +58,8 @@ class GasMixerPanel(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self._panel_PV.Close()
-        self._panel_HA.Close()
+        self.panel_PV.Close()
+        self.panel_HA.Close()
 
 
 class BaseGasMixerPanel(wx.Panel):
@@ -310,7 +310,7 @@ if __name__ == "__main__":
     try:
         cdi.read_config()
         cdi_name = 'CDI'
-    except pyCDI.CDIDeviceException:
+    except pyCDI.CDIException:
         lgr.warning(f'CDI not found. Loading mock')
         cdi = pyCDI.MockCDI(name='mock_cdi')
         cdi.read_config()

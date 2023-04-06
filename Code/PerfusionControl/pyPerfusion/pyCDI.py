@@ -169,6 +169,7 @@ class CDIStreaming:
                 except serial.SerialException as e:
                     self._lgr.error(f'CDI: error attempting to read response. Message {e}')
                     # assuming this is an occasional glitch so log, but keep going
+
                 if good_response:
                     data = self.parse_response(resp)
                     ts = get_epoch_ms()
@@ -253,5 +254,5 @@ class MockCDI(CDIStreaming):
             else:
                 self.last_pkt = ''
                 self.last_pkt_index = 0
-        sleep(30)
+        sleep(2)
         return pkt
