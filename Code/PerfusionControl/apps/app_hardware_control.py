@@ -26,9 +26,6 @@ class HardwarePanel(wx.Panel):
 
         self.pump_names = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
 
-        # self.cdi_sensor = SYS_HW.get_hw('CDI')  # TODO: it doesn't like this here for some reason?
-        # self.cdi_sensor.read_config()
-        # wx.MessageBox(f'CDI hardware loaded')
         wx.Panel.__init__(self, parent)
 
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
@@ -87,12 +84,12 @@ class HardwareFrame(wx.Frame):
         for sensor in self.panel.panel_dialysate_pumps.sensors:
             sensor.stop()
 
-        self.panel.panel_gas_mixers._panel_HA.sync_with_hw_timer.Stop()
-        self.panel.panel_gas_mixers._panel_PV.sync_with_hw_timer.Stop()
-        self.panel.panel_gas_mixers._panel_HA.cdi_timer.Stop()
-        self.panel.panel_gas_mixers._panel_PV.cdi_timer.Stop()
-        self.panel.panel_gas_mixers._panel_HA.gas_device.set_working_status(turn_on=False)
-        self.panel.panel_gas_mixers._panel_PV.gas_device.set_working_status(turn_on=False)
+        self.panel.panel_gas_mixers.panel_HA.sync_with_hw_timer.Stop()
+        self.panel.panel_gas_mixers.panel_PV.sync_with_hw_timer.Stop()
+        self.panel.panel_gas_mixers.panel_HA.cdi_timer.Stop()
+        self.panel.panel_gas_mixers.panel_PV.cdi_timer.Stop()
+        self.panel.panel_gas_mixers.panel_HA.gas_device.set_working_status(turn_on=False)
+        self.panel.panel_gas_mixers.panel_PV.gas_device.set_working_status(turn_on=False)
 
         self.Destroy()
 

@@ -330,7 +330,6 @@ class WriterStream:
     def process_buffer(self, buffer, t=None):
         # In derived classes, do not override this method, override _process
         if self._processed_buffer is None:
-            self._lgr.debug(f'{self.cfg.name}: creating process buffer of {buffer.dtype}')
             self._processed_buffer = np.zeros(len(buffer), dtype=buffer.dtype)
         self._process(buffer, t)
         self._write_to_file(self._processed_buffer, t)

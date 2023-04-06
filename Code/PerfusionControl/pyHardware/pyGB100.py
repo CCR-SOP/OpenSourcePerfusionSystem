@@ -96,10 +96,12 @@ class GasDevice:
         self.mutex = Lock()
 
         self.data_type = np.uint32
+
         self.total_flow = 0
         # assume a max of 3 channels
         self.percent = [0, 0, 0]
         self.status = False
+
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -158,6 +160,7 @@ class GasDevice:
             with self.mutex:
                 addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Id gas'].value
                 gas_id = self.hw.read_register(addr)
+
             try:
                 gas_type = GasNames(gas_id).name
             except IndexError:
