@@ -292,7 +292,7 @@ class GasDevice:
         status_on = False
         if self.hw is not None:
             with self.mutex:
-                addr = MainBoardOffsets['Working status']
+                addr = MainBoardOffsets['Working status'].value
                 status_on = self.hw.read_register(addr) == 1
                 self.status = status_on
         return status_on
@@ -300,7 +300,7 @@ class GasDevice:
     def set_working_status(self, turn_on: bool):
         if self.hw is not None:
             with self.mutex:
-                addr = MainBoardOffsets['Working status']
+                addr = MainBoardOffsets['Working status'].value
                 self.hw.write_register(addr, int(turn_on))
                 self.status = turn_on
                 self.push_data()
