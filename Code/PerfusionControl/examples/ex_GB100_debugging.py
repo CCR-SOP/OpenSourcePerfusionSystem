@@ -62,14 +62,14 @@ def get_percent() -> float:
 
 PORT = 'COM25'
 # Windows may require the port to be closed after each call
-hw = modbus.Instrument(PORT, 1, modbus.MODE_RTU, close_port_after_each_call=False, debug=True)
+hw = modbus.Instrument(PORT, 1, modbus.MODE_RTU, close_port_after_each_call=True, debug=True)
 hw.serial.baudrate = 115200
 hw.serial.bytesize = 8
 hw.serial.parity = modbus.serial.PARITY_NONE
 hw.serial.stopbits = 1
 hw.serial.timeout = 3
 # these are previously unused options
-# hw.clear_buffers_before_each_transaction = True
+hw.clear_buffers_before_each_transaction = True
 
 
 working_status = get_working_status()
