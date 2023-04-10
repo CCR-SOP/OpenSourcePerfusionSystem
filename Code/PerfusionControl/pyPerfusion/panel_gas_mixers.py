@@ -167,6 +167,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
+        self.update_controls_from_hardware()
 
     def __set_bindings(self):
         self.btn_flow.Bind(wx.EVT_TOGGLEBUTTON, self.OnFlow)
