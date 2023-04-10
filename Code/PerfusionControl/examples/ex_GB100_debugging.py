@@ -45,7 +45,7 @@ def get_total_flow() -> int:
 def set_percent(percentage: int):
     global hw
     # channel 2 base address is 25
-    addr = 25 + 7
+    addr = 25 + 6
     val = int(percentage*100)
     print(f'set_percent: addr={addr}, val={val}')
     hw.write_register(addr, val)
@@ -54,7 +54,7 @@ def set_percent(percentage: int):
 def get_percent() -> float:
     global hw
     # channel 2 base address is 25
-    addr = 25 + 7
+    addr = 25 + 6
     val = hw.read_register(addr, number_of_decimals=2)
     print(f'get_percent: addr={addr}, val={val}')
     return val
