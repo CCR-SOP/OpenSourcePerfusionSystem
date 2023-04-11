@@ -11,6 +11,8 @@ import pytest
 import logging
 from time import sleep
 
+import numpy as np
+
 import pyHardware.pyAI as pyAI
 import pyHardware.pyAI_NIDAQ as pyAI_NIDAQ
 import pyHardware.pyAI_Finite_NIDAQ as pyAI_Finite_NIDAQ
@@ -155,7 +157,7 @@ def test_getdata(ai_device, ai_channel_config):
     sleep(4.0)
 
     data, t = ai_device.ai_channels[ai_channel_config.name].get_data()
-    assert len(data) > 0 and type(t) is float
+    assert len(data) > 0 and type(t) is np.uint64
     ai_device.stop()
 
 
