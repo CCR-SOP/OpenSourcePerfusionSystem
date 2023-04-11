@@ -259,6 +259,7 @@ class TestFrame(wx.Frame):
         pv_autogasmixer.stop()
         ha_autogasmixer.gas_device.stop()
         pv_autogasmixer.gas_device.stop()
+        cdi_sensor.stop()
         self.Destroy()
 
         for thread in enumerate():

@@ -72,7 +72,7 @@ class AutoGasMixer:
 
     def update_gas_on_cdi(self, cdi_data):
         # this is the base class, so do nothing
-        self._lgr.warning('Attempting to use the bas AutoGasMixer class, no adjustment will be made')
+        self._lgr.warning('Attempting to use the base AutoGasMixer class, no adjustment will be made')
 
 
 class AutoGasMixerVenous(AutoGasMixer):
@@ -92,19 +92,12 @@ class AutoGasMixerVenous(AutoGasMixer):
             pass
 
     def _update_flow(self, pH: float):
-        flow = self.gas_device.get_total_flow()
-        self._lgr.debug(f'Flow is {flow}')
-        if 5 <= flow <= 250:  # adding ceiling/floor to prevent extremes from killing organ
-            if pH == -1:
-                self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
-            elif pH < self.gas_device.cfg.pH_range[0]:
-                self.gas_device.adjust_flow(self.flow_adjust)
-            elif pH > self.gas_device.cfg.pH_range[1]:
-                self.gas_device.adjust_flow(-self.flow_adjust)
-        elif flow > 250:
-            self._lgr.debug(f'{self.name}: Flow of is at upper limit of 250. Cannot adjust flow automatically')
-        elif flow < 5:
-            self._lgr.debug(f'{self.name}: Flow of is at lower limit of 5. Cannot adjust flow automatically')
+        if pH == -1:
+            self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
+        elif pH < self.gas_device.cfg.pH_range[0]:
+            self.gas_device.adjust_flow(self.flow_adjust)
+        elif pH > self.gas_device.cfg.pH_range[1]:
+            self.gas_device.adjust_flow(-self.flow_adjust)
 
     def _update_O2(self, O2: float):
         o2_adjust = 0
