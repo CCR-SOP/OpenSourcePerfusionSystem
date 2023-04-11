@@ -92,15 +92,24 @@ class AutoGasMixerVenous(AutoGasMixer):
             pass
 
     def _update_flow(self, pH: float):
-        if pH == -1:
-            self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
-        elif pH < self.gas_device.cfg.pH_range[0]:
-            self.gas_device.adjust_flow(self.flow_adjust)
-        elif pH > self.gas_device.cfg.pH_range[1]:
-            self.gas_device.adjust_flow(-self.flow_adjust)
+        flow = self.gas_device.get_total_flow()
+        self._lgr.debug(f'Flow is {flow}')
+        if 5 <= flow <= 250:  # adding ceiling/floor to prevent extremes from killing organ
+            if pH == -1:
+                self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
+            elif pH < self.gas_device.cfg.pH_range[0]:
+                self.gas_device.adjust_flow(self.flow_adjust)
+            elif pH > self.gas_device.cfg.pH_range[1]:
+                self.gas_device.adjust_flow(-self.flow_adjust)
+        elif flow > 250:
+            self._lgr.debug(f'{self.name}: Flow of is at upper limit of 250. Cannot adjust flow automatically')
+        elif flow < 5:
+            self._lgr.debug(f'{self.name}: Flow of is at lower limit of 5. Cannot adjust flow automatically')
 
     def _update_O2(self, O2: float):
         o2_adjust = 0
+        o2 = self.gas_device.get_percent_value(self.o2_ch)
+
         if O2 == -1:
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
         elif O2 < self.gas_device.cfg.O2_range[0]:
@@ -109,10 +118,9 @@ class AutoGasMixerVenous(AutoGasMixer):
         elif O2 > self.gas_device.cfg.O2_range[1]:
             o2_adjust = -self.o2_adjust
             self._lgr.warning(f'{self.name}: O2 high')
-
-        o2 = self.gas_device.get_percent_value(self.o2_ch)
         new_percent = o2 + o2_adjust
-        self.gas_device.set_percent_value(self.o2_ch, 100-new_percent)
+        if o2_adjust is not 0:
+            self.gas_device.set_percent_value(self.o2_ch, new_percent)
 
 
 class AutoGasMixerArterial(AutoGasMixer):
@@ -130,19 +138,34 @@ class AutoGasMixerArterial(AutoGasMixer):
             # this will happen if there is invalid CDI data
             pass
 
-    def update_CO2(self, pH: float, CO2: float) -> float:
+    def update_CO2(self, pH: float, CO2: float):
         co2_adjust = 0
+        co2 = self.gas_device.get_percent_value(self.co2_ch)
+
+        check_co2 = False
         if pH == -1:
             self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
-        elif CO2 == -1:
-            self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
-        elif pH > self.gas_device.cfg.pH_range[1] or CO2 < self.gas_device.cfg.CO2_range[0]:
+            check_co2 = True
+        elif pH > self.gas_device.cfg.pH_range[1]:
             co2_adjust = self.co2_adjust
-            self._lgr.warning(f'{self.name}: CO2 low, blood alkalotic')
-        elif pH < self.gas_device.cfg.pH_range[0] or CO2 > self.gas_device.cfg.CO2_range[1]:
+            self._lgr.warning(f'{self.name}: pH high, blood alkalotic')
+        elif pH < self.gas_device.cfg.pH_range[0]:
             co2_adjust = -self.co2_adjust
-            self._lgr.warning(f'{self.name}: CO2 high, blood acidotic')
+            self._lgr.warning(f'{self.name}: pH low, blood acidotic')
+        else:
+            check_co2 = True
 
-        co2 = self.gas_device.get_percent_value(self.co2_ch)
+        if check_co2 is True:  # only check CO2 is pH checking didn't work - pH more important parameter to monitor
+            if CO2 == -1:
+                self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
+            elif CO2 < self.gas_device.cfg.CO2_range[0]:
+                co2_adjust = self.co2_adjust
+                self._lgr.warning(f'{self.name}: CO2 low, blood alkalotic')
+            elif CO2 > self.gas_device.cfg.CO2_range[1]:
+                co2_adjust = -self.co2_adjust
+                self._lgr.warning(f'{self.name}: CO2 high, blood acidotic')
+
         new_percent = co2 + co2_adjust
-        self.gas_device.set_percent_value(self.co2_ch, new_percent)
+        if co2_adjust is not 0:
+            self.gas_device.set_percent_value(self.co2_ch, new_percent)
+

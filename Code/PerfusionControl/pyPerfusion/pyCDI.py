@@ -143,7 +143,7 @@ class CDIStreaming:
         return data
 
     def read_from_serial(self):
-        #self._lgr.debug('Attempting to read serial data from CDI')
+        # self._lgr.debug('Attempting to read serial data from CDI')
         resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
         return resp
 
