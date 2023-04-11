@@ -13,8 +13,10 @@ from functools import wraps
 
 import serial
 import serial.tools.list_ports
+import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+
 
 
 def setup_default_logging(filename=None):
@@ -98,4 +100,4 @@ def get_avail_com_ports() -> list:
 
 
 def get_epoch_ms():
-    return int(time_ns() / 1_000_000.0)
+    return np.uint64(time_ns() / 1_000_000.0)
