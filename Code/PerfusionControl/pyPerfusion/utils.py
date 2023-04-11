@@ -101,3 +101,10 @@ def get_avail_com_ports() -> list:
 
 def get_epoch_ms():
     return np.uint64(time_ns() / 1_000_000.0)
+
+
+# helper function to create a logger with consistent naming
+# Use module_name.object_name to allow filtering by entire class (e.g. pyPump)
+# as well as a specific instance (e.g., Pump1)
+def get_object_logger(module_name: str, object_name: str):
+    return logging.getLogger(f'{module_name}.{object_name}')
