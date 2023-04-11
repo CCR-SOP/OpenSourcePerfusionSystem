@@ -18,6 +18,8 @@ from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
+from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
+
 
 class HardwarePanel(wx.Panel):
     def __init__(self, parent, cdi_Sensor):
@@ -28,13 +30,19 @@ class HardwarePanel(wx.Panel):
 
         wx.Panel.__init__(self, parent)
 
+
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
         self.ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
         self.pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
 
+        ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=self.ha_mixer,
+                                               cdi_reader=self.cdi_sensor.get_reader())
+        pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer', gas_device=self.pv_mixer,
+                                             cdi_reader=self.cdi_sensor.get_reader())
+
         self.panel_syringes = SyringePanel(self, drugs)
         self.panel_dialysate_pumps = DialysisPumpPanel(self, self.pump_names, self.cdi_sensor)
-        self.panel_gas_mixers = GasMixerPanel(self, self.ha_mixer, self.pv_mixer, self.cdi_sensor)
+        self.panel_gas_mixers = GasMixerPanel(self, ha_autogasmixer, pv_autogasmixer, cdi_reader=self.cdi_sensor.get_reader())
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -50,6 +58,7 @@ class HardwarePanel(wx.Panel):
         self.sizer.Add(self.panel_syringes, flags.Proportion(2))
         self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(2))
         self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
+
 
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start
@@ -69,7 +78,7 @@ class HardwareFrame(wx.Frame):
         # Load CDI sensor
         cdi_sensor = Sensor(name='CDI')
         cdi_sensor.read_config()
-        wx.MessageBox(f'CDI loaded')
+        cdi_sensor.start()
 
         self.panel = HardwarePanel(self, cdi_sensor)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -83,8 +92,6 @@ class HardwareFrame(wx.Frame):
         for sensor in self.panel.panel_dialysate_pumps.sensors:
             sensor.stop()
 
-        self.panel.panel_gas_mixers.panel_HA.sync_with_hw_timer.Stop()
-        self.panel.panel_gas_mixers.panel_PV.sync_with_hw_timer.Stop()
         self.panel.panel_gas_mixers.panel_HA.cdi_timer.Stop()
         self.panel.panel_gas_mixers.panel_PV.cdi_timer.Stop()
         self.panel.panel_gas_mixers.panel_HA.gas_device.set_working_status(turn_on=False)

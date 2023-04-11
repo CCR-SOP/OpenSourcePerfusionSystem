@@ -14,9 +14,13 @@ import pyPerfusion.utils as utils
 from time import sleep
 
 PerfusionConfig.set_test_config()
-utils.setup_file_logger(logging.getLogger(), logging.DEBUG, filename='ex_gb100')
+utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+#utils.setup_file_logger(logging.getLogger(), logging.DEBUG, filename='ex_gb100')
+
 
 SYS_HW.load_hardware_from_config()
+SYS_HW.start()
+
 ha_device = SYS_HW.get_hw('Arterial Gas Mixer')
 pv_device = SYS_HW.get_hw('Venous Gas Mixer')
 
@@ -39,8 +43,8 @@ total_flow = 50
 print(f'Setting HA total flow to {total_flow}')
 ha_device.set_total_flow(total_flow)
 
-percent = 5
-print(f'Setting HA second channel to 30%')
+percent = 10
+print(f'Setting HA second channel to {percent}')
 ha_device.set_percent_value(2, percent)
 
 sleep(2)
@@ -51,3 +55,5 @@ print('Turn off HA device')
 ha_device.set_working_status(turn_on=False)
 working_status = ha_device.get_working_status()
 print(f'HA device working status is {working_status}')
+
+SYS_HW.stop()

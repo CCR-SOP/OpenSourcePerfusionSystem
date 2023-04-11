@@ -33,7 +33,7 @@ def main():
     cdi_var_index = CDIIndex.arterial_pH.value
 
     # Test get_data-from_last_read
-    collect_time_sec = 180
+    collect_time_sec = 60
     print(f'Sleeping for {collect_time_sec} seconds to collect data')
     time.sleep(collect_time_sec)
     print('Reading full CDI variables, starting from t=0')

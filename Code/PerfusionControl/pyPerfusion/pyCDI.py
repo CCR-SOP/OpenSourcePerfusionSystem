@@ -103,6 +103,7 @@ class CDIStreaming:
             self._lgr.error(f'CDI: Message: {e}')
             raise CDIException(f'CDI: Could not open serial port at {self.cfg.port}')
 
+
     def close(self):
         self.stop()
         if self.__serial:
@@ -128,7 +129,7 @@ class CDIStreaming:
                 try:
                     value = self.data_type(field[4:])
                 except ValueError:
-                    self._lgr.error(f'Field {code} (value={field[4:]}) is out-of-range')
+                    # self._lgr.error(f'Field {code} (value={field[4:]}) is out-of-range')
                     value = self.data_type(-1)
                 data[code] = value
         else:
@@ -142,7 +143,7 @@ class CDIStreaming:
         return data
 
     def read_from_serial(self):
-        self._lgr.debug('Attempting to read serial data from CDI')
+        # self._lgr.debug('Attempting to read serial data from CDI')
         resp = self.__serial.read_until(expected=b'\r\n').decode('utf-8')
         return resp
 
@@ -168,10 +169,13 @@ class CDIStreaming:
                 except serial.SerialException as e:
                     self._lgr.error(f'CDI: error attempting to read response. Message {e}')
                     # assuming this is an occasional glitch so log, but keep going
+
                 if good_response:
                     data = self.parse_response(resp)
+                    self._lgr.debug(f'data is {data}')
                     ts = get_epoch_ms()
                     self._queue.put((data, ts))
+                    self._lgr.debug('put data')
                     good_response = False
                 else:
                     msg = f'CDI: Failed to read good response after multiple attempts. ' \
@@ -220,7 +224,6 @@ class MockCDI(CDIStreaming):
         if cfg is not None:
             self.cfg = cfg
         self._is_open = True
-        self._lgr.debug('here')
         self._queue = Queue()
 
     def close(self):
@@ -253,5 +256,5 @@ class MockCDI(CDIStreaming):
             else:
                 self.last_pkt = ''
                 self.last_pkt_index = 0
-        sleep(30)
+        sleep(2)
         return pkt
