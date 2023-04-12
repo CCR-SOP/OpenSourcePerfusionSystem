@@ -142,11 +142,11 @@ class Pump11Elite:
         return self._serial.is_open
 
     def read_config(self):
-        PerfusionConfig.read_into_dataclass('syringes', self.name, self.cfg)
+        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
         self.open(self.cfg)
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('syringes', self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
 
     def open(self, cfg: Pump11EliteConfig = None) -> None:
         self._queue = Queue()

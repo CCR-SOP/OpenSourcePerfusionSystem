@@ -31,15 +31,12 @@ def get_object(name: str):
     try:
         class_ = globals().get(params['class'], None)
     except KeyError:
-        params = PerfusionConfig.read_section('syringes', name)
-    try:
-        class_ = globals().get(params['class'], None)
-    except KeyError:
         class_ = None
 
     if class_ is not None:
         obj = class_(name=name)
     else:
+        print(f'Could not load {name}')
         print(f'class {params["class"]} doesnt exist')
         obj = None
     return obj
@@ -50,8 +47,8 @@ def get_mock(name: str):
     if params:
         mock_name = MOCKS[params['class']]
     else:
-        params = PerfusionConfig.read_section('syringes', name)
-        mock_name = MOCKS[params['class']]
+        return None
+
     try:
         class_ = globals().get(mock_name, None)
     except KeyError:
@@ -75,7 +72,9 @@ class SystemHardware:
         self.hw = {}
 
     def load_hardware_from_config(self):
-        for name in ['NI_Dev1', 'NI_Dev2']:
+        all_names = PerfusionConfig.get_section_names('hardware')
+
+        for name in all_names:
             self.hw[name] = get_object(name)
             try:
                 self.hw[name].read_config()
@@ -86,54 +85,11 @@ class SystemHardware:
                 self.hw[name] = get_mock(name)
                 self.hw[name].read_config()
 
-            for ch in self.hw[name].ai_channels:
-                self.hw[ch.name] = ch
-
-        names = ['Arterial Gas Mixer', 'Venous Gas Mixer']
-        for name in names:
-            self.hw[name] = get_object(name)
-            try:
-                self.hw[name].read_config()
-            except PerfusionConfig.HardwareException as e:
-                self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
-                self._lgr.info(f'Loading mock for {name}')
-                self.hw[name] = get_mock(name)
-                self.hw[name].read_config()
-
-        try:
-            name = 'CDI'
-            self.hw[name] = get_object(name)
-            self.hw[name].read_config()
-        except PerfusionConfig.HardwareException as e:
-            self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
-            self._lgr.info(f'Loading mock for {name}')
-            self.hw[name] = get_mock(name)
-            self.hw[name].read_config()
-
-        pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump', 'Glucose Circuit Pump']
-        for name in pump_names:
-            self.hw[name] = get_object(name)
-            try:
-                self.hw[name].read_config()
-                self._lgr.debug(f'successfully read config for {name}')
-            except PerfusionConfig.HardwareException as e:
-                self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
-                self._lgr.info(f'Loading mock for {name}')
-                self.hw[name] = get_mock(name)
-                self.hw[name].read_config()
-
-        all_syringe_names = PerfusionConfig.get_section_names('syringes')
-        real_syringe_names = all_syringe_names[1:]
-        for name in real_syringe_names:
-            syringe = get_object(name)
-            try:
-                syringe.read_config()
-                self._lgr.debug(f'read syringe {name}: {syringe}')
-            except PerfusionConfig.HardwareException:
-                self._lgr.debug(f'Could not open syringe. Loading mock')
-                syringe = get_mock(name)
-                syringe.read_config()
-            self.hw[name] = syringe
+            self._lgr.debug(f'hw type is {type(self.hw[name])}')
+            if isinstance(self.hw[name], NIDAQAIDevice) or isinstance(self.hw[name], AIDevice):
+                for ch in self.hw[name].ai_channels:
+                    self._lgr.debug(f'adding channel {ch.name}')
+                    self.hw[ch.name] = ch
 
     def start(self):
         PerfusionConfig.MASTER_HALT.clear()
