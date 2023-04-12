@@ -8,7 +8,6 @@
     and under the public domain.
 """
 
-import logging
 from queue import Queue, Empty
 from dataclasses import dataclass
 
@@ -17,10 +16,10 @@ import serial
 import serial.tools.list_ports
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.utils import get_epoch_ms
+import pyPerfusion.utils as utils
 
 
-class CDIException(Exception):
+class Pump11EliteException(Exception):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -71,16 +70,16 @@ DEFAULT_MANUFACTURERS = {
 
 
 @dataclass
-class SyringeConfig:
-        com_port: str = ''
-        manufacturer_code: str = ''
-        size: str = ''
-        initial_injection_rate: float = 0.0
-        initial_rate_unit: str = 'uL/min'
-        initial_vol_unit: str = 'uL'
-        initial_target_volume: float = 0.0
-        baud: int = 9600
-        address: int = 0
+class Pump11EliteConfig:
+    com_port: str = ''
+    manufacturer_code: str = ''
+    size: str = ''
+    initial_injection_rate: float = 0.0
+    initial_rate_unit: str = 'uL/min'
+    initial_vol_unit: str = 'uL'
+    initial_target_volume: float = 0.0
+    baud: int = 9600
+    address: int = 0
 
 
 def get_available_manufacturer_codes() -> list:
@@ -108,11 +107,11 @@ def get_code_from_name(desired_name: str):
 class Pump11Elite:
     def __init__(self, name):
         self.name = name
-        self._lgr = logging.getLogger(__name__)
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self.data_type = np.float64
 
         self.name = name
-        self.cfg = SyringeConfig()
+        self.cfg = Pump11EliteConfig()
         self.cfg.name = name
 
         self._serial = serial.Serial()
@@ -143,14 +142,14 @@ class Pump11Elite:
         return self._serial.is_open
 
     def read_config(self):
-        cfg = SyringeConfig()
-        PerfusionConfig.read_into_dataclass('syringes', self.name, cfg)
-        self.open(cfg)
+        PerfusionConfig.read_into_dataclass('syringes', self.name, self.cfg)
+        self.open(self.cfg)
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass('syringes', self.name, self.cfg)
 
-    def open(self, cfg: SyringeConfig = None) -> None:
+    def open(self, cfg: Pump11EliteConfig = None) -> None:
+        self._queue = Queue()
         if self._serial.is_open:
             self._serial.close()
 
@@ -162,9 +161,8 @@ class Pump11Elite:
         try:
             self._serial.open()
         except serial.serialutil.SerialException as e:
-            self._lgr.error(f'Could not open serial port {self._serial.port}')
-            self._lgr.error(f'Message: {e}')
-        self._queue = Queue()
+            self._lgr.error(f'Could not open serial port {self._serial.port}. Message: {e}')
+            raise Pump11EliteException()
 
         # JWK, why do we need to send a blank?
         self.send_wait4response('')
@@ -177,19 +175,18 @@ class Pump11Elite:
             self._serial.close()
 
     def start(self):
-        self.acq_start_ms = get_epoch_ms()
+        self.acq_start_ms = utils.get_epoch_ms()
 
     def send_wait4response(self, str2send: str) -> str:
-        response = ''
         if self._serial.is_open:
             self._serial.write(str2send.encode('UTF-8'))
             self._serial.flush()
-            response = ''
             self._serial.timeout = 1.0
             response = self._serial.read_until('\r', size=1000).decode('UTF-8')
         else:
             response = '0 0'
         # JWK, we should be checking error responses
+
         # strip starting \r and ending \r
         return response[1:-1]
 
@@ -219,8 +216,7 @@ class Pump11Elite:
         return infuse_rate, infuse_unit
 
     def set_target_volume(self, volume_ul):
-           self._set_param('tvolume', f'{int(volume_ul)} ul\r')
-
+        self._set_param('tvolume', f'{int(volume_ul)} ul\r')
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
@@ -310,7 +306,7 @@ class Pump11Elite:
         """
         # JWK, should check if target volume is set
         self.send_wait4response('irun\r')
-        t = get_epoch_ms()
+        t = utils.get_epoch_ms()
         self.record_targeted_infusion(t)
 
     def start_constant_infusion(self):
@@ -318,7 +314,7 @@ class Pump11Elite:
         """
         # JWK, should check if target volume is cleared
         self.send_wait4response('irun\r')
-        t = get_epoch_ms()
+        t = utils.get_epoch_ms()
         self.record_continuous_infusion(t, start=True)
         self.is_infusing = True
 
@@ -328,13 +324,12 @@ class Pump11Elite:
         """
         self.send_wait4response('stop\r')
         self.is_infusing = False
-        t = get_epoch_ms()
+        t = utils.get_epoch_ms()
         # check if targeted volume is 0, if so, then this is a continuous injection
         # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
         target_vol, target_unit = self.get_target_volume()
         if target_vol == 0:
             self.record_continuous_infusion(t, start=False)
-
 
     def set_syringe(self, manu_code: str, syringe_size: str) -> None:
         self._set_param('syrm', f'{manu_code} {syringe_size}\r')
@@ -370,7 +365,7 @@ class Pump11Elite:
             syringes = response.split('\n')
         return syringes
 
-    def get_data(self, ch_id=None):
+    def get_data(self):
         buf = None
         t = None
         try:
@@ -385,10 +380,12 @@ class Pump11Elite:
 class MockPump11Elite(Pump11Elite):
     def __init__(self, name):
         super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self._lgr.debug(f'Creating MockPump11Elite with name {name}')
         self._serial.is_open = False
         self._values = {'tvolume': '0 ul', 'irate': '0 ul/min'}
 
-    def open(self, cfg: SyringeConfig = None) -> None:
+    def open(self, cfg: Pump11EliteConfig = None) -> None:
         self.cfg = cfg
         self._queue = Queue()
         self._serial.is_open = True
@@ -401,7 +398,7 @@ class MockPump11Elite(Pump11Elite):
             parts = str2send.split(' ', 1)
             if parts[0] == 'syrmanu':
                 if parts[1] == '?':
-                    response = DEFAULT_MANUFACTURERS_STR
+                    response = DEFAULT_MANUFACTURERS.values()
                 else:
                     code = parts[1].split(' ')[0]
                     response = DEFAULT_SYRINGES[code]
@@ -412,18 +409,4 @@ class MockPump11Elite(Pump11Elite):
                     response = self._values[parts[0]]
 
         # JWK, we should be checking error responses
-        return response
-
-
-class MockPump11Elite(Pump11Elite):
-    def __init__(self, name: str):
-        super().__init__(name)
-        self._last_send = ''
-
-    def send_wait4response(self, str2send: str) -> str:
-        response = ''
-        if str2send == 'tvolume\r':
-            response = '100 ul'
-        elif str2send == 'irate\r':
-            response = '10 ul/min'
         return response

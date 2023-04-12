@@ -23,7 +23,7 @@ class SystemHardware:
     def __init__(self):
         self._lgr = logging.getLogger(__name__)
         PerfusionConfig.MASTER_HALT.clear()
-        self.mocks_enabled = False
+        self.mocks_enabled = True
 
         # Preload the NIDAQ devices as the analog inputs channels
         # need this to exist anyway
@@ -83,15 +83,19 @@ class SystemHardware:
 
         all_syringe_names = PerfusionConfig.get_section_names('syringes')
         real_syringe_names = all_syringe_names[1:]
-        # self._lgr.debug(f' Excluding mock: {real_syringe_names}')
         for name in real_syringe_names:
             syringe = pyPump11Elite.Pump11Elite(name=name)
-            syringe.read_config()
-            self._lgr.debug(f'read syringe {name}: {syringe}')
+            try:
+                syringe.read_config()
+                self._lgr.debug(f'read syringe {name}: {syringe}')
+            except pyPump11Elite.Pump11EliteException:
+                self._lgr.debug(f'Could not open syringe. Loading mock')
+                syringe = pyPump11Elite.MockPump11Elite(name=name)
+                syringe.read_config()
             self.hw[name] = syringe
 
     def load_mocks(self):
-        self.mocks_enabled = True
+
 
         name = 'FakeEvents'
         self.mocks[name] = pyAI.AIDevice(name=name)
@@ -101,7 +105,7 @@ class SystemHardware:
 
         name = 'mock_cdi'
         self.mocks[name] = pyCDI.MockCDI(name=name)
-        self.mocks[name] .read_config(pyCDI.CDIConfig())
+        self.mocks[name] .read_config()
 
         name = 'mock_syringe'
         self.mocks[name] = pyPump11Elite.MockPump11Elite(name=name)
@@ -152,8 +156,9 @@ class SystemHardware:
         if self.mocks_enabled:
             try:
                 for name, device in self.mocks.items():
-                    self._lgr.debug(f'Starting {name}')
-                    device.stop()
+                    if type(device) != pyAI.AIChannel:
+                        self._lgr.debug(f'Starting {name}')
+                        device.stop()
             except pyAI.AIDeviceException as e:
                 self._lgr.error(e)
 

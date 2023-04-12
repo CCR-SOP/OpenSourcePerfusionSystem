@@ -19,6 +19,9 @@ from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
 
 
+BAUD_RATES = ['9600', '38400', '57600', '115200']
+
+
 class PanelSyringe(wx.Panel):
     def __init__(self, parent, sensor):
         wx.Panel.__init__(self, parent, -1)
@@ -311,6 +314,7 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
+    SYS_HW.load_mocks()
 
     name = 'Insulin'
     try:
