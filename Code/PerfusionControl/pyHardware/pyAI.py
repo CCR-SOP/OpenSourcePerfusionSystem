@@ -121,11 +121,12 @@ class AIDevice:
 
     def add_channel(self, ch_name: str, cfg: AIChannelConfig):
         if self.channel_exists(ch_name):
-            self._lgr.warning(f'Channel {ch_name} already exists. Overwriting with new config')
-        self.stop()
-        ai = AIChannel(name=ch_name, cfg=cfg, device=self)
-        ai.read_config()
-        self.ai_channels.append(ai)
+            self._lgr.warning(f'Channel {ch_name} already exists!')
+        else:
+            self.stop()
+            ai = AIChannel(name=ch_name, cfg=cfg, device=self)
+            ai.read_config()
+            self.ai_channels.append(ai)
 
     def remove_channel(self, ch_name: str):
         if self.channel_exists(ch_name):

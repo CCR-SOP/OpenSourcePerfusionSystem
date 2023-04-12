@@ -79,20 +79,20 @@ class SystemHardware:
             self._lgr.error(f'CDI exception: {e}')
 
         try:
-            self.dialysate_inflow = NIDAQDCDevice()
-            self.dialysate_inflow.cfg = pyDC.DCChannelConfig(name='Dialysate Inflow Pump')
+            self.dialysate_inflow = NIDAQDCDevice(name='Dialysate Inflow Pump')
+            self.dialysate_inflow.cfg = pyDC.DCChannelConfig()
             self.dialysate_inflow.read_config()
 
-            self.dialysate_outflow = NIDAQDCDevice()
-            self.dialysate_outflow.cfg = pyDC.DCChannelConfig(name='Dialysate Outflow Pump')
+            self.dialysate_outflow = NIDAQDCDevice(name='Dialysate Outflow Pump')
+            self.dialysate_outflow.cfg = pyDC.DCChannelConfig()
             self.dialysate_outflow.read_config()
 
-            self.dialysis_blood = NIDAQDCDevice()
-            self.dialysis_blood.cfg = pyDC.DCChannelConfig(name='Dialysis Blood Pump')
+            self.dialysis_blood = NIDAQDCDevice(name='Dialysis Blood Pump')
+            self.dialysis_blood.cfg = pyDC.DCChannelConfig()
             self.dialysis_blood.read_config()
 
-            self.glucose_circuit = NIDAQDCDevice()
-            self.glucose_circuit.cfg = pyDC.DCChannelConfig(name='Glucose Circuit Pump')
+            self.glucose_circuit = NIDAQDCDevice(name='Glucose Circuit Pump')
+            self.glucose_circuit.cfg = pyDC.DCChannelConfig()
             self.glucose_circuit.read_config()
         except pyDC.DCDeviceException as e:
             self._lgr.error(e)
