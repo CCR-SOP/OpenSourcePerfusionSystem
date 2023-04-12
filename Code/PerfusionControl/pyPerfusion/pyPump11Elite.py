@@ -9,16 +9,19 @@
 """
 
 import logging
-from time import time_ns
 from queue import Queue, Empty
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 import numpy as np
 import serial
 import serial.tools.list_ports
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.utils import get_epoch_ms, get_avail_com_ports
+from pyPerfusion.utils import get_epoch_ms
+
+
+class CDIException(Exception):
+    """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
 DATA_VERSION = 3
@@ -69,7 +72,6 @@ DEFAULT_MANUFACTURERS = {
 
 @dataclass
 class SyringeConfig:
-        name: str = 'Syringe'
         com_port: str = ''
         manufacturer_code: str = ''
         size: str = ''
@@ -104,13 +106,13 @@ def get_code_from_name(desired_name: str):
 
 
 class Pump11Elite:
-    def __init__(self, name, config=SyringeConfig()):
-        super().__init__()
+    def __init__(self, name):
+        self.name = name
         self._lgr = logging.getLogger(__name__)
         self.data_type = np.float64
 
         self.name = name
-        self.cfg = config
+        self.cfg = SyringeConfig()
         self.cfg.name = name
 
         self._serial = serial.Serial()
