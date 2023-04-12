@@ -8,7 +8,7 @@ Author: John Kakareka
 """
 import logging
 from dataclasses import asdict
-
+from threading import Event
 from configparser import ConfigParser
 
 from pyPerfusion.folder_management import FolderManagement
@@ -20,6 +20,8 @@ StudyConfig = FolderManagement('LiverPerfusion')
 TestConfig = FolderManagement('LPTest')
 ACTIVE_CONFIG = None
 ALLOW_MOCKS = True
+
+MASTER_HALT = Event()
 
 
 class MissingConfigFile(Exception):

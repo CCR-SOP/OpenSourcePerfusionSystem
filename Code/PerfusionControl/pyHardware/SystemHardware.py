@@ -8,11 +8,9 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-import time
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyHardware.pyAI as pyAI
-import serial.serialutil
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
 import pyPerfusion.pyCDI as pyCDI
 import pyPerfusion.pyPump11Elite as pyPump11Elite
@@ -24,6 +22,7 @@ import pyHardware.pyDC as pyDC
 class SystemHardware:
     def __init__(self):
         self._lgr = logging.getLogger(__name__)
+        PerfusionConfig.MASTER_HALT.clear()
         self.mocks_enabled = False
 
         self.ni_dev1 = NIDAQAIDevice(name='Dev1')
@@ -126,6 +125,7 @@ class SystemHardware:
         self.mock_pv_mixer.hw = pyGB100.MockGB100()
 
     def start(self):
+        PerfusionConfig.MASTER_HALT.clear()
         try:
             self.ni_dev1.start()
             self.ni_dev2.start()
@@ -150,6 +150,8 @@ class SystemHardware:
             self.mock_pv_mixer.start()
 
     def stop(self):
+        PerfusionConfig.MASTER_HALT.set()
+
         try:
             self.ni_dev1.stop()
             self.ni_dev2.stop()

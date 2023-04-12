@@ -22,7 +22,6 @@ and under the public domain.
 from threading import Thread, Event
 from queue import Queue, Empty
 from time import sleep
-import logging
 from dataclasses import dataclass
 
 import numpy as np
@@ -152,6 +151,7 @@ class AIDevice:
         self.stop()
 
     def start(self):
+        self._lgr.debug(f'starting')
         self.stop()
         self._event_halt.clear()
         self.acq_start_ms = utils.get_epoch_ms()
@@ -168,17 +168,12 @@ class AIDevice:
             self.__thread = None
 
     def run(self):
-        next_t = utils.get_epoch_ms()
-        offset = 0
-        while not self._event_halt.is_set():
-            next_t += offset + self.cfg.read_period_ms
-            delay = next_t - utils.get_epoch_ms()
-            if delay > 0:
-                sleep(delay / 1_000.0)
-                offset = 0
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            period_timeout = self.cfg.read_period_ms / 1_000.0
+            if not self._event_halt.wait(timeout=period_timeout):
+                self._acq_samples()
             else:
-                offset = -delay
-            self._acq_samples()
+                break
 
     def _acq_samples(self):
         buffer_t = utils.get_epoch_ms()

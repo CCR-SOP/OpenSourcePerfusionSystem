@@ -15,7 +15,6 @@ and under the public domain.
 """
 from threading import Thread, Event
 import logging
-import time
 from dataclasses import dataclass, field
 from typing import Protocol, TypeVar, List
 
@@ -25,6 +24,7 @@ import numpy.typing as npt
 import pyPerfusion.Strategies as Strategies
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
+import pyPerfusion.utils as utils
 
 
 class HWProtocol(Protocol):
@@ -70,6 +70,7 @@ class Sensor:
         self._lgr.info(f'Creating Sensor object {name}')
         self.__thread = None
         self._evt_halt = Event()
+        self._timeout = 0.5
         self.hw = None
 
         self.cfg = SensorConfig(name=name)
@@ -137,16 +138,15 @@ class Sensor:
         return writer
 
     def run(self):
-        while not self._evt_halt.is_set():
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            if self._evt_halt.wait(self._timeout):
+                break
             if self.hw is not None:
                 data_buf, t = self.hw.get_data()
                 if data_buf is not None:
-                  buf = data_buf
-                  for strategy in self._strategies:
+                    buf = data_buf
+                    for strategy in self._strategies:
                         buf, t = strategy.process_buffer(buf, t)
-
-                else:
-                   time.sleep(0.5)
 
     def open(self):
         pass
@@ -180,15 +180,14 @@ class CalculatedSensor(Sensor):
         self.reader = None
 
     def run(self):
-        while not self._evt_halt.is_set():
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            if self._evt_halt.wait(self._timeout):
+                break
             t, data_buf = self.reader.get_data_from_last_read(self.cfg.samples_per_calc)
             if data_buf is not None:
                 buf = data_buf
                 for strategy in self._strategies:
                     buf, t = strategy.process_buffer(buf, t)
-
-            else:
-                time.sleep(0.5)
 
 
 class DivisionSensor(Sensor):
@@ -201,12 +200,12 @@ class DivisionSensor(Sensor):
         self.reader_divisor = None
 
     def run(self):
-        while not self._evt_halt.is_set():
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            if self._evt_halt.wait(self._timeout):
+                break
             t_f, dividend = self.reader_dividend.get_data_from_last_read(self.cfg.samples_per_calc)
             t_p, divisor = self.reader_divisor.get_data_from_last_read(self.cfg.samples_per_calc)
             if dividend is not None and divisor is not None:
                 buf = np.divide(dividend, divisor)
                 for strategy in self._strategies:
                     buf, t = strategy.process_buffer(buf, t_f)
-            else:
-                time.sleep(0.5)

@@ -146,7 +146,7 @@ class PanelPlotting(wx.Panel):
         self.__set_bindings()
 
         self.timer_plot = wx.Timer(self)
-        self.timer_plot.Start(200, wx.TIMER_CONTINUOUS)
+        self.timer_plot.Start(100, wx.TIMER_CONTINUOUS)
 
     @property
     def axes(self):

@@ -15,6 +15,7 @@ from time import sleep
 
 from pyPerfusion.pyCDI import CDIData
 from pyPerfusion.utils import get_epoch_ms
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class AutoGasMixer:
@@ -37,22 +38,20 @@ class AutoGasMixer:
 
     def run(self):
         self.is_streaming = True
-        next_t = self.acq_start_ms + self.adjust_rate_ms
-        # sleep only 1 second so the thread can be terminated
-        # in a quicker fashion. if adjust_rate is smaller, then use that
-        sleep_time = min(1_000, self.adjust_rate_ms)
-        while not self._event_halt.is_set():
-            if get_epoch_ms() > next_t:
-                if self.gas_device and self.cdi_reader:
-                    ts, all_vars = self.cdi_reader.get_last_acq()
-                    if all_vars is not None:
-                        cdi_data = CDIData(all_vars)
-                        self.update_gas_on_cdi(cdi_data)
-                    else:
-                        self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
-                next_t += self.adjust_rate_ms
-            else:
-                sleep(sleep_time/1_000)
+        # JWK, this assumes the take to get the data and make the
+        # adjustments is small compared to the adjust rate so timing drift
+        # is small
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            timeout = self.adjust_rate_ms / 1_000.0
+            if self._event_halt.wait(timeout):
+                break
+            if self.gas_device and self.cdi_reader:
+                ts, all_vars = self.cdi_reader.get_last_acq()
+                if all_vars is not None:
+                    cdi_data = CDIData(all_vars)
+                    self.update_gas_on_cdi(cdi_data)
+                else:
+                    self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
 
     def start(self):
         self.stop()

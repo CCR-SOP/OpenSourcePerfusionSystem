@@ -59,9 +59,9 @@ class CDIStreaming:
         self.cfg = CDIConfig()
 
         self.__serial = serial.Serial()
-        self._timeout = 5.0
+        self._timeout = 1.0
 
-        self._event_halt = Event()
+        self._evt_halt = Event()
         self.__thread = None
         self.is_streaming = False
 
@@ -149,10 +149,14 @@ class CDIStreaming:
 
     def run(self):  # continuous data stream
         self.is_streaming = True
-        self._event_halt.clear()
+        self._evt_halt.clear()
         good_response = False
         loops = 0
-        while not self._event_halt.is_set():
+        # only wait for a second so if the MASTER HALT is set,
+        # we can break out of the loop
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            if self._evt_halt.wait(self._timeout):
+                break
             if self.is_open():
                 resp = ''
                 try:
@@ -172,23 +176,19 @@ class CDIStreaming:
 
                 if good_response:
                     data = self.parse_response(resp)
-                    self._lgr.debug(f'data is {data}')
                     ts = get_epoch_ms()
                     self._queue.put((data, ts))
-                    self._lgr.debug('put data')
                     good_response = False
                 else:
                     msg = f'CDI: Failed to read good response after multiple attempts. ' \
                           f'Something may be wrong with CDI interface'
                     self._lgr.error(msg)
                     raise CDIException(msg)
-            else:
-                sleep(1.0)
         self.is_streaming = False
 
     def start(self):
         self.stop()
-        self._event_halt.clear()
+        self._evt_halt.clear()
         self.acq_start_ms = get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
@@ -197,7 +197,7 @@ class CDIStreaming:
 
     def stop(self):
         if self.is_streaming:
-            self._event_halt.set()
+            self._evt_halt.set()
 
     def get_data(self, timeout=0):
         buf = None
