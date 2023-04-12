@@ -25,7 +25,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 
 
-class GasDeviceException(Exception):
+class GasDeviceException(PerfusionConfig.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 

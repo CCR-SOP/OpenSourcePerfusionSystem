@@ -21,7 +21,6 @@ and under the public domain.
 """
 from threading import Thread, Event
 from queue import Queue, Empty
-from time import sleep
 from dataclasses import dataclass
 
 import numpy as np
@@ -31,7 +30,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 
 
-class AIDeviceException(Exception):
+class AIDeviceException(PerfusionConfig.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 

@@ -13,11 +13,11 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import pyHardware.pyAI as pyAI
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice
-from pyPerfusion.pyCDI import CDI, CDIException, MockCDI
-from pyPerfusion.pyPump11Elite import Pump11Elite, Pump11EliteException, MockPump11Elite
-from pyHardware.pyGB100 import GasDevice, GasDeviceException, MockGasDevice
+from pyPerfusion.pyCDI import CDI, MockCDI
+from pyPerfusion.pyPump11Elite import Pump11Elite, MockPump11Elite
+from pyHardware.pyGB100 import GasDevice, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
-from pyHardware.pyDC import DCDevice, DCDeviceException
+from pyHardware.pyDC import DCDevice
 
 
 def get_object(name: str):
@@ -53,7 +53,7 @@ class SystemHardware:
             self.hw[name] = get_object(name)
             try:
                 self.hw[name].read_config()
-            except pyAI.AIDeviceException as e:
+            except PerfusionConfig.HardwareException as e:
                 self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
                 self._lgr.info(f'Loading mock for {name}')
                 self.hw[name] = pyAI.AIDevice(name=name)
@@ -67,7 +67,7 @@ class SystemHardware:
             self.hw[name] = get_object(name)
             try:
                 self.hw[name].read_config()
-            except GasDeviceException as e:
+            except PerfusionConfig.HardwareException as e:
                 self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
                 self._lgr.info(f'Loading mock for {name}')
                 self.hw[name] = MockGasDevice(name=name)
@@ -77,7 +77,7 @@ class SystemHardware:
             name = 'CDI'
             self.hw[name] = get_object(name)
             self.hw[name].read_config()
-        except CDIException as e:
+        except PerfusionConfig.HardwareException as e:
             self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
             self._lgr.info(f'Loading mock for {name}')
             self.hw[name] = MockCDI(name=name)
@@ -89,7 +89,7 @@ class SystemHardware:
             try:
                 self.hw[name].read_config()
                 self._lgr.debug(f'successfully read config for {name}')
-            except DCDeviceException as e:
+            except PerfusionConfig.HardwareException as e:
                 self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
                 self._lgr.info(f'Loading mock for {name}')
                 self.hw[name] = DCDevice(name=name)
@@ -102,7 +102,7 @@ class SystemHardware:
             try:
                 syringe.read_config()
                 self._lgr.debug(f'read syringe {name}: {syringe}')
-            except Pump11EliteException:
+            except PerfusionConfig.HardwareException:
                 self._lgr.debug(f'Could not open syringe. Loading mock')
                 syringe = MockPump11Elite(name=name)
                 syringe.read_config()

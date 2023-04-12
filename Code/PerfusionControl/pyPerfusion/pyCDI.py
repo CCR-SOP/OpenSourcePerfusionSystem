@@ -20,7 +20,7 @@ import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
-class CDIException(Exception):
+class CDIException(PerfusionConfig.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 

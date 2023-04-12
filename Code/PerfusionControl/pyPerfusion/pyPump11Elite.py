@@ -19,7 +19,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 
 
-class Pump11EliteException(Exception):
+class Pump11EliteException(PerfusionConfig.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
