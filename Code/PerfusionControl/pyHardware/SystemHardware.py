@@ -31,7 +31,7 @@ class SystemHardware:
         self.hw = {}
 
     def load_hardware_from_config(self):
-        for name in ['Dev1', 'Dev2']:
+        for name in ['NI_Dev1', 'NI_Dev2']:
             self.hw[name] = NIDAQAIDevice(name=name)
             try:
                 self.hw[name].read_config()

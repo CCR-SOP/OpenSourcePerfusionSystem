@@ -72,13 +72,12 @@ class AIDevice:
             PerfusionConfig.write_from_dataclass(self.name, ch.name, ch.cfg)
 
     def read_config(self):
-        PerfusionConfig.read_into_dataclass(self.name, 'General', self.cfg)
+        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
         channel_names = PerfusionConfig.get_section_names(self.name)
         for ch_name in channel_names:
-            if ch_name != 'General':
-                ch_cfg = AIChannelConfig()
-                self.add_channel(ch_name=ch_name, cfg=ch_cfg)
-                self._lgr.info(f'read_config: added channel {ch_name} with cfg: {ch_cfg}')
+            ch_cfg = AIChannelConfig()
+            self.add_channel(ch_name=ch_name, cfg=ch_cfg)
+            self._lgr.info(f'read_config: added channel {ch_name} with cfg: {ch_cfg}')
 
         self.open(self.cfg)
 
