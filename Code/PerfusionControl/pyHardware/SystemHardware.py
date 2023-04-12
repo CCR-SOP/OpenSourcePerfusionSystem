@@ -13,12 +13,30 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import pyHardware.pyAI as pyAI
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice
-import pyHardware.pyDC as pyDC
-import pyPerfusion.pyCDI as pyCDI
-import pyPerfusion.pyPump11Elite as pyPump11Elite
-import pyHardware.pyGB100 as pyGB100
+from pyPerfusion.pyCDI import CDI, CDIException, MockCDI
+from pyPerfusion.pyPump11Elite import Pump11Elite, Pump11EliteException, MockPump11Elite
+from pyHardware.pyGB100 import GasDevice, GasDeviceException, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
-import pyHardware.pyDC as pyDC
+from pyHardware.pyDC import DCDevice, DCDeviceException
+
+
+def get_object(name: str):
+    params = PerfusionConfig.read_section('hardware', name)
+    try:
+        class_ = globals().get(params['class'], None)
+    except KeyError:
+        params = PerfusionConfig.read_section('syringes', name)
+    try:
+        class_ = globals().get(params['class'], None)
+    except KeyError:
+        class_ = None
+
+    if class_ is not None:
+        obj = class_(name=name)
+    else:
+        print(f'class {params["class"]} doesnt exist')
+        obj = None
+    return obj
 
 
 class SystemHardware:
@@ -32,7 +50,7 @@ class SystemHardware:
 
     def load_hardware_from_config(self):
         for name in ['NI_Dev1', 'NI_Dev2']:
-            self.hw[name] = NIDAQAIDevice(name=name)
+            self.hw[name] = get_object(name)
             try:
                 self.hw[name].read_config()
             except pyAI.AIDeviceException as e:
@@ -44,58 +62,49 @@ class SystemHardware:
             for ch in self.hw[name].ai_channels:
                 self.hw[ch.name] = ch
 
-        try:
-            name = 'Arterial Gas Mixer'
-            self.hw[name] = pyGB100.GasDevice(name=name)
-            self.hw[name].read_config()
-        except pyGB100.GasDeviceException as e:
-            self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
-            self._lgr.info(f'Loading mock for {name}')
-            self.hw[name] = pyGB100.MockGasDevice(name=name)
-            self.hw[name].open()
-
-        try:
-            name = 'Venous Gas Mixer'
-            self.hw[name] = pyGB100.GasDevice(name=name)
-            self.hw[name].read_config()
-        except pyGB100.GasDeviceException as e:
-            self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
-            self._lgr.info(f'Loading mock for {name}')
-            self.hw[name] = pyGB100.MockGasDevice(name=name)
-            self.hw[name].read_config()
+        names = ['Arterial Gas Mixer', 'Venous Gas Mixer']
+        for name in names:
+            self.hw[name] = get_object(name)
+            try:
+                self.hw[name].read_config()
+            except GasDeviceException as e:
+                self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
+                self._lgr.info(f'Loading mock for {name}')
+                self.hw[name] = MockGasDevice(name=name)
+                self.hw[name].read_config()
 
         try:
             name = 'CDI'
-            self.hw[name] = pyCDI.CDI(name=name)
+            self.hw[name] = get_object(name)
             self.hw[name].read_config()
-        except pyCDI.CDIException as e:
+        except CDIException as e:
             self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
             self._lgr.info(f'Loading mock for {name}')
-            self.hw[name] = pyCDI.MockCDI(name=name)
+            self.hw[name] = MockCDI(name=name)
             self.hw[name].read_config()
 
         pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump', 'Glucose Circuit Pump']
         for name in pump_names:
-            self.hw[name] = NIDAQDCDevice(name=name)
+            self.hw[name] = get_object(name)
             try:
                 self.hw[name].read_config()
                 self._lgr.debug(f'successfully read config for {name}')
-            except pyDC.DCDeviceException as e:
+            except DCDeviceException as e:
                 self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
                 self._lgr.info(f'Loading mock for {name}')
-                self.hw[name] = pyDC.DCDevice(name=name)
+                self.hw[name] = DCDevice(name=name)
                 self.hw[name].read_config()
 
         all_syringe_names = PerfusionConfig.get_section_names('syringes')
         real_syringe_names = all_syringe_names[1:]
         for name in real_syringe_names:
-            syringe = pyPump11Elite.Pump11Elite(name=name)
+            syringe = get_object(name)
             try:
                 syringe.read_config()
                 self._lgr.debug(f'read syringe {name}: {syringe}')
-            except pyPump11Elite.Pump11EliteException:
+            except Pump11EliteException:
                 self._lgr.debug(f'Could not open syringe. Loading mock')
-                syringe = pyPump11Elite.MockPump11Elite(name=name)
+                syringe = MockPump11Elite(name=name)
                 syringe.read_config()
             self.hw[name] = syringe
 
