@@ -16,7 +16,7 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 
-from pyPerfusion.utils import get_epoch_ms
+import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
@@ -32,8 +32,6 @@ CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'a
 
 class CDIData:
     def __init__(self, data):
-        self._lgr = logging.getLogger(__name__)
-        # self._lgr.debug(f'Data is {data}')
         if data is not None:
             for idx in range(18):
                 # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data[idx]}')
@@ -41,15 +39,15 @@ class CDIData:
 
 @dataclass
 class CDIConfig:
-    name: str = 'CDI'
     port: str = ''
     sampling_period_ms: int = 1000
 
 
-class CDIStreaming:
-    def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
+class CDI:
+    def __init__(self, name:str):
         self.name = name
+        self._lgr = utils.get_object_logger(__name__, self.name)
+
         self._queue = Queue()
         self.data_type = np.float64
         self.buf_len = 18
@@ -102,7 +100,6 @@ class CDIStreaming:
             self._lgr.error(f'CDI: Could not open serial port {self.cfg.port}')
             self._lgr.error(f'CDI: Message: {e}')
             raise CDIException(f'CDI: Could not open serial port at {self.cfg.port}')
-
 
     def close(self):
         self.stop()
@@ -161,6 +158,7 @@ class CDIStreaming:
                 resp = ''
                 try:
                     while not good_response:
+
                         resp += self.read_from_serial()
                         if len(resp) > 0:
                             if resp[-1] == '\n':
@@ -176,7 +174,7 @@ class CDIStreaming:
 
                 if good_response:
                     data = self.parse_response(resp)
-                    ts = get_epoch_ms()
+                    ts = utils.get_epoch_ms()
                     self._queue.put((data, ts))
                     good_response = False
                 else:
@@ -189,7 +187,7 @@ class CDIStreaming:
     def start(self):
         self.stop()
         self._evt_halt.clear()
-        self.acq_start_ms = get_epoch_ms()
+        self.acq_start_ms = utils.get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
@@ -209,10 +207,10 @@ class CDIStreaming:
         return buf, t
 
 
-class MockCDI(CDIStreaming):
+class MockCDI(CDI):
     def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
         super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self._is_open = False
         self.last_pkt = ''
         self.last_pkt_index = 0
@@ -228,9 +226,6 @@ class MockCDI(CDIStreaming):
 
     def close(self):
         pass
-
-    def request_data(self, timeout=30):  # request single data packet
-        return self._form_pkt()
 
     def read_from_serial(self):
         pkt_stx = 0x2

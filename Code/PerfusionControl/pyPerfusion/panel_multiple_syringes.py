@@ -95,7 +95,7 @@ class MySyringeApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
