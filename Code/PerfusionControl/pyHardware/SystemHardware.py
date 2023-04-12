@@ -11,13 +11,19 @@ import logging
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import pyHardware.pyAI as pyAI
+from pyHardware.pyAI import AIDevice, AIChannel, AIDeviceException
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice
 from pyPerfusion.pyCDI import CDI, MockCDI
 from pyPerfusion.pyPump11Elite import Pump11Elite, MockPump11Elite
 from pyHardware.pyGB100 import GasDevice, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 from pyHardware.pyDC import DCDevice
+
+MOCKS = {'NIDAQAIDevice': 'AIDevice',
+         'CDI': 'MockCDI',
+         'Pump11Elite': 'MockPump11Elite',
+         'GasDevice': 'MockGasDevice',
+         'NIDAQDCDevice': 'DCDevice'}
 
 
 def get_object(name: str):
@@ -28,6 +34,26 @@ def get_object(name: str):
         params = PerfusionConfig.read_section('syringes', name)
     try:
         class_ = globals().get(params['class'], None)
+    except KeyError:
+        class_ = None
+
+    if class_ is not None:
+        obj = class_(name=name)
+    else:
+        print(f'class {params["class"]} doesnt exist')
+        obj = None
+    return obj
+
+
+def get_mock(name: str):
+    params = PerfusionConfig.read_section('hardware', name)
+    if params:
+        mock_name = MOCKS[params['class']]
+    else:
+        params = PerfusionConfig.read_section('syringes', name)
+        mock_name = MOCKS[params['class']]
+    try:
+        class_ = globals().get(mock_name, None)
     except KeyError:
         class_ = None
 
@@ -56,7 +82,8 @@ class SystemHardware:
             except PerfusionConfig.HardwareException as e:
                 self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
                 self._lgr.info(f'Loading mock for {name}')
-                self.hw[name] = pyAI.AIDevice(name=name)
+
+                self.hw[name] = get_mock(name)
                 self.hw[name].read_config()
 
             for ch in self.hw[name].ai_channels:
@@ -70,7 +97,7 @@ class SystemHardware:
             except PerfusionConfig.HardwareException as e:
                 self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
                 self._lgr.info(f'Loading mock for {name}')
-                self.hw[name] = MockGasDevice(name=name)
+                self.hw[name] = get_mock(name)
                 self.hw[name].read_config()
 
         try:
@@ -80,7 +107,7 @@ class SystemHardware:
         except PerfusionConfig.HardwareException as e:
             self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
             self._lgr.info(f'Loading mock for {name}')
-            self.hw[name] = MockCDI(name=name)
+            self.hw[name] = get_mock(name)
             self.hw[name].read_config()
 
         pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump', 'Glucose Circuit Pump']
@@ -92,7 +119,7 @@ class SystemHardware:
             except PerfusionConfig.HardwareException as e:
                 self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
                 self._lgr.info(f'Loading mock for {name}')
-                self.hw[name] = DCDevice(name=name)
+                self.hw[name] = get_mock(name)
                 self.hw[name].read_config()
 
         all_syringe_names = PerfusionConfig.get_section_names('syringes')
@@ -104,7 +131,7 @@ class SystemHardware:
                 self._lgr.debug(f'read syringe {name}: {syringe}')
             except PerfusionConfig.HardwareException:
                 self._lgr.debug(f'Could not open syringe. Loading mock')
-                syringe = MockPump11Elite(name=name)
+                syringe = get_mock(name)
                 syringe.read_config()
             self.hw[name] = syringe
 
@@ -113,10 +140,10 @@ class SystemHardware:
 
         try:
             for name, device in self.hw.items():
-                if type(device) != pyAI.AIChannel:
+                if type(device) != AIChannel:
                     self._lgr.debug(f'Starting {name}')
                     device.start()
-        except pyAI.AIDeviceException as e:
+        except AIDeviceException as e:
             self._lgr.debug('Exception caught')
             self._lgr.error(e)
 
@@ -125,10 +152,10 @@ class SystemHardware:
 
         try:
             for name, device in self.hw.items():
-                if type(device) != pyAI.AIChannel:
+                if type(device) != AIChannel:
                     self._lgr.debug(f'Stopping {name}')
                     device.stop()
-        except pyAI.AIDeviceException as e:
+        except AIDeviceException as e:
             self._lgr.error(e)
 
     def get_hw(self, name: str = None):
