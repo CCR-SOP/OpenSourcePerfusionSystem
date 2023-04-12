@@ -20,7 +20,7 @@ from pyPerfusion.pyCDI import CDIIndex, CDIData
 
 
 def main():
-    SYS_HW.load_hardware_from_config()
+    SYS_HW.load_all()
     # SYS_HW.load_mocks()
     SYS_HW.start()
 

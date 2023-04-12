@@ -219,7 +219,7 @@ if __name__ == "__main__":
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    SYS_HW.load_hardware_from_config()
+    SYS_HW.load_all()
     sensor = Sensor.Sensor(name='Hepatic Artery Flow')
     sensor.read_config()
 

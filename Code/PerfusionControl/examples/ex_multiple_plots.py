@@ -60,7 +60,7 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    SYS_HW.load_hardware_from_config()
+    SYS_HW.load_all()
     SYS_HW.start()
     sensor_haflow = Sensor.Sensor(name='Hepatic Artery Pressure')
     sensor_haflow.read_config()

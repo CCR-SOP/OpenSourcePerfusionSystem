@@ -71,25 +71,28 @@ class SystemHardware:
 
         self.hw = {}
 
-    def load_hardware_from_config(self):
+    def load_all(self):
         all_names = PerfusionConfig.get_section_names('hardware')
 
         for name in all_names:
-            self.hw[name] = get_object(name)
-            try:
-                self.hw[name].read_config()
-            except PerfusionConfig.HardwareException as e:
-                self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
-                self._lgr.info(f'Loading mock for {name}')
+            self.load(name)
 
-                self.hw[name] = get_mock(name)
-                self.hw[name].read_config()
+    def load(self, name: str):
+        self.hw[name] = get_object(name)
+        try:
+            self.hw[name].read_config()
+        except PerfusionConfig.HardwareException as e:
+            self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
+            self._lgr.info(f'Loading mock for {name}')
 
-            self._lgr.debug(f'hw type is {type(self.hw[name])}')
-            if isinstance(self.hw[name], NIDAQAIDevice) or isinstance(self.hw[name], AIDevice):
-                for ch in self.hw[name].ai_channels:
-                    self._lgr.debug(f'adding channel {ch.name}')
-                    self.hw[ch.name] = ch
+            self.hw[name] = get_mock(name)
+            self.hw[name].read_config()
+
+        self._lgr.debug(f'hw type is {type(self.hw[name])}')
+        if isinstance(self.hw[name], NIDAQAIDevice) or isinstance(self.hw[name], AIDevice):
+            for ch in self.hw[name].ai_channels:
+                self._lgr.debug(f'adding channel {ch.name}')
+                self.hw[ch.name] = ch
 
     def start(self):
         PerfusionConfig.MASTER_HALT.clear()

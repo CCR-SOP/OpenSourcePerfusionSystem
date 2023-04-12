@@ -281,7 +281,7 @@ if __name__ == "__main__":
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.setup_file_logger(lgr, logging.DEBUG, 'panel_gas_mixers_debug')
 
-    SYS_HW.load_hardware_from_config()
+    SYS_HW.load_all()
     SYS_HW.start()
 
     ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')

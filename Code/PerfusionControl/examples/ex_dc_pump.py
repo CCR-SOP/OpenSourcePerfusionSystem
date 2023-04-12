@@ -24,7 +24,7 @@ logger = logging.getLogger()
 PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
-SYS_HW.load_hardware_from_config()
+SYS_HW.load_all()
 
 name = 'Dialysate Outflow'
 try:

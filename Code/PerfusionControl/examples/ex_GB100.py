@@ -18,7 +18,7 @@ utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 #utils.setup_file_logger(logging.getLogger(), logging.DEBUG, filename='ex_gb100')
 
 
-SYS_HW.load_hardware_from_config()
+SYS_HW.load_all()
 SYS_HW.start()
 
 ha_device = SYS_HW.get_hw('Arterial Gas Mixer')
