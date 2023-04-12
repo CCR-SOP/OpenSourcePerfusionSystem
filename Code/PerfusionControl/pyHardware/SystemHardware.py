@@ -53,25 +53,31 @@ class SystemHardware:
             name = 'Arterial Gas Mixer'
             self.hw[name] = pyGB100.GasDevice(name=name)
             self.hw[name].read_config()
-        except Exception as e:
-            self._lgr.error(f"Error trying to create {name}")
-            self._lgr.error(f"GasDevice exception: {e}")
+        except pyGB100.GasDeviceException as e:
+            self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
+            self._lgr.info(f'Loading mock for {name}')
+            self.hw[name] = pyGB100.MockGasDevice(name=name)
+            self.hw[name].open()
 
         try:
             name = 'Venous Gas Mixer'
             self.hw[name] = pyGB100.GasDevice(name=name)
             self.hw[name].read_config()
-        except Exception as e:
-            self._lgr.error(f"Error trying to create {name}")
-            self._lgr.error(f"GasDevice exception: {e}")
+        except pyGB100.GasDeviceException as e:
+            self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
+            self._lgr.info(f'Loading mock for {name}')
+            self.hw[name] = pyGB100.MockGasDevice(name=name)
+            self.hw[name].read_config()
 
         try:
             name = 'CDI'
-            self.hw[name] = pyCDI.CDIStreaming(name=name)
+            self.hw[name] = pyCDI.CDI(name=name)
             self.hw[name].read_config()
-        except Exception as e:
-            self._lgr.error(f'Error trying to create {name}')
-            self._lgr.error(f'CDI exception: {e}')
+        except pyCDI.CDIException as e:
+            self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
+            self._lgr.info(f'Loading mock for {name}')
+            self.hw[name] = pyCDI.MockCDI(name=name)
+            self.hw[name].read_config()
 
         try:
             pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump', 'Glucose Circuit Pump']

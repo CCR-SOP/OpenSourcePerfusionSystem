@@ -22,7 +22,7 @@ import serial
 import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.utils import get_epoch_ms
+import pyPerfusion.utils as utils
 
 
 class GasDeviceException(Exception):
@@ -74,9 +74,9 @@ GasNames = IntEnum('GasNames', ['Air', 'Nitric Oxide', 'Nitrogen', 'Oxygen',
 def get_gas_index(gas_name: str):
     return [gas.value for gas in GasNames if gas.name == gas_name][0]
 
+
 @dataclass
 class GasDeviceConfig:
-    name: str = 'GasDevice'
     port: str = ''
     CO2_range: List = field(default_factory=lambda: [0, 100])
     O2_range: List = field(default_factory=lambda: [0, 100])
@@ -85,11 +85,12 @@ class GasDeviceConfig:
 
 
 class GasDevice:
-    def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
+    def __init__(self, name: str):
         self.name = name
+        self._lgr = utils.get_object_logger(__name__, self.name)
+
         self.hw = None
-        self.cfg = GasDeviceConfig(name=name)
+        self.cfg = GasDeviceConfig()
 
         self._queue = None
         self.acq_start_ms = 0
@@ -103,16 +104,15 @@ class GasDevice:
         self.percent = [0, 0, 0]
         self.status = False
 
-
     def get_acq_start_ms(self):
         return self.acq_start_ms
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.cfg.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
 
     def read_config(self):
-        self._lgr.debug(f'Reading config for {self.cfg.name}')
-        PerfusionConfig.read_into_dataclass('hardware', self.cfg.name, self.cfg)
+        self._lgr.debug(f'Reading config for {self.name}')
+        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
         self._lgr.debug(f'Config = {self.cfg}')
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
@@ -141,7 +141,6 @@ class GasDevice:
                                 f'Exception: {e}')
                 raise GasDeviceException('Could not open gas device')
 
-
     def close(self):
         if self.hw:
             with self.mutex:
@@ -149,7 +148,7 @@ class GasDevice:
             self.stop()
 
     def start(self):
-        self.acq_start_ms = get_epoch_ms()
+        self.acq_start_ms = utils.get_epoch_ms()
 
     def stop(self):
         pass
@@ -308,7 +307,7 @@ class GasDevice:
     def push_data(self):
         if self._queue:
             buf = self.data_type([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
-            self._queue.put((buf, get_epoch_ms()))
+            self._queue.put((buf, utils.get_epoch_ms()))
 
     def get_data(self):
         buf = None
@@ -323,9 +322,26 @@ class GasDevice:
         return buf, t
 
 
+class MockGasDevice(GasDevice):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+
+    def open(self, cfg=None):
+        if cfg is not None:
+            self.cfg = cfg
+        self._queue = Queue()
+        self.hw = MockGB100()
+
+    def close(self):
+        if self.hw:
+            self.stop()
+
+
 class MockGB100:
     def __init__(self):
-        self._lgr = logging.getLogger(__name__)
+        self.name = 'MockGB100'
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self.total_flow = 0
         self.percent = [0, 0]
         self.status = False
