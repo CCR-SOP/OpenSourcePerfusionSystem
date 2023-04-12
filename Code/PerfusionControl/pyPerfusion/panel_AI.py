@@ -33,7 +33,7 @@ class PanelAI(wx.Panel):
         self._panel_cal = PanelAICalibration(self, sensor, reader)
 
         if self._sensor.hw is not None:
-            ch_name = f'{self._sensor.hw.device.cfg.name} Channel: {self._sensor.hw.cfg.name}'
+            ch_name = f'{self._sensor.hw.device.name} Channel: {self._sensor.hw.name}'
         else:
             ch_name = "NA"
         static_box = wx.StaticBox(self, wx.ID_ANY, label=ch_name)
@@ -183,7 +183,7 @@ class PanelAICalibration(wx.Panel):
         self._sensor.hw.write_config()
 
     def on_load_cfg(self, evt):
-        self._sensor.hw.read_config(self._sensor.hw.cfg.name)
+        self._sensor.hw.read_config(self._sensor.hw.name)
         self.update_controls_from_config()
 
 
@@ -192,7 +192,11 @@ class TestFrame(wx.Frame):
         self._lgr = logging.getLogger(__name__)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
+        try:
+            self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
+        except:
+            # catch any exception to properly close SYS_HW
+            self.on_close(wx.Event())
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_close(self, evt):
@@ -210,15 +214,17 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+    utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_hardware_from_config()
-    SYS_HW.start()
     sensor = Sensor.Sensor(name='Hepatic Artery Flow')
     sensor.read_config()
+
     sensor.start()
+    SYS_HW.start()
 
     app = MyTestApp(0)
     app.MainLoop()

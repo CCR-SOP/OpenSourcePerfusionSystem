@@ -26,8 +26,8 @@ class SystemHardware:
         self._lgr = logging.getLogger(__name__)
         self.mocks_enabled = False
 
-        self.ni_dev1 = NIDAQAIDevice()
-        self.ni_dev2 = NIDAQAIDevice()
+        self.ni_dev1 = NIDAQAIDevice(name='Dev1')
+        self.ni_dev2 = NIDAQAIDevice(name='Dev2')
 
         self.syringes = []
 
@@ -50,9 +50,9 @@ class SystemHardware:
 
     def load_hardware_from_config(self):
         try:
-            self.ni_dev1.cfg = AINIDAQDeviceConfig(name='Dev1')
+            self.ni_dev1.cfg = AINIDAQDeviceConfig()
             self.ni_dev1.read_config()
-            self.ni_dev2.cfg = AINIDAQDeviceConfig(name='Dev2')
+            self.ni_dev2.cfg = AINIDAQDeviceConfig()
             self.ni_dev2.read_config()
         except pyAI.AIDeviceException as e:
             self._lgr.error(e)
@@ -202,9 +202,9 @@ class SystemHardware:
             elif name == 'CDI':
                 hw = self.cdi
         if hw is None:
-            hw = self.ni_dev1.ai_channels.get(name, None)
+            hw = self.ni_dev1.get_channel(name)
         if hw is None:
-            hw = self.ni_dev2.ai_channels.get(name, None)
+            hw = self.ni_dev2.get_channel(name)
         if hw is None:
             hw = next((syringe for syringe in self.syringes if syringe.name == name), None)
 
