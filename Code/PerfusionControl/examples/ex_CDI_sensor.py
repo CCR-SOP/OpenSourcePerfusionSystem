@@ -16,7 +16,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.Sensor import Sensor
 from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.pyCDI import CDIIndex, CDIData
+from pyHardware.pyCDI import CDIIndex, CDIData
 
 
 def main():

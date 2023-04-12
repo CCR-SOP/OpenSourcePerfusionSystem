@@ -11,9 +11,7 @@ and under the public domain.
 import logging
 from threading import Thread, Event
 
-from time import sleep
-
-from pyPerfusion.pyCDI import CDIData
+from pyHardware.pyCDI import CDIData
 from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 

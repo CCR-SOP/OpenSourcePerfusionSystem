@@ -14,7 +14,7 @@ import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import pyPerfusion.pyPump11Elite as pyPump11Elite
+import pyHardware.pyPump11Elite as pyPump11Elite
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
 

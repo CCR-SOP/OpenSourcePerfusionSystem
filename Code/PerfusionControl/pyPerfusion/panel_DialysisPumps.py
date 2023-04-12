@@ -15,7 +15,7 @@ import pyPerfusion.utils as utils
 from pyPerfusion.panel_DC import PanelDC
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
-from pyPerfusion.pyCDI import CDIData
+from pyHardware.pyCDI import CDIData
 
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, pump_names, cdi, **kwds):

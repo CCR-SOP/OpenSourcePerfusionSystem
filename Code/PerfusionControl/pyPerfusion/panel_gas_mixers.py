@@ -15,8 +15,6 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.Sensor import Sensor
-import pyPerfusion.pyCDI as pyCDI
-import pyHardware.pyGB100 as pyGB100
 from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
 from pyHardware.SystemHardware import SYS_HW
 
