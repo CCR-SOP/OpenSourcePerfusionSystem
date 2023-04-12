@@ -15,8 +15,6 @@ that no samples are dropped from the hardware due to slow processing. There is o
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-import time
-import logging
 import ctypes
 from dataclasses import dataclass
 
@@ -27,6 +25,7 @@ from PyDAQmx import Task
 import PyDAQmx.DAQmxConstants 
 
 import pyHardware.pyAI as pyAI
+import pyPerfusion.utils as utils
 
 
 @dataclass
@@ -39,9 +38,10 @@ class AINIDAQDeviceConfig(pyAI.AIDeviceConfig):
 
 
 class NIDAQAIDevice(pyAI.AIDevice):
-    def __init__(self):
-        super().__init__()
-        self._lgr = logging.getLogger(__name__)
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+
         self.__timeout = 1.0
         self._task = None
         self._exception_msg_ack = False
@@ -49,18 +49,11 @@ class NIDAQAIDevice(pyAI.AIDevice):
         self._acq_buf = None
         self._sample_mode = PyDAQmx.DAQmx_Val_ContSamps
 
-    # def read_config(self):
-    #     info = PerfusionConfig.read_section(self.cfg.name, 'General')
-    #     self.cfg = AINIDAQDeviceConfig(**info)
-    #     for ch_name, ch_cfg in self.cfg.ch_info.items():
-    #         self.add_channel(ch_cfg, ch_cfg.line)
-
-
     @property
     def devname(self):
         # recreate from scratch so base naming convention does not need
         # to be consistent with actual hardware naming convention
-        lines = [ch.cfg.line for ch in self.ai_channels.values()]
+        lines = [ch.cfg.line for ch in self.ai_channels]
         if len(lines) == 0:
             dev_str = f'{self.cfg.device_name}/ai'
         else:
@@ -75,7 +68,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
 
     def _acq_samples(self):
         samples_read = PyDAQmx.int32()
-        buffer_t = pyAI.get_epoch_ms() - self.get_acq_start_ms()
+        buffer_t = utils.get_epoch_ms() - self.get_acq_start_ms()
         try:
             if self._task and len(self.ai_channels) > 0:
                 self._task.ReadAnalogF64(self.samples_per_read, 1.05 * self.cfg.read_period_ms / 1000.0,
@@ -83,7 +76,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
                                          self._acq_buf, len(self._acq_buf), PyDAQmx.byref(samples_read), None)
 
                 offset = 0
-                for ch in self.ai_channels.values():
+                for ch in self.ai_channels:
                     buf = self._acq_buf[offset:offset + self.samples_per_read]
                     ch.put_data(buf, buffer_t)
                     offset += self.samples_per_read
@@ -95,9 +88,9 @@ class NIDAQAIDevice(pyAI.AIDevice):
         except PyDAQmx.DAQmxFunctions.CanNotPerformOpWhenNoChansInTaskError:
             self._lgr.error(f'Attempt to acquire data from {self.devname} before channels were added')
         except PyDAQmx.DAQmxFunctions.WaitUntilDoneDoesNotIndicateDoneError:
-            self._lgr.warning(f'For device {self.cfg.name}, read not completed before timeout in _acq_samples.')
+            self._lgr.warning(f'For device {self.name}, read not completed before timeout in _acq_samples.')
         except PyDAQmx.DAQmxFunctions.InvalidTaskError:
-            self._lgr.error(f'For device {self.cfg.name}, invalid task error in _acq_samples.')
+            self._lgr.error(f'For device {self.name}, invalid task error in _acq_samples.')
 
 
     def _is_valid_device_name(self, device):
@@ -194,9 +187,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
         if self._task:
             self._task.StopTask()
             try:
-                err = self._task.WaitUntilTaskDone(2.0)
+                self._task.WaitUntilTaskDone(2.0)
             except PyDAQmx.DAQmxFunctions.WaitUntilDoneDoesNotIndicateDoneError:
-                self._lgr.warning(f'For device {self.cfg.name}, read not completed before timeout.')
+                self._lgr.warning(f'For device {self.name}, read not completed before timeout.')
         super().stop()
-
-

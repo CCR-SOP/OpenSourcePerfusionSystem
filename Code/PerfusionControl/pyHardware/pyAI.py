@@ -58,7 +58,6 @@ class AIDevice:
     def __init__(self, name: str):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self._lgr = logging.getLogger(f'{__name__}.{self.name}')
 
         self.__thread = None
         self._event_halt = Event()
@@ -131,9 +130,16 @@ class AIDevice:
     def remove_channel(self, ch_name: str):
         if self.channel_exists(ch_name):
             self._lgr.info(f'Removing channel {ch_name} from device {self.name}')
-            self.ai_channels = [ch for ch in self.ai_channels if ch.name == ch_name]
+            self.ai_channels = [ch for ch in self.ai_channels if ch.name != ch_name]
         else:
             self._lgr.warning(f'Attempt to remove non-existent channel {ch_name} from device {self.name}')
+
+    def get_channel(self, ch_name: str):
+        channel = [ch for ch in self.ai_channels if ch.name == ch_name]
+        if len(channel) > 0:
+            return channel[0]
+        else:
+            return None
 
     def remove_all_channels(self):
         self.ai_channels = []
