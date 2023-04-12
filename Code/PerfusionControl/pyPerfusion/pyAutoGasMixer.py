@@ -111,7 +111,7 @@ class AutoGasMixerVenous(AutoGasMixer):
             o2_adjust = -self.o2_adjust
             self._lgr.warning(f'{self.name}: O2 high')
         new_percent = o2 + o2_adjust
-        if o2_adjust is not 0:
+        if o2_adjust != 0:
             self.gas_device.set_percent_value(self.o2_ch, new_percent)
 
 
@@ -158,6 +158,6 @@ class AutoGasMixerArterial(AutoGasMixer):
                 self._lgr.warning(f'{self.name}: CO2 high, blood acidotic')
 
         new_percent = co2 + co2_adjust
-        if co2_adjust is not 0:
+        if co2_adjust != 0:
             self.gas_device.set_percent_value(self.co2_ch, new_percent)
 
