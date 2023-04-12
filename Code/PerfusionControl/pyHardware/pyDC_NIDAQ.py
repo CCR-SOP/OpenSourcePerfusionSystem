@@ -36,8 +36,8 @@ class NIDAQDCDevice(pyDC.DCDevice):
             dev_str = 'None'
         return dev_str
 
-    def open(self, cfg: pyDC.DCChannelConfig):
-        super().open()
+    def open(self, cfg: pyDC.DCChannelConfig = None):
+        super().open(cfg)
         self._open_task()
 
     def _open_task(self):
@@ -51,11 +51,11 @@ class NIDAQDCDevice(pyDC.DCDevice):
             msg = f'Could not access device "{self.cfg.device}". Please ensure device is '\
                   f'plugged in and assigned the correct device name'
             self._lgr.error(msg)
-            raise(pyDC.AODeviceException(msg))
+            raise(pyDC.DCDeviceException(msg))
         except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
             msg = f'Channel "{self.cfg.line}" does not exist on device {self.cfg.device}'
             self._lgr.error(msg)
-            raise(pyDC.AODeviceException(msg))
+            raise(pyDC.DCDeviceException(msg))
         except PyDAQmx.DAQmxFunctions.InvalidDeviceIDError:
             if self.cfg:
                 name = self.cfg.device

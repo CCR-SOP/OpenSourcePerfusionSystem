@@ -60,8 +60,9 @@ class DCDevice:
     def get_acq_start_ms(self):
         return self.acq_start_ms
 
-    def open(self, cfg: DCChannelConfig):
-        self.cfg = cfg
+    def open(self, cfg: DCChannelConfig = None):
+        if cfg is not None:
+            self.cfg = cfg
         self._buffer = np.zeros(1, dtype=self.cfg.data_type)
 
     def is_open(self):
@@ -75,6 +76,7 @@ class DCDevice:
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
+        self.open()
 
     def start(self):
         self.acq_start_ms = utils.get_epoch_ms()

@@ -42,6 +42,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
 
+        self.cfg = AINIDAQDeviceConfig()
         self.__timeout = 1.0
         self._task = None
         self._exception_msg_ack = False
@@ -111,11 +112,14 @@ class NIDAQAIDevice(pyAI.AIDevice):
         try:
             if self.cfg.device_name and len(self.ai_channels) > 0:
                 if self._task:
+                    self._lgr.debug('clearing task')
                     self._task.ClearTask()
                     self._task = Task()
 
                 volt_min = self.cfg.offset_volts - 0.5 * self.cfg.pk2pk_volts
                 volt_max = self.cfg.offset_volts + 0.5 * self.cfg.pk2pk_volts
+                self._lgr.debug('creating task')
+
                 self._task.CreateAIVoltageChan(self.devname, None, PyDAQmx.DAQmxConstants.DAQmx_Val_RSE,
                                                volt_min, volt_max, PyDAQmx.DAQmxConstants.DAQmx_Val_Volts, None)
                 hz = 1.0 / (self.cfg.sampling_period_ms / 1000.0)
@@ -141,6 +145,8 @@ class NIDAQAIDevice(pyAI.AIDevice):
         except PyDAQmx.DAQmxFunctions.CanNotPerformOpWhenNoChansInTaskError:
             msg = f'No channels added for {self.devname}'
             self._lgr.error(msg)
+        except Exception as e:
+            msg = str(e)
         finally:
             if cleanup:
                 raise pyAI.AIDeviceException(msg)
@@ -176,11 +182,17 @@ class NIDAQAIDevice(pyAI.AIDevice):
         self._task = None
 
     def start(self):
+        self._lgr.debug("in start")
         if self._task:
+            self._lgr.debug("good task")
             self._acq_buf = np.zeros(self.samples_per_read * len(self.ai_channels),
                                      dtype='float64')
+            self._lgr.debug("updating task")
+
             self._update_task()
+            self._lgr.debug("starting task")
             self._task.StartTask()
+            self._lgr.debug("starting pyAI")
             super().start()
 
     def stop(self):
