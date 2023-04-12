@@ -27,18 +27,25 @@ MOCKS = {'NIDAQAIDevice': 'AIDevice',
 
 
 def get_object(name: str):
-    params = PerfusionConfig.read_section('hardware', name)
     try:
-        class_ = globals().get(params['class'], None)
+        params = PerfusionConfig.read_section('hardware', name)
     except KeyError:
-        class_ = None
+        print(f'Could not find {name} in hardware.ini')
+        return None
 
-    if class_ is not None:
-        obj = class_(name=name)
-    else:
-        print(f'Could not load {name}')
-        print(f'class {params["class"]} doesnt exist')
-        obj = None
+    try:
+        class_name = params['class']
+    except KeyError:
+        print(f'could not find key class in section {name}')
+        return None
+
+    try:
+        class_ = globals().get(class_name, None)
+    except KeyError:
+        print(f'Class {class_name} was not imported in SystemHardware')
+        return None
+
+    obj = class_(name=name)
     return obj
 
 

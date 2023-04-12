@@ -18,7 +18,8 @@ utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
 #utils.setup_file_logger(logging.getLogger(), logging.DEBUG, filename='ex_gb100')
 
 
-SYS_HW.load_all()
+SYS_HW.load('Arterial Gas Mixer')
+SYS_HW.load('Venous Gas Mixer')
 SYS_HW.start()
 
 ha_device = SYS_HW.get_hw('Arterial Gas Mixer')

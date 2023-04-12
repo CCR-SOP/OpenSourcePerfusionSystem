@@ -20,8 +20,8 @@ from pyPerfusion.pyCDI import CDIIndex, CDIData
 
 
 def main():
-    SYS_HW.load_all()
-    # SYS_HW.load_mocks()
+
+    SYS_HW.load('CDI')
     SYS_HW.start()
 
     sensor = Sensor(name='CDI')

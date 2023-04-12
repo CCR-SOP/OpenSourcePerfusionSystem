@@ -24,9 +24,9 @@ logger = logging.getLogger()
 PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
-SYS_HW.load_all()
-
 name = 'Dialysate Outflow'
+SYS_HW.load('Dialysate Outflow Pump')
+
 try:
     sensor = Sensor(name=name)
     sensor.read_config()
