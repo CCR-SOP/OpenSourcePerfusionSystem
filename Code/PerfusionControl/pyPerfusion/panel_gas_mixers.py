@@ -227,7 +227,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_percent_gas1.Refresh()
         self.btn_update.Enable(False)
 
-    def update_controls_from_hardware(self, evt):
+    def update_controls_from_hardware(self, evt=None):
         self.real_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
 
         self.percent_gas1.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(1)}')
