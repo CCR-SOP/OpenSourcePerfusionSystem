@@ -14,6 +14,7 @@ from dataclasses import dataclass
 import numpy as np
 
 import pyPerfusion.Strategy_ReadWrite as Strategy_ReadWrite
+import pyPerfusion.utils as utils
 
 
 @dataclass
@@ -27,10 +28,10 @@ class RunningSumConfig(Strategy_ReadWrite.WriterConfig):
 
 
 class RMS(Strategy_ReadWrite.WriterStream):
-    def __init__(self, cfg: WindowConfig):
-        self._lgr = logging.getLogger(__name__)
-        super().__init__(cfg)
-        self.cfg.algorithm = "RMS"
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = WindowConfig()
         self._sum = 0
         self._window_buffer = None
         self.data_dtype = np.dtype('float64')
@@ -60,9 +61,10 @@ class RMS(Strategy_ReadWrite.WriterStream):
 
 
 class MovingAverage(Strategy_ReadWrite.WriterStream):
-    def __init__(self, cfg: WindowConfig):
-        super().__init__(cfg)
-        self.cfg.algorithm = "MovingAverage"
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = WindowConfig()
         self._sum = 0
         self._window_buffer = None
         self.data_dtype = np.dtype(np.float64)
@@ -94,9 +96,10 @@ class MovingAverage(Strategy_ReadWrite.WriterStream):
 
 
 class RunningSum(Strategy_ReadWrite.WriterStream):
-    def __init__(self, cfg: WindowConfig):
-        super().__init__(cfg)
-        self.cfg.algorithm = "VolumeByFlow"
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = RunningSumConfig()
         self._window_buffer = None
         self.data_dtype = np.dtype(np.float64)
         self._calibration_buffer = None

@@ -28,13 +28,11 @@ if TYPE_CHECKING:
 
 @dataclass
 class WriterConfig:
-    name: str = ''
     algorithm: str = "WriterStream"
 
 
 @dataclass
 class WriterPointsConfig:
-    name: str = ''
     algorithm: str = "WriterPoints"
     bytes_per_timestamp: int = 4
     samples_per_timestamp: int = 1
@@ -42,7 +40,7 @@ class WriterPointsConfig:
 
 class Reader:
     def __init__(self, fqpn: pathlib.Path, cfg: WriterConfig, sensor: Sensor):
-        self.name = cfg.name
+        self.name = 'Reader'
         self._lgr = utils.get_object_logger(__name__, self.name)
         self._version = 1
         self.fqpn = fqpn
@@ -128,7 +126,7 @@ class Reader:
 
 class ReaderPoints(Reader):
     def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
-        self.name = cfg.name
+        self.name = "ReaderPoints"
         self._lgr = utils.get_object_logger(__name__, self.name)
         super().__init__(fqpn, cfg, sensor)
         self._version = 1
@@ -234,16 +232,16 @@ class ReaderPoints(Reader):
 
 
 class WriterStream:
-    def __init__(self, cfg: WriterConfig):
-        self.name = cfg.name
+    def __init__(self, name: str):
+        self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self.cfg = cfg
+        self.cfg = WriterConfig
         self._ext = '.dat'
         self._ext_hdr = '.txt'
         self._last_idx = 0
         self._fid = None
         self._base_path = pathlib.Path.cwd()
-        self._filename = pathlib.Path(f'{self.cfg.name}')
+        self._filename = pathlib.Path(f'{self.name}')
         self.cfg.version = 1
         self._acq_start_ms = 0
         self.sensor = None
@@ -273,7 +271,7 @@ class WriterStream:
             try:
                 data_buf.tofile(self._fid)
             except OSError as e:
-                self._lgr.error(f'{self.cfg.name}: {e}')
+                self._lgr.error(f'{self.name}: {e}')
             self._fid.flush()
             self._last_idx += len(data_buf)
 
@@ -299,7 +297,7 @@ class WriterStream:
 
     def open(self, sensor: Sensor = None):
         self._base_path = PerfusionConfig.get_date_folder()
-        self._filename = pathlib.Path(f'{sensor.cfg.name}_{self.cfg.name}')
+        self._filename = pathlib.Path(f'{sensor.name}_{self.name}')
         self.sensor = sensor
         self.data_dtype = sensor.hw.data_dtype
 
@@ -329,8 +327,8 @@ class WriterStream:
 
 
 class WriterPoints(WriterStream):
-    def __init__(self, cfg: WriterPointsConfig):
-        super().__init__(cfg)
+    def __init__(self, name: str):
+        super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
 
     @classmethod

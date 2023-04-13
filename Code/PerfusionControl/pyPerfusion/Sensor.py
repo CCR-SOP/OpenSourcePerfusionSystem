@@ -21,10 +21,11 @@ from typing import Protocol, TypeVar, List
 import numpy as np
 import numpy.typing as npt
 
-import pyPerfusion.Strategies as Strategies
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
 import pyPerfusion.utils as utils
+from pyPerfusion.Strategy_Processing import RMS, MovingAverage, RunningSum
+from pyPerfusion.Strategy_ReadWrite import WriterStream, WriterPoints
 
 
 class HWProtocol(Protocol):
@@ -42,7 +43,6 @@ class HWProtocol(Protocol):
 
 @dataclass
 class SensorConfig:
-    name: str = ''
     hw_name: str = ''
     strategy_names: str = ''
     units: str = ''
@@ -66,33 +66,30 @@ class DivisionSensorConfig(SensorConfig):
 
 class Sensor:
     def __init__(self, name: str):
-        self._lgr = logging.getLogger(__name__)
+        self.name = name
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self._lgr.info(f'Creating Sensor object {name}')
         self.__thread = None
         self._evt_halt = Event()
         self._timeout = 0.5
         self.hw = None
 
-        self.cfg = SensorConfig(name=name)
+        self.cfg = SensorConfig()
 
         self._strategies = []
 
-    @property
-    def name(self):
-        return self.cfg.name
-
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('sensors', self.cfg.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('sensors', self.name, self.cfg)
 
     def read_config(self):
-        self._lgr.debug(f'Reading config for {self.cfg.name}')
-        PerfusionConfig.read_into_dataclass('sensors', self.cfg.name, self.cfg)
+        self._lgr.debug(f'Reading config for {self.name}')
+        PerfusionConfig.read_into_dataclass('sensors', self.name, self.cfg)
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
         self.cfg.valid_range = [int(x) for x in ''.join(self.cfg.valid_range).split(',')]
 
         # attach hardware
-        self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.cfg.name}')
+        self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.name}')
         self.hw = SYS_HW.get_hw(self.cfg.hw_name)
 
         # load strategies
@@ -100,18 +97,19 @@ class Sensor:
         for name in self.cfg.strategy_names.split(', '):
             self._lgr.debug(f'Getting strategy {name}')
             params = PerfusionConfig.read_section('strategies', name)
-            self._lgr.debug(f'Attempting to get algorithm {params["algorithm"]}')
             try:
-                strategy_class = Strategies.get_class(params['algorithm'])
+                self._lgr.debug(f'Looking for {params["class"]}')
+                strategy_class = globals().get(params['class'], None)
                 self._lgr.debug(f'Found {strategy_class}')
                 cfg = strategy_class.get_config_type()()
                 self._lgr.debug(f'Config type is {cfg}')
                 PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-                cfg.name = name
                 self._lgr.debug('adding strategy')
-                self.add_strategy(strategy_class(cfg))
+                strategy = strategy_class(name)
+                strategy.cfg = cfg
+                self.add_strategy(strategy)
             except AttributeError as e:
-                self._lgr.error(f'Could not create algorithm {params["algorithm"]} for sensor {self.cfg.name}')
+                self._lgr.error(f'Could not create algorithm {params["algorithm"]} for sensor {self.name}')
                 self._lgr.exception(e)
 
     def add_strategy(self, strategy):
@@ -130,7 +128,7 @@ class Sensor:
         if name is None:
             writer = self._strategies[-1]
         else:
-            writer = [strategy for strategy in self._strategies if strategy.cfg.name == name]
+            writer = [strategy for strategy in self._strategies if strategy.name == name]
             if len(writer) > 0:
                 writer = writer[0]
             else:
@@ -161,9 +159,9 @@ class Sensor:
             self.stop()
         self._evt_halt.clear()
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'Sensor ({self.cfg.name})'
+        self.__thread.name = f'Sensor ({self.name})'
         self.__thread.start()
-        self._lgr.debug(f'{self.cfg.name} sensor started')
+        self._lgr.debug(f'{self.name} sensor started')
 
     def stop(self):
         self._evt_halt.set()
@@ -176,7 +174,7 @@ class CalculatedSensor(Sensor):
     def __init__(self, name):
         self._lgr = logging.getLogger(__name__)
         super().__init__(name)
-        self.cfg = CalculatedSensorConfig(name=name)
+        self.cfg = CalculatedSensorConfig()
         self.reader = None
 
     def run(self):
@@ -194,7 +192,7 @@ class DivisionSensor(Sensor):
     def __init__(self, name):
         self._lgr = logging.getLogger(__name__)
         super().__init__(name)
-        self.cfg = DivisionSensorConfig(name=name)
+        self.cfg = DivisionSensorConfig()
         self.reader = None
         self.reader_dividend = None
         self.reader_divisor = None

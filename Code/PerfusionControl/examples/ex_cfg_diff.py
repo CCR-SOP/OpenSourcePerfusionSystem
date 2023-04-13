@@ -21,6 +21,9 @@ from pyHardware.pyPump11Elite import Pump11Elite, MockPump11Elite
 from pyHardware.pyGB100 import GasDevice, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 from pyHardware.pyDC import DCDevice
+from pyPerfusion.Sensor import Sensor
+from pyPerfusion.Strategy_Processing import RMS, MovingAverage, RunningSum
+from pyPerfusion.Strategy_ReadWrite import WriterStream, WriterPoints
 
 
 def print_diff(local_data, git_data, hdr_msg):
@@ -66,35 +69,43 @@ def print_dataclass_diff(section_keys, dataclass, hdr_msg):
         print('====')
 
 
-PerfusionConfig.set_test_config()
-git_fm = FolderManagement(project_name='PerfusionControl', base_path=Path('../'), default_structure=False)
-git_fm.add_folder('config')
+def compare_file(file, git_fm):
+    print(f'Comparing {file}.ini')
+    # check section names in hardware.ini
+    hw_local = PerfusionConfig.get_section_names(file)
+    hw_git = PerfusionConfig.get_section_names(file, git_fm)
+
+    print_diff(hw_local, hw_git, 'Comparing section names:')
+
+    for section in hw_local:
+        if section in hw_git:
+            pairs_local = PerfusionConfig.read_section(file, section)
+            pairs_git = PerfusionConfig.read_section(file, section, git_fm)
+            local_opt = []
+            for key, value in pairs_local.items():
+                local_opt.append(f'{key} = {value}')
+            git_opt = []
+            for key, value in pairs_git.items():
+                git_opt.append(f'{key} = {value}')
+            print_diff(local_opt, git_opt, f'Comparing section {section} keys')
+
+            class_name = pairs_local['class']
+            print_dataclass_diff(pairs_local.keys(), class_name,
+                                 f'Comparing local {section} keys to {class_name} config')
+            print_dataclass_diff(pairs_git.keys(), class_name,
+                                 f'Comparing git {section} keys to {class_name} config')
 
 
-print('Comparing hardware.ini')
-# check section names in hardware.ini
-hw_local = PerfusionConfig.get_section_names('hardware')
-hw_git = PerfusionConfig.get_section_names('hardware', git_fm)
+def main():
+    PerfusionConfig.set_test_config()
+    git_fm = FolderManagement(project_name='PerfusionControl', base_path=Path('../'), default_structure=False)
+    git_fm.add_folder('config')
+    compare_file('hardware', git_fm)
+    compare_file('sensors', git_fm)
+    compare_file('strategies', git_fm)
 
-print_diff(hw_local, hw_git, 'Comparing section names:')
 
-for section in hw_local:
-    if section in hw_git:
-        pairs_local = PerfusionConfig.read_section('hardware', section)
-        pairs_git = PerfusionConfig.read_section('hardware', section, git_fm)
-        local_opt = []
-        for key, value in pairs_local.items():
-            local_opt.append(f'{key} = {value}')
-        git_opt = []
-        for key, value in pairs_git.items():
-            git_opt.append(f'{key} = {value}')
-        print_diff(local_opt, git_opt, f'Comparing section {section} keys')
-
-        class_name = pairs_local['class']
-        print_dataclass_diff(pairs_local.keys(), class_name,
-                             f'Comparing local {section} keys to {class_name} config')
-        print_dataclass_diff(pairs_git.keys(), class_name,
-                             f'Comparing git {section} keys to {class_name} config')
-
+if __name__ == "__main__":
+    main()
 
 
