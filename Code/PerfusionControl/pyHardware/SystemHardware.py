@@ -12,6 +12,11 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyHardware.pyAI import AIDevice, AIChannel, AIDeviceException
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice
+from pyHardware.pyCDI import CDI, MockCDI
+from pyHardware.pyPump11Elite import Pump11Elite, MockPump11Elite
+from pyHardware.pyGB100 import GasDevice, MockGasDevice
+from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
+from pyHardware.pyDC import DCDevice
 
 MOCKS = {'NIDAQAIDevice': 'AIDevice',
          'CDI': 'MockCDI',
