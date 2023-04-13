@@ -10,6 +10,8 @@ import logging
 from dataclasses import asdict
 from threading import Event
 from configparser import ConfigParser
+from pathlib import Path
+import difflib
 
 from pyPerfusion.folder_management import FolderManagement
 
@@ -46,37 +48,26 @@ def set_study_config():
     ACTIVE_CONFIG = StudyConfig
 
 
-def get_date_folder():
-    global ACTIVE_CONFIG
-    return ACTIVE_CONFIG.get_folder('date')
+def get_date_folder(fm: FolderManagement = None):
+    fm = fm or ACTIVE_CONFIG
+    return fm.get_folder('date')
 
 
-def get_cfg_filename(name: str):
-    global ACTIVE_CONFIG
-    return ACTIVE_CONFIG.get_folder('config') / f'{name}.ini'
+def get_cfg_filename(name: str, fm: FolderManagement = None):
+    fm = fm or ACTIVE_CONFIG
+    return fm.get_folder('config') / f'{name}.ini'
 
 
-def hw_cfg_name():
-    global ACTIVE_CONFIG
-    return ACTIVE_CONFIG.get_folder('config') / 'hardware.ini'
+def hw_cfg_name(fm: FolderManagement = None):
+    fm = fm or ACTIVE_CONFIG
+    return fm.get_folder('config') / 'hardware.ini'
 
 
-def receiver_cfg_name():
-    global ACTIVE_CONFIG
-    return ACTIVE_CONFIG.get_folder('config') / 'receiver.ini'
-
-
-def syringe_cfg_name():
-    global ACTIVE_CONFIG
-    return ACTIVE_CONFIG.get_folder('config') / 'syringe.ini'
-
-
-""" In order to properly parse """
-def read_into_dataclass(cfg_name: str, section_name: str, cfg):
-    global ACTIVE_CONFIG
+def read_into_dataclass(cfg_name: str, section_name: str, cfg, fm: FolderManagement = None):
+    fm = fm or ACTIVE_CONFIG
     parser = ConfigParser()
     parser.optionxform = str
-    filename = get_cfg_filename(cfg_name)
+    filename = get_cfg_filename(cfg_name, fm)
     if filename:
         parser.read(filename)
     else:
@@ -101,11 +92,11 @@ def read_into_dataclass(cfg_name: str, section_name: str, cfg):
         raise MissingConfigSection(f'{section_name} in {filename}')
 
 
-def write_from_dataclass(cfg_name: str, section_name: str, cfg):
-    global ACTIVE_CONFIG
+def write_from_dataclass(cfg_name: str, section_name: str, cfg, fm: FolderManagement = None):
+    fm = fm or ACTIVE_CONFIG
     parser = ConfigParser()
     parser.optionxform = str
-    filename = get_cfg_filename(cfg_name)
+    filename = get_cfg_filename(cfg_name, fm)
     if filename:
         parser.read(filename)
     if not parser.has_section(section_name):
@@ -115,11 +106,11 @@ def write_from_dataclass(cfg_name: str, section_name: str, cfg):
         parser.write(file)
 
 
-def write_section(cfg_name: str, section_name: str, info: dict):
-    global ACTIVE_CONFIG
+def write_section(cfg_name: str, section_name: str, info: dict, fm: FolderManagement = None):
+    fm = fm or ACTIVE_CONFIG
     parser = ConfigParser()
     parser.optionxform = str
-    filename = get_cfg_filename(cfg_name)
+    filename = get_cfg_filename(cfg_name, fm)
     if filename:
         parser.read(filename)
     if not parser.has_section(section_name):
@@ -129,11 +120,11 @@ def write_section(cfg_name: str, section_name: str, info: dict):
         parser.write(file)
 
 
-def read_section(cfg_name: str, section_name: str) -> dict:
-    global ACTIVE_CONFIG
+def read_section(cfg_name: str, section_name: str, fm: FolderManagement = None) -> dict:
+    fm = fm or ACTIVE_CONFIG
     parser = ConfigParser()
     parser.optionxform = str
-    filename = get_cfg_filename(cfg_name)
+    filename = get_cfg_filename(cfg_name, fm)
     if filename:
         parser.read(filename)
     section = {}
@@ -142,70 +133,13 @@ def read_section(cfg_name: str, section_name: str) -> dict:
     return section
 
 
-def get_section_names(cfg_name: str):
-    global ACTIVE_CONFIG
+def get_section_names(cfg_name: str, fm: FolderManagement = None):
+    fm = fm or ACTIVE_CONFIG
     parser = ConfigParser()
     parser.optionxform = str
-    filename = get_cfg_filename(cfg_name)
+    filename = get_cfg_filename(cfg_name, fm)
     sections = {}
     if filename:
         parser.read(filename)
         sections = parser.sections()
     return sections
-
-def open_receiver_info():
-    config = ConfigParser()
-    config.read(receiver_cfg_name())
-    receiver_info = {}
-    for key, val in config['Dexcom Receivers'].items():
-        receiver_info[key] = val
-    return receiver_info
-
-
-def save_syringe_info(codes, volumes):
-    config = ConfigParser()
-    config.read(syringe_cfg_name())
-    if not config.has_section('Codes'):
-        config.add_section('Codes')
-    config['Codes'] = codes
-
-    if not config.has_section('Volumes'):
-        config.add_section('Volumes')
-    # Changed the way syringe volumes are stored in the config file:
-    volume = {}
-    for key, val in volumes.items():
-        volume[key] = str(val)[1:-1].replace("'", '')
-    config['Volumes'] = volume
-
-    with open(syringe_cfg_name(), 'w') as file:
-        config.write(file)
-
-
-def open_syringe_info(self):
-    config = ConfigParser()
-    config.read(syringe_cfg_name())
-    volumes = {}
-    for key, val in config['Volumes'].items():
-        volumes[key] = val.split(', ')
-    return config['Codes'], volumes
-
-
-def get_COMs_bauds():
-    config = ConfigParser()
-    config.read(syringe_cfg_name())
-    COMs_bauds = {}
-    for key, val in config['Syringes'].items():
-        COMs_bauds[key] = val.split(', ')
-    return COMs_bauds
-
-
-def setup_file_logger(lgr, level, filename=None):
-    global ACTIVE_CONFIG
-    if not filename:
-        filename = lgr.device_name
-    lgr.setLevel(level)
-    ch = logging.FileHandler(ACTIVE_CONFIG.get_folder('logs') / f'{filename}.log')
-    ch.setLevel(level)
-    formatter = logging.Formatter('%(asctime) s: %(name) s - %(levelname) s - %(message) s')
-    ch.setFormatter(formatter)
-    lgr.addHandler(ch)
