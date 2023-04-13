@@ -70,10 +70,10 @@ class Reader:
             data = None
         return fid, data
 
-    def get_file_size(self, fid):
+    def get_file_size_in_bytes(self, fid):
         cur_pos = fid.tell()
         fid.seek(0, SEEK_END)
-        file_size = int(fid.tell() / self.data_dtype.itemsize)
+        file_size = int(fid.tell())
         fid.seek(cur_pos, SEEK_SET)
         return file_size
 
@@ -86,7 +86,7 @@ class Reader:
         if data is None:
             return [], []
 
-        file_size_in_samples = int(self.get_file_size(fid) / self.data_dtype.itemsize)
+        file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
         if last_ms == 0:
             # if last x samples requested, no timestamps are returned
             data = data[-samples_needed:]
@@ -115,7 +115,7 @@ class Reader:
     def get_data_from_last_read(self, samples: int):
         period = self.sensor.hw.sampling_period_ms
         fid, data = self._open_mmap()
-        if self._read_last_idx + samples > self.get_file_size(fid):
+        if self._read_last_idx + samples > self.get_file_size_in_bytes(fid):
             return None, None
         data = data[self._read_last_idx:self._read_last_idx + samples]
         end_idx = self._read_last_idx + len(data) - 1
@@ -190,7 +190,7 @@ class ReaderPoints(Reader):
 
     def get_data_from_last_read(self, chunks_needed: int, index: int = None):
         fid = self._open_read()
-        file_size = self.get_file_size(fid)
+        file_size = self.get_file_size_in_bytes(fid)
 
         if not fid or file_size == 0:
             return None, None
@@ -216,7 +216,7 @@ class ReaderPoints(Reader):
 
     def get_last_acq(self, index: int = None):
         fid = self._open_read()
-        file_size = self.get_file_size(fid)
+        file_size = self.get_file_size_in_bytes(fid)
         if not fid or file_size == 0:
             return None, None
 
@@ -291,7 +291,6 @@ class WriterStream:
         fid = open(self.fqpn.with_suffix('').with_suffix('.txt'), 'wt')
         fid.write(hdr_str)
         if self.sensor.hw is not None:
-            self._lgr.debug(f'acq_start is {self.sensor.hw.get_acq_start_ms()}')
             timestamp = datetime.utcfromtimestamp(self.sensor.hw.get_acq_start_ms() / 1_000)
             fid.write(f'Start of Acquisition: {timestamp}')
         else:
