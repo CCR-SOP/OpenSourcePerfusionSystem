@@ -185,10 +185,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.input_percent_gas1.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(1)}')
 
     def OnAuto(self, evt):
-        if self.chk_auto.IsChecked():
-            self.autogasmixer.start()
-        else:
-            self.autogasmixer.stop()
+        if not self.chk_auto.IsChecked():
             self._update_manual_entries()
         self.input_percent_gas1.Enable(not self.chk_auto.IsChecked())
         self.input_total_flow.Enable(not self.chk_auto.IsChecked())
