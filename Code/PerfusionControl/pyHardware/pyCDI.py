@@ -124,10 +124,10 @@ class CDI:
                 # get code and convert string hex value to an actual integer
                 code = int(field[0:2].upper(), 16)
                 try:
-                    value = self.data_dtype(field[4:])
+                    value = self.data_dtype.type(field[4:])
                 except ValueError:
                     # self._lgr.error(f'Field {code} (value={field[4:]}) is out-of-range')
-                    value = self.data_dtype(-1)
+                    value = self.data_dtype.type(-1)
                 data[code] = value
         else:
             # this may be a result of an incomplete serial response.
