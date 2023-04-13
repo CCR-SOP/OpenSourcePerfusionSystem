@@ -109,13 +109,11 @@ class NIDAQAIDevice(pyAI.AIDevice):
         try:
             if self.cfg.device_name and len(self.ai_channels) > 0:
                 if self._task:
-                    self._lgr.debug('clearing task')
                     self._task.ClearTask()
                     self._task = Task()
 
                 volt_min = self.cfg.offset_volts - 0.5 * self.cfg.pk2pk_volts
                 volt_max = self.cfg.offset_volts + 0.5 * self.cfg.pk2pk_volts
-                self._lgr.debug('creating task')
 
                 self._task.CreateAIVoltageChan(self.devname, None, PyDAQmx.DAQmxConstants.DAQmx_Val_RSE,
                                                volt_min, volt_max, PyDAQmx.DAQmxConstants.DAQmx_Val_Volts, None)
@@ -181,17 +179,12 @@ class NIDAQAIDevice(pyAI.AIDevice):
         self._task = None
 
     def start(self):
-        self._lgr.debug("in start")
         if self._task:
-            self._lgr.debug("good task")
             self._acq_buf = np.zeros(self.samples_per_read * len(self.ai_channels),
                                      dtype=self.buf_dtype)
-            self._lgr.debug("updating task")
 
             self._update_task()
-            self._lgr.debug("starting task")
             self._task.StartTask()
-            self._lgr.debug("starting pyAI")
             super().start()
 
     def stop(self):
