@@ -200,8 +200,8 @@ class PanelSyringeControls(wx.Panel):
         self.btn_bolus = wx.Button(self, label='Bolus')
         self.btn_bolus.SetFont(font)
 
-        # self.btn_save_cfg = wx.Button(self, label='Save')
-        # self.btn_load_cfg = wx.Button(self, label='Load')
+        self.timer_gui_update = wx.Timer(self)
+        self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
 
         self.__do_layout()
         self.__set_bindings()
@@ -233,9 +233,8 @@ class PanelSyringeControls(wx.Panel):
     def __set_bindings(self):
         self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
         self.btn_bolus.Bind(wx.EVT_BUTTON, self.OnBolus)
-        # self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
-        # self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
-
+        self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnBasal(self, evt):
         infusion_rate = self.spin_rate.GetValue()
@@ -261,7 +260,10 @@ class PanelSyringeControls(wx.Panel):
         self.syringe.set_infusion_rate(infusion_rate)
         self.syringe.set_target_volume(target_vol)
         self.syringe.infuse_to_target_volume()
-            
+
+    def update_controls_from_hardware(self, evt = None):
+        self.btn_bolus.Enable(not self.syringe.is_infusing)
+
     def update_config_from_controls(self):
         self.syringe.cfg.initial_injection_rate = int(self.spin_rate.GetValue())
         self.syringe.cfg.initial_target_volume = int(self.spin_volume.GetValue())
@@ -278,6 +280,10 @@ class PanelSyringeControls(wx.Panel):
     def on_load_cfg(self, evt):
         self.syringe.read_config()
         self.update_controls_from_config()
+
+    def OnClose(self, evt):
+        self.timer_gui_update.Stop()
+        self.syringe.stop()
 
 
 class TestFrame(wx.Frame):
