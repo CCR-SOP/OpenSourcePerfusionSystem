@@ -17,7 +17,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logger, logging.DEBUG)
 

@@ -19,7 +19,6 @@ import ctypes
 from dataclasses import dataclass
 
 import numpy as np
-import numpy.typing as npt
 import PyDAQmx
 from PyDAQmx import Task
 import PyDAQmx.DAQmxConstants 
@@ -34,7 +33,7 @@ class AINIDAQDeviceConfig(pyAI.AIDeviceConfig):
     offset_volts: float = 2.5
     # override the default buffer type to match how
     # NIDAQ devices return data
-    buf_type: npt.DTypeLike = np.dtype(np.float64).name
+    buf_type: str = 'float64'
 
 
 class NIDAQAIDevice(pyAI.AIDevice):
@@ -166,7 +165,9 @@ class NIDAQAIDevice(pyAI.AIDevice):
             dev: the name of a valid NI device
         """
         self._task = Task()
-        cfg.buf_type = np.float64
+
+        # ensure the buffer type is float64 for NIDAQ devices
+        cfg.buf_type = 'float64'
         super().open(cfg=cfg)
         if not self._is_valid_device_name(cfg.device_name):
             msg = f'Device "{cfg.device_name}" is not a valid device name on this system. ' \
@@ -186,7 +187,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
         if self._task:
             self._lgr.debug("good task")
             self._acq_buf = np.zeros(self.samples_per_read * len(self.ai_channels),
-                                     dtype='float64')
+                                     dtype=self.np_buf_type)
             self._lgr.debug("updating task")
 
             self._update_task()
