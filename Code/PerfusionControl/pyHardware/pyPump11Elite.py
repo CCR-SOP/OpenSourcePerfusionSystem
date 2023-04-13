@@ -75,8 +75,6 @@ class Pump11EliteConfig:
     manufacturer_code: str = ''
     size: str = ''
     initial_injection_rate: float = 0.0
-    initial_rate_unit: str = 'uL/min'
-    initial_vol_unit: str = 'uL'
     initial_target_volume: float = 0.0
     baud: int = 9600
     address: int = 0
