@@ -164,7 +164,7 @@ class GasDevice:
             try:
                 gas_type = GasNames(gas_id).name
             except IndexError:
-                self._lgr.error(f'Channel {channel_num} at addr {addr} ahd invalid gas id {gas_id}')
+                self._lgr.error(f'Channel {channel_num} at addr {addr} has invalid gas id {gas_id}')
         return gas_type
 
     def get_total_channels(self):
@@ -306,7 +306,7 @@ class GasDevice:
 
     def push_data(self):
         if self._queue:
-            buf = self.data_dtype([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
+            buf = self.data_dtype.type([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
             self._queue.put((buf, utils.get_epoch_ms()))
 
     def get_data(self):

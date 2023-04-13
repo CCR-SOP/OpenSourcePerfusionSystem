@@ -27,8 +27,10 @@ class GasMixerPanel(wx.Panel):
         self.cdi_reader = cdi_reader
         self.ha_autogasmixer = ha_gasmixer
         self.pv_autogasmixer = pv_gasmixer
-        self.panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', autogasmixer=ha_gasmixer, cdi_reader=self.cdi_reader)
-        self.panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', autogasmixer=pv_gasmixer, cdi_reader=self.cdi_reader)
+        self.panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', autogasmixer=ha_gasmixer,
+                                          cdi_reader=self.cdi_reader)
+        self.panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', autogasmixer=pv_gasmixer,
+                                          cdi_reader=self.cdi_reader)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -288,8 +290,10 @@ if __name__ == "__main__":
     cdi_sensor.read_config()
     cdi_sensor.start()
 
-    ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=ha_mixer, cdi_reader=cdi_sensor.get_reader())
-    pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer', gas_device=pv_mixer, cdi_reader=cdi_sensor.get_reader())
+    ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=ha_mixer,
+                                           cdi_reader=cdi_sensor.get_reader())
+    pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer', gas_device=pv_mixer,
+                                         cdi_reader=cdi_sensor.get_reader())
 
     app = MyTestApp(0)
     app.MainLoop()

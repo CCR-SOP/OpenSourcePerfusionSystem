@@ -141,7 +141,8 @@ class NIDAQAIDevice(pyAI.AIDevice):
             msg = f'No channels added for {self.devname}'
             self._lgr.error(msg)
         except Exception as e:
-            msg = str(e)
+            msg = f'Generic exception for {self.devname}'
+            self._lgr.exception(e)
         finally:
             if cleanup:
                 raise pyAI.AIDeviceException(msg)
