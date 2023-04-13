@@ -42,6 +42,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
         self.cfg = AINIDAQDeviceConfig()
+        self.np_buf_type = np.float64
         self.__timeout = 1.0
         self._task = None
         self._exception_msg_ack = False

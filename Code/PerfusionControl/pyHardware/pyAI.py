@@ -49,7 +49,6 @@ class AIDeviceConfig:
     sampling_period_ms: int = 0
     read_period_ms: int = 0
     data_type: str = 'float64'
-    buf_type: str = 'uint16'
 
 
 class AIDevice:
@@ -61,6 +60,7 @@ class AIDevice:
         self._event_halt = Event()
 
         self.cfg = AIDeviceConfig()
+        self.np_buf_type = np.uint16
         self.ai_channels = []
 
         self.acq_start_ms = 0
@@ -107,10 +107,6 @@ class AIDevice:
     @property
     def np_data_type(self):
         return np.dtype(self.cfg.data_type)
-
-    @property
-    def np_buf_type(self):
-        return np.dtype(self.cfg.buf_type)
 
     def is_open(self):
         channels_valid = len(self.ai_channels) > 0
