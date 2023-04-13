@@ -45,6 +45,7 @@ sensor.hw.set_output(1.0)
 print('Setting output to 1V, sleeping 2 seconds')
 sleep(2)
 
+print('Retrieving actions from file')
 ts, last_samples = reader.retrieve_buffer(5000, 5)
 for ts, samples in zip(ts, last_samples):
     print(f'At time {ts}: output was set to {samples}')

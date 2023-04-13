@@ -30,21 +30,20 @@ if TYPE_CHECKING:
 class WriterConfig:
     name: str = ''
     algorithm: str = "WriterStream"
-    data_type = np.float64
 
 
 @dataclass
 class WriterPointsConfig:
     name: str = ''
     algorithm: str = "WriterPoints"
-    data_type = np.float64
     bytes_per_timestamp: int = 4
     samples_per_timestamp: int = 1
 
 
 class Reader:
     def __init__(self, fqpn: pathlib.Path, cfg: WriterConfig, sensor: Sensor):
-        self._lgr = logging.getLogger(__name__)
+        self.name = cfg.name
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self._version = 1
         self.fqpn = fqpn
         self.cfg = cfg
@@ -53,17 +52,17 @@ class Reader:
         self._read_last_idx = 0
 
     @property
-    def name(self):
-        return self.cfg.name
+    def data_dtype(self):
+        return self.sensor.hw.data_dtype
 
-    def _open_read(self, data_type):
+    def _open_read(self):
         fid = open(self.fqpn, 'rb')
         return fid
 
-    def _open_mmap(self, data_type):
-        fid = self._open_read(data_type)
+    def _open_mmap(self):
+        fid = self._open_read()
         try:
-            data = np.memmap(fid, dtype=data_type, mode='r')
+            data = np.memmap(fid, dtype=self.data_dtype, mode='r')
         except ValueError as e:
             # cannot mmap an empty file
             # this can happen if attempting to read a file before the first data was written
@@ -74,15 +73,7 @@ class Reader:
     def get_file_size(self, fid):
         cur_pos = fid.tell()
         fid.seek(0, SEEK_END)
-        file_size = int(fid.tell() / np.dtype(self.cfg.data_type).itemsize)
-        fid.seek(cur_pos, SEEK_SET)
-        return file_size
-
-
-    def get_file_size(self, fid):
-        cur_pos = fid.tell()
-        fid.seek(0, SEEK_END)
-        file_size = int(fid.tell())
+        file_size = int(fid.tell() / self.data_dtype.itemsize)
         fid.seek(cur_pos, SEEK_SET)
         return file_size
 
@@ -90,12 +81,12 @@ class Reader:
         if self.sensor.hw is None:
             return [], []
         period = self.sensor.hw.sampling_period_ms
-        fid, data = self._open_mmap(self.cfg.data_type)
+        fid, data = self._open_mmap()
 
         if data is None:
             return [], []
 
-        file_size_in_samples = int(self.get_file_size(fid) / np.dtype(self.cfg.data_type).itemsize)
+        file_size_in_samples = int(self.get_file_size(fid) / self.data_dtype.itemsize)
         if last_ms == 0:
             # if last x samples requested, no timestamps are returned
             data = data[-samples_needed:]
@@ -111,25 +102,25 @@ class Reader:
             else:
                 start_idx = 0
             samples_needed = min(file_size_in_samples, samples_needed)
-            idx = np.linspace(start_idx, file_size_in_samples - 1, samples_needed, dtype=np.int32)
+            idx = np.linspace(start_idx, file_size_in_samples - 1, samples_needed, dtype=np.uint64)
             data = data[idx]
 
         start_t = start_idx * period / 1000.0
         stop_t = file_size_in_samples * period / 1000.0
-        data_time = np.linspace(start_t, stop_t, samples_needed, dtype=self.cfg.data_type)
+        data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.uint64)
 
         fid.close()
         return data_time, data
 
     def get_data_from_last_read(self, samples: int):
         period = self.sensor.hw.sampling_period_ms
-        fid, data = self._open_mmap(self.cfg.data_type)
+        fid, data = self._open_mmap()
         if self._read_last_idx + samples > self.get_file_size(fid):
             return None, None
         data = data[self._read_last_idx:self._read_last_idx + samples]
         end_idx = self._read_last_idx + len(data) - 1
         data_time = np.linspace(self._read_last_idx * period, end_idx * period,
-                                samples, dtype=self.cfg.data_type)
+                                samples, dtype=np.uint64)
         self._read_last_idx = end_idx
         fid.close()
         return data_time, data
@@ -137,7 +128,8 @@ class Reader:
 
 class ReaderPoints(Reader):
     def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
-        self._lgr = logging.getLogger(__name__)
+        self.name = cfg.name
+        self._lgr = utils.get_object_logger(__name__, self.name)
         super().__init__(fqpn, cfg, sensor)
         self._version = 1
         self.fqpn = fqpn
@@ -147,7 +139,7 @@ class ReaderPoints(Reader):
     @property
     def bytes_per_chunk(self):
         bytes_per_chunk = self.cfg.bytes_per_timestamp + (
-                self.cfg.samples_per_timestamp * self.cfg.data_type(1).itemsize)
+                self.cfg.samples_per_timestamp * self.data_dtype.itemsize)
         return bytes_per_chunk
 
     def read_chunk(self, fid):
@@ -157,7 +149,7 @@ class ReaderPoints(Reader):
         # self._lgr.debug(f'chunk={chunk}')
         if chunk:
             ts, = struct.unpack('!Q', chunk)
-            data_chunk = np.fromfile(fid, dtype=self.cfg.data_type, count=self.cfg.samples_per_timestamp)
+            data_chunk = np.fromfile(fid, dtype=self.data_dtype, count=self.cfg.samples_per_timestamp)
         else:
             ts = None
             data_chunk = None
@@ -172,11 +164,11 @@ class ReaderPoints(Reader):
         cur_time = utils.get_epoch_ms()
         while True:
             chunk = fid.read(self.cfg.bytes_per_timestamp)
-            if chunk:
+            if chunk and (len(chunk) == self.cfg.bytes_per_timestamp):
                 ts, = struct.unpack('!Q', chunk)
                 diff_t = cur_time - ts
                 if diff_t <= last_ms:
-                    data_chunk = np.fromfile(fid, dtype=self.cfg.data_type,
+                    data_chunk = np.fromfile(fid, dtype=self.data_dtype,
                                              count=self.cfg.samples_per_timestamp)
                     if index is None:
                         data.append(data_chunk)
@@ -197,7 +189,7 @@ class ReaderPoints(Reader):
         return data_time, data
 
     def get_data_from_last_read(self, chunks_needed: int, index: int = None):
-        fid = self._open_read(self.cfg.data_type)
+        fid = self._open_read()
         file_size = self.get_file_size(fid)
 
         if not fid or file_size == 0:
@@ -223,7 +215,7 @@ class ReaderPoints(Reader):
         return timestamps, chunks
 
     def get_last_acq(self, index: int = None):
-        fid = self._open_read(self.cfg.data_type)
+        fid = self._open_read()
         file_size = self.get_file_size(fid)
         if not fid or file_size == 0:
             return None, None
@@ -243,7 +235,8 @@ class ReaderPoints(Reader):
 
 class WriterStream:
     def __init__(self, cfg: WriterConfig):
-        self._lgr = logging.getLogger(__name__)
+        self.name = cfg.name
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = cfg
         self._ext = '.dat'
         self._ext_hdr = '.txt'
@@ -254,6 +247,7 @@ class WriterStream:
         self.cfg.version = 1
         self._acq_start_ms = 0
         self.sensor = None
+        self.data_dtype = np.dtype(np.float64)
 
         self._processed_buffer = None
 
@@ -265,10 +259,6 @@ class WriterStream:
     @property
     def fqpn(self):
         return self._base_path / self._filename.with_suffix(self._ext)
-
-    @property
-    def name(self):
-        return self.cfg.name
 
     def get_reader(self):
         return Reader(self.fqpn, self.cfg, self.sensor)
@@ -290,6 +280,7 @@ class WriterStream:
     def _get_stream_info(self):
         # all_params = {**self._params, **self._sensor_params}
         all_params = asdict(self.cfg)
+        all_params['Data Type'] = str(self.data_dtype)
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)
 
@@ -311,6 +302,8 @@ class WriterStream:
         self._base_path = PerfusionConfig.get_date_folder()
         self._filename = pathlib.Path(f'{sensor.cfg.name}_{self.cfg.name}')
         self.sensor = sensor
+        self.data_dtype = sensor.hw.data_dtype
+
         if self._fid:
             self._fid.close()
             self._fid = None
@@ -339,7 +332,7 @@ class WriterStream:
 class WriterPoints(WriterStream):
     def __init__(self, cfg: WriterPointsConfig):
         super().__init__(cfg)
-        self._lgr = logging.getLogger(__name__)
+        self._lgr = utils.get_object_logger(__name__, self.name)
 
     @classmethod
     def get_config_type(cls):

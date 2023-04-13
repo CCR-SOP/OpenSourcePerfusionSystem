@@ -49,7 +49,7 @@ class CDI:
         self._lgr = utils.get_object_logger(__name__, self.name)
 
         self._queue = Queue()
-        self.data_type = np.float64
+        self.data_dtype = np.dtype(np.float64)
         self.buf_len = 18
         self.samples_per_read = 18
         self.acq_start_ms = 0
@@ -107,7 +107,7 @@ class CDI:
             self.__serial.close()
 
     def parse_response(self, response: str):
-        data = np.zeros(0, dtype=self.data_type)
+        data = np.zeros(0, dtype=self.data_dtype)
         if response is None:
             return data
 
@@ -116,7 +116,7 @@ class CDI:
         expected_vars = max(CDIIndex).value + 1
 
         if len(fields) == expected_vars + 2:
-            data = np.zeros(expected_vars, dtype=self.data_type)
+            data = np.zeros(expected_vars, dtype=self.data_dtype)
             # skip first field which is SN and timestamp
             # timestamp will be ignored,  we will use the timestamp when the response arrives
             # self.timestamp = fields[0][-8:]
@@ -124,10 +124,10 @@ class CDI:
                 # get code and convert string hex value to an actual integer
                 code = int(field[0:2].upper(), 16)
                 try:
-                    value = self.data_type(field[4:])
+                    value = self.data_dtype(field[4:])
                 except ValueError:
                     # self._lgr.error(f'Field {code} (value={field[4:]}) is out-of-range')
-                    value = self.data_type(-1)
+                    value = self.data_dtype(-1)
                 data[code] = value
         else:
             # this may be a result of an incomplete serial response.

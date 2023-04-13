@@ -112,7 +112,7 @@ class Sensor:
                 self.add_strategy(strategy_class(cfg))
             except AttributeError as e:
                 self._lgr.error(f'Could not create algorithm {params["algorithm"]} for sensor {self.cfg.name}')
-                self._lgr.error(f'Error message is {e}')
+                self._lgr.exception(e)
 
     def add_strategy(self, strategy):
         strategy.open(sensor=self)

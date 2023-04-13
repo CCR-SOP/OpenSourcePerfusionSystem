@@ -97,7 +97,7 @@ class GasDevice:
         self.baud = 115200
         self.mutex = Lock()
 
-        self.data_type = np.uint32
+        self.data_dtype = np.dtype(np.uint32)
 
         self.total_flow = 0
         # assume a max of 3 channels
@@ -306,7 +306,7 @@ class GasDevice:
 
     def push_data(self):
         if self._queue:
-            buf = self.data_type([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
+            buf = self.data_dtype([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
             self._queue.put((buf, utils.get_epoch_ms()))
 
     def get_data(self):

@@ -31,9 +31,6 @@ import pyPerfusion.utils as utils
 class AINIDAQDeviceConfig(pyAI.AIDeviceConfig):
     pk2pk_volts: float = 5.0
     offset_volts: float = 2.5
-    # override the default buffer type to match how
-    # NIDAQ devices return data
-    buf_type: str = 'float64'
 
 
 class NIDAQAIDevice(pyAI.AIDevice):
@@ -42,7 +39,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
         self.cfg = AINIDAQDeviceConfig()
-        self.np_buf_type = np.float64
+        self.buf_dtype = np.float64
         self.__timeout = 1.0
         self._task = None
         self._exception_msg_ack = False
@@ -188,7 +185,7 @@ class NIDAQAIDevice(pyAI.AIDevice):
         if self._task:
             self._lgr.debug("good task")
             self._acq_buf = np.zeros(self.samples_per_read * len(self.ai_channels),
-                                     dtype=self.np_buf_type)
+                                     dtype=self.buf_dtype)
             self._lgr.debug("updating task")
 
             self._update_task()

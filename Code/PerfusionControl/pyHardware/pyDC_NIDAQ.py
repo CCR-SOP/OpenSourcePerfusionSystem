@@ -9,13 +9,12 @@ and under the public domain.
 Author: John Kakareka
 """
 import ctypes
-import logging
 
 import PyDAQmx
 import PyDAQmx.DAQmxConstants
+import numpy as np
 
 import pyHardware.pyDC as pyDC
-import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 
 
@@ -25,6 +24,7 @@ class NIDAQDCDevice(pyDC.DCDevice):
         self._lgr = utils.get_object_logger(__name__, self.name)
         self._task = None
         self.__timeout = 1.0
+        self.buf_dtype = np.dtype(np.float64)
 
     @property
     def devname(self):
@@ -68,7 +68,6 @@ class NIDAQDCDevice(pyDC.DCDevice):
     def set_output(self, output_volts: float):
         super().set_output(output_volts)
         self._open_task()
-        self._lgr.debug(f'output is {output_volts} V')
         try:
             written = ctypes.c_int32(0)
             self._task.WriteAnalogF64(len(self._buffer), True, self.__timeout * 5, PyDAQmx.DAQmx_Val_GroupByChannel,

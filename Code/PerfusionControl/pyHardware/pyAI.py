@@ -60,7 +60,7 @@ class AIDevice:
         self._event_halt = Event()
 
         self.cfg = AIDeviceConfig()
-        self.np_buf_type = np.uint16
+        self.buf_dtype = np.dtype(np.uint16)
         self.ai_channels = []
 
         self.acq_start_ms = 0
@@ -105,7 +105,7 @@ class AIDevice:
         return self.__thread and self.__thread.is_alive()
 
     @property
-    def np_data_type(self):
+    def data_dtype(self):
         return np.dtype(self.cfg.data_type)
 
     def is_open(self):
@@ -181,7 +181,7 @@ class AIDevice:
         buffer_t = utils.get_epoch_ms()
         for channel in self.ai_channels:
             val = np.random.random_sample()
-            buffer = np.ones(self.samples_per_read, dtype=self.np_buf_type) * val
+            buffer = np.ones(self.samples_per_read, dtype=self.buf_dtype) * val
             channel.put_data(buffer, buffer_t)
 
 
@@ -201,8 +201,8 @@ class AIChannel:
         return self.device.buf_len
 
     @property
-    def np_data_type(self):
-        return np.dtype(self.device.cfg.data_type)
+    def data_dtype(self):
+        return self.device.data_dtype
 
     @property
     def sampling_period_ms(self):
@@ -244,9 +244,9 @@ class AIChannel:
 
     def _calibrate(self, buffer):
         if self.cfg.cal_pt2_reading - self.cfg.cal_pt1_reading == 0:
-            data = buffer.astype(self.np_data_type)
+            data = buffer.astype(self.data_dtype)
         else:
-            data = np.zeros(len(buffer), dtype=self.np_data_type)
+            data = np.zeros(len(buffer), dtype=self.data_dtype)
             for i in range(len(buffer)):
                 data[i] = ((((buffer[i] - self.cfg.cal_pt1_reading)
                            * (self.cfg.cal_pt2_target - self.cfg.cal_pt1_target))

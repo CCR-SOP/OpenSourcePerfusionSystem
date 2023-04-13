@@ -34,8 +34,6 @@ class DCChannelConfig:
     device: str = ''
     line: int = 0
     output_volts: float = 0.0
-    data_type: npt.DTypeLike = np.dtype(np.float64).name
-    buf_type: npt.DTypeLike = np.dtype(np.uint16).name
 
 
 class DCDevice:
@@ -44,10 +42,12 @@ class DCDevice:
         self._lgr = utils.get_object_logger(__name__, self.name)
 
         self.cfg = DCChannelConfig()
+        self.buf_dtype = np.dtype(np.float64)
+        self.data_dtype = np.dtype(np.float64)
         self._queue = Queue()
         self._q_timeout = 0.5
 
-        self._buffer = np.zeros(1, dtype=self.cfg.data_type)
+        self._buffer = np.zeros(1, dtype=self.buf_dtype)
 
         self.acq_start_ms = 0
         self.buf_len = 1
@@ -63,7 +63,7 @@ class DCDevice:
     def open(self, cfg: DCChannelConfig = None):
         if cfg is not None:
             self.cfg = cfg
-        self._buffer = np.zeros(1, dtype=self.cfg.data_type)
+        self._buffer = np.zeros(1, dtype=self.buf_dtype)
 
     def is_open(self):
         return self.cfg is not None

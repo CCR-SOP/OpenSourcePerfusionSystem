@@ -106,7 +106,7 @@ class Pump11Elite:
     def __init__(self, name):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self.data_type = np.float64
+        self.data_dtype = np.dtype(np.float64)
 
         self.name = name
         self.cfg = Pump11EliteConfig()

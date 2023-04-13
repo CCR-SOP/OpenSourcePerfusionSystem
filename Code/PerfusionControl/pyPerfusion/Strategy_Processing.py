@@ -33,7 +33,7 @@ class RMS(Strategy_ReadWrite.WriterStream):
         self.cfg.algorithm = "RMS"
         self._sum = 0
         self._window_buffer = None
-        self._data_type = np.float64
+        self.data_dtype = np.dtype('float64')
 
     @classmethod
     def get_config_type(cls):
@@ -41,7 +41,7 @@ class RMS(Strategy_ReadWrite.WriterStream):
 
     def _process(self, buffer, t=None):
         if self._window_buffer is None:
-            self._window_buffer = np.zeros(self.cfg.window_len, dtype=self._data_type)
+            self._window_buffer = np.zeros(self.cfg.window_len, dtype=self.data_dtype)
         idx = 0
         for sample in buffer:
             sqr = sample * sample
@@ -65,7 +65,7 @@ class MovingAverage(Strategy_ReadWrite.WriterStream):
         self.cfg.algorithm = "MovingAverage"
         self._sum = 0
         self._window_buffer = None
-        self._data_type = np.float64
+        self.data_dtype = np.dtype(np.float64)
 
     @classmethod
     def get_config_type(cls):
@@ -73,7 +73,7 @@ class MovingAverage(Strategy_ReadWrite.WriterStream):
 
     def _process(self, buffer, t=None):
         if self._window_buffer is None:
-            self._window_buffer = np.zeros(self.cfg.window_len, dtype=self._data_type)
+            self._window_buffer = np.zeros(self.cfg.window_len, dtype=self.data_dtype)
         idx = 0
         for sample in buffer:
             front = self._window_buffer[0]
@@ -98,7 +98,7 @@ class RunningSum(Strategy_ReadWrite.WriterStream):
         super().__init__(cfg)
         self.cfg.algorithm = "VolumeByFlow"
         self._window_buffer = None
-        self._data_type = np.float64
+        self.data_dtype = np.dtype(np.float64)
         self._calibration_buffer = None
         self._cal_idx = 0
         self._calibrating = False
@@ -113,7 +113,7 @@ class RunningSum(Strategy_ReadWrite.WriterStream):
         if self._calibrating:
             if self._calibration_buffer is None:
                 cal_samples = int(self.cfg.calibration_seconds * 1_000 / self.sensor.hw.sampling_period_ms)
-                self._calibration_buffer = np.zeros(cal_samples, dtype=self._data_type)
+                self._calibration_buffer = np.zeros(cal_samples, dtype=self.data_dtype)
 
             self._processed_buffer = buffer
             buf_len = len(buffer)
@@ -129,7 +129,7 @@ class RunningSum(Strategy_ReadWrite.WriterStream):
                 self.flow_offset = np.mean(self._calibration_buffer)
                 self._lgr.info(f'Calibration complete, flow offset is {self.flow_offset}')
         else:
-            self._processed_buffer = np.cumsum(buffer-self.flow_offset, dtype=self._data_type) \
+            self._processed_buffer = np.cumsum(buffer-self.flow_offset, dtype=self.data_dtype) \
                                      + self.last_volume
             self.last_volume = self._processed_buffer[-1]
 
