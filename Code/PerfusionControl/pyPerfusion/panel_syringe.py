@@ -261,13 +261,7 @@ class PanelSyringeControls(wx.Panel):
         self.syringe.set_infusion_rate(infusion_rate)
         self.syringe.set_target_volume(target_vol)
         self.syringe.infuse_to_target_volume()
-
-        sleep(1)
-        ts, last_samples = self.reader.retrieve_buffer(5000, 5)
-        for ts, samples in zip(ts, last_samples):
-            self._lgr.info(f' At time {ts}, {self.sensor.name} infused a bolus at rate {samples[0]} uL/min with '
-                           f'target volume of {samples[1]} uL')
-
+            
     def update_config_from_controls(self):
         self.syringe.cfg.initial_injection_rate = int(self.spin_rate.GetValue())
         self.syringe.cfg.initial_target_volume = int(self.spin_volume.GetValue())
@@ -314,7 +308,6 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_all()
-    SYS_HW.load_mocks()
 
     name = 'Insulin'
     try:

@@ -10,6 +10,7 @@
 
 from queue import Queue, Empty
 from dataclasses import dataclass
+from enum import Enum
 
 import numpy as np
 import serial
@@ -79,6 +80,10 @@ class Pump11EliteConfig:
     baud: int = 9600
     address: int = 0
 
+PumpState = Enum('PumpState', ['idle', 'infusing', 'withdrawing', 'stalled', 'target_reached'])
+PumpMap = {':': PumpState.idle, '>': PumpState.infusing, '<': PumpState.withdrawing,
+           '*': PumpState.stalled, 'T*': PumpState.target_reached}
+
 
 def get_available_manufacturer_codes() -> list:
     return list(DEFAULT_MANUFACTURERS.keys())
@@ -111,6 +116,7 @@ class Pump11Elite:
         self.name = name
         self.cfg = Pump11EliteConfig()
         self.cfg.name = name
+        self.pump_state = PumpState.idle
 
         self._serial = serial.Serial()
         self._queue = None
@@ -118,20 +124,9 @@ class Pump11Elite:
         self.period_sampling_ms = 0
         self.samples_per_read = 0
 
-        # JWK, this should be tied to actual hardware
-        # SCL this seems to be working? Was this corrected?
-        self.is_infusing = False
-
-        self._params = {
-            'File Format': DATA_VERSION,
-            'Syringe': self.name,
-            'Volume Unit': 'ul',
-            'Rate Unit': 'ul/min',
-            'Data Format': str(np.dtype(np.float64)),
-            'Datapoints Per Timestamp': 2,
-            'Bytes Per Timestamp': 4,
-            'Start of Acquisition': 0
-            }
+    @property
+    def is_infusing(self):
+        return self.pump_state == PumpState.infusing
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -181,12 +176,16 @@ class Pump11Elite:
             self._serial.flush()
             self._serial.timeout = 1.0
             response = self._serial.read_until('\r', size=1000).decode('UTF-8')
+            # strip starting \r and ending \r
+            response = response[1:-1]
+            if response[0] in PumpMap.keys():
+                self.pump_state = PumpMap[response[0]]
+            else:
+                self._lgr.error(f'Unknown syringe state {response[0]} from response: {response}')
         else:
             response = '0 0'
-        # JWK, we should be checking error responses
 
-        # strip starting \r and ending \r
-        return response[1:-1]
+        return response
 
     def _set_param(self, param, value) -> str:
         """ helper function to send a properly formatted parameter-value pair"""
@@ -314,14 +313,12 @@ class Pump11Elite:
         self.send_wait4response('irun\r')
         t = utils.get_epoch_ms()
         self.record_continuous_infusion(t, start=True)
-        self.is_infusing = True
 
     def stop(self):
         """ stop an infusion. Typically, used to stop a continuous infusion
             but can be used to abort a targeted infusion
         """
         self.send_wait4response('stop\r')
-        self.is_infusing = False
         t = utils.get_epoch_ms()
         # check if targeted volume is 0, if so, then this is a continuous injection
         # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
@@ -405,6 +402,9 @@ class MockPump11Elite(Pump11Elite):
                     self._values[parts[0]] = parts[1]
                 else:
                     response = self._values[parts[0]]
+            elif parts[0] == 'irun':
+                self.pump_state = PumpState.infusing
+            elif parts[0] == 'stop':
+                self.pump_state = PumpState.idle
 
-        # JWK, we should be checking error responses
         return response
