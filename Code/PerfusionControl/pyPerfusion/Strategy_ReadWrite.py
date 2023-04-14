@@ -39,8 +39,8 @@ class WriterPointsConfig:
 
 
 class Reader:
-    def __init__(self, fqpn: pathlib.Path, cfg: WriterConfig, sensor: Sensor):
-        self.name = 'Reader'
+    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterConfig, sensor: Sensor):
+        self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
         self._version = 1
         self.fqpn = fqpn
@@ -125,8 +125,8 @@ class Reader:
 
 
 class ReaderPoints(Reader):
-    def __init__(self, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
-        self.name = "ReaderPoints"
+    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
+        self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
         super().__init__(fqpn, cfg, sensor)
         self._version = 1
@@ -259,7 +259,7 @@ class WriterStream:
         return self._base_path / self._filename.with_suffix(self._ext)
 
     def get_reader(self):
-        return Reader(self.fqpn, self.cfg, self.sensor)
+        return Reader(self.name, self.fqpn, self.cfg, self.sensor)
 
     def _open_write(self):
         self._lgr.info(f'opening for write: {self.fqpn}')
@@ -336,7 +336,7 @@ class WriterPoints(WriterStream):
         return WriterPointsConfig
 
     def get_reader(self):
-        return ReaderPoints(self.fqpn, self.cfg, self.sensor)
+        return ReaderPoints(self.name, self.fqpn, self.cfg, self.sensor)
 
     def _write_to_file(self, data_buf, t=None):
         ts_bytes = struct.pack('!Q', t)
