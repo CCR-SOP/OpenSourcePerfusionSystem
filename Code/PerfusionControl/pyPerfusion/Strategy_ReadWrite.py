@@ -26,14 +26,15 @@ if TYPE_CHECKING:
     from pyPerfusion.Sensor import Sensor
 
 
+# raw Writer does not have any parameters, but create a config class
+# for consistency
 @dataclass
 class WriterConfig:
-    algorithm: str = "WriterStream"
+    pass
 
 
 @dataclass
 class WriterPointsConfig:
-    algorithm: str = "WriterPoints"
     bytes_per_timestamp: int = 4
     samples_per_timestamp: int = 1
 
