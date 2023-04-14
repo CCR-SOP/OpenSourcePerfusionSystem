@@ -116,6 +116,7 @@ class Pump11Elite:
         self.name = name
         self.cfg = Pump11EliteConfig()
         self.cfg.name = name
+
         self.pump_state = PumpState.idle
 
         self._serial = serial.Serial()
@@ -178,10 +179,11 @@ class Pump11Elite:
             response = self._serial.read_until('\r', size=1000).decode('UTF-8')
             # strip starting \r and ending \r
             response = response[1:-1]
-            if response[0] in PumpMap.keys():
-                self.pump_state = PumpMap[response[0]]
-            else:
-                self._lgr.error(f'Unknown syringe state {response[0]} from response: {response}')
+            # JWK, this  needs to be tested more thoroughly
+            # if response[0] in PumpMap.keys():
+                # self.pump_state = PumpMap[response[0]]
+            # else:
+                # self._lgr.error(f'Unknown syringe state {response[0]} from response: {response}')
         else:
             response = '0 0'
 
@@ -305,6 +307,7 @@ class Pump11Elite:
         self.send_wait4response('irun\r')
         t = utils.get_epoch_ms()
         self.record_targeted_infusion(t)
+        self.pump_state = PumpState.infusing
 
     def start_constant_infusion(self):
         """ start a constant infusion. Requires a target volume to be cleared.
@@ -313,6 +316,7 @@ class Pump11Elite:
         self.send_wait4response('irun\r')
         t = utils.get_epoch_ms()
         self.record_continuous_infusion(t, start=True)
+        self.pump_state = PumpState.infusing
 
     def stop(self):
         """ stop an infusion. Typically, used to stop a continuous infusion
@@ -325,6 +329,7 @@ class Pump11Elite:
         target_vol, target_unit = self.get_target_volume()
         if target_vol == 0:
             self.record_continuous_infusion(t, start=False)
+        self.pump_state = PumpState.idle
 
     def set_syringe(self, manu_code: str, syringe_size: str) -> None:
         self._set_param('syrm', f'{manu_code} {syringe_size}\r')
