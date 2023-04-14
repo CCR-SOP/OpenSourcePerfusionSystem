@@ -14,7 +14,7 @@ import dataclasses
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.folder_management import FolderManagement
-from pyHardware.pyAI import AIDeviceConfig, AIChannelConfig
+from pyHardware.pyAI import AIDeviceConfig, AIChannelConfig, AIChannel
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice
 from pyHardware.pyCDI import CDI, MockCDI
 from pyHardware.pyPump11Elite import Pump11Elite, MockPump11Elite
@@ -95,12 +95,13 @@ def compare_file(file, git_fm):
             print_dataclass_diff(pairs_git.keys(), class_name,
                                  f'Comparing git {section} keys to {class_name} config')
 
-
 def main():
     PerfusionConfig.set_test_config()
     git_fm = FolderManagement(project_name='PerfusionControl', base_path=Path('../'), default_structure=False)
     git_fm.add_folder('config')
     compare_file('hardware', git_fm)
+    compare_file('NI_Dev1', git_fm)
+    compare_file('NI_Dev2', git_fm)
     compare_file('sensors', git_fm)
     compare_file('strategies', git_fm)
 

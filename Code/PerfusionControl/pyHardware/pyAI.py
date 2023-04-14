@@ -125,7 +125,9 @@ class AIDevice:
             self._lgr.warning(f'Channel {ch_name} already exists!')
         else:
             self.stop()
-            ai = AIChannel(name=ch_name, cfg=cfg, device=self)
+            ai = AIChannel(name=ch_name)
+            ai.cfg = cfg
+            ai.device = self
             ai.read_config()
             self.ai_channels.append(ai)
 
@@ -186,11 +188,11 @@ class AIDevice:
 
 
 class AIChannel:
-    def __init__(self, name: str, cfg: AIChannelConfig, device: AIDevice):
+    def __init__(self, name: str):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self.cfg = cfg
-        self.device = device
+        self.cfg = AIChannelConfig()
+        self.device = None
 
         self._queue = Queue()
         self._q_timeout = 0.5
