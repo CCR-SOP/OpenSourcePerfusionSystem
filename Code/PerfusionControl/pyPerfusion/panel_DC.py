@@ -111,17 +111,16 @@ class PanelDCControl(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_update(self, evt):
-        new_voltage = self.entered_offset.GetValue() / 10
+        new_flow = self.entered_offset.GetValue()
         # TODO this should be done in a calibration, not a hard-coded value
-        self.sensor.hw.set_output(new_voltage+0.03)  # add 0.03 V to account for offset
+        self.sensor.hw.set_flow(new_flow)
 
     def on_stop(self, evt):
-        self.sensor.hw.set_output(int(0))
+        self.sensor.hw.set_output(0)
 
     def update_controls_from_hardware(self, evt=None):
         if self.sensor and self.sensor.hw:
-            self.text_real.SetValue(str(self.sensor.hw.last_value * 10))
-            self.entered_offset.Enable(self.sensor.hw.is_running)
+            self.text_real.SetValue(f'{self.sensor.hw.last_flow:.3f}')
 
     def on_close(self, evt):
         self.timer_gui_update.Stop()

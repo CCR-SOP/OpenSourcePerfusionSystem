@@ -19,7 +19,6 @@ from dataclasses import dataclass
 from queue import Queue, Empty
 
 import numpy as np
-import numpy.typing as npt
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -34,6 +33,10 @@ class DCChannelConfig:
     device: str = ''
     line: int = 0
     output_volts: float = 0.0
+    cal_pt1_volts: np.float64 = 0.0
+    cal_pt1_flow: np.float64 = -0.03
+    cal_pt2_volts: np.float64 = 5
+    cal_pt2_flow: np.float64 = 49.7
 
 
 class DCDevice:
@@ -48,7 +51,7 @@ class DCDevice:
         self._q_timeout = 0.5
         self.volt_range = [0, 5.0]
 
-        self._buffer = np.zeros(1, dtype=self.buf_dtype)
+        self._buffer = np.zeros(1, dtype=self.buf_dtype) - self.cfg.cal_pt1_flow
 
         self.acq_start_ms = 0
         self.buf_len = 1
@@ -63,14 +66,24 @@ class DCDevice:
         return self._buffer[0]
 
     @property
+    def last_flow(self):
+        return self.volts_to_mlpermin(self._buffer[0])
+
+    @property
     def is_running(self):
         return self._buffer[0] == 0
 
     def volts_to_mlpermin(self, volts):
-        return volts * 10.0
+        ml_per_min = (((volts - self.cfg.cal_pt1_volts) * (self.cfg.cal_pt2_flow - self.cfg.cal_pt1_flow))
+                       / (self.cfg.cal_pt2_volts - self.cfg.cal_pt1_volts)) + self.cfg.cal_pt1_flow
+        return ml_per_min
 
     def mlpermin_to_volts(self, ml_per_min):
-        return ml_per_min / 10.0
+        volts = ((((ml_per_min - self.cfg.cal_pt1_flow)
+                 * (self.cfg.cal_pt2_volts - self.cfg.cal_pt1_volts))
+                 / (self.cfg.cal_pt2_flow - self.cfg.cal_pt1_flow))
+                 + self.cfg.cal_pt1_volts)
+        return volts
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -101,6 +114,7 @@ class DCDevice:
 
     def set_flow(self, ml_per_min: float):
         volts = self.mlpermin_to_volts(ml_per_min)
+        self._lgr.debug(f'ml/min = {ml_per_min}, volts = {volts}')
         self.set_output(volts)
 
     def set_output(self, output_volts: float):
