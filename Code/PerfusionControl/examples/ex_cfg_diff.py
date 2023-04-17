@@ -24,6 +24,7 @@ from pyHardware.pyDC import DCDevice
 from pyPerfusion.Sensor import Sensor, CalculatedSensor, DivisionSensor
 from pyPerfusion.Strategy_Processing import RMS, MovingAverage, RunningSum
 from pyPerfusion.Strategy_ReadWrite import WriterStream, WriterPoints
+from pyPerfusion.pyAutoDialysis import AutoDialysis, AutoDialysisInflow, AutoDialysisOutflow
 
 
 def print_diff(local_data, git_data, hdr_msg):
@@ -104,6 +105,7 @@ def main():
     compare_file('NI_Dev2', git_fm)
     compare_file('sensors', git_fm)
     compare_file('strategies', git_fm)
+    compare_file('automations', git_fm)
 
 
 if __name__ == "__main__":

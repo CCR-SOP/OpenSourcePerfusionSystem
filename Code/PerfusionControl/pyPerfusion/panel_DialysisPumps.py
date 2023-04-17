@@ -141,13 +141,14 @@ if __name__ == "__main__":
             SYS_HW.stop()
             raise SystemExit(1)
 
-    auto_inflow = AutoDialysisInflow(name='Dialysate Inflow Automation',
-                                     pump=SYS_HW.get_hw('Dialysate Inflow Pump'),
-                                     cdi_reader=cdi_sensor.get_reader())
+    auto_inflow = AutoDialysisInflow(name='Dialysate Inflow Automation')
+    auto_inflow.pump = SYS_HW.get_hw('Dialysate Inflow Pump')
+    auto_inflow.cdi_reader = cdi_sensor.get_reader()
     auto_inflow.read_config()
-    auto_outflow = AutoDialysisOutflow(name='Dialysate Outflow Automation',
-                                       pump=SYS_HW.get_hw('Dialysate Outflow Pump'),
-                                       cdi_reader=cdi_sensor.get_reader())
+
+    auto_outflow = AutoDialysisOutflow(name='Dialysate Outflow Automation')
+    auto_outflow.pump = SYS_HW.get_hw('Dialysate Outflow Pump')
+    auto_outflow.cdi_reader = cdi_sensor.get_reader()
     auto_outflow.read_config()
 
     app = MyTestApp(0)

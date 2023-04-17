@@ -22,17 +22,25 @@ import pyPerfusion.utils as utils
 class AutoDialysisConfig:
     adjust_percent: float = 5.0
     adjust_rate_ms: int = 10_000
+
+
+@dataclass
+class AutoDialysisInflowConfig(AutoDialysisConfig):
+    K_range: List = field(default_factory=lambda: [0, 100])
+
+
+@dataclass
+class AutoDialysisOutflowConfig(AutoDialysisConfig):
     hct_range: List = field(default_factory=lambda: [0, 100])
-    hgb_range: List = field(default_factory=lambda: [0, 100])
     K_range: List = field(default_factory=lambda: [0, 100])
 
 
 class AutoDialysis:
-    def __init__(self, name: str, pump, cdi_reader):
+    def __init__(self, name: str):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self.pump = pump
-        self.cdi_reader = cdi_reader
+        self.pump = None
+        self.cdi_reader = None
         self.cfg = AutoDialysisConfig()
 
         self.adjust_rate_ms = 10_000
@@ -93,8 +101,9 @@ class AutoDialysis:
 
 
 class AutoDialysisInflow(AutoDialysis):
-    def __init__(self, name: str, pump, cdi_reader):
-        super().__init__(name, pump, cdi_reader)
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.cfg = AutoDialysisInflowConfig()
 
     def read_config(self):
         super().read_config()
@@ -120,8 +129,9 @@ class AutoDialysisInflow(AutoDialysis):
 
 
 class AutoDialysisOutflow(AutoDialysis):
-    def __init__(self, name: str, pump, cdi_reader):
-        super().__init__(name, pump, cdi_reader)
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.cfg = AutoDialysisOutflowConfig()
 
     def read_config(self):
         super().read_config()
