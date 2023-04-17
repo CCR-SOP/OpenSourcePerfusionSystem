@@ -119,6 +119,7 @@ class GasDevice:
         self.cfg.CO2_range = [int(x) for x in ''.join(self.cfg.CO2_range).strip(' ').split(',')]
         self.cfg.O2_range = [int(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
         self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
+        self.cfg.flow_limits = [int(x) for x in ''.join(self.cfg.flow_limits).strip(' ').split(',')]
         self.open()
 
     def open(self, cfg=None):

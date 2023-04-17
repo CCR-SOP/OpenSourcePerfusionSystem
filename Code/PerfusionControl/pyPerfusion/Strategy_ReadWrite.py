@@ -129,7 +129,7 @@ class ReaderPoints(Reader):
     def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        super().__init__(fqpn, cfg, sensor)
+        super().__init__(name, fqpn, cfg, sensor)
         self._version = 1
         self.fqpn = fqpn
         self.cfg = cfg

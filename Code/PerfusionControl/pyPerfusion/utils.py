@@ -18,6 +18,9 @@ import numpy as np
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
+def get_standard_log_format():
+    return '%(asctime) s: %(name) s - %(levelname) s - %(message) s'
+
 
 def setup_default_logging(filename=None):
     setup_stream_logger(logging.getLogger(), logging.INFO)
@@ -51,6 +54,7 @@ def filter_legend_messages(record):
     if record.module == 'matplotlib.legend':
         return False
     return True
+
 
 def configure_matplotlib_logging():
     # matplotlib logs to the root logger and can create
