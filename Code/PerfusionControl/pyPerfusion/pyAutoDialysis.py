@@ -43,8 +43,6 @@ class AutoDialysis:
         self.cdi_reader = None
         self.cfg = AutoDialysisConfig()
 
-        self.adjust_rate_ms = 10_000
-
         self.acq_start_ms = 0
         self._event_halt = Event()
         self.__thread = None
@@ -68,7 +66,7 @@ class AutoDialysis:
         # adjustments is small compared to the adjust rate so timing drift
         # is small
         while not PerfusionConfig.MASTER_HALT.is_set():
-            timeout = self.adjust_rate_ms / 1_000.0
+            timeout = self.cfg.adjust_rate_ms / 1_000.0
             if self._event_halt.wait(timeout):
                 break
             if self.pump and self.cdi_reader:
