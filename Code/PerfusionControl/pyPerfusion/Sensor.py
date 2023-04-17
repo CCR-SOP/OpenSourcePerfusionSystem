@@ -42,21 +42,25 @@ class HWProtocol(Protocol):
 
 
 @dataclass
-class SensorConfig:
-    hw_name: str = ''
+class BaseSensorConfig:
     strategy_names: str = ''
     units: str = ''
     valid_range: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
-class CalculatedSensorConfig(SensorConfig):
+class SensorConfig(BaseSensorConfig):
+    hw_name: str = ''
+
+
+@dataclass
+class CalculatedSensorConfig(BaseSensorConfig):
     samples_per_calc: int = 1
     sensor_strategy: str = ''
 
 
 @dataclass
-class DivisionSensorConfig(SensorConfig):
+class DivisionSensorConfig(BaseSensorConfig):
     dividend_name: str = ''
     divisor_name: str = ''
     dividend_strategy: str = ''

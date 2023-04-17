@@ -331,6 +331,7 @@ class WriterPoints(WriterStream):
     def __init__(self, name: str):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = WriterPointsConfig()
 
     @classmethod
     def get_config_type(cls):

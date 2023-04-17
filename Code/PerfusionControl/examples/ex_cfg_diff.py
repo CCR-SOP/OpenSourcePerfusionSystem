@@ -21,7 +21,7 @@ from pyHardware.pyPump11Elite import Pump11Elite, MockPump11Elite
 from pyHardware.pyGB100 import GasDevice, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 from pyHardware.pyDC import DCDevice
-from pyPerfusion.Sensor import Sensor
+from pyPerfusion.Sensor import Sensor, CalculatedSensor, DivisionSensor
 from pyPerfusion.Strategy_Processing import RMS, MovingAverage, RunningSum
 from pyPerfusion.Strategy_ReadWrite import WriterStream, WriterPoints
 
