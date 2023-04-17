@@ -97,18 +97,18 @@ class Sensor:
         self.hw = SYS_HW.get_hw(self.cfg.hw_name)
 
         # load strategies
-        self._lgr.debug(f'strategies are {self.cfg.strategy_names}')
+        # self._lgr.debug(f'strategies are {self.cfg.strategy_names}')
         for name in self.cfg.strategy_names.split(', '):
-            self._lgr.debug(f'Getting strategy {name}')
+            # self._lgr.debug(f'Getting strategy {name}')
             params = PerfusionConfig.read_section('strategies', name)
             try:
-                self._lgr.debug(f'Looking for {params["class"]}')
+                # self._lgr.debug(f'Looking for {params["class"]}')
                 strategy_class = globals().get(params['class'], None)
                 self._lgr.debug(f'Found {strategy_class}')
                 cfg = strategy_class.get_config_type()()
-                self._lgr.debug(f'Config type is {cfg}')
+                # self._lgr.debug(f'Config type is {cfg}')
                 PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-                self._lgr.debug('adding strategy')
+                 #self._lgr.debug('adding strategy')
                 strategy = strategy_class(name)
                 strategy.cfg = cfg
                 self.add_strategy(strategy)
