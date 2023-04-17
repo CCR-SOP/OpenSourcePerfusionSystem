@@ -158,7 +158,6 @@ class CDI:
                 resp = ''
                 try:
                     while not good_response:
-
                         resp += self.read_from_serial()
                         if len(resp) > 0:
                             if resp[-1] == '\n':
@@ -234,7 +233,9 @@ class MockCDI(CDI):
         ts = datetime.now()
         timestamp = f'{ts.hour:02d}:{ts.minute:02d}:{ts.second:02d}'
         # self._lgr.debug(f'timestamp is {timestamp}')
-        data = [f'{idx.value:02x}{idx.value*2:04d}\t' for idx in CDIIndex]
+        cdi_array = [idx.value*2 for idx in CDIIndex]
+        cdi_array[CDIIndex.K] = 1
+        data = [f'{idx.value:02x}{cdi_array[idx.value]:04d}\t' for idx in CDIIndex]
         data_str = ''.join(data)
         crc = 0
         pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'

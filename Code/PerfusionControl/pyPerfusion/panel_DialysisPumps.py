@@ -16,26 +16,19 @@ from pyPerfusion.panel_DC import PanelDC
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Sensor import Sensor
 from pyHardware.pyCDI import CDIData
+from pyPerfusion.pyAutoDialysis import AutoDialysisInflow, AutoDialysisOutflow
+
 
 class DialysisPumpPanel(wx.Panel):
-    def __init__(self, parent, pump_names, cdi, **kwds):
+    def __init__(self, parent, pumps, cdi, auto_inflow, auto_outflow):
         self._lgr = logging.getLogger(__name__)
         wx.Panel.__init__(self, parent, -1)
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         self.parent = parent
+        self.pumps = pumps
         self.cdi_sensor = cdi
+        self.auto_inflow = auto_inflow
+        self.auto_outflow = auto_outflow
 
-        # Load sensors from pump_names
-        self.sensors = []
-        for pump_name in pump_names:
-            try:
-                temp_sensor = Sensor(name=pump_name)
-                temp_sensor.read_config()
-                self.sensors.append(temp_sensor)
-            except PerfusionConfig.MissingConfigSection:
-                print(f'Could not find sensor called {pump_name} in sensors.ini')
-                SYS_HW.stop()
-                raise SystemExit(1)
 
         font = wx.Font()
         font.SetPointSize(int(16))
@@ -48,17 +41,16 @@ class DialysisPumpPanel(wx.Panel):
         self.sizer = wx.FlexGridSizer(rows=3, cols=2, vgap=1, hgap=1)
 
         self.panels = []
-        for sensor in self.sensors:
-            sensor.start()
-            sensor.hw.start()
-            self.panel = PanelDC(self, sensor.name, sensor)
+        for pump in self.pumps:
+            pump.start()
+            pump.hw.start()
+            self.panel = PanelDC(self, pump.name, pump)
             self.sizer.Add(self.panel, 1, wx.ALL | wx.EXPAND, border=1)
             self.panels.append(self.panel)
 
         # Add auto start button as 5th panel
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
         self.btn_auto_dialysis.SetFont(font)
-        self.cdi_timer = wx.Timer(self)
         self.sizer.Add(self.btn_auto_dialysis, flagsExpand)
 
         self.__do_layout()
@@ -83,47 +75,38 @@ class DialysisPumpPanel(wx.Panel):
 
     def __set_bindings(self):
         self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
-        self.Bind(wx.EVT_TIMER, self.readDataFromCDI, self.cdi_timer)
 
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
             self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
-            self.cdi_timer.Start(300_000, wx.TIMER_CONTINUOUS)
-            self.cdi_sensor.hw.start()
-            self.cdi_sensor.start()
+            self.auto_outflow.start()
+            self.auto_inflow.start()
+            for panel in self.panels:
+                panel.panel_dc.entered_offset.Enable(False)
         else:
             self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
-            self.cdi_timer.Stop()
-            self.cdi_sensor.stop()
+            self.auto_outflow.stop()
+            self.auto_inflow.stop()
+            for panel in self.panels:
+                panel.panel_dc.entered_offset.Enable(True)
 
-    def readDataFromCDI(self, evt):
-        if evt.GetId() == self.cdi_timer.GetId():
-            cdi_reader = self.cdi_sensor.get_reader()
-            ts, all_vars = cdi_reader.get_last_acq()
-            cdi_data = CDIData(all_vars)
-            if cdi_data is not None:
-                for panel in self.panels:
-                    if panel.name == "Dialysate Outflow" or panel.name == "Dialysate Inflow":
-                        panel.panel_dc.update_dialysis_rates(cdi_data)
-            else:
-                self._lgr.debug(f'No CDI data. Cannot run dialysis automatically')
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = DialysisPumpPanel(self, rPumpNames, cdi_sensor)
+        self.panel = DialysisPumpPanel(self, pumps, cdi_sensor, auto_inflow, auto_outflow)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         self.panel.close()
         SYS_HW.stop()
-        self.panel.cdi_timer.Stop()
-        self.panel.cdi_sensor.stop()
-        for sensor in self.panel.sensors:
-            sensor.stop()
+        cdi_sensor.stop()
+        for pump in pumps:
+            pump.stop()
         self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -139,12 +122,33 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     SYS_HW.load_all()
+    SYS_HW.start()
+
+    cdi_sensor = Sensor(name="CDI")
+    cdi_sensor.read_config()
+    cdi_sensor.start()
 
     rPumpNames = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
+    # Load sensors from pump_names
+    pumps = []
+    for pump_name in rPumpNames:
+        try:
+            temp_sensor = Sensor(name=pump_name)
+            temp_sensor.read_config()
+            pumps.append(temp_sensor)
+        except PerfusionConfig.MissingConfigSection:
+            print(f'Could not find sensor called {pump_name} in sensors.ini')
+            SYS_HW.stop()
+            raise SystemExit(1)
 
-    # Load CDI sensor
-    cdi_sensor = Sensor(name='CDI')
-    cdi_sensor.read_config()
+    auto_inflow = AutoDialysisInflow(name='Dialysate Inflow Automation',
+                                     pump=SYS_HW.get_hw('Dialysate Inflow Pump'),
+                                     cdi_reader=cdi_sensor.get_reader())
+    auto_inflow.read_config()
+    auto_outflow = AutoDialysisOutflow(name='Dialysate Outflow Automation',
+                                       pump=SYS_HW.get_hw('Dialysate Outflow Pump'),
+                                       cdi_reader=cdi_sensor.get_reader())
+    auto_outflow.read_config()
 
     app = MyTestApp(0)
     app.MainLoop()

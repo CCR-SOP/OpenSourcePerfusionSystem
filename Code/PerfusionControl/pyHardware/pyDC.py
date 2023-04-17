@@ -46,6 +46,7 @@ class DCDevice:
         self.data_dtype = np.dtype(np.float64)
         self._queue = Queue()
         self._q_timeout = 0.5
+        self.volt_range = [0, 5.0]
 
         self._buffer = np.zeros(1, dtype=self.buf_dtype)
 
@@ -56,6 +57,20 @@ class DCDevice:
     @property
     def devname(self):
         return 'dc'
+
+    @property
+    def last_value(self):
+        return self._buffer[0]
+
+    @property
+    def is_running(self):
+        return self._buffer[0] == 0
+
+    def volts_to_mlpermin(self, volts):
+        return volts * 10.0
+
+    def mlpermin_to_volts(self, ml_per_min):
+        return ml_per_min / 10.0
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -84,9 +99,27 @@ class DCDevice:
     def stop(self):
         self.set_output(0)
 
+    def set_flow(self, ml_per_min: float):
+        volts = self.mlpermin_to_volts(ml_per_min)
+        self.set_output(volts)
+
     def set_output(self, output_volts: float):
         self._buffer[0] = output_volts
         self._queue.put((self._buffer, utils.get_epoch_ms()))
+        self._lgr.debug(f'last value is {self.volts_to_mlpermin(self._buffer[0])}')
+
+    def adjust_percent_of_max(self, percent: float):
+        self._lgr.debug(f'last value is {self._buffer[0]}')
+        adjustment = (percent / 100.0) * (self.volt_range[1] - self.volt_range[0])
+        value = self._buffer[0] + adjustment
+        self._lgr.debug(f'adjust speed by {adjustment} to {value}')
+
+        if value < self.volt_range[0]:
+            self._lgr.warning(f'Pump speed already at lowest value. No adjustment can be made')
+        elif value > self.volt_range[1]:
+            self._lgr.warning(f'Pump speed already at highest value. No adjustment can be made')
+        else:
+            self.set_output(value)
 
     def get_data(self):
         buf = None
