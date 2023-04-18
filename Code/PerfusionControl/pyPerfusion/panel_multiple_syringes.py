@@ -34,9 +34,7 @@ class SyringePanel(wx.Panel):
 
         for syringe in syringe_sensors:
             # Initialize panel
-            hw = syringe.hw
-            self.syringes.append(syringe)  # is this redundant?
-            self.panel[syringe.name] = PanelSyringeControls(parent=self, syringe=hw, sensor=syringe)
+            self.panel[syringe.name] = PanelSyringeControls(parent=self, sensor=syringe)
             self.panel[syringe.name].update_controls_from_config()
             sizer.Add(self.panel[syringe.name], 1, wx.ALL | wx.EXPAND, border=1)
 
@@ -61,7 +59,7 @@ class SyringeFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.panel.OnClose(self)
-        PerfusionSystem.close()
+        sys.close()
         self.Destroy()
 
 
@@ -78,13 +76,14 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    PerfusionSystem.load_all()
-    PerfusionSystem.open()
+    sys = PerfusionSystem()
+    sys.load_all()
+    sys.open()
 
     drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
     syringes = []
     for drug in drugs:
-        syringes.append(PerfusionSystem.get_sensor(drug))
+        syringes.append(sys.get_sensor(drug))
 
     app = MySyringeApp(0)
     app.MainLoop()
