@@ -7,6 +7,7 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+import logging
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -24,7 +25,6 @@ def get_object(name: str):
 
     try:
         class_name = params['class']
-        print(f'class_name is {class_name}')
     except KeyError:
         print(f'could not find key class in section {name}')
         print(params)
@@ -32,7 +32,6 @@ def get_object(name: str):
 
     try:
         class_ = globals().get(class_name, None)
-        print(f'class_ is {class_}')
     except KeyError:
         print(f'Class {class_name} was not imported in PerfusionSystem')
         return None
@@ -44,12 +43,14 @@ def get_object(name: str):
 class PerfusionSystem:
     def __init__(self, name: str = "Standard"):
         self.name = name
-        self._lgr = utils.get_object_logger(__name__, self.name)
+        self._lgr = logging.getLogger('PerfusionSystem')
         self.sensors = {}
+        self.is_opened = False
 
     def open(self):
         SYS_HW.load_all()
         SYS_HW.start()
+        self.is_opened = True
 
     def close(self):
         SYS_HW.stop()
@@ -57,14 +58,19 @@ class PerfusionSystem:
             sensor.stop()
             if sensor.hw:
                 sensor.hw.stop()
+        self.is_opened = False
         self._lgr.info('PerfusionSystem is closed')
 
     def load_all(self):
+        if not self.is_opened:
+            self.open()
         all_names = PerfusionConfig.get_section_names('sensors')
         for name in all_names:
             self.load(name)
 
     def load(self, name: str):
+        if not self.is_opened:
+            self.open()
         if name in self.sensors.keys():
             self._lgr.error(f'Sensor {name} already loaded')
             return

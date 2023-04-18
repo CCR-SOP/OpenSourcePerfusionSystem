@@ -8,6 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import threading
 
 import wx
 
@@ -31,9 +32,7 @@ class HardwarePanel(wx.Panel):
         pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump', 'Glucose Circuit Pump']
         pumps = []
         for pump_name in pump_names:
-            temp_sensor = Sensor(name=pump_name)
-            temp_sensor.read_config()
-            pumps.append(temp_sensor)
+            pumps.append(perfusion_system.get_sensor(pump_name))
 
         self.ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer',
                                                     gas_device=perfusion_system.get_sensor('Arterial Gas Mixer').hw,
@@ -91,22 +90,13 @@ class HardwarePanel(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self._lgr.debug('closing')
         self.ha_autogasmixer.stop()
-        self._lgr.debug('stopped ha_autogasmixer')
         self.pv_autogasmixer.stop()
-        self._lgr.debug('stopped pv_autogasmixer')
         self.auto_inflow.stop()
-        self._lgr.debug('stopped auto_inflow')
         self.auto_outflow.stop()
-        self._lgr.debug('stopped auto_outflow')
-        self._lgr.debug('closing')
         self.panel_syringes.Close()
-        self._lgr.debug(' panel_syringes closed')
         self.panel_gas_mixers.Close()
-        self._lgr.debug(' panel_gas_mixers closed')
         self.panel_dialysate_pumps.Close()
-        self._lgr.debug(' panel_dialysate_pumps closed')
         self.Destroy()
 
 
@@ -119,7 +109,7 @@ class HardwareFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.sys.close()
+        self.panel.Close()
         self.Destroy()
 
 
@@ -137,8 +127,8 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     sys = PerfusionSystem()
-    sys.load_all()
     sys.open()
+    sys.load_all()
 
     app = MyHardwareApp(0)
     app.MainLoop()

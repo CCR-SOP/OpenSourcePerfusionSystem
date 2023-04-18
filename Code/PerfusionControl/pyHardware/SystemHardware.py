@@ -35,7 +35,6 @@ def get_object(name: str):
 
     try:
         class_name = params['class']
-        print(f'class_name is {class_name}')
     except KeyError:
         print(f'could not find key class in section {name}')
         print(params)
@@ -43,7 +42,6 @@ def get_object(name: str):
 
     try:
         class_ = globals().get(class_name, None)
-        print(f'class_ is {class_}')
     except KeyError:
         print(f'Class {class_name} was not imported in SystemHardware')
         return None

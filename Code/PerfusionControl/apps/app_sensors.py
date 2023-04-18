@@ -18,16 +18,15 @@ import pyPerfusion.utils as utils
 from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
-class SensorFrame(wx.Frame):
-    def __init__(self, perfusion_system, *args, **kwds):
+class SensorPanel(wx.Panel):
+    def __init__(self, parent, perfusion_system):
+        self.parent = parent
+        wx.Panel.__init__(self, parent)
         self._lgr = logging.getLogger('AppSensors')
-        wx.Frame.__init__(self, *args, **kwds)
-        sizer = wx.GridSizer(cols=2)
-        utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-        utils.configure_matplotlib_logging()
-
         self.sys = perfusion_system
         sensor_names = ['Hepatic Artery Flow', 'Portal Vein Flow', 'Hepatic Artery Pressure', 'Portal Vein Pressure']
+
+        sizer = wx.GridSizer(cols=2)
         self.sensors = {}
         self.panels = []
         for name in sensor_names:
@@ -51,6 +50,19 @@ class SensorFrame(wx.Frame):
         self.Destroy()
 
 
+class SensorFrame(wx.Frame):
+    def __init__(self, perfusion_system, *args, **kwds):
+        wx.Frame.__init__(self, *args, **kwds)
+
+        self.sys = perfusion_system
+        self.panel = SensorPanel(self, self.sys)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, evt):
+        self.panel.Close()
+        self.Destroy()
+
+
 class MySensorApp(wx.App):
     def OnInit(self):
         frame = SensorFrame(sys, None, wx.ID_ANY, "")
@@ -65,12 +77,13 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     sys = PerfusionSystem()
-    sys.load_all()
     sys.open()
+    sys.load_all()
 
     app = MySensorApp(0)
     app.MainLoop()
+    sys.close()
     for thread in threading.enumerate():
         print(thread.name)
 
-    sys.close()
+

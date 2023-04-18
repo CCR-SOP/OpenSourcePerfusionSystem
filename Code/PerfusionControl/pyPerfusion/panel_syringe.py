@@ -259,6 +259,7 @@ class PanelSyringeControls(wx.Panel):
         self.sensor.hw.infuse_to_target_volume()
 
     def update_controls_from_hardware(self, evt = None):
+
         self.btn_bolus.Enable(not self.sensor.hw.is_infusing)
 
     def update_config_from_controls(self):
@@ -266,7 +267,6 @@ class PanelSyringeControls(wx.Panel):
         self.sensor.hw.cfg.initial_target_volume = int(self.spin_volume.GetValue())
 
     def update_controls_from_config(self):
-        self._lgr.debug(f'config is {self.sensor.hw.cfg}')
         self.spin_volume.SetValue(self.sensor.hw.cfg.initial_target_volume)
         self.spin_rate.SetValue(self.sensor.hw.cfg.initial_injection_rate)
 
@@ -310,8 +310,9 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     sys = PerfusionSystem()
-    sys.load_all()
     sys.open()
+    sys.load('Insulin')
+
     syringe = sys.get_sensor('Insulin')
 
     app = MyTestApp(0)

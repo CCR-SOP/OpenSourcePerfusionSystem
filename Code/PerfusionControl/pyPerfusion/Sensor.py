@@ -176,7 +176,7 @@ class Sensor:
             self.stop()
         self._evt_halt.clear()
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'__name__ ({self.name})'
+        self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
         self._lgr.debug(f'{self.name} sensor started')
 

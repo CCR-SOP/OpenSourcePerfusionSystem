@@ -35,8 +35,8 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     sys = PerfusionSystem()
-    sys.load_all()
     sys.open()
+    sys.load_all()
 
     app = MyMainApp(0)
     app.MainLoop()
