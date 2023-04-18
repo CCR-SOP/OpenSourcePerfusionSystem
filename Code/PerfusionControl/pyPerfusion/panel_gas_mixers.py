@@ -16,7 +16,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.Sensor import Sensor
 from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
-from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class GasMixerPanel(wx.Panel):
@@ -72,7 +72,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.name = name
         self.autogasmixer = autogasmixer
         self.cdi_reader = cdi_reader
-
 
         if self.autogasmixer.gas_device is not None:
             # TODO we should verify the gas mixer is configured
@@ -191,8 +190,12 @@ class BaseGasMixerPanel(wx.Panel):
     def OnAuto(self, evt):
         if not self.chk_auto.IsChecked():
             self._update_manual_entries()
+            self.autogasmixer.stop()
+        else:
+            self.autogasmixer.start()
         self.input_percent_gas1.Enable(not self.chk_auto.IsChecked())
         self.input_total_flow.Enable(not self.chk_auto.IsChecked())
+
 
     def OnFlow(self, evt):
         working_status = self.autogasmixer.gas_device.get_working_status()
@@ -256,16 +259,11 @@ class TestFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.panel.Close()
-        SYS_HW.stop()
-        ha_autogasmixer.stop()
-        pv_autogasmixer.stop()
-        ha_autogasmixer.gas_device.stop()
-        pv_autogasmixer.gas_device.stop()
-        cdi_sensor.stop()
-        self.Destroy()
-
+        sys.close()
         for thread in enumerate():
             print(thread.name)
+
+        self.Destroy()
 
 
 class MyTestApp(wx.App):
@@ -282,16 +280,13 @@ if __name__ == "__main__":
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.setup_file_logger(lgr, logging.DEBUG, 'panel_gas_mixers_debug')
 
-    SYS_HW.load_all()
-    SYS_HW.start()
+    sys = PerfusionSystem()
+    sys.load_all()
+    sys.open()
 
-    ha_sensor = Sensor(name='Arterial Gas Mixer')
-    ha_sensor.read_config()
-    pv_sensor = Sensor('Venous Gas Mixer')
-    pv_sensor.read_config()
-    cdi_sensor = Sensor(name="CDI")
-    cdi_sensor.read_config()
-    cdi_sensor.start()
+    ha_sensor = sys.get_sensor(name='Arterial Gas Mixer')
+    pv_sensor = sys.get_sensor('Venous Gas Mixer')
+    cdi_sensor = sys.get_sensor(name="CDI")
 
     ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=ha_sensor.hw,
                                            cdi_reader=cdi_sensor.get_reader())
