@@ -102,6 +102,7 @@ class AutoDialysisInflow(AutoDialysis):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = AutoDialysisInflowConfig()
+        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def read_config(self):
         super().read_config()
@@ -117,7 +118,6 @@ class AutoDialysisInflow(AutoDialysis):
             pass
 
     def _update_speed(self, K: float):
-        self._lgr.debug(f'K={K}, range is {self.cfg.K_range}')
         if K == -1:
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
         elif K < self.cfg.K_range[0]:
@@ -130,6 +130,7 @@ class AutoDialysisOutflow(AutoDialysis):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = AutoDialysisOutflowConfig()
+        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def read_config(self):
         super().read_config()

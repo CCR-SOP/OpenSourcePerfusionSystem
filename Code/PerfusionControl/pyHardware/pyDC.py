@@ -53,8 +53,8 @@ class DCDevice:
         self._buffer = np.zeros(1, dtype=self.data_dtype)
         self.acq_start_ms = 0
         self.buf_len = 1
-        self.data_type = float
         self.sampling_period_ms = 0
+        self.output_range = [0, 5]
 
     @property
     def last_value(self):
@@ -107,7 +107,19 @@ class DCDevice:
         self._lgr.debug(f'ml/min = {ml_per_min}, volts = {volts}')
         self.set_output(volts)
 
+    def adjust_percent_of_max(self, percent: float):
+        adjust = (percent / 100.0) * (self.output_range[1] - self.output_range[0])
+        self._lgr.debug(f'adjust is {adjust}')
+        volts = self.last_value + adjust
+        self.set_output(volts)
+
     def set_output(self, output_volts: float):
+        if output_volts < self.output_range[0]:
+            self._lgr.warning(f'Attempt to set output below {self.output_range[0]}')
+            output_volts = self.output_range[0]
+        elif output_volts > self.output_range[1]:
+            self._lgr.warning(f'Attempt to set output below {self.output_range[1]}')
+            output_volts = self.output_range[1]
         self._buffer[0] = output_volts
         self._queue.put((self._buffer, utils.get_epoch_ms()))
 

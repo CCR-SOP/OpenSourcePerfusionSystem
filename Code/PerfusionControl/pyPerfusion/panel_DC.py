@@ -119,7 +119,7 @@ class PanelDCControl(wx.Panel):
 
     def update_controls_from_hardware(self, evt=None):
         if self.sensor and self.sensor.hw:
-            self.text_real.SetValue(f'{self.sensor.hw.last_value:.3f}')
+            self.text_real.SetValue(f'{self.sensor.hw.last_flow:.3f}')
 
     def on_close(self, evt):
         self.timer_gui_update.Stop()

@@ -236,7 +236,7 @@ class WriterStream:
     def __init__(self, name: str):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self.cfg = WriterConfig
+        self.cfg = WriterConfig()
         self._ext = '.dat'
         self._ext_hdr = '.txt'
         self._last_idx = 0
@@ -300,7 +300,6 @@ class WriterStream:
         self._base_path = PerfusionConfig.get_date_folder()
         self._filename = pathlib.Path(f'{sensor.name}_{self.name}')
         self.sensor = sensor
-        self.data_dtype = sensor.hw.data_dtype
 
         if self._fid:
             self._fid.close()

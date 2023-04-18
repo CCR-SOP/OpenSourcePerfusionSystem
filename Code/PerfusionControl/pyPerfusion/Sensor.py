@@ -87,19 +87,27 @@ class Sensor:
 
         self._strategies = []
 
+    @property
+    def data_dtype(self):
+        return self.hw.data_dtype
+
     def write_config(self):
         PerfusionConfig.write_from_dataclass('sensors', self.name, self.cfg)
 
-    def read_config(self):
-        self._lgr.debug(f'Reading config for {self.name}')
-        PerfusionConfig.read_into_dataclass('sensors', self.name, self.cfg)
+    def _convert_lists(self):
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
         self.cfg.valid_range = [int(x) for x in ''.join(self.cfg.valid_range).split(',')]
 
+    def read_config(self):
+        self._lgr.debug(f'Reading config for {self.name}')
+        PerfusionConfig.read_into_dataclass('sensors', self.name, self.cfg)
+        self._convert_lists()
+
         # attach hardware
-        self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.name}')
-        self.hw = SYS_HW.get_hw(self.cfg.hw_name)
+        if hasattr(self.cfg, 'hw_name'):
+            self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.name}')
+            self.hw = SYS_HW.get_hw(self.cfg.hw_name)
 
         # load strategies
         # self._lgr.debug(f'strategies are {self.cfg.strategy_names}')
@@ -184,13 +192,19 @@ class CalculatedSensor(Sensor):
         self._lgr = logging.getLogger(__name__)
         super().__init__(name)
         self.cfg = CalculatedSensorConfig()
-        self.reader = None
+
+    def _convert_lists(self):
+        pass
+
+    @property
+    def data_dtype(self):
+        return self.get_reader().data_dtype
 
     def run(self):
         while not PerfusionConfig.MASTER_HALT.is_set():
             if self._evt_halt.wait(self._timeout):
                 break
-            t, data_buf = self.reader.get_data_from_last_read(self.cfg.samples_per_calc)
+            t, data_buf = self.get_reader().get_data_from_last_read(self.cfg.samples_per_calc)
             if data_buf is not None:
                 buf = data_buf
                 for strategy in self._strategies:
@@ -202,9 +216,15 @@ class DivisionSensor(Sensor):
         self._lgr = logging.getLogger(__name__)
         super().__init__(name)
         self.cfg = DivisionSensorConfig()
-        self.reader = None
         self.reader_dividend = None
         self.reader_divisor = None
+
+    def _convert_lists(self):
+        pass
+
+    @property
+    def data_dtype(self):
+        return self.get_writer().data_dtype
 
     def run(self):
         while not PerfusionConfig.MASTER_HALT.is_set():

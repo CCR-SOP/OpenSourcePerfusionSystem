@@ -9,30 +9,28 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from time import sleep
+
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import pyHardware.pyPump11Elite as pyPump11Elite
-from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.Sensor import Sensor
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 BAUD_RATES = ['9600', '38400', '57600', '115200']
 
 
 class PanelSyringe(wx.Panel):
-    def __init__(self, parent, sensor):
+    def __init__(self, parent, syringe_sensor):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-        self.sensor = sensor
-        syringe = self.sensor.hw
+        self.sensor = syringe_sensor
 
-        self._panel_cfg = PanelSyringeConfig(self, syringe)
-        self._panel_ctrl = PanelSyringeControls(self, syringe, self.sensor)
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=syringe.name)
+        self._panel_cfg = PanelSyringeConfig(self, self.sensor.hw)
+        self._panel_ctrl = PanelSyringeControls(self, self.sensor)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.sensor.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()
@@ -169,11 +167,10 @@ class PanelSyringeConfig(wx.Panel):
 
 
 class PanelSyringeControls(wx.Panel):
-    def __init__(self, parent, syringe: pyPump11Elite.Pump11Elite, sensor):
+    def __init__(self, parent, sensor):
         super().__init__(parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
-        self.syringe = syringe
         self.sensor = sensor
         self.reader = self.sensor.get_reader()
         self._inc = 1
@@ -182,7 +179,7 @@ class PanelSyringeControls(wx.Panel):
         font = wx.Font()
         font.SetPointSize(int(12))
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.syringe.name)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.sensor.name)
         static_box.SetFont(font)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
@@ -238,18 +235,18 @@ class PanelSyringeControls(wx.Panel):
 
     def OnBasal(self, evt):
         infusion_rate = self.spin_rate.GetValue()
-        if self.syringe.is_infusing:
-            self.syringe.set_target_volume(0)
+        if self.sensor.hw.is_infusing:
+            self.sensor.hw.set_target_volume(0)
             self.btn_basal.SetLabel('Start Basal')
             self.btn_basal.SetValue(True)
-            self.syringe.stop()
+            self.sensor.hw.stop()
             self._lgr.info(f'Basal syringe infusion halted')
         else:
-            self.syringe.set_infusion_rate(infusion_rate)
-            self.syringe.set_target_volume(0)
+            self.sensor.hw.set_infusion_rate(infusion_rate)
+            self.sensor.hw.set_target_volume(0)
             # self._lgr.debug(f'Infusion rate: {infusion_rate}')
             # self._lgr.debug(f'Target volume: {0}')
-            self.syringe.start_constant_infusion()
+            self.sensor.hw.start_constant_infusion()
             self.btn_basal.SetLabel('Stop Basal')
             self.btn_basal.SetValue(False)
             self._lgr.info(f'Basal syringe infusion at rate {infusion_rate} uL/min started')
@@ -257,33 +254,33 @@ class PanelSyringeControls(wx.Panel):
     def OnBolus(self, evt):
         infusion_rate = self.spin_rate.GetValue()
         target_vol = self.spin_volume.GetValue()
-        self.syringe.set_infusion_rate(infusion_rate)
-        self.syringe.set_target_volume(target_vol)
-        self.syringe.infuse_to_target_volume()
+        self.sensor.hw.set_infusion_rate(infusion_rate)
+        self.sensor.hw.set_target_volume(target_vol)
+        self.sensor.hw.infuse_to_target_volume()
 
     def update_controls_from_hardware(self, evt = None):
-        self.btn_bolus.Enable(not self.syringe.is_infusing)
+        self.btn_bolus.Enable(not self.sensor.hw.is_infusing)
 
     def update_config_from_controls(self):
-        self.syringe.cfg.initial_injection_rate = int(self.spin_rate.GetValue())
-        self.syringe.cfg.initial_target_volume = int(self.spin_volume.GetValue())
+        self.sensor.hw.cfg.initial_injection_rate = int(self.spin_rate.GetValue())
+        self.sensor.hw.cfg.initial_target_volume = int(self.spin_volume.GetValue())
 
     def update_controls_from_config(self):
-        self._lgr.debug(f'config is {self.syringe.cfg}')
-        self.spin_volume.SetValue(self.syringe.cfg.initial_target_volume)
-        self.spin_rate.SetValue(self.syringe.cfg.initial_injection_rate)
+        self._lgr.debug(f'config is {self.sensor.hw.cfg}')
+        self.spin_volume.SetValue(self.sensor.hw.cfg.initial_target_volume)
+        self.spin_rate.SetValue(self.sensor.hw.cfg.initial_injection_rate)
 
     def on_save_cfg(self, evt):
         self.update_config_from_controls()
-        self.syringe.write_config()
+        self.sensor.hw.write_config()
 
     def on_load_cfg(self, evt):
-        self.syringe.read_config()
+        self.sensor.hw.read_config()
         self.update_controls_from_config()
 
     def OnClose(self, evt):
         self.timer_gui_update.Stop()
-        self.syringe.stop()
+        self.sensor.hw.stop()
 
 
 class TestFrame(wx.Frame):
@@ -291,14 +288,13 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = PanelSyringe(self, trial_sensor)
-        self.trial_sensor = trial_sensor
+        self.panel = PanelSyringe(self, syringe)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        SYS_HW.stop()
-        self.trial_sensor.stop()
+        sys.close()
         self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
@@ -313,18 +309,10 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    SYS_HW.load_all()
-
-    name = 'Insulin'
-    try:
-        trial_sensor = Sensor(name=name)
-        trial_sensor.read_config()
-        trial_sensor.start()
-    except PerfusionConfig.MissingConfigSection:
-        print(f'Could not find sensor called {name} in sensors.ini')
-        SYS_HW.stop()
-        exit()
-        trial_sensor = None
+    sys = PerfusionSystem()
+    sys.load_all()
+    sys.open()
+    syringe = sys.get_sensor('Insulin')
 
     app = MyTestApp(0)
     app.MainLoop()

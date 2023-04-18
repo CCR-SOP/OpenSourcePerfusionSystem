@@ -16,32 +16,42 @@ import pyPerfusion.utils as utils
 from pyPerfusion.panel_multiple_syringes import SyringePanel
 from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
 from pyPerfusion.panel_gas_mixers import GasMixerPanel
-from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 from pyPerfusion.Sensor import Sensor
 from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
+from pyPerfusion.pyAutoDialysis import AutoDialysisInflow, AutoDialysisOutflow
 
 
 class HardwarePanel(wx.Panel):
-    def __init__(self, parent, cdi_Sensor):
+    def __init__(self, parent, perfusion_system):
         self.parent = parent
-        self.cdi_sensor = cdi_Sensor
-
-        self.pump_names = ['Dialysate Inflow', 'Dialysate Outflow', 'Dialysis Blood', 'Glucose Circuit']
-
         wx.Panel.__init__(self, parent)
+        self._lgr = logging.getLogger(__name__)
 
+        pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump', 'Glucose Circuit Pump']
         drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
-        self.ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
-        self.pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
 
-        ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=self.ha_mixer,
-                                               cdi_reader=self.cdi_sensor.get_reader())
-        pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer', gas_device=self.pv_mixer,
-                                             cdi_reader=self.cdi_sensor.get_reader())
+        pumps = []
+        for pump_name in pump_names:
+            temp_sensor = Sensor(name=pump_name)
+            temp_sensor.read_config()
+            pumps.append(temp_sensor)
+
+        ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer',
+                                               gas_device=perfusion_system.get_sensor('Arterial Gas Mixer').hw,
+                                               cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
+        pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer',
+                                             gas_device=perfusion_system.get_sensor('Venous Gas Mixer').hw,
+                                             cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
 
         self.panel_syringes = SyringePanel(self, drugs)
-        self.panel_dialysate_pumps = DialysisPumpPanel(self, self.pump_names, self.cdi_sensor)
-        self.panel_gas_mixers = GasMixerPanel(self, ha_autogasmixer, pv_autogasmixer, cdi_reader=self.cdi_sensor.get_reader())
+        self.panel_dialysate_pumps = DialysisPumpPanel(self,
+                                                       pumps,
+                                                       perfusion_system.get_sensor('CDI').get_reader(),
+                                                       auto_inflow=auto_inflow,
+                                                       auto_outflow=auto_outflow)
+        self.panel_gas_mixers = GasMixerPanel(self, ha_autogasmixer, pv_autogasmixer,
+                                              cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -73,26 +83,11 @@ class HardwareFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        # Load CDI sensor
-        cdi_sensor = Sensor(name='CDI')
-        cdi_sensor.read_config()
-        cdi_sensor.start()
-
-        self.panel = HardwarePanel(self, cdi_sensor)
+        self.panel = HardwarePanel(self, sys)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        SYS_HW.stop()
-        self.panel.panel_syringes.OnClose(self)
-        self.panel.panel_dialysate_pumps.close()
-        self.panel.panel_dialysate_pumps.cdi_timer.Stop()
-        self.panel.cdi_sensor.stop()
-        for sensor in self.panel.panel_dialysate_pumps.sensors:
-            sensor.stop()
-
-        self.panel.panel_gas_mixers.panel_HA.autogasmixer.gas_device.set_working_status(turn_on=False)
-        self.panel.panel_gas_mixers.panel_PV.autogasmixer.gas_device.set_working_status(turn_on=False)
-
+        sys.close()
         self.Destroy()
 
 
@@ -109,8 +104,19 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    SYS_HW.load_all()
-    SYS_HW.start()
+    sys = PerfusionSystem()
+    sys.open()
+    sys.load_all()
+
+    auto_inflow = AutoDialysisInflow(name='Dialysate Inflow Automation')
+    auto_inflow.pump = sys.get_sensor('Dialysate Inflow Pump').hw
+    auto_inflow.cdi_reader = sys.get_sensor('CDI').get_reader()
+    auto_inflow.read_config()
+
+    auto_outflow = AutoDialysisOutflow(name='Dialysate Outflow Automation')
+    auto_outflow.pump = sys.get_sensor('Dialysate Outflow Pump').hw
+    auto_outflow.cdi_reader = sys.get_sensor('CDI').get_reader()
+    auto_outflow.read_config()
 
     app = MyHardwareApp(0)
     app.MainLoop()
