@@ -8,10 +8,8 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Thread, Event
-from dataclasses import dataclass, field
-from typing import List
+from dataclasses import dataclass
 
-from pyHardware.pyCDI import CDIData
 from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -64,7 +62,7 @@ class AutoSyringe:
         return self.is_streaming
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
 
     def read_config(self):
         self._lgr.debug(f'Reading config for {self.name}')

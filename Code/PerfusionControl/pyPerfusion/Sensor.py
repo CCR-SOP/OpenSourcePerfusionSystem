@@ -28,39 +28,28 @@ from pyPerfusion.Strategy_Processing import RMS, MovingAverage, RunningSum
 from pyPerfusion.Strategy_ReadWrite import WriterStream, WriterPoints
 
 
-class HWProtocol(Protocol):
-    T = TypeVar("T", bound=npt.NBitBase)
-
-    def get_buf_info(self) -> (int, np.dtype):
-        pass
-
-    def get_data(self) -> (np.int32, np.dtype[T]):
-        pass
-
-    def sampling_period_ms(self):
-        pass
-
-
 @dataclass
 class BaseSensorConfig:
     strategy_names: str = ''
-    units: str = ''
 
 
 @dataclass
 class SensorConfig(BaseSensorConfig):
     hw_name: str = ''
+    units: str = ''
     valid_range: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
 class CalculatedSensorConfig(BaseSensorConfig):
+    units: str = ''
     samples_per_calc: int = 1
     sensor_strategy: str = ''
 
 
 @dataclass
 class DivisionSensorConfig(BaseSensorConfig):
+    units: str = ''
     dividend_name: str = ''
     divisor_name: str = ''
     dividend_strategy: str = ''
@@ -70,6 +59,12 @@ class DivisionSensorConfig(BaseSensorConfig):
 
 @dataclass
 class ActuatorWriterConfig(BaseSensorConfig):
+    units: str = ''
+    hw_name: str = ''
+
+
+@dataclass
+class GasMixerConfig(BaseSensorConfig):
     hw_name: str = ''
 
 
@@ -189,8 +184,8 @@ class Sensor:
 
 class CalculatedSensor(Sensor):
     def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
         super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = CalculatedSensorConfig()
 
     def _convert_lists(self):
@@ -213,8 +208,8 @@ class CalculatedSensor(Sensor):
 
 class DivisionSensor(Sensor):
     def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
         super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = DivisionSensorConfig()
         self.reader_dividend = None
         self.reader_divisor = None
@@ -236,3 +231,13 @@ class DivisionSensor(Sensor):
                 buf = np.divide(dividend, divisor)
                 for strategy in self._strategies:
                     buf, t = strategy.process_buffer(buf, t_f)
+
+
+class GasMixerSensor(Sensor):
+    def __init__(self, name):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = GasMixerConfig()
+
+    def _convert_lists(self):
+        pass

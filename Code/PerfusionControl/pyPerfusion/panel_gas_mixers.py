@@ -281,17 +281,19 @@ if __name__ == "__main__":
     utils.setup_file_logger(lgr, logging.DEBUG, 'panel_gas_mixers_debug')
 
     sys = PerfusionSystem()
-    sys.load_all()
     sys.open()
+    sys.load_all()
 
     ha_sensor = sys.get_sensor(name='Arterial Gas Mixer')
-    pv_sensor = sys.get_sensor('Venous Gas Mixer')
+    pv_sensor = sys.get_sensor(name='Venous Gas Mixer')
     cdi_sensor = sys.get_sensor(name="CDI")
 
-    ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=ha_sensor.hw,
+    ha_autogasmixer = AutoGasMixerArterial(name='Arterial Gas Mixer Automation', gas_device=ha_sensor.hw,
                                            cdi_reader=cdi_sensor.get_reader())
-    pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer', gas_device=pv_sensor.hw,
+    ha_autogasmixer.read_config()
+    pv_autogasmixer = AutoGasMixerVenous(name='Venous Gas Mixer Automation', gas_device=pv_sensor.hw,
                                          cdi_reader=cdi_sensor.get_reader())
+    pv_autogasmixer.read_config()
 
     app = MyTestApp(0)
     app.MainLoop()

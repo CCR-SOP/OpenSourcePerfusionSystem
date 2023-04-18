@@ -78,10 +78,7 @@ def get_gas_index(gas_name: str):
 @dataclass
 class GasDeviceConfig:
     port: str = ''
-    CO2_range: List = field(default_factory=lambda: [0, 100])
-    O2_range: List = field(default_factory=lambda: [0, 100])
-    pH_range: List = field(default_factory=lambda: [0, 100])
-    flow_limits: List = field(default_factory=lambda: [5, 250])
+    flow_limits: List = field(default_factory=lambda: [0, 100])
 
 
 class GasDevice:
@@ -111,14 +108,7 @@ class GasDevice:
         PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
 
     def read_config(self):
-        self._lgr.debug(f'Reading config for {self.name}')
         PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
-        self._lgr.debug(f'Config = {self.cfg}')
-        # update the valid_range attribute to a list of integers
-        # as it will be read in as a list of characters
-        self.cfg.CO2_range = [int(x) for x in ''.join(self.cfg.CO2_range).strip(' ').split(',')]
-        self.cfg.O2_range = [int(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
-        self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
         self.cfg.flow_limits = [int(x) for x in ''.join(self.cfg.flow_limits).strip(' ').split(',')]
         self.open()
 

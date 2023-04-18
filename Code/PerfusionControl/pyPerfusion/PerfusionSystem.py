@@ -12,7 +12,7 @@ import logging
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.Sensor import Sensor, CalculatedSensor, DivisionSensor
+from pyPerfusion.Sensor import Sensor, CalculatedSensor, DivisionSensor, GasMixerSensor
 
 
 def get_object(name: str):
@@ -77,13 +77,9 @@ class PerfusionSystem:
 
         self._lgr.info(f'Loading {name}')
         sensor = get_object(name)
-        try:
-            sensor.read_config()
-            self.sensors[name] = sensor
-            sensor.start()
-        except PerfusionConfig.HardwareException as e:
-            self._lgr.error(f'Error reading config for {name}. Message {e}.')
-            raise e
+        sensor.read_config()
+        self.sensors[name] = sensor
+        sensor.start()
 
     def get_sensor(self, name: str):
         if name in self.sensors.keys():
