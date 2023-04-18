@@ -16,7 +16,8 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 from queue import Queue, Empty
 
 import numpy as np
@@ -33,6 +34,11 @@ class DCDeviceException(Exception):
 class DCChannelConfig:
     device: str = ''
     line: int = 0
+    flow_range: List = field(default_factory=lambda: [0, 100])
+    cal_pt1_volts: np.float64 = 0.0
+    cal_pt1_flow: np.float64 = -0.03
+    cal_pt2_volts: np.float64 = 5
+    cal_pt2_flow: np.float64 = 49.7
 
 
 class DCDevice:
@@ -42,7 +48,9 @@ class DCDevice:
         self.cfg = DCChannelConfig()
         self._queue = Queue()
         self._q_timeout = 0.5
-        self._buffer = np.zeros(1, dtype=np.float64)
+
+        self.data_dtype = np.dtype(np.float64)
+        self._buffer = np.zeros(1, dtype=self.data_dtype)
         self.acq_start_ms = 0
         self.buf_len = 1
         self.data_type = float
@@ -51,6 +59,22 @@ class DCDevice:
     @property
     def last_value(self):
         return self._buffer[0]
+
+    @property
+    def last_flow(self):
+        return self.volts_to_mlpermin(self.last_value)
+
+    def volts_to_mlpermin(self, volts):
+        ml_per_min = (((volts - self.cfg.cal_pt1_volts) * (self.cfg.cal_pt2_flow - self.cfg.cal_pt1_flow))
+                      / (self.cfg.cal_pt2_volts - self.cfg.cal_pt1_volts)) + self.cfg.cal_pt1_flow
+        return ml_per_min
+
+    def mlpermin_to_volts(self, ml_per_min):
+        volts = ((((ml_per_min - self.cfg.cal_pt1_flow)
+                 * (self.cfg.cal_pt2_volts - self.cfg.cal_pt1_volts))
+                 / (self.cfg.cal_pt2_flow - self.cfg.cal_pt1_flow))
+                 + self.cfg.cal_pt1_volts)
+        return volts
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -77,6 +101,11 @@ class DCDevice:
 
     def stop(self):
         self.set_output(0)
+
+    def set_flow(self, ml_per_min):
+        volts = self.mlpermin_to_volts(ml_per_min)
+        self._lgr.debug(f'ml/min = {ml_per_min}, volts = {volts}')
+        self.set_output(volts)
 
     def set_output(self, output_volts: float):
         self._buffer[0] = output_volts

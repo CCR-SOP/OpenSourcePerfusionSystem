@@ -45,12 +45,12 @@ class HWProtocol(Protocol):
 class BaseSensorConfig:
     strategy_names: str = ''
     units: str = ''
-    valid_range: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
 class SensorConfig(BaseSensorConfig):
     hw_name: str = ''
+    valid_range: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
@@ -68,11 +68,16 @@ class DivisionSensorConfig(BaseSensorConfig):
     samples_per_calc: int = 1
 
 
+@dataclass
+class ActuatorWriterConfig(BaseSensorConfig):
+    hw_name: str = ''
+
+
 class Sensor:
     def __init__(self, name: str):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self._lgr.info(f'Creating Sensor object {name}')
+        self._lgr.info(f'Creating {__name__} object {name}')
         self.__thread = None
         self._evt_halt = Event()
         self._timeout = 0.5
@@ -113,7 +118,7 @@ class Sensor:
                 strategy.cfg = cfg
                 self.add_strategy(strategy)
             except AttributeError as e:
-                self._lgr.error(f'Could not create algorithm {params["algorithm"]} for sensor {self.name}')
+                self._lgr.error(f'Could not create algorithm {params["algorithm"]} for {__name__} {self.name}')
                 self._lgr.exception(e)
 
     def add_strategy(self, strategy):
@@ -163,7 +168,7 @@ class Sensor:
             self.stop()
         self._evt_halt.clear()
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'Sensor ({self.name})'
+        self.__thread.name = f'__name__ ({self.name})'
         self.__thread.start()
         self._lgr.debug(f'{self.name} sensor started')
 

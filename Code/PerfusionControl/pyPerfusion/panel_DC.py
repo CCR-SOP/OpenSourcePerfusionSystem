@@ -112,15 +112,14 @@ class PanelDCControl(wx.Panel):
 
     def on_update(self, evt):
         new_flow = self.entered_offset.GetValue()
-        # TODO this should be done in a calibration, not a hard-coded value
         self.sensor.hw.set_flow(new_flow)
 
     def on_stop(self, evt):
-        self.sensor.hw.set_output(0)
+        self.sensor.hw.set_flow(0)
 
     def update_controls_from_hardware(self, evt=None):
         if self.sensor and self.sensor.hw:
-            self.text_real.SetValue(f'{self.sensor.hw.last_flow:.3f}')
+            self.text_real.SetValue(f'{self.sensor.hw.last_value:.3f}')
 
     def on_close(self, evt):
         self.timer_gui_update.Stop()
@@ -140,7 +139,6 @@ class TestFrame(wx.Frame):
         self.Destroy()
 
 
-
 class MyTestApp(wx.App):
     def OnInit(self):
         frame = TestFrame(None, wx.ID_ANY, "")
@@ -154,9 +152,9 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
+    pump_name = 'Dialysate Inflow Pump'
     SYS_HW.load_all()
 
-    pump_name = 'Dialysate Inflow'
     try:
         trial_sensor = Sensor(name=pump_name)
         trial_sensor.read_config()
