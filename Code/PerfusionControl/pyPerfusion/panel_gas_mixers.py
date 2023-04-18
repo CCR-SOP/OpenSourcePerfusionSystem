@@ -73,11 +73,15 @@ class BaseGasMixerPanel(wx.Panel):
         self.autogasmixer = autogasmixer
         self.cdi_reader = cdi_reader
 
+
         if self.autogasmixer.gas_device is not None:
             # TODO we should verify the gas mixer is configured
             # for the gases we want (O2, CO2)
             self.gas1_name = self.autogasmixer.gas_device.get_gas_type(1)
             self.gas2_name = self.autogasmixer.gas_device.get_gas_type(2)
+        else:
+            self.gas1_name = "NA"
+            self.gas2_name = "NA"
 
         font = wx.Font()
         font.SetPointSize(int(12))
@@ -281,15 +285,17 @@ if __name__ == "__main__":
     SYS_HW.load_all()
     SYS_HW.start()
 
-    ha_mixer = SYS_HW.get_hw('Arterial Gas Mixer')
-    pv_mixer = SYS_HW.get_hw('Venous Gas Mixer')
+    ha_sensor = Sensor(name='Arterial Gas Mixer')
+    ha_sensor.read_config()
+    pv_sensor = Sensor('Venous Gas Mixer')
+    pv_sensor.read_config()
     cdi_sensor = Sensor(name="CDI")
     cdi_sensor.read_config()
     cdi_sensor.start()
 
-    ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=ha_mixer,
+    ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer', gas_device=ha_sensor.hw,
                                            cdi_reader=cdi_sensor.get_reader())
-    pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer', gas_device=pv_mixer,
+    pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer', gas_device=pv_sensor.hw,
                                          cdi_reader=cdi_sensor.get_reader())
 
     app = MyTestApp(0)
