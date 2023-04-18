@@ -26,31 +26,44 @@ class HardwarePanel(wx.Panel):
     def __init__(self, parent, perfusion_system):
         self.parent = parent
         wx.Panel.__init__(self, parent)
-        self._lgr = logging.getLogger(__name__)
+        self._lgr = logging.getLogger('HardwareControl')
 
         pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump', 'Glucose Circuit Pump']
-        drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
-
         pumps = []
         for pump_name in pump_names:
             temp_sensor = Sensor(name=pump_name)
             temp_sensor.read_config()
             pumps.append(temp_sensor)
 
-        ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer',
-                                               gas_device=perfusion_system.get_sensor('Arterial Gas Mixer').hw,
-                                               cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
-        pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer',
-                                             gas_device=perfusion_system.get_sensor('Venous Gas Mixer').hw,
-                                             cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
+        self.ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer',
+                                                    gas_device=perfusion_system.get_sensor('Arterial Gas Mixer').hw,
+                                                    cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
+        self.pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer',
+                                                  gas_device=perfusion_system.get_sensor('Venous Gas Mixer').hw,
+                                                  cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
 
-        self.panel_syringes = SyringePanel(self, drugs)
+        drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
+        syringes = []
+        for drug in drugs:
+            syringes.append(perfusion_system.get_sensor(drug))
+
+        self.auto_inflow = AutoDialysisInflow(name='Dialysate Inflow Automation')
+        self.auto_inflow.pump = perfusion_system.get_sensor('Dialysate Inflow Pump').hw
+        self.auto_inflow.cdi_reader = perfusion_system.get_sensor('CDI').get_reader()
+        self.auto_inflow.read_config()
+
+        self.auto_outflow = AutoDialysisOutflow(name='Dialysate Outflow Automation')
+        self.auto_outflow.pump = perfusion_system.get_sensor('Dialysate Outflow Pump').hw
+        self.auto_outflow.cdi_reader = perfusion_system.get_sensor('CDI').get_reader()
+        self.auto_outflow.read_config()
+
+        self.panel_syringes = SyringePanel(self, syringes)
         self.panel_dialysate_pumps = DialysisPumpPanel(self,
                                                        pumps,
                                                        perfusion_system.get_sensor('CDI').get_reader(),
-                                                       auto_inflow=auto_inflow,
-                                                       auto_outflow=auto_outflow)
-        self.panel_gas_mixers = GasMixerPanel(self, ha_autogasmixer, pv_autogasmixer,
+                                                       auto_inflow=self.auto_inflow,
+                                                       auto_outflow=self.auto_outflow)
+        self.panel_gas_mixers = GasMixerPanel(self, self.ha_autogasmixer, self.pv_autogasmixer,
                                               cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
@@ -75,25 +88,44 @@ class HardwarePanel(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        pass
-
-
-class HardwareFrame(wx.Frame):
-    def __init__(self, *args, **kwds):
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, *args, **kwds)
-
-        self.panel = HardwarePanel(self, sys)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sys.close()
+        self._lgr.debug('closing')
+        self.ha_autogasmixer.stop()
+        self._lgr.debug('stopped ha_autogasmixer')
+        self.pv_autogasmixer.stop()
+        self._lgr.debug('stopped pv_autogasmixer')
+        self.auto_inflow.stop()
+        self._lgr.debug('stopped auto_inflow')
+        self.auto_outflow.stop()
+        self._lgr.debug('stopped auto_outflow')
+        self._lgr.debug('closing')
+        self.panel_syringes.Close()
+        self._lgr.debug(' panel_syringes closed')
+        self.panel_gas_mixers.Close()
+        self._lgr.debug(' panel_gas_mixers closed')
+        self.panel_dialysate_pumps.Close()
+        self._lgr.debug(' panel_dialysate_pumps closed')
+        self.Destroy()
+
+
+class HardwareFrame(wx.Frame):
+    def __init__(self, perfusion_system, *args, **kwds):
+        wx.Frame.__init__(self, *args, **kwds)
+
+        self.sys = perfusion_system
+        self.panel = HardwarePanel(self, self.sys)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnClose(self, evt):
+        self.sys.close()
         self.Destroy()
 
 
 class MyHardwareApp(wx.App):
     def OnInit(self):
-        frame = HardwareFrame(None, wx.ID_ANY, "")
+        frame = HardwareFrame(sys, None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
         frame.Show()
         return True
@@ -105,18 +137,9 @@ if __name__ == "__main__":
     utils.configure_matplotlib_logging()
 
     sys = PerfusionSystem()
-    sys.open()
     sys.load_all()
-
-    auto_inflow = AutoDialysisInflow(name='Dialysate Inflow Automation')
-    auto_inflow.pump = sys.get_sensor('Dialysate Inflow Pump').hw
-    auto_inflow.cdi_reader = sys.get_sensor('CDI').get_reader()
-    auto_inflow.read_config()
-
-    auto_outflow = AutoDialysisOutflow(name='Dialysate Outflow Automation')
-    auto_outflow.pump = sys.get_sensor('Dialysate Outflow Pump').hw
-    auto_outflow.cdi_reader = sys.get_sensor('CDI').get_reader()
-    auto_outflow.read_config()
+    sys.open()
 
     app = MyHardwareApp(0)
     app.MainLoop()
+    sys.close()

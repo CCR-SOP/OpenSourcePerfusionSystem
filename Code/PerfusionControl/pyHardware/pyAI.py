@@ -255,3 +255,9 @@ class AIChannel:
                            / (self.cfg.cal_pt2_reading - self.cfg.cal_pt1_reading))
                            + self.cfg.cal_pt1_target)
         return data
+
+    def start(self):
+        pass
+
+    def stop(self):
+        pass

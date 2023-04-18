@@ -8,6 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import threading
 
 import wx
 
@@ -15,14 +16,13 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from apps.app_sensors import SensorFrame
 from apps.app_hardware_control import HardwareFrame
-from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.Sensor import Sensor
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class MyMainApp(wx.App):
     def OnInit(self):
-        frame_hw = HardwareFrame(None, wx.ID_ANY, "")
-        frame_sensor = SensorFrame(None, wx.ID_ANY, "")
+        frame_hw = HardwareFrame(sys, None, wx.ID_ANY, "")
+        frame_sensor = SensorFrame(sys, None, wx.ID_ANY, "")
         self.SetTopWindow(frame_sensor)
         frame_hw.Show()
         frame_sensor.Show()
@@ -34,12 +34,10 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    SYS_HW.load_all()
-    SYS_HW.start()
-
-    # Load CDI sensor
-    # cdi_sensor = Sensor(name='CDI')
-    # cdi_sensor.read_config()
+    sys = PerfusionSystem()
+    sys.load_all()
+    sys.open()
 
     app = MyMainApp(0)
     app.MainLoop()
+    sys.close()

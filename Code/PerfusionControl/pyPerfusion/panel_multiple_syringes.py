@@ -80,10 +80,7 @@ if __name__ == "__main__":
     sys.load_all()
     sys.open()
 
-    drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
-    syringes = []
-    for drug in drugs:
-        syringes.append(sys.get_sensor(drug))
+
 
     app = MySyringeApp(0)
     app.MainLoop()

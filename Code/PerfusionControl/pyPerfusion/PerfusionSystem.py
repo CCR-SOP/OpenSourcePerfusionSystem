@@ -46,8 +46,6 @@ class PerfusionSystem:
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.sensors = {}
-        SYS_HW.load_all()
-        SYS_HW.start()
 
     def open(self):
         SYS_HW.load_all()
@@ -57,6 +55,9 @@ class PerfusionSystem:
         SYS_HW.stop()
         for sensor in self.sensors.values():
             sensor.stop()
+            if sensor.hw:
+                sensor.hw.stop()
+        self._lgr.info('PerfusionSystem is closed')
 
     def load_all(self):
         all_names = PerfusionConfig.get_section_names('sensors')
