@@ -75,10 +75,9 @@ class Pump11EliteConfig:
     com_port: str = ''
     manufacturer_code: str = ''
     size: str = ''
-    initial_injection_rate: float = 0.0
-    initial_target_volume: float = 0.0
     baud: int = 9600
     address: int = 0
+
 
 PumpState = Enum('PumpState', ['idle', 'infusing', 'withdrawing', 'stalled', 'target_reached'])
 PumpMap = {':': PumpState.idle, '>': PumpState.infusing, '<': PumpState.withdrawing,
