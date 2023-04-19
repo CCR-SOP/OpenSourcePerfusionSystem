@@ -275,12 +275,12 @@ class PanelSyringeControls(wx.Panel):
         self.btn_bolus.Enable(enable)
 
     def update_config_from_controls(self):
-        self.automation.device.hw.cfg.initial_injection_rate = int(self.spin_rate.GetValue())
-        self.automation.device.hw.cfg.initial_target_volume = int(self.spin_volume.GetValue())
+        self.automation.device.cfg.rate_ul_per_min = int(self.spin_rate.GetValue())
+        self.automation.device.cfg.target_ul = int(self.spin_volume.GetValue())
 
     def update_controls_from_config(self):
-        self.spin_volume.SetValue(self.automation.device.hw.cfg.initial_target_volume)
-        self.spin_rate.SetValue(self.automation.device.hw.cfg.initial_injection_rate)
+        self.spin_volume.SetValue(self.automation.device.cfg.target_ul)
+        self.spin_rate.SetValue(self.automation.device.cfg.rate_ul_per_min)
 
     def on_save_cfg(self, evt):
         self.update_config_from_controls()

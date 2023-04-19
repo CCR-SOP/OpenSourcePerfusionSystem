@@ -87,14 +87,16 @@ def read_into_dataclass(cfg_name: str, section_name: str, cfg, fm: FolderManagem
                 continue
             try:
                 # check if value is a list (i.e.: #, #)
+                normal_value = True
                 if ',' in value:
                     try:
                         value = [float(x.strip()) for x in ''.join(value).split(',')]
+                        normal_value = False
                     except ValueError:
                         # a comma was found, but the values are not all numbers, so this
                         # probably isn't a list. Treat it normally
-                        value = type(dummy)(value)
-                else:
+                        pass
+                if normal_value:
                     value = type(dummy)(value)
                 setattr(cfg, key, value )
             except ValueError:

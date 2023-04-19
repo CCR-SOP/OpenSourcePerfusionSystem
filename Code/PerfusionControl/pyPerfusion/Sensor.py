@@ -14,19 +14,15 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Thread, Event
-import logging
 from dataclasses import dataclass, field
-from typing import Protocol, TypeVar, List
+from typing import List
 
 import numpy as np
-import numpy.typing as npt
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
-import pyPerfusion.utils as utils
-from pyPerfusion.Strategy_Processing import RMS, MovingAverage, RunningSum
-from pyPerfusion.Strategy_ReadWrite import WriterStream, WriterPoints
-
+from pyPerfusion.Strategy_Processing import *
+from pyPerfusion.Strategy_ReadWrite import *
 
 @dataclass
 class BaseSensorConfig:
@@ -68,6 +64,13 @@ class GasMixerConfig(BaseSensorConfig):
     hw_name: str = ''
 
 
+@dataclass
+class SyringeConfig(BaseSensorConfig):
+    hw_name: str = ''
+    target_ul: int = 0
+    rate_ul_per_min: int = 0
+
+
 class Sensor:
     def __init__(self, name: str):
         self.name = name
@@ -105,14 +108,18 @@ class Sensor:
             try:
                 # self._lgr.debug(f'Looking for {params["class"]}')
                 strategy_class = globals().get(params['class'], None)
-                # self._lgr.debug(f'Found {strategy_class}')
-                cfg = strategy_class.get_config_type()()
-                # self._lgr.debug(f'Config type is {cfg}')
-                PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-                 #self._lgr.debug('adding strategy')
-                strategy = strategy_class(name)
-                strategy.cfg = cfg
-                self.add_strategy(strategy)
+                try:
+                    # self._lgr.debug(f'Found {strategy_class}')
+                    cfg = strategy_class.get_config_type()()
+                    # self._lgr.debug(f'Config type is {cfg}')
+                    PerfusionConfig.read_into_dataclass('strategies', name, cfg)
+                    # self._lgr.debug('adding strategy')
+                    strategy = strategy_class(name)
+                    strategy.cfg = cfg
+                    self.add_strategy(strategy)
+                except AttributeError as e:
+                    self._lgr.error(f'Could not find strategy class for {name}')
+                    pass
             except AttributeError as e:
                 self._lgr.error(f'Could not create algorithm {params["algorithm"]} for {__name__} {self.name}')
                 self._lgr.exception(e)
@@ -133,11 +140,15 @@ class Sensor:
         if name is None:
             writer = self._strategies[-1]
         else:
-            writer = [strategy for strategy in self._strategies if strategy.name == name]
-            if len(writer) > 0:
-                writer = writer[0]
-            else:
-                return None
+            try:
+                writer = [strategy for strategy in self._strategies if strategy.name == name]
+                if len(writer) > 0:
+                    writer = writer[0]
+                else:
+                    return None
+            except IndexError as e:
+                self._lgr.error(f'No strategies exist for {name}')
+                writer = None
         return writer
 
     def run(self):
@@ -225,3 +236,10 @@ class GasMixerSensor(Sensor):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = GasMixerConfig()
+
+
+class SyringeSensor(Sensor):
+    def __init__(self, name):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = SyringeConfig()

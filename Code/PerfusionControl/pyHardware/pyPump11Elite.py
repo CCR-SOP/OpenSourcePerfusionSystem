@@ -248,7 +248,7 @@ class Pump11Elite:
         self.clear_infusion_volume()
         self.clear_target_volume()
 
-    def record_targeted_infusion(self, t: np.float64):
+    def record_targeted_infusion(self, t):
         """ targeted infusion actions in ul and ul/min
         """
         target_vol, target_vol_unit = self.get_target_volume()
@@ -274,11 +274,11 @@ class Pump11Elite:
             self._lgr.error(f'Unknown rate unit in syringe {self.name}: ++{rate_unit}++')
             rate = 0
 
-        buf = np.array([target_vol, rate], np.float64)
+        buf = np.array([target_vol, rate], dtype=self.data_dtype)
         if self._queue:
             self._queue.put((buf, t))
 
-    def record_continuous_infusion(self, t: np.float64, start: bool):
+    def record_continuous_infusion(self, t, start: bool):
         """ targeted infusion actions in ul and ul/min
         """
         rate, rate_unit = self.get_infusion_rate()
@@ -295,7 +295,7 @@ class Pump11Elite:
             rate = 0
 
         flag = INFUSION_START if start else INFUSION_STOP
-        buf = np.array([flag, rate], np.float64)
+        buf = np.array([flag, rate], dtype=self.data_dtype)
         if self._queue:
             self._queue.put((buf, t))
 
