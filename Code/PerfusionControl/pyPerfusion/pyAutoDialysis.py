@@ -108,7 +108,7 @@ class AutoDialysisInflow(AutoDialysis):
         super().read_config()
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
-        self.cfg.K_range = [float(x) for x in ''.join(self.cfg.K_range).strip(' ').split(',')]
+        # self.cfg.K_range = [float(x) for x in ''.join(self.cfg.K_range).strip(' ').split(',')]
 
     def update_on_input(self, cdi_data):
         try:
@@ -136,8 +136,8 @@ class AutoDialysisOutflow(AutoDialysis):
         super().read_config()
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
-        self.cfg.hct_range = [int(x) for x in ''.join(self.cfg.hct_range).strip(' ').split(',')]
-        self.cfg.K_range = [float(x) for x in ''.join(self.cfg.K_range).strip(' ').split(',')]
+        # self.cfg.hct_range = [int(x) for x in ''.join(self.cfg.hct_range).strip(' ').split(',')]
+        # self.cfg.K_range = [float(x) for x in ''.join(self.cfg.K_range).strip(' ').split(',')]
 
     def update_on_input(self, cdi_data):
         self._lgr.debug('updating outflow automation')

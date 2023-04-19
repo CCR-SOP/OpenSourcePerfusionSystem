@@ -80,6 +80,7 @@ class SystemHardware:
         self.hw = {}
 
     def load_all(self):
+        self._lgr.info('loading all hardware')
         all_names = PerfusionConfig.get_section_names('hardware')
         for name in all_names:
             self.load(name)
@@ -95,13 +96,12 @@ class SystemHardware:
             self.hw[name] = get_mock(name)
             self.hw[name].read_config()
 
-        self._lgr.debug(f'hw type is {type(self.hw[name])}')
         if isinstance(self.hw[name], NIDAQAIDevice) or isinstance(self.hw[name], AIDevice):
             for ch in self.hw[name].ai_channels:
-                self._lgr.debug(f'adding channel {ch.name}')
                 self.hw[ch.name] = ch
 
     def start(self):
+        self._lgr.info('starting all hardware')
         PerfusionConfig.MASTER_HALT.clear()
 
         try:
@@ -119,15 +119,13 @@ class SystemHardware:
         try:
             for name, device in self.hw.items():
                 if type(device) != AIChannel:
-                    self._lgr.debug(f'Stopping {name}')
                     device.stop()
         except AIDeviceException as e:
             self._lgr.error(e)
+        self._lgr.info('all hardware stopped')
 
     def get_hw(self, name: str = None):
-        self._lgr.debug(f'Getting hardware named: {name}')
         hw = self.hw.get(name, None)
-        self._lgr.debug(f'Found {hw}')
         return hw
 
 

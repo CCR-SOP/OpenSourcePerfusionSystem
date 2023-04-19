@@ -89,19 +89,12 @@ class Sensor:
     def write_config(self):
         PerfusionConfig.write_from_dataclass('sensors', self.name, self.cfg)
 
-    def _convert_lists(self):
-        # update the valid_range attribute to a list of integers
-        # as it will be read in as a list of characters
-        self.cfg.valid_range = [int(x) for x in ''.join(self.cfg.valid_range).split(',')]
-
     def read_config(self):
-        self._lgr.debug(f'Reading config for {self.name}')
+        # self._lgr.debug(f'Reading config for {self.name}')
         PerfusionConfig.read_into_dataclass('sensors', self.name, self.cfg)
-        self._convert_lists()
 
         # attach hardware
         if hasattr(self.cfg, 'hw_name'):
-            self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.name}')
             self.hw = SYS_HW.get_hw(self.cfg.hw_name)
 
         # load strategies
@@ -112,7 +105,7 @@ class Sensor:
             try:
                 # self._lgr.debug(f'Looking for {params["class"]}')
                 strategy_class = globals().get(params['class'], None)
-                self._lgr.debug(f'Found {strategy_class}')
+                # self._lgr.debug(f'Found {strategy_class}')
                 cfg = strategy_class.get_config_type()()
                 # self._lgr.debug(f'Config type is {cfg}')
                 PerfusionConfig.read_into_dataclass('strategies', name, cfg)
@@ -173,7 +166,7 @@ class Sensor:
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
-        self._lgr.debug(f'{self.name} sensor started')
+        # self._lgr.debug(f'{self.name} sensor started')
 
     def stop(self):
         self._evt_halt.set()
@@ -187,9 +180,6 @@ class CalculatedSensor(Sensor):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = CalculatedSensorConfig()
-
-    def _convert_lists(self):
-        pass
 
     @property
     def data_dtype(self):
@@ -214,9 +204,6 @@ class DivisionSensor(Sensor):
         self.reader_dividend = None
         self.reader_divisor = None
 
-    def _convert_lists(self):
-        pass
-
     @property
     def data_dtype(self):
         return self.get_writer().data_dtype
@@ -238,6 +225,3 @@ class GasMixerSensor(Sensor):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = GasMixerConfig()
-
-    def _convert_lists(self):
-        pass

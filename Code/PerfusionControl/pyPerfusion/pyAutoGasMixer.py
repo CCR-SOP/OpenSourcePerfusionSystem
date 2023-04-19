@@ -82,8 +82,8 @@ class AutoGasMixer:
                 if all_vars is not None:
                     cdi_data = CDIData(all_vars)
                     self.update_on_input(cdi_data)
-                else:
-                    self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
+                # else:
+                    # self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
 
     def start(self):
         self.stop()
@@ -93,13 +93,13 @@ class AutoGasMixer:
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'AutoGasMixer {self.name}'
         self.__thread.start()
-        self._lgr.debug(f'AutoGasMixer {self.name} started')
+        self._lgr.info(f'AutoGasMixer {self.name} started')
 
     def stop(self):
         if self.is_streaming:
             self._event_halt.set()
             self.is_streaming = False
-            self._lgr.debug(f'AutoGasMixer {self.name} stopped')
+            self._lgr.info(f'AutoGasMixer {self.name} stopped')
 
     def update_on_input(self, data):
         # this is the base class, so do nothing
@@ -121,8 +121,8 @@ class AutoGasMixerVenous(AutoGasMixer):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
-        self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
-        self.cfg.O2_range = [float(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
+        # self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
+        # self.cfg.O2_range = [float(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
 
     def update_on_input(self, data):
         try:
@@ -172,8 +172,7 @@ class AutoGasMixerArterial(AutoGasMixer):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
-        self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
-        self._lgr.debug(self.cfg)
+        # self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
 
     def update_on_input(self, data):
         try:

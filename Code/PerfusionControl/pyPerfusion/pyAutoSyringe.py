@@ -67,9 +67,7 @@ class AutoSyringe:
         PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
 
     def read_config(self):
-        self._lgr.debug(f'Reading config for {self.name}')
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
-        self._lgr.debug(f'Config = {self.cfg}')
 
     def run(self):
         self.is_streaming = True

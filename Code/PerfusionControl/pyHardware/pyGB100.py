@@ -109,7 +109,7 @@ class GasDevice:
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
-        self.cfg.flow_limits = [int(x) for x in ''.join(self.cfg.flow_limits).strip(' ').split(',')]
+        # self.cfg.flow_limits = [int(x) for x in ''.join(self.cfg.flow_limits).strip(' ').split(',')]
         self.open()
 
     def open(self, cfg=None):
@@ -227,9 +227,9 @@ class GasDevice:
                 self.set_working_status(turn_on=False)
                 with self.mutex:
                     addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
-                    self._lgr.debug(f'requesting new percent {new_percent}')
+                    # self._lgr.debug(f'requesting new percent {new_percent}')
                     percent = int(new_percent * 100)
-                    self._lgr.debug(f'writing {percent}')
+                    # self._lgr.debug(f'writing {percent}')
                     self.hw.write_register(addr, percent)
                     self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent/100} %')
                     self.push_data()

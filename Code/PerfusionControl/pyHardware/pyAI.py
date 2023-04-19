@@ -155,7 +155,6 @@ class AIDevice:
         self.stop()
 
     def start(self):
-        self._lgr.debug(f'starting')
         self.stop()
         self._event_halt.clear()
         self.acq_start_ms = utils.get_epoch_ms()
@@ -166,7 +165,6 @@ class AIDevice:
 
     def stop(self):
         if self.__thread and self.__thread.is_alive():
-            self._lgr.debug(f'Stopping {self.__thread.name}')
             self._event_halt.set()
             self.__thread.join(2.0)
             self.__thread = None

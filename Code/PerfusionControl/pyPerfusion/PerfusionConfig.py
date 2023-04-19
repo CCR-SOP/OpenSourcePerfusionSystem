@@ -80,11 +80,23 @@ def read_into_dataclass(cfg_name: str, section_name: str, cfg, fm: FolderManagem
             try:
                 dummy = getattr(cfg, key)
             except AttributeError as e:
-                logging.getLogger(__name__).debug(f'Config contained entry {key} which is not part of dataclass {cfg}')
-                # this can occur in the case of derived classes, so continue on
+                # most configs should contain an entry "class" which is not
+                # part of the actual config for a class
+                if key != 'class':
+                    logging.getLogger(__name__).debug(f'Config contained entry {key} which is not part of dataclass {cfg}')
                 continue
             try:
-                setattr(cfg, key, type(dummy)(value))
+                # check if value is a list (i.e.: #, #)
+                if ',' in value:
+                    try:
+                        value = [float(x.strip()) for x in ''.join(value).split(',')]
+                    except ValueError:
+                        # a comma was found, but the values are not all numbers, so this
+                        # probably isn't a list. Treat it normally
+                        value = type(dummy)(value)
+                else:
+                    value = type(dummy)(value)
+                setattr(cfg, key, value )
             except ValueError:
                 logging.getLogger(__name__).error(f'Error reading {filename}[{section_name}]:{key} = {value}')
                 logging.getLogger(__name__).error(f'Expected value type is {type(dummy)}')
