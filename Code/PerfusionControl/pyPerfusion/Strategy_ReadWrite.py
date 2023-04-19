@@ -100,9 +100,8 @@ class Reader:
                 self._lgr.error(f'idx = {idx}')
                 return None, None
 
-        start_t = start_idx * period / 1000.0
-        stop_t = file_size_in_samples * period / 1000.0
-        data_time = np.linspace(start_t, stop_t, samples_needed, dtype=np.uint64)
+        data_time = np.linspace(start_idx * period, file_size_in_samples * period,
+                                samples_needed, dtype=np.uint64)
 
         fid.close()
         return data_time, data
@@ -116,7 +115,7 @@ class Reader:
         end_idx = self._read_last_idx + len(data) - 1
         data_time = np.linspace(self._read_last_idx * period, end_idx * period,
                                 samples, dtype=np.uint64)
-        self._read_last_idx = end_idx
+        self._read_last_idx = end_idx + 1
         fid.close()
         return data_time, data
 
