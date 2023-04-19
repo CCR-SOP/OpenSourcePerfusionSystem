@@ -39,15 +39,6 @@ class SensorConfig(BaseSensorConfig):
 
 
 @dataclass
-class DivisionSensorConfig(BaseSensorConfig):
-    dividend_name: str = ''
-    divisor_name: str = ''
-    dividend_strategy: str = ''
-    divisor_strategy: str = ''
-    samples_per_calc: int = 1
-
-
-@dataclass
 class ActuatorWriterConfig(BaseSensorConfig):
     units: str = ''
     hw_name: str = ''
@@ -73,6 +64,15 @@ class CalculatedSensorConfig(BaseSensorConfig):
     units: str = ''
 
 
+@dataclass
+class DivisionSensorConfig(BaseSensorConfig):
+    dividend_name: str = ''
+    divisor_name: str = ''
+    dividend_strategy: str = ''
+    divisor_strategy: str = ''
+    samples_per_calc: int = 1
+
+
 class Sensor:
     def __init__(self, name: str):
         self.name = name
@@ -95,6 +95,9 @@ class Sensor:
     def sampling_period_ms(self):
         return self.hw.sampling_period_ms
 
+    def get_acq_start_ms(self):
+        return self.hw.get_acq_start_ms()
+
     def write_config(self):
         PerfusionConfig.write_from_dataclass('sensors', self.name, self.cfg)
 
@@ -112,19 +115,20 @@ class Sensor:
             # self._lgr.debug(f'Getting strategy {name}')
             params = PerfusionConfig.read_section('strategies', name)
             try:
-                # self._lgr.debug(f'Looking for {params["class"]}')
+                self._lgr.debug(f'Looking for {params}')
                 strategy_class = globals().get(params['class'], None)
                 try:
-                    # self._lgr.debug(f'Found {strategy_class}')
+                    self._lgr.debug(f'Found {strategy_class}')
                     cfg = strategy_class.get_config_type()()
-                    # self._lgr.debug(f'Config type is {cfg}')
+                    self._lgr.debug(f'Config type is {cfg}')
                     PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-                    # self._lgr.debug('adding strategy')
+                    self._lgr.debug(f'adding strategy {name}')
                     strategy = strategy_class(name)
                     strategy.cfg = cfg
                     self.add_strategy(strategy)
                 except AttributeError as e:
                     self._lgr.error(f'Could not find strategy class for {name}')
+                    self._lgr.exception(e)
                     pass
             except AttributeError as e:
                 self._lgr.error(f'Could not create algorithm {params["algorithm"]} for {__name__} {self.name}')
@@ -207,7 +211,18 @@ class CalculatedSensor(Sensor):
     def data_dtype(self):
         return self.reader.data_dtype
 
+    def get_acq_start_ms(self):
+        return self.reader.sensor.get_acq_start_ms()
+
+    def add_strategy(self, strategy):
+        # CalculatedSensor won't be fully active until the readers are set
+        # wait until run() to open them
+        self._strategies.append(strategy)
+
     def run(self):
+        for strategy in self._strategies:
+            strategy.open(sensor=self)
+
         while not PerfusionConfig.MASTER_HALT.is_set():
             if self._evt_halt.wait(self._timeout):
                 break
@@ -234,7 +249,17 @@ class DivisionSensor(Sensor):
     def data_dtype(self):
         return self.reader_dividend.data_dtype
 
+    def get_acq_start_ms(self):
+        return self.reader_dividend.sensor.get_acq_start_ms()
+
+    def add_strategy(self, strategy):
+        # Division won't be fully active until the readers are set
+        # wait until run() to open them
+        self._strategies.append(strategy)
+
     def run(self):
+        for strategy in self._strategies:
+            strategy.open(sensor=self)
         while not PerfusionConfig.MASTER_HALT.is_set():
             if self._evt_halt.wait(self._timeout):
                 break

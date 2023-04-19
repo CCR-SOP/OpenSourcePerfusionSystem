@@ -45,7 +45,7 @@ class Reader:
 
     @property
     def data_dtype(self):
-        return self.sensor.hw.data_dtype
+        return self.sensor.data_dtype
 
     def _open_read(self):
         fid = open(self.fqpn, 'rb')
@@ -70,8 +70,6 @@ class Reader:
         return file_size
 
     def retrieve_buffer(self, last_ms, samples_needed):
-        if self.sensor.hw is None:
-            return [], []
         period = self.sensor.sampling_period_ms
         fid, data = self._open_mmap()
 
@@ -95,7 +93,12 @@ class Reader:
                 start_idx = 0
             samples_needed = min(file_size_in_samples, samples_needed)
             idx = np.linspace(start_idx, file_size_in_samples - 1, samples_needed, dtype=np.uint64)
-            data = data[idx]
+            try:
+                data = data[idx]
+            except IndexError as e:
+                self._lgr.exception(e)
+                self._lgr.error(f'idx = {idx}')
+                return None, None
 
         start_t = start_idx * period / 1000.0
         stop_t = file_size_in_samples * period / 1000.0
@@ -174,7 +177,7 @@ class ReaderPoints(Reader):
                         data.append(data_chunk)
                     else:
                         data.append(data_chunk[index])
-                    data_time.append((ts - self.sensor.hw.get_acq_start_ms()) / 1000.0)
+                    data_time.append((ts - self.sensor.get_acq_start_ms()) / 1000.0)
                 else:
                     fid.seek(self.bytes_per_chunk-self.cfg.bytes_per_timestamp, SEEK_CUR)
 
@@ -207,7 +210,7 @@ class ReaderPoints(Reader):
             if chunk is not None:
                 if index is not None and index < len(chunk):
                     chunk = chunk[index]
-                timestamps.append((ts - self.sensor.hw.get_acq_start_ms()) / 1000.0)
+                timestamps.append((ts - self.sensor.get_acq_start_ms()) / 1000.0)
                 chunks.append(chunk)
 
         self._last_idx = fid.tell()
@@ -229,7 +232,7 @@ class ReaderPoints(Reader):
         if index is not None and index < len(data_chunk):
             data_chunk = data_chunk[index]
         fid.close()
-        ts = (ts - self.sensor.hw.get_acq_start_ms()) / 1000.0
+        ts = (ts - self.sensor.get_acq_start_ms()) / 1000.0
         return ts, data_chunk
 
 
@@ -290,11 +293,9 @@ class WriterStream:
         # reads using memory-mapped files
         fid = open(self.fqpn.with_suffix('').with_suffix('.txt'), 'wt')
         fid.write(hdr_str)
-        if self.sensor.hw is not None:
-            timestamp = datetime.utcfromtimestamp(self.sensor.hw.get_acq_start_ms() / 1_000)
-            fid.write(f'Start of Acquisition: {timestamp}')
-        else:
-            self._lgr.error(f'Hardware has not been attached')
+        timestamp = datetime.utcfromtimestamp(self.sensor.get_acq_start_ms() / 1_000)
+        fid.write(f'Start of Acquisition: {timestamp}')
+
         fid.close()
 
     def open(self, sensor = None):
