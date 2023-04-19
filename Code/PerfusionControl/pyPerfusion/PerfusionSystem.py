@@ -10,30 +10,31 @@ and under the public domain.
 import logging
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-import pyPerfusion.utils as utils
 from pyHardware.SystemHardware import SYS_HW
+
+# Do NOT delete anything below this line. All object are required for auto-loading
 from pyPerfusion.Sensor import Sensor, CalculatedSensor, DivisionSensor, GasMixerSensor
+from pyPerfusion.pyAutoGasMixer import AutoGasMixer, AutoGasMixerArterial, AutoGasMixerVenous
 
 
-def get_object(name: str):
+def get_object(name: str, config: str ='sensors'):
     params = {}
     try:
-        params = PerfusionConfig.read_section('sensors', name)
+        params = PerfusionConfig.read_section(config, name)
     except KeyError:
-        print(f'Could not find {name} in sensors.ini')
+        logging.getLogger().error(f'Could not find {name} in {config}.ini')
         return None
 
     try:
         class_name = params['class']
     except KeyError:
-        print(f'could not find key class in section {name}')
-        print(params)
+        logging.getLogger().error(f'could not find key class in section {name}. Params={params}')
         return None
 
     try:
         class_ = globals().get(class_name, None)
     except KeyError:
-        print(f'Class {class_name} was not imported in PerfusionSystem')
+        logging.getLogger().error(f'Class {class_name} was not imported in PerfusionSystem')
         return None
 
     obj = class_(name=name)
@@ -45,6 +46,7 @@ class PerfusionSystem:
         self.name = name
         self._lgr = logging.getLogger('PerfusionSystem')
         self.sensors = {}
+        self.automations = {}
         self.is_opened = False
 
     def open(self):
@@ -81,9 +83,19 @@ class PerfusionSystem:
         self.sensors[name] = sensor
         sensor.start()
 
-    def get_sensor(self, name: str):
-        if name in self.sensors.keys():
-            return self.sensors[name]
-        else:
-            return None
+    def load_automations(self):
+        all_names = PerfusionConfig.get_section_names('automations')
+        for name in all_names:
+            automation = get_object(name, config='automations')
+            automation.read_config()
 
+            if isinstance(automation, AutoGasMixer):
+                automation.gas_device = self.get_sensor(automation.cfg.gas_device).hw
+                automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
+            self.automations[name] = automation
+
+    def get_sensor(self, name: str):
+        return self.sensors.get(name, None)
+
+    def get_automation(self, name: str):
+        return self.automations.get(name, None)

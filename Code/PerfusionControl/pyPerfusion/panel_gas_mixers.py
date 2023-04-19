@@ -8,29 +8,23 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from threading import enumerate
 
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.Sensor import Sensor
-from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
 from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class GasMixerPanel(wx.Panel):
-    def __init__(self, parent, ha_gasmixer, pv_gasmixer, cdi_reader):
-        self.parent = parent
+    def __init__(self, parent, automations):
         wx.Panel.__init__(self, parent)
+        self._lgr = logging.getLogger(__name__)
 
-        self.cdi_reader = cdi_reader
-        self.ha_autogasmixer = ha_gasmixer
-        self.pv_autogasmixer = pv_gasmixer
-        self.panel_HA = BaseGasMixerPanel(self, name='Arterial Gas Mixer', autogasmixer=ha_gasmixer,
-                                          cdi_reader=self.cdi_reader)
-        self.panel_PV = BaseGasMixerPanel(self, name='Venous Gas Mixer', autogasmixer=pv_gasmixer,
-                                          cdi_reader=self.cdi_reader)
+        self.panels = []
+        for automation in automations:
+            panel = BaseGasMixerPanel(self, automation)
+            self.panels.append(panel)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -42,36 +36,34 @@ class GasMixerPanel(wx.Panel):
         flags = wx.SizerFlags().Expand().Border()
         self.sizer = wx.FlexGridSizer(rows=1, cols=2, vgap=1, hgap=1)
 
-        self.sizer.Add(self.panel_HA, flags)
-        self.sizer.Add(self.panel_PV, flags)
+        for panel in self.panels:
+            self.sizer.Add(panel, flags)
 
         self.sizer.AddGrowableCol(0, 1)
         self.sizer.AddGrowableCol(1, 1)
 
-        self.sizer.SetSizeHints(self.parent)
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+
+        self.sizer.SetSizeHints(self.GetParent())
+        self.SetAutoLayout(True)
         self.SetSizer(self.wrapper)
         self.Layout()
-        self.Fit()
 
     def __set_bindings(self):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.panel_PV.Close()
-        self.panel_HA.Close()
+        for panel in self.panels:
+            panel.Close()
 
 
 class BaseGasMixerPanel(wx.Panel):
-    def __init__(self, parent, name, autogasmixer, cdi_reader, **kwds):
-        wx.Panel.__init__(self, parent, -1)
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        self._lgr = logging.getLogger(__name__)
+    def __init__(self, parent, autogasmixer):
+        wx.Panel.__init__(self, parent)
+        self.name = autogasmixer.name
+        self._lgr = utils.get_object_logger(__name__, self.name)
 
-        self.parent = parent
-        self.name = name
         self.autogasmixer = autogasmixer
-        self.cdi_reader = cdi_reader
 
         if self.autogasmixer.gas_device is not None:
             # TODO we should verify the gas mixer is configured
@@ -85,13 +77,13 @@ class BaseGasMixerPanel(wx.Panel):
         font = wx.Font()
         font.SetPointSize(int(12))
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
         self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400, initial=0, inc=1)
-        self.label_total_flow.SetFont(font)
-        self.input_total_flow.SetFont(font)
+        # self.label_total_flow.SetFont(font)
+        # self.input_total_flow.SetFont(font)
 
         self.label_real_total_flow = wx.StaticText(self, label='Actual total gas flow (mL/min):')
         self.real_total_flow = wx.TextCtrl(self, style=wx.TE_READONLY, value='0')
@@ -129,7 +121,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 2).Center()
+        flags = wx.SizerFlags().Border(wx.ALL, 2).Expand()
         sizer_cfg = wx.FlexGridSizer(cols=2)
 
         sizer_cfg.Add(self.label_total_flow, flags)
@@ -166,10 +158,11 @@ class BaseGasMixerPanel(wx.Panel):
 
         self.sizer.Add(sizer_cfg, proportion=1, flag=wx.ALL | wx.EXPAND, border=1)
 
-        self.sizer.SetSizeHints(self.parent)
+        self.sizer.SetSizeHints(self.GetParent())
+        self.SetAutoLayout(True)
         self.SetSizer(self.sizer)
         self.Layout()
-        self.Fit()
+
         self.update_controls_from_hardware()
 
     def __set_bindings(self):
@@ -195,7 +188,6 @@ class BaseGasMixerPanel(wx.Panel):
             self.autogasmixer.start()
         self.input_percent_gas1.Enable(not self.chk_auto.IsChecked())
         self.input_total_flow.Enable(not self.chk_auto.IsChecked())
-
 
     def OnFlow(self, evt):
         working_status = self.autogasmixer.gas_device.get_working_status()
@@ -251,24 +243,23 @@ class BaseGasMixerPanel(wx.Panel):
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = GasMixerPanel(self, ha_autogasmixer, pv_autogasmixer, cdi_reader=cdi_sensor.get_reader())
+        automation_names = ['Arterial Gas Mixer Automation', 'Venous Gas Mixer Automation']
+        automations = []
+        for name in automation_names:
+            automations.append(SYS_PERFUSION.get_automation(name))
+        self.panel = GasMixerPanel(self, automations)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
         self.panel.Close()
-        sys.close()
-        for thread in enumerate():
-            print(thread.name)
-
         self.Destroy()
 
 
 class MyTestApp(wx.App):
     def OnInit(self):
-        frame = TestFrame(None, wx.ID_ANY, "")
+        frame = TestFrame(None)
         self.SetTopWindow(frame)
         frame.Show()
         return True
@@ -280,20 +271,17 @@ if __name__ == "__main__":
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.setup_file_logger(lgr, logging.DEBUG, 'panel_gas_mixers_debug')
 
-    sys = PerfusionSystem()
-    sys.open()
-    sys.load_all()
-
-    ha_sensor = sys.get_sensor(name='Arterial Gas Mixer')
-    pv_sensor = sys.get_sensor(name='Venous Gas Mixer')
-    cdi_sensor = sys.get_sensor(name="CDI")
-
-    ha_autogasmixer = AutoGasMixerArterial(name='Arterial Gas Mixer Automation', gas_device=ha_sensor.hw,
-                                           cdi_reader=cdi_sensor.get_reader())
-    ha_autogasmixer.read_config()
-    pv_autogasmixer = AutoGasMixerVenous(name='Venous Gas Mixer Automation', gas_device=pv_sensor.hw,
-                                         cdi_reader=cdi_sensor.get_reader())
-    pv_autogasmixer.read_config()
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
+    SYS_PERFUSION.close()

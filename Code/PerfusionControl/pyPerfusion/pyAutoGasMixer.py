@@ -9,7 +9,6 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 
-import logging
 from threading import Thread, Event
 from dataclasses import dataclass, field
 from typing import List
@@ -21,19 +20,21 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 @dataclass
 class AutoGasMixerConfig:
-    pass
+    gas_device: str = ''
+    data_source: str = ''
 
 
 @dataclass
-class ArterialAutoGasMixerConfig:
+class ArterialAutoGasMixerConfig(AutoGasMixerConfig):
     pH_range: List = field(default_factory=lambda: [0, 100])
     flow_adjust: float = 0.0
     O2_channel: int = 0
     CO2_channel: int = 0
     CO2_adjust: float = 0.0
 
+
 @dataclass
-class VenousAutoGasMixerConfig:
+class VenousAutoGasMixerConfig(AutoGasMixerConfig):
     pH_range: List = field(default_factory=lambda: [0, 100])
     O2_range: List = field(default_factory=lambda: [0, 100])
     O2_adjust: float = 0.0
@@ -43,11 +44,11 @@ class VenousAutoGasMixerConfig:
 
 
 class AutoGasMixer:
-    def __init__(self, name: str, gas_device, cdi_reader):
-        self._lgr = logging.getLogger(__name__)
+    def __init__(self, name: str):
         self.name = name
-        self.gas_device = gas_device
-        self.cdi_reader = cdi_reader
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.gas_device = None
+        self.data_source = None
         self.cfg = AutoGasMixerConfig()
 
         self.adjust_rate_ms = 10_000
@@ -76,8 +77,8 @@ class AutoGasMixer:
             timeout = self.adjust_rate_ms / 1_000.0
             if self._event_halt.wait(timeout):
                 break
-            if self.gas_device and self.cdi_reader:
-                ts, all_vars = self.cdi_reader.get_last_acq()
+            if self.gas_device and self.data_source:
+                ts, all_vars = self.data_source.get_last_acq()
                 if all_vars is not None:
                     cdi_data = CDIData(all_vars)
                     self.update_on_input(cdi_data)
@@ -102,12 +103,14 @@ class AutoGasMixer:
 
     def update_on_input(self, data):
         # this is the base class, so do nothing
-        self._lgr.warning('Attempting to use the base AutoGasMixer class, no adjustment will be made')
+        # This can be used when an automation object needs to be supplied
+        # but no automation is necessary (e.g., panel_gas_mixers)
+        pass
 
 
 class AutoGasMixerVenous(AutoGasMixer):
-    def __init__(self, name: str, gas_device, cdi_reader):
-        super().__init__(name, gas_device, cdi_reader)
+    def __init__(self, name: str):
+        super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = VenousAutoGasMixerConfig()
 
@@ -116,7 +119,6 @@ class AutoGasMixerVenous(AutoGasMixer):
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
-        self._lgr.debug(f'config o2range is {self.cfg.O2_range}')
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
         self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
@@ -156,8 +158,8 @@ class AutoGasMixerVenous(AutoGasMixer):
 
 
 class AutoGasMixerArterial(AutoGasMixer):
-    def __init__(self, name: str, gas_device, cdi_reader):
-        super().__init__(name, gas_device, cdi_reader)
+    def __init__(self, name: str):
+        super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = ArterialAutoGasMixerConfig()
         self.o2_ch = 1
@@ -171,6 +173,7 @@ class AutoGasMixerArterial(AutoGasMixer):
         # update the valid_range attribute to a list of integers
         # as it will be read in as a list of characters
         self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
+        self._lgr.debug(self.cfg)
 
     def update_on_input(self, data):
         try:
