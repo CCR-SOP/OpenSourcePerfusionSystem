@@ -21,35 +21,34 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         wx.Frame.__init__(self, *args, **kwds)
+        self._lgr = logging.getLogger('ex_volume_by_flow')
 
-        sensor_volume = SYS_PERFUSION.get_sensor('Hepatic Artery Volume')
-        sensor_flow = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
-        self.panel = PanelPlotting(self)
-        self.panel.plot_frame_ms = 10_000
-        self.plotvol = SensorPlot(sensor_volume, self.panel.axes, readout=True)
-        self.plotflow = SensorPlot(sensor_flow, self.panel.axes, readout=True)
+        sensors = [SYS_PERFUSION.get_sensor('Hepatic Artery Volume'),
+                   SYS_PERFUSION.get_sensor('Hepatic Artery Flow')]
 
-        self.plotflow.set_reader(sensor_flow.get_reader())
-        self.plotvol.set_reader(sensor_volume.get_reader(), color='y')
+        self._plots = []
+        sizer_plots = wx.GridSizer(cols=2)
+        for idx, sensor in enumerate(sensors):
+            panel = PanelPlotting(self)
+            self._plots.append(panel)
+            plot = SensorPlot(sensor, panel.axes, readout=True)
+            plot.set_reader(sensor.get_reader())
+            self._lgr.debug(f'reader fqpn = {sensor.get_reader().fqpn}')
+            sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+            panel.add_plot(plot)
+            sensor.start()
 
-        self.panel.add_plot(self.plotflow)
-        self.panel.add_plot(self.plotvol)
-
-        sensor_flow.open()
-        sensor_flow.start()
-        sensor_volume.open()
-        sensor_volume.start()
+        self.SetSizer(sizer_plots)
 
         # example of calibrating the zero flow, normally this would
         # be done using a button on a panel
         print('Calibrating in 2 seconds')
         time.sleep(2.0)
-        sensor_volume.get_writer('VolumeByFlow').reset()
-
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.panel.Destroy()
+        for plot in self._plots:
+            plot.Close()
         self.Destroy()
 
 
