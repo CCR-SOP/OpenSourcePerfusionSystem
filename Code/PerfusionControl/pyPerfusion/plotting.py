@@ -57,18 +57,19 @@ class SensorPlot:
             return
 
         readout = data[-1]
-        if self._sensor.cfg.valid_range is not None:
-            low_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[0],
-                                                where=data < self._sensor.cfg.valid_range[0], color='r')
-            high_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[1],
-                                                 where=data > self._sensor.cfg.valid_range[1], color='r')
-            self._invalid = [low_range, high_range]
+        if hasattr(self._sensor.cfg, 'valid_range'):
+            if self._sensor.cfg.valid_range is not None:
+                low_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[0],
+                                                    where=data < self._sensor.cfg.valid_range[0], color='r')
+                high_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[1],
+                                                     where=data > self._sensor.cfg.valid_range[1], color='r')
+                self._invalid = [low_range, high_range]
 
-            if self._with_readout:
-                if readout < self._sensor.cfg.valid_range[0]:
-                    readout_color = 'orange'
-                elif readout > self._sensor.cfg.valid_range[1]:
-                    readout_color = 'red'
+                if self._with_readout:
+                    if readout < self._sensor.cfg.valid_range[0]:
+                        readout_color = 'orange'
+                    elif readout > self._sensor.cfg.valid_range[1]:
+                        readout_color = 'red'
 
         if self._line is None:
             self._line, = self._axes.plot(data_time, data, color=self._color)
@@ -86,14 +87,14 @@ class SensorPlot:
                     txt.set_fontsize('large')
                     # self._display.set_color(readout_color)
 
-
     def set_reader(self, reader, color=None, keep_old_title=False):
         self._reader = reader
         self._line = None
         self._color = color
-        if self._sensor.cfg.valid_range is not None:
-            rng = self._sensor.cfg.valid_range
-            self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+        if hasattr(self._sensor.cfg, 'valid_range'):
+            if self._sensor.cfg.valid_range is not None:
+                rng = self._sensor.cfg.valid_range
+                self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
         if not keep_old_title:
             self._axes.set_title(f'{self._sensor.name}\n')
             self._axes.set_ylabel(self._sensor.cfg.units)

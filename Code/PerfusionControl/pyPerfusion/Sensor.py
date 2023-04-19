@@ -19,10 +19,11 @@ from typing import List
 
 import numpy as np
 
-import pyPerfusion.PerfusionConfig as PerfusionConfig
+
 from pyHardware.SystemHardware import SYS_HW
 from pyPerfusion.Strategy_ReadWrite import *
 from pyPerfusion.Strategy_Processing import *
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 @dataclass
@@ -38,15 +39,7 @@ class SensorConfig(BaseSensorConfig):
 
 
 @dataclass
-class CalculatedSensorConfig(BaseSensorConfig):
-    units: str = ''
-    samples_per_calc: int = 1
-    sensor_strategy: str = ''
-
-
-@dataclass
 class DivisionSensorConfig(BaseSensorConfig):
-    units: str = ''
     dividend_name: str = ''
     divisor_name: str = ''
     dividend_strategy: str = ''
@@ -72,6 +65,14 @@ class SyringeConfig(BaseSensorConfig):
     rate_ul_per_min: int = 0
 
 
+@dataclass
+class CalculatedSensorConfig(BaseSensorConfig):
+    sensor_name: str = ''
+    sensor_strategy: str = ''
+    samples_per_calc: int = 0
+    units: str = ''
+
+
 class Sensor:
     def __init__(self, name: str):
         self.name = name
@@ -89,6 +90,10 @@ class Sensor:
     @property
     def data_dtype(self):
         return self.hw.data_dtype
+
+    @property
+    def sampling_period_ms(self):
+        return self.hw.sampling_period_ms
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass('sensors', self.name, self.cfg)
@@ -192,16 +197,21 @@ class CalculatedSensor(Sensor):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = CalculatedSensorConfig()
+        self.reader = None
+
+    @property
+    def sampling_period_ms(self):
+        return self.reader.sensor.sampling_period_ms
 
     @property
     def data_dtype(self):
-        return self.get_reader().data_dtype
+        return self.reader.data_dtype
 
     def run(self):
         while not PerfusionConfig.MASTER_HALT.is_set():
             if self._evt_halt.wait(self._timeout):
                 break
-            t, data_buf = self.get_reader().get_data_from_last_read(self.cfg.samples_per_calc)
+            t, data_buf = self.reader.get_data_from_last_read(self.cfg.samples_per_calc)
             if data_buf is not None:
                 buf = data_buf
                 for strategy in self._strategies:
@@ -217,8 +227,12 @@ class DivisionSensor(Sensor):
         self.reader_divisor = None
 
     @property
+    def sampling_period_ms(self):
+        return self.reader_dividend.sensor.sampling_period_ms
+
+    @property
     def data_dtype(self):
-        return self.get_writer().data_dtype
+        return self.reader_dividend.data_dtype
 
     def run(self):
         while not PerfusionConfig.MASTER_HALT.is_set():

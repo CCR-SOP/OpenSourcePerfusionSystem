@@ -83,6 +83,11 @@ class PerfusionSystem:
         sensor = get_object(name)
         sensor.read_config()
         self.sensors[name] = sensor
+        if isinstance(sensor, CalculatedSensor):
+            sensor.reader = self.get_sensor(sensor.cfg.sensor_name).get_reader(sensor.cfg.sensor_strategy)
+        elif isinstance(sensor, DivisionSensor):
+            sensor.reader_dividend = self.get_sensor(sensor.cfg.dividend_name).get_reader(sensor.cfg.dividend_strategy)
+            sensor.reader_divisor = self.get_sensor(sensor.cfg.divisor_name).get_reader(sensor.cfg.divisor_strategy)
         sensor.start()
 
     def load_automations(self):

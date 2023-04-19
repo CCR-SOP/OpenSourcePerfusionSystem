@@ -115,7 +115,7 @@ class RunningSum(Strategy_ReadWrite.WriterStream):
     def _process(self, buffer, t=None):
         if self._calibrating:
             if self._calibration_buffer is None:
-                cal_samples = int(self.cfg.calibration_seconds * 1_000 / self.sensor.hw.sampling_period_ms)
+                cal_samples = int(self.cfg.calibration_seconds * 1_000 / self.sensor.sampling_period_ms)
                 self._calibration_buffer = np.zeros(cal_samples, dtype=self.data_dtype)
 
             self._processed_buffer = buffer
@@ -132,9 +132,13 @@ class RunningSum(Strategy_ReadWrite.WriterStream):
                 self.flow_offset = np.mean(self._calibration_buffer)
                 self._lgr.info(f'Calibration complete, flow offset is {self.flow_offset}')
         else:
-            self._processed_buffer = np.cumsum(buffer-self.flow_offset, dtype=self.data_dtype) \
-                                     + self.last_volume
-            self.last_volume = self._processed_buffer[-1]
+            try:
+                self._processed_buffer = np.cumsum(buffer-self.flow_offset, dtype=self.data_dtype) \
+                                         + self.last_volume
+                self.last_volume = self._processed_buffer[-1]
+            except IndexError as e:
+                # buffer may not exist yet, could be waiting for data
+                pass
 
     def reset(self):
         self.last_volume = 0.0

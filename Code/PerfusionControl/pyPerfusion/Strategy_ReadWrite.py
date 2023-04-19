@@ -72,7 +72,7 @@ class Reader:
     def retrieve_buffer(self, last_ms, samples_needed):
         if self.sensor.hw is None:
             return [], []
-        period = self.sensor.hw.sampling_period_ms
+        period = self.sensor.sampling_period_ms
         fid, data = self._open_mmap()
 
         if data is None:
@@ -105,7 +105,7 @@ class Reader:
         return data_time, data
 
     def get_data_from_last_read(self, samples: int):
-        period = self.sensor.hw.sampling_period_ms
+        period = self.sensor.sampling_period_ms
         fid, data = self._open_mmap()
         if self._read_last_idx + samples > self.get_file_size_in_bytes(fid):
             return None, None
@@ -121,7 +121,7 @@ class Reader:
         fid, data = self._open_mmap()
         file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
         data = data[-1]
-        data_time = file_size_in_samples * self.sensor.hw.sampling_period_ms
+        data_time = file_size_in_samples * self.sensor.sampling_period_ms
         fid.close()
         return data_time, data
 

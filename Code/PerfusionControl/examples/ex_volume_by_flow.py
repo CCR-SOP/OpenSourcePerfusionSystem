@@ -15,21 +15,22 @@ from pyPerfusion.plotting import SensorPlot, PanelPlotting
 import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
+        sensor_volume = SYS_PERFUSION.get_sensor('Hepatic Artery Volume')
+        sensor_flow = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
         self.plotvol = SensorPlot(sensor_volume, self.panel.axes, readout=True)
         self.plotflow = SensorPlot(sensor_flow, self.panel.axes, readout=True)
 
-        self.plotflow.set_reader(sensor_flow.get_reader('RMS_11pt'))
-        self.plotvol.set_reader(sensor_volume.get_reader('VolumeByFlow'), color='y')
+        self.plotflow.set_reader(sensor_flow.get_reader())
+        self.plotvol.set_reader(sensor_volume.get_reader(), color='y')
 
         self.panel.add_plot(self.plotflow)
         self.panel.add_plot(self.plotvol)
@@ -48,16 +49,13 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor_volume.stop()
-        sensor_flow.stop()
-        SYS_HW.stop()
         self.panel.Destroy()
         self.Destroy()
 
 
 class MyTestApp(wx.App):
     def OnInit(self):
-        frame = TestFrame(None, wx.ID_ANY, "")
+        frame = TestFrame(None)
         self.SetTopWindow(frame)
         frame.Show()
         return True
@@ -68,16 +66,17 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    SYS_HW.load_all()
-    SYS_HW.start()
-    sensor_flow = Sensor.Sensor(name='Hepatic Artery Flow')
-    sensor_flow.read_config()
-
-    sensor_volume = Sensor.CalculatedSensor(name='Hepatic Artery Volume')
-    sensor_volume.read_config()
-    sensor_volume.reader = sensor_flow.get_reader(sensor_volume.cfg.sensor_strategy)
-    sensor_volume.hw = sensor_flow.hw
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
-
+    SYS_PERFUSION.close()
