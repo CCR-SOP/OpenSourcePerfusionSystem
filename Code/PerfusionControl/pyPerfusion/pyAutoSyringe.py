@@ -17,10 +17,12 @@ import pyPerfusion.utils as utils
 
 @dataclass
 class AutoSyringeConfig:
+    device: str = ''
+    data_source: str = ''
     volume_ul: int = 0
     ul_per_min: int = 0
     basal: bool = False
-    check_rate_sec: int = 0
+    adjust_rate_ms: int = 0
 
 
 @dataclass
@@ -48,8 +50,8 @@ class AutoSyringe:
     def __init__(self, name: str):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self.syringe = None
-        self.input_reader = None
+        self.device = None
+        self.data_source = None
         self.cfg = AutoSyringeConfig()
 
         self.acq_start_ms = 0
@@ -75,11 +77,13 @@ class AutoSyringe:
         # adjustments is small compared to the adjust rate so timing drift
         # is small
         while not PerfusionConfig.MASTER_HALT.is_set():
-            timeout = self.cfg.check_rate_sec
+            timeout = self.cfg.adjust_rate_ms / 1000.0
+            self._lgr = utils.get_object_logger(__name__, self.name)
             if self._event_halt.wait(timeout):
                 break
-            if self.syringe and self.input_reader:
-                ts, data = self.input_reader.get_last_acq()
+            self._lgr.debug(f'syringe is {self.device}')
+            if self.device and self.data_source:
+                ts, data = self.data_source.get_last_acq()
                 if data is not None:
                     self.update_on_input(data)
                 else:
@@ -91,34 +95,36 @@ class AutoSyringe:
         self.acq_start_ms = get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'AutoSyringe {self.name}'
+        self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
-        self._lgr.debug(f'AutoSyringe {self.name} started')
+        self._lgr.debug(f'{__name__} {self.name} started')
 
     def stop(self):
         if self.is_streaming:
             self._event_halt.set()
             self.is_streaming = False
-            self._lgr.debug(f'AutoSyringe {self.name} stopped')
+            self._lgr.debug(f'{__name__} {self.name} stopped')
 
     def update_on_input(self, data):
         # this is the base class, so do nothing
-        self._lgr.warning('Attempting to use the base AutoSyringe class, no adjustment will be made')
+        # self._lgr.warning('Attempting to use the base AutoSyringe class, no adjustment will be made')
+        pass
 
     def _inject(self, value):
         if self.cfg.basal:
-            self.syringe.set_target_volume(0)
-            self.syringe.set_infusion_rate(value)
-            self.syringe.start_constant_infusion()
+            self.device.hw.set_target_volume(0)
+            self.device.hw.set_infusion_rate(value)
+            self.device.hw.start_constant_infusion()
         else:
-            self.syringe.set_target_volume(value)
-            self.syringe.infuse_to_target_volume()
+            self.device.hw.set_target_volume(value)
+            self.device.hw.infuse_to_target_volume()
 
 
 class AutoSyringeGlucagon(AutoSyringe):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = AutoSyringeGlucagonConfig()
+        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def read_config(self):
         super().read_config()
@@ -132,12 +138,13 @@ class AutoSyringeInsulin(AutoSyringe):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = AutoSyringeInsulinConfig()
+        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def read_config(self):
         super().read_config()
 
     def update_on_input(self, glucose):
-        rate = self.syringe.get_infusion_rate()
+        rate = self.device.hw.get_infusion_rate()
         if glucose > self.cfg.glucose_level:
             if rate < self.cfg.max_ul_per_min:
                 rate += 1
@@ -145,18 +152,20 @@ class AutoSyringeInsulin(AutoSyringe):
                 self._lgr.warning(f'Max infusion rate of {self.cfg.max_ul_per_min} reached')
             self._inject(rate)
         else:
-            self.syringe.stop()
+            self.device.hw.stop()
 
 
 class AutoSyringeEpo(AutoSyringe):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = AutoSyringeEpoConfig()
+        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def read_config(self):
         super().read_config()
 
     def update_on_input(self, pressure):
+        self._lgr.debug(f'pressure is {pressure} limits is {self.cfg.pressure_level_mmHg}')
         if pressure > self.cfg.pressure_level_mmHg:
             self._inject(self.cfg.ul_per_min)
 
@@ -165,6 +174,7 @@ class AutoSyringePhenyl(AutoSyringe):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = AutoSyringePhenylConfig()
+        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def read_config(self):
         super().read_config()

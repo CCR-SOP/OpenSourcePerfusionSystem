@@ -124,6 +124,14 @@ class Reader:
         fid.close()
         return data_time, data
 
+    def get_last_acq(self):
+        fid, data = self._open_mmap()
+        file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
+        data = data[-1]
+        data_time = file_size_in_samples * self.sensor.hw.sampling_period_ms
+        fid.close()
+        return data_time, data
+
 
 class ReaderPoints(Reader):
     def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
