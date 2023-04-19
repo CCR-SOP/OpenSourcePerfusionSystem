@@ -8,8 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from time import time, time_ns
-from functools import wraps
+from time import time_ns
 
 import serial
 import serial.tools.list_ports
@@ -64,38 +63,6 @@ def configure_matplotlib_logging():
     lgr.setLevel(logging.WARNING)
 
 
-def simple_time_tracker(log_fun):
-    """ wrapper function to measure the execution time of a function
-    Taken from https://medium.com/sicara/profile-surgical-time-tracking-python-db1e0a5c06b6
-    """
-    def _simple_time_tracker(fn):
-        @wraps(fn)
-        def wrapped_fn(*args, **kwargs):
-            start_time = time()
-
-            try:
-                result = fn(*args, **kwargs)
-            finally:
-                elapsed_time = time() - start_time
-
-                # log the result
-                log_fun({
-                    'function_name': fn.__name__,
-                    'total_time': elapsed_time,
-                })
-
-            return result
-
-        return wrapped_fn
-
-    return _simple_time_tracker
-
-
-def log(message):
-    """for use with simple_time_tracker"""
-    print('[SimpleTimeTracker] {function_name} {total_time:.3f}'.format(**message))
-
-
 # utility function to return all available comports in a list
 # typically used in a GUI to provide a selection of com ports
 def get_avail_com_ports() -> list:
@@ -112,3 +79,29 @@ def get_epoch_ms():
 # as well as a specific instance (e.g., Pump1)
 def get_object_logger(module_name: str, object_name: str):
     return logging.getLogger(f'{module_name}.{object_name}')
+
+
+# borrowed from https://stackoverflow.com/questions/17275334/what-is-a-correct-way-to-filter-different-loggers-using-python-logging
+class Whitelist(logging.Filter):
+    def __init__(self, whitelist):
+        super().__init__()
+        self.whitelist = [logging.Filter(name) for name in whitelist]
+
+    def filter(self, record):
+        return any(f.filter(record) for f in self.whitelist)
+
+
+class Blacklist(Whitelist):
+    def filter(self, record):
+        return not Whitelist.filter(self, record)
+
+
+def only_show_logs_from(names_to_show):
+    for handler in logging.root.handlers:
+        handler.addFilter(Whitelist(names_to_show))
+
+
+def never_show_logs_from(names_to_hide):
+    for handler in logging.root.handlers:
+        handler.addFilter(Blacklist(names_to_hide))
+

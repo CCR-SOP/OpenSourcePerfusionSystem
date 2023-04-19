@@ -23,10 +23,8 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         self._lgr = logging.getLogger('ex_volume_by_flow')
 
-
         sensors = [SYS_PERFUSION.get_sensor('Hepatic Artery Flow'),
                    SYS_PERFUSION.get_sensor('Hepatic Artery Volume')]
-
 
         self._plots = []
         sizer_plots = wx.GridSizer(cols=2)
