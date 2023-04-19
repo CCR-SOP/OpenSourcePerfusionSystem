@@ -45,6 +45,7 @@ class SensorPlot:
         readout_color = 'black'
         if not self._reader:
             return
+
         try:
             data_time, data = self._reader.retrieve_buffer(frame_ms, plot_len)
         except ValueError:
@@ -135,7 +136,6 @@ class PanelPlotting(wx.Panel):
         self._plot_frame_ms = 5_000
 
         self.fig = matplotlib.figure.Figure()
-        self.fig.set_tight_layout(True)
         self._axes = self.fig.add_subplot(111)
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
 
