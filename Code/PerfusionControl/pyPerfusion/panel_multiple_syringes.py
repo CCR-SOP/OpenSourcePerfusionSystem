@@ -18,54 +18,61 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class SyringePanel(wx.Panel):
-    def __init__(self, parent, syringe_sensors):
-        self.parent = parent
+    def __init__(self, parent, automations):
         wx.Panel.__init__(self, parent)
-        self.syringes = []
+        self._lgr = logging.getLogger(__name__)
 
-        font_panel_label = wx.Font()
-        font_panel_label.SetPointSize(int(12))
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Infusions")
-        static_box.SetFont(font_panel_label)
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
-        sizer = wx.GridSizer(cols=2)
+        self.panels = []
 
-        self.panel = {}
+        for automation in automations:
+            self._lgr.debug(automation)
+            panel = PanelSyringeControls(self, automation)
+            panel.update_controls_from_config()
+            self.panels.append(panel)
 
-        for syringe in syringe_sensors:
-            # Initialize panel
-            self.panel[syringe.name] = PanelSyringeControls(parent=self, sensor=syringe)
-            self.panel[syringe.name].update_controls_from_config()
-            sizer.Add(self.panel[syringe.name], 1, wx.ALL | wx.EXPAND, border=1)
+        self.__do_layout()
+        self.__set_bindings()
 
-        sizer.SetSizeHints(self.parent)
-        self.wrapper.Add(sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
-        self.SetSizer(self.wrapper)
-        self.Fit()
+    def __do_layout(self):
+        flags = wx.SizerFlags().Expand().Border()
+        self.sizer = wx.GridSizer(cols=2)
+
+        for panel in self.panels:
+            self.sizer.Add(panel, flags)
+
+        self.sizer.SetSizeHints(self.GetParent())
+        self.SetAutoLayout(True)
+        self.SetSizer(self.sizer)
         self.Layout()
 
+    def __set_bindings(self):
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
     def OnClose(self, evt):
-        for panel in self.panel.keys():
-            self.panel[panel].Close()
+        for panel in self.panels:
+            panel.Close()
 
 
 class SyringeFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = SyringePanel(self, syringes)
+        automation_names = ['Insulin Automation', 'Glucagon Automation',
+                            'Phenylephrine Automation', 'Epoprostenol Automation']
+        automations = []
+        for name in automation_names:
+            automations.append(SYS_PERFUSION.get_automation(name))
+        self.panel = SyringePanel(self, automations)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.panel.OnClose(self)
-        sys.close()
+        self.panel.Close()
         self.Destroy()
 
 
 class MySyringeApp(wx.App):
     def OnInit(self):
-        frame = SyringeFrame(None, wx.ID_ANY, "")
+        frame = SyringeFrame(None)
         self.SetTopWindow(frame)
         frame.Show()
         return True
@@ -76,11 +83,18 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    sys = PerfusionSystem()
-    sys.load_all()
-    sys.open()
-
-
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MySyringeApp(0)
     app.MainLoop()
+    SYS_PERFUSION.close()
+

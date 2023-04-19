@@ -81,7 +81,6 @@ class AutoSyringe:
             self._lgr = utils.get_object_logger(__name__, self.name)
             if self._event_halt.wait(timeout):
                 break
-            self._lgr.debug(f'syringe is {self.device}')
             if self.device and self.data_source:
                 ts, data = self.data_source.get_last_acq()
                 if data is not None:
