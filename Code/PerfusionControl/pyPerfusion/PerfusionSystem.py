@@ -15,6 +15,7 @@ from pyHardware.SystemHardware import SYS_HW
 # Do NOT delete anything below this line. All object are required for auto-loading
 from pyPerfusion.Sensor import Sensor, CalculatedSensor, DivisionSensor, GasMixerSensor
 from pyPerfusion.pyAutoGasMixer import AutoGasMixer, AutoGasMixerArterial, AutoGasMixerVenous
+from pyPerfusion.pyAutoDialysis import AutoDialysis, AutoDialysisInflow, AutoDialysisOutflow
 
 
 def get_object(name: str, config: str ='sensors'):
@@ -91,6 +92,9 @@ class PerfusionSystem:
 
             if isinstance(automation, AutoGasMixer):
                 automation.gas_device = self.get_sensor(automation.cfg.gas_device).hw
+                automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
+            elif isinstance(automation, AutoDialysis):
+                automation.pump = self.get_sensor(automation.cfg.pump)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
             self.automations[name] = automation
 

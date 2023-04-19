@@ -109,7 +109,6 @@ class DCDevice:
 
     def adjust_percent_of_max(self, percent: float):
         adjust = (percent / 100.0) * (self.output_range[1] - self.output_range[0])
-        self._lgr.debug(f'adjust is {adjust}')
         volts = self.last_value + adjust
         self.set_output(volts)
 

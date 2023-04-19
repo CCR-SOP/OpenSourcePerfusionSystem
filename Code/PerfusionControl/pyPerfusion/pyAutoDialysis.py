@@ -20,6 +20,8 @@ import pyPerfusion.utils as utils
 
 @dataclass
 class AutoDialysisConfig:
+    pump: str = ''
+    data_source: str = ''
     adjust_percent: float = 5.0
     adjust_rate_ms: int = 10_000
 
@@ -40,7 +42,7 @@ class AutoDialysis:
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.pump = None
-        self.cdi_reader = None
+        self.data_source = None
         self.cfg = AutoDialysisConfig()
 
         self.acq_start_ms = 0
@@ -56,9 +58,7 @@ class AutoDialysis:
         PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
 
     def read_config(self):
-        self._lgr.debug(f'Reading config for {self.name}')
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
-        self._lgr.debug(f'Config = {self.cfg}')
 
     def run(self):
         self.is_streaming = True
@@ -69,11 +69,11 @@ class AutoDialysis:
             timeout = self.cfg.adjust_rate_ms / 1_000.0
             if self._event_halt.wait(timeout):
                 break
-            if self.pump and self.cdi_reader:
-                ts, all_vars = self.cdi_reader.get_last_acq()
+            if self.pump and self.data_source:
+                ts, all_vars = self.data_source.get_last_acq()
                 if all_vars is not None:
                     cdi_data = CDIData(all_vars)
-                    self.update_pump_on_cdi(cdi_data)
+                    self.update_on_input(cdi_data)
                 else:
                     self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
 
@@ -83,19 +83,19 @@ class AutoDialysis:
         self.acq_start_ms = get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'AutoDialysis {self.name}'
+        self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
-        self._lgr.debug(f'AutoDialysis {self.name} started')
+        self._lgr.debug(f'{self.name} started')
 
     def stop(self):
         if self.is_streaming:
             self._event_halt.set()
             self.is_streaming = False
-            self._lgr.debug(f'AutoDialysis {self.name} stopped')
+            self._lgr.debug(f'{self.name} stopped')
 
-    def update_pump_on_cdi(self, cdi_data):
-        # this is the base class, so do nothing
-        self._lgr.warning('Attempting to use the base AutoDialysis class, no adjustment will be made')
+    def update_on_input(self, cdi_data):
+        # this is the base class, it is only used when no actual automation is required
+        pass
 
 
 class AutoDialysisInflow(AutoDialysis):
@@ -110,7 +110,7 @@ class AutoDialysisInflow(AutoDialysis):
         # as it will be read in as a list of characters
         self.cfg.K_range = [float(x) for x in ''.join(self.cfg.K_range).strip(' ').split(',')]
 
-    def update_pump_on_cdi(self, cdi_data):
+    def update_on_input(self, cdi_data):
         try:
             self._update_speed(cdi_data.hct)
         except AttributeError:
@@ -121,16 +121,16 @@ class AutoDialysisInflow(AutoDialysis):
         if K == -1:
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
         elif K < self.cfg.K_range[0]:
-            self.pump.adjust_percent_of_max(self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(self.cfg.adjust_percent)
         elif K > self.cfg.K_range[1]:
-            self.pump.adjust_percent_of_max(-self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(-self.cfg.adjust_percent)
 
 
 class AutoDialysisOutflow(AutoDialysis):
     def __init__(self, name: str):
         super().__init__(name)
-        self.cfg = AutoDialysisOutflowConfig()
         self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = AutoDialysisOutflowConfig()
 
     def read_config(self):
         super().read_config()
@@ -139,7 +139,8 @@ class AutoDialysisOutflow(AutoDialysis):
         self.cfg.hct_range = [int(x) for x in ''.join(self.cfg.hct_range).strip(' ').split(',')]
         self.cfg.K_range = [float(x) for x in ''.join(self.cfg.K_range).strip(' ').split(',')]
 
-    def update_pump_on_cdi(self, cdi_data):
+    def update_on_input(self, cdi_data):
+        self._lgr.debug('updating outflow automation')
         try:
             self._update_speed(cdi_data.hct, cdi_data.K)
         except AttributeError:
@@ -150,13 +151,13 @@ class AutoDialysisOutflow(AutoDialysis):
         if K == -1:
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
         elif K < self.cfg.K_range[0]:
-            self.pump.adjust_percent_of_max(self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(self.cfg.adjust_percent)
         elif K > self.cfg.K_range[1]:
-            self.pump.adjust_percent_of_max(-self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(-self.cfg.adjust_percent)
 
         if hct == -1:
             self._lgr.warning(f'{self.name} hct is out of range. Cannot be adjusted automatically')
         elif hct < self.cfg.hct_range[0]:
-            self.pump.adjust_percent_of_max(self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(self.cfg.adjust_percent)
         elif hct > self.cfg.hct_range[1]:
-            self.pump.adjust_percent_of_max(-self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(-self.cfg.adjust_percent)
