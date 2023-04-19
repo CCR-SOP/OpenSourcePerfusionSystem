@@ -21,8 +21,9 @@ import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.Strategy_Processing import *
 from pyPerfusion.Strategy_ReadWrite import *
+from pyPerfusion.Strategy_Processing import *
+
 
 @dataclass
 class BaseSensorConfig:

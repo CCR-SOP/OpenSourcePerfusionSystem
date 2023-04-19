@@ -7,10 +7,7 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-from __future__ import annotations
-from typing import TYPE_CHECKING
 import pathlib
-import logging
 import struct
 from os import SEEK_CUR, SEEK_END, SEEK_SET
 from dataclasses import dataclass, asdict
@@ -20,10 +17,6 @@ import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-
-
-if TYPE_CHECKING:
-    from pyPerfusion.Sensor import Sensor
 
 
 # raw Writer does not have any parameters, but create a config class
@@ -40,7 +33,7 @@ class WriterPointsConfig:
 
 
 class Reader:
-    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterConfig, sensor: Sensor):
+    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterConfig, sensor):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
         self._version = 1
@@ -134,7 +127,7 @@ class Reader:
 
 
 class ReaderPoints(Reader):
-    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: Sensor):
+    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
         super().__init__(name, fqpn, cfg, sensor)
@@ -304,7 +297,7 @@ class WriterStream:
             self._lgr.error(f'Hardware has not been attached')
         fid.close()
 
-    def open(self, sensor: Sensor = None):
+    def open(self, sensor = None):
         self._base_path = PerfusionConfig.get_date_folder()
         self._filename = pathlib.Path(f'{sensor.name}_{self.name}')
         self.sensor = sensor
