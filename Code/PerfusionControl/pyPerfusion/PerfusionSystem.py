@@ -8,6 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import inspect
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyHardware.SystemHardware import SYS_HW
@@ -17,6 +18,8 @@ from pyPerfusion.Sensor import *
 from pyPerfusion.pyAutoGasMixer import *
 from pyPerfusion.pyAutoDialysis import *
 from pyPerfusion.pyAutoSyringe import *
+from pyPerfusion.Strategy_ReadWrite import *
+from pyPerfusion.Strategy_Processing import *
 
 
 def get_object(name: str, config: str ='sensors'):
@@ -46,10 +49,12 @@ def get_object(name: str, config: str ='sensors'):
 class PerfusionSystem:
     def __init__(self, name: str = "Standard"):
         self.name = name
-        self._lgr = logging.getLogger('PerfusionSystem')
+        self._lgr = utils.get_object_logger(__name__, self.name)
         self.sensors = {}
         self.automations = {}
         self.is_opened = False
+        self.config_name = 'sensors'
+        self._lgr.debug(f'create Perfusion System {self.name}')
 
     def open(self):
         SYS_HW.load_all()
@@ -68,7 +73,7 @@ class PerfusionSystem:
     def load_all(self):
         if not self.is_opened:
             self.open()
-        all_names = PerfusionConfig.get_section_names('sensors')
+        all_names = PerfusionConfig.get_section_names(self.config_name)
         for name in all_names:
             self.load(name)
 
@@ -81,7 +86,9 @@ class PerfusionSystem:
 
         self._lgr.info(f'Loading {name}')
         sensor = get_object(name)
-        sensor.read_config()
+        sensor = self.create_config(sensor)
+        self._lgr.debug(f'created config {sensor.cfg}')
+        # sensor.read_config()
         self.sensors[name] = sensor
         if isinstance(sensor, CalculatedSensor):
             sensor.reader = self.get_sensor(sensor.cfg.sensor_name).get_reader(sensor.cfg.sensor_strategy)
@@ -97,6 +104,7 @@ class PerfusionSystem:
             automation.read_config()
 
             if isinstance(automation, AutoGasMixer):
+                self._lgr.debug(f'loading {automation.cfg.gas_device}, {automation.cfg.data_source}')
                 automation.gas_device = self.get_sensor(automation.cfg.gas_device).hw
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
             elif isinstance(automation, AutoDialysis):
@@ -112,3 +120,42 @@ class PerfusionSystem:
 
     def get_automation(self, name: str):
         return self.automations.get(name, None)
+
+    def write_config(self, obj):
+        PerfusionConfig.write_from_dataclass('sensors', obj.name, obj.cfg)
+
+    def create_config(self, obj):
+        PerfusionConfig.read_into_dataclass(self.config_name, obj.name, obj.cfg)
+
+        # change logging name to reflect sensor name for easier filtering
+        # of log message
+        lgr = logging.getLogger(f'{__name__}.{obj.name}')
+        # attach hardware
+        if hasattr(obj.cfg, 'hw_name'):
+            obj.hw = SYS_HW.get_hw(obj.cfg.hw_name)
+
+        # load strategies
+        lgr.debug(f'strategies are {obj.cfg.strategy_names}')
+        for name in obj.cfg.strategy_names.split(', '):
+            lgr.debug(f'Getting strategy {name}')
+            params = PerfusionConfig.read_section('strategies', name)
+            try:
+                lgr.debug(f'Looking for {params}')
+                strategy_class = globals().get(params['class'], None)
+                try:
+                    lgr.debug(f'Found {strategy_class}')
+                    cfg = strategy_class.get_config_type()()
+                    lgr.debug(f'Config type is {cfg}')
+                    PerfusionConfig.read_into_dataclass('strategies', name, cfg)
+                    lgr.debug(f'adding strategy {name}')
+                    strategy = strategy_class(name)
+                    strategy.cfg = cfg
+                    obj.add_strategy(strategy)
+                except AttributeError as e:
+                    self._lgr.error(f'Could not find strategy class for {name}')
+                    self._lgr.exception(e)
+                    pass
+            except AttributeError as e:
+                lgr.error(f'Could not create algorithm {params["algorithm"]} for {__name__} {self.name}')
+                lgr.exception(e)
+        return obj

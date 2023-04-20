@@ -31,10 +31,12 @@ utils.setup_stream_logger(logger, logging.DEBUG)
 # logging.getLogger('pyPerfusion.Strategy_ReadWrite').setLevel(logging.ERROR)
 
 # only show logs from Arterial Gas Mixer
-# utils.only_show_logs_from(['pyPerfusion.PerfusionConfig'])
+utils.only_show_logs_from(['pyPerfusion.PerfusionSystem.Standard', 'pyPerfusion.PerfusionConfig',
+                           'pyPerfusion.PerfusionSystem.CDI'])
 
 # never show logs from Arterial Gas Mixer
-utils.never_show_logs_from(['pyPerfusion.PerfusionConfig'])
+# utils.never_show_logs_from(['pyPerfusion.PerfusionConfig'])
+
 
 SYS_PERFUSION = PerfusionSystem()
 try:

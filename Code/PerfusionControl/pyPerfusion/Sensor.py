@@ -98,42 +98,6 @@ class Sensor:
     def get_acq_start_ms(self):
         return self.hw.get_acq_start_ms()
 
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('sensors', self.name, self.cfg)
-
-    def read_config(self):
-        # self._lgr.debug(f'Reading config for {self.name}')
-        PerfusionConfig.read_into_dataclass('sensors', self.name, self.cfg)
-
-        # attach hardware
-        if hasattr(self.cfg, 'hw_name'):
-            self.hw = SYS_HW.get_hw(self.cfg.hw_name)
-
-        # load strategies
-        # self._lgr.debug(f'strategies are {self.cfg.strategy_names}')
-        for name in self.cfg.strategy_names.split(', '):
-            # self._lgr.debug(f'Getting strategy {name}')
-            params = PerfusionConfig.read_section('strategies', name)
-            try:
-                self._lgr.debug(f'Looking for {params}')
-                strategy_class = globals().get(params['class'], None)
-                try:
-                    self._lgr.debug(f'Found {strategy_class}')
-                    cfg = strategy_class.get_config_type()()
-                    self._lgr.debug(f'Config type is {cfg}')
-                    PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-                    self._lgr.debug(f'adding strategy {name}')
-                    strategy = strategy_class(name)
-                    strategy.cfg = cfg
-                    self.add_strategy(strategy)
-                except AttributeError as e:
-                    self._lgr.error(f'Could not find strategy class for {name}')
-                    self._lgr.exception(e)
-                    pass
-            except AttributeError as e:
-                self._lgr.error(f'Could not create algorithm {params["algorithm"]} for {__name__} {self.name}')
-                self._lgr.exception(e)
-
     def add_strategy(self, strategy):
         strategy.open(sensor=self)
         self._strategies.append(strategy)
@@ -148,7 +112,12 @@ class Sensor:
 
     def get_writer(self, name: str = None):
         if name is None:
-            writer = self._strategies[-1]
+            try:
+                writer = self._strategies[-1]
+            except IndexError as e:
+                self._lgr.error(f'No strategies exist for {name}')
+                self._lgr.exception(e)
+                writer = None
         else:
             try:
                 writer = [strategy for strategy in self._strategies if strategy.name == name]
