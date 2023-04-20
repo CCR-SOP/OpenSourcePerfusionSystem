@@ -9,7 +9,7 @@ import logging
 
 import wx
 
-from pyPerfusion.panel_AI import PanelAI, DEV_LIST
+from gui.panel_AI import PanelAI, DEV_LIST
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as PerfusionConfig

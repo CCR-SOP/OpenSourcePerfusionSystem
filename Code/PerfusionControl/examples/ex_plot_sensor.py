@@ -8,10 +8,9 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import wx
-import time
 import logging
 
-from pyPerfusion.plotting import SensorPlot, PanelPlotting
+from gui.plotting import SensorPlot, PanelPlotting
 import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig

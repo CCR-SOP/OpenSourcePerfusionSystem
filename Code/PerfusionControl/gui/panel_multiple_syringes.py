@@ -13,7 +13,7 @@ import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.panel_syringe import PanelSyringeControls
+from gui.panel_syringe import PanelSyringeControls
 from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 

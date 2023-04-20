@@ -6,15 +6,13 @@
 Demonstration of screen with chemical substances
 """
 from enum import Enum
-import time
 import logging
 
 import wx
 
-from pyPerfusion.plotting import PanelPlotting, PanelPlotLT, SensorPlot, EventPlot
+from gui.plotting import PanelPlotting, PanelPlotLT, SensorPlot, EventPlot
 from pyPerfusion.panel_readout import PanelReadout
 from pyHardware.pyAI import AI
-from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 from pyPerfusion.SensorPoint import SensorPoint
 import pyPerfusion.PerfusionConfig as PerfusionConfig

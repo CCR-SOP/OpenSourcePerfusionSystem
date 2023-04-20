@@ -6,11 +6,9 @@
 Demonstration of basic Analog Output controls
 """
 import wx
-import time
-from pathlib import Path
 
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
-from pyPerfusion.panel_DC import PanelDC
+from gui.panel_DC import PanelDC
 
 devices = ['Centrifugal Pump 1', 'Centrifugal Pump 2', 'Peristaltic Pump 1', 'Peristaltic Pump 2']
 

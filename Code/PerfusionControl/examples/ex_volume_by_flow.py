@@ -11,8 +11,7 @@ import wx
 import time
 import logging
 
-from pyPerfusion.plotting import SensorPlot, PanelPlotting
-import pyPerfusion.Sensor as Sensor
+from gui.plotting import SensorPlot, PanelPlotting
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.PerfusionSystem import PerfusionSystem

@@ -13,10 +13,10 @@ import logging
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.plotting import PanelPlotting, SensorPlot
+from gui.plotting import PanelPlotting, SensorPlot
 import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
-from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 from pyPerfusion.Strategy_ReadWrite import Reader
 
 
@@ -192,16 +192,14 @@ class TestFrame(wx.Frame):
         self._lgr = logging.getLogger(__name__)
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        try:
-            self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
-        except:
-            # catch any exception to properly close SYS_HW
-            self.on_close(wx.Event())
+
+        sensor = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
+        self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
+
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_close(self, evt):
-        SYS_HW.stop()
-        sensor.close()
+        self.panel.Close()
         self.Destroy()
 
 
@@ -219,13 +217,17 @@ if __name__ == "__main__":
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    name = 'Hepatic Artery Flow'
-    SYS_HW.load("NI_Dev1")
-    sensor = Sensor.Sensor(name=name)
-    sensor.read_config()
-
-    sensor.start()
-    SYS_HW.start()
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
+    SYS_PERFUSION.close()

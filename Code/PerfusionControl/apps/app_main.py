@@ -21,8 +21,8 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 class MyMainApp(wx.App):
     def OnInit(self):
-        frame_hw = HardwareFrame(sys, None, wx.ID_ANY, "")
-        frame_sensor = SensorFrame(sys, None, wx.ID_ANY, "")
+        frame_hw = HardwareFrame(SYS_PERFUSION, None)
+        frame_sensor = SensorFrame(SYS_PERFUSION, None)
         self.SetTopWindow(frame_sensor)
         frame_hw.Show()
         frame_sensor.Show()
@@ -34,10 +34,17 @@ if __name__ == "__main__":
     utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    sys = PerfusionSystem()
-    sys.open()
-    sys.load_all()
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyMainApp(0)
     app.MainLoop()
-    sys.close()
+    SYS_PERFUSION.close()

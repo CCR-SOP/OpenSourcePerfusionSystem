@@ -12,7 +12,7 @@ import threading
 
 import wx
 
-from pyPerfusion.panel_AI import PanelAI
+from gui.panel_AI import PanelAI
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.PerfusionSystem import PerfusionSystem

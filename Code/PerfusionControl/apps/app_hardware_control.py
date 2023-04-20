@@ -8,17 +8,15 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-import threading
 
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.panel_multiple_syringes import SyringePanel
-from pyPerfusion.panel_DialysisPumps import DialysisPumpPanel
-from pyPerfusion.panel_gas_mixers import GasMixerPanel
+from gui.panel_multiple_syringes import SyringePanel
+from gui.panel_DialysisPumps import DialysisPumpPanel
+from gui.panel_gas_mixers import GasMixerPanel
 from pyPerfusion.PerfusionSystem import PerfusionSystem
-from pyPerfusion.Sensor import Sensor
 from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
 from pyPerfusion.pyAutoDialysis import AutoDialysisInflow, AutoDialysisOutflow
 
@@ -34,36 +32,27 @@ class HardwarePanel(wx.Panel):
         for pump_name in pump_names:
             pumps.append(perfusion_system.get_sensor(pump_name))
 
-        self.ha_autogasmixer = AutoGasMixerArterial(name='HA Auto Gas Mixer',
-                                                    gas_device=perfusion_system.get_sensor('Arterial Gas Mixer').hw,
-                                                    cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
-        self.pv_autogasmixer = AutoGasMixerVenous(name='PV Auto Gas Mixer',
-                                                  gas_device=perfusion_system.get_sensor('Venous Gas Mixer').hw,
-                                                  cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
+        automation_names = ['Insulin Automation', 'Glucagon Automation',
+                            'Phenylephrine Automation', 'Epoprostenol Automation']
+        automations = []
+        for name in automation_names:
+            automations.append(perfusion_system.get_automation(name))
+        self.panel_syringes = SyringePanel(self, automations)
 
-        drugs = ['TPN + Bile Salts', 'Insulin', 'Zosyn', 'Methylprednisone', 'Phenylephrine', 'Epoprostenol']
-        syringes = []
-        for drug in drugs:
-            syringes.append(perfusion_system.get_sensor(drug))
+        automation_names = ['Dialysate Inflow Automation',
+                            'Dialysate Outflow Automation',
+                            'Dialysis Blood Automation',
+                            'Glucose Circuit Automation']
+        automations = []
+        for name in automation_names:
+            automations.append(perfusion_system.get_automation(name))
+        self.panel_dialysate_pumps = DialysisPumpPanel(self, automations)
 
-        self.auto_inflow = AutoDialysisInflow(name='Dialysate Inflow Automation')
-        self.auto_inflow.pump = perfusion_system.get_sensor('Dialysate Inflow Pump').hw
-        self.auto_inflow.cdi_reader = perfusion_system.get_sensor('CDI').get_reader()
-        self.auto_inflow.read_config()
-
-        self.auto_outflow = AutoDialysisOutflow(name='Dialysate Outflow Automation')
-        self.auto_outflow.pump = perfusion_system.get_sensor('Dialysate Outflow Pump').hw
-        self.auto_outflow.cdi_reader = perfusion_system.get_sensor('CDI').get_reader()
-        self.auto_outflow.read_config()
-
-        self.panel_syringes = SyringePanel(self, syringes)
-        self.panel_dialysate_pumps = DialysisPumpPanel(self,
-                                                       pumps,
-                                                       perfusion_system.get_sensor('CDI').get_reader(),
-                                                       auto_inflow=self.auto_inflow,
-                                                       auto_outflow=self.auto_outflow)
-        self.panel_gas_mixers = GasMixerPanel(self, self.ha_autogasmixer, self.pv_autogasmixer,
-                                              cdi_reader=perfusion_system.get_sensor('CDI').get_reader())
+        automation_names = ['Arterial Gas Mixer Automation', 'Venous Gas Mixer Automation']
+        automations = []
+        for name in automation_names:
+            automations.append(perfusion_system.get_automation(name))
+        self.panel_gas_mixers = GasMixerPanel(self, automations)
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
@@ -90,10 +79,6 @@ class HardwarePanel(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.ha_autogasmixer.stop()
-        self.pv_autogasmixer.stop()
-        self.auto_inflow.stop()
-        self.auto_outflow.stop()
         self.panel_syringes.Close()
         self.panel_gas_mixers.Close()
         self.panel_dialysate_pumps.Close()

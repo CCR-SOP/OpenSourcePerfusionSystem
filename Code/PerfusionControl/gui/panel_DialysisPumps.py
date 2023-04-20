@@ -12,7 +12,7 @@ import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.panel_DC import PanelDC
+from gui.panel_DC import PanelDC
 from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
