@@ -29,18 +29,24 @@ class GasMixerPanel(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
+        self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Arterial Gas Mixer'])
+        self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Venous Gas Mixer'])
+
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand().Border()
-        self.sizer = wx.FlexGridSizer(rows=1, cols=2, vgap=1, hgap=1)
+        self.sizer = wx.FlexGridSizer(cols=2, vgap=1, hgap=1)
 
         for panel in self.panels:
             self.sizer.Add(panel, flags)
 
         self.sizer.AddGrowableCol(0, 1)
         self.sizer.AddGrowableCol(1, 1)
+
+        self.sizer.Add(self.text_log_arterial, flags)
+        self.sizer.Add(self.text_log_venous, flags)
 
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
 

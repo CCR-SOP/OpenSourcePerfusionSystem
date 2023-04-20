@@ -10,6 +10,7 @@ and under the public domain.
 import logging
 from time import time_ns
 
+import wx
 import serial
 import serial.tools.list_ports
 import numpy as np
@@ -105,3 +106,32 @@ def never_show_logs_from(names_to_hide):
     for handler in logging.root.handlers:
         handler.addFilter(Blacklist(names_to_hide))
 
+
+class WxTextCtrlHandler(logging.Handler):
+    def __init__(self, ctrl):
+        logging.Handler.__init__(self)
+        self.ctrl = ctrl
+
+    def emit(self, record):
+        s = self.format(record) + '\n'
+        wx.CallAfter(self.ctrl.WriteText, s)
+
+
+def create_log_display(parent, logging_level, names_to_log):
+    log_display = wx.TextCtrl(parent, wx.ID_ANY, size=(300, 100),
+                              style=wx.TE_MULTILINE | wx.TE_READONLY)
+    create_wx_handler(log_display, logging_level, names_to_log)
+    return log_display
+
+
+def create_wx_handler(wx_control, logging_level, names_to_log):
+    handler = WxTextCtrlHandler(wx_control)
+    handler.setLevel(logging_level)
+    formatter = logging.Formatter('%(asctime) s - %(levelname) s - %(message) s',
+                                  '%H:%M:%S')
+    handler.setFormatter(formatter)
+    loggers = logging.root.manager.loggerDict
+    for log_name in names_to_log:
+        logs_with_name = [logging.getLogger(lgr_name) for lgr_name in loggers.keys() if log_name in lgr_name]
+        for lgr in logs_with_name:
+            lgr.addHandler(handler)
