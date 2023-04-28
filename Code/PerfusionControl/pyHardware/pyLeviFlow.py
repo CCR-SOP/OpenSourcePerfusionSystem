@@ -22,13 +22,11 @@ import serial
 import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.utils import get_epoch_ms
-
+import pyPerfusion.utils as utils
 
 
 class LeviFlowException(Exception):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
-
 
 
 EquipmentStatusBits = IntEnum('EquipmentStatusBits',
@@ -55,6 +53,7 @@ class SensorType(IntEnum):
     i19 = 105
     i25 = 106
     i35 = 107
+
 
 class FlowLevelOnMeasurementOptions(IntEnum):
     ZeroOutput = 0
@@ -99,6 +98,7 @@ class Register:
     word_len: int = 1
     scaling: float = 1.0
 
+
 # Taken from page 31 Section 2.3.2.4.1 of Firmware H2.48 docs
 ReadRegisters = {
              'EquipmentStatus': Register(addr=0),
@@ -138,7 +138,6 @@ WriteRegisters = {
 
 @dataclass
 class LeviFlowConfig:
-    name: str = 'LeviFlow'
     port: str = ''
     baud: int = 57600
     device_addr: int = 0
@@ -146,11 +145,11 @@ class LeviFlowConfig:
 
 
 class LeviFlow:
-    def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
+    def __init__(self, name: str):
         self.name = name
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = LeviFlowConfig()
         self.hw = None
-        self.cfg = LeviFlowConfig(name=name)
 
         self._queue = Queue()
         self.acq_start_ms = 0
@@ -174,11 +173,11 @@ class LeviFlow:
         return self.acq_start_ms
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.cfg.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
 
     def read_config(self):
-        self._lgr.debug(f'Reading config for {self.cfg.name}')
-        PerfusionConfig.read_into_dataclass('hardware', self.cfg.name, self.cfg)
+        self._lgr.debug(f'Reading config for {self.name}')
+        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
         self._lgr.debug(f'Config = {self.cfg}')
         self.open()
 
@@ -211,10 +210,10 @@ class LeviFlow:
     def start(self):
         self.stop()
         self._event_halt.clear()
-        self.acq_start_ms = get_epoch_ms()
+        self.acq_start_ms = utils.get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'LeviFlow {self.cfg.name}'
+        self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
 
     def stop(self):
@@ -225,11 +224,11 @@ class LeviFlow:
             self.__thread = None
 
     def run(self):
-        next_t = get_epoch_ms()
+        next_t = utils.get_epoch_ms()
         offset = 0
         while not self._event_halt.is_set():
             next_t += offset + self.cfg.sampling_period_ms
-            delay = next_t - get_epoch_ms()
+            delay = next_t - utils.get_epoch_ms()
             if delay > 0:
                 sleep(delay / 1_000.0)
                 offset = 0
@@ -250,7 +249,7 @@ class LeviFlow:
 
     def clear(self):
         with self.mutex:
-            self._queue.clear()
+            self._queue.queue.clear()
 
     def get_flow(self):
         flow = 0
@@ -261,7 +260,7 @@ class LeviFlow:
         return flow
 
     def _acq_samples(self):
-        buffer_t = get_epoch_ms()
+        buffer_t = utils.get_epoch_ms()
         self.buffer[0] = self.get_flow()
         self._queue.put((self.buffer, buffer_t))
 
