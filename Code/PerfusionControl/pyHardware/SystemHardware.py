@@ -125,37 +125,6 @@ class SystemHardware:
         except AIDeviceException as e:
             self._lgr.debug('Exception caught')
             self._lgr.error(e)
-<<<<<<< HEAD
-=======
-        for syringe in self.syringes:
-            syringe.start()
-
-        if self.cdi:
-            self.cdi.start()
-
-        if self.ha_mixer:
-            self.ha_mixer.start()
-        if self.pv_mixer:
-            self.pv_mixer.start()
-
-        if self.pump1:
-            self.pump1.start()
-        if self.pump2:
-            self.pump2.start()
-        if self.pump3:
-            self.pump3.start()
-
-        if self.leviflow1:
-            self.leviflow1.start()
-        if self.leviflow2:
-            self.leviflow2.start()
-
-        if self.mocks_enabled:
-            self.mock_device.start()
-            self.mock_cdi.start()
-            self.mock_syringe.start()
->>>>>>> 6e7614e (update panel and mocks for working example (w/o hardware))
-
     def stop(self):
         PerfusionConfig.MASTER_HALT.set()
 
@@ -165,87 +134,10 @@ class SystemHardware:
                     device.stop()
         except AIDeviceException as e:
             self._lgr.error(e)
-<<<<<<< HEAD
         self._lgr.info('all hardware stopped')
 
     def get_hw(self, name: str = None):
         hw = self.hw.get(name, None)
-=======
-
-        for syringe in self.syringes:
-            syringe.stop()
-
-        if self.cdi:
-            self.cdi.stop()
-
-        if self.ha_mixer:
-            self.ha_mixer.stop()
-        if self.pv_mixer:
-            self.pv_mixer.stop()
-
-        if self.pump1:
-            self.pump1.stop()
-        if self.pump2:
-            self.pump2.stop()
-        if self.pump3:
-            self.pump3.stop()
-
-        if self.leviflow1:
-            self.leviflow1.stop()
-        if self.leviflow2:
-            self.leviflow2.stop()
-
-        if self.mocks_enabled:
-            self.mock_device.stop()
-            self.mock_cdi.stop()
-            self.mock_syringe.stop()
-
-    def get_hw(self, name: str = None):
-        self._lgr.debug(f'Getting hardware named: {name}')
-        hw = None
-        if hw is None:
-            if name == 'Glucose Circuit Pump':
-                hw = self.glucose_circuit
-            elif name == 'Dialysate Inflow Pump':
-                hw = self.dialysate_inflow
-            elif name == 'Dialysate Outflow Pump':
-                hw = self.dialysate_outflow
-            elif name == 'Dialysis Blood Pump':
-                hw = self.dialysis_blood
-            elif name == 'Arterial Gas Mixer':
-                hw = self.ha_mixer
-            elif name == 'Venous Gas Mixer':
-                hw = self.pv_mixer
-            elif name == 'CDI':
-                hw = self.cdi
-            elif name == 'Pump 1':
-                hw = self.pump1
-            elif name == 'Pump 2':
-                hw = self.pump2
-            elif name == 'Pump 3':
-                hw = self.pump3
-            elif name == 'LeviFlow1':
-                hw = self.leviflow1
-            elif name == 'LeviFlow2':
-                hw = self.leviflow2
-
-        if hw is None:
-            hw = self.ni_dev1.ai_channels.get(name, None)
-        if hw is None:
-            hw = self.ni_dev2.ai_channels.get(name, None)
-        if hw is None:
-            hw = next((syringe for syringe in self.syringes if syringe.name == name), None)
-
-        if self.mocks_enabled:
-            if hw is None:
-                hw = self.mock_device.ai_channels.get(name, None)
-            if hw is None:
-                if name == "mock_cdi":
-                    hw = self.mock_cdi
-                elif name == "mock_syringe":
-                    hw = self.mock_syringe
-        self._lgr.debug(f'Found {hw}')
->>>>>>> 6e7614e (update panel and mocks for working example (w/o hardware))
         return hw
 
 
