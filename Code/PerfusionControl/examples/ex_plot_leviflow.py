@@ -11,13 +11,10 @@ import wx
 import time
 import logging
 
-from pyPerfusion.plotting import SensorPlot, PanelPlotting
-import pyPerfusion.Sensor as Sensor
+from gui.plotting import SensorPlot, PanelPlotting
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyHardware.SystemHardware import SYS_HW
-import pyHardware.pyLeviFlow as pyLeviFlow
-
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -26,17 +23,15 @@ class TestFrame(wx.Frame):
 
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
+        sensor = SYS_PERFUSION.get_sensor('Flow')
         self.plotraw = SensorPlot(sensor, self.panel.axes, readout=True)
-
-        self.plotraw.set_reader(sensor.get_reader())
+        self.plotraw.set_reader(sensor.get_reader('Raw'))
 
         self.panel.add_plot(self.plotraw)
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor.stop()
-        leviflow.stop()
         self.panel.Destroy()
         self.Destroy()
 
@@ -55,19 +50,17 @@ if __name__ == "__main__":
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.configure_matplotlib_logging()
 
-    leviflow = pyLeviFlow.LeviFlow(name='LeviFlow1')
+    SYS_PERFUSION = PerfusionSystem()
     try:
-        leviflow.read_config()
-    except pyLeviFlow.LeviFlowException:
-        lgr.warning(f'LeviFlow1 not found. Loading mock')
-        SYS_HW.mocks_enabled = True
-        leviflow.hw = pyLeviFlow.MockLeviFlow()
-        SYS_HW.leviflow1 = leviflow
-
-    leviflow.start()
-    sensor = Sensor.Sensor(name='Test LeviFlow')
-    sensor.read_config()
-    sensor.start()
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
+    SYS_PERFUSION.close()
