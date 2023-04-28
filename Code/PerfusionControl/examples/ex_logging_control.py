@@ -22,7 +22,7 @@ PerfusionConfig.set_test_config()
 utils.setup_stream_logger(logger, logging.DEBUG)
 
 # increase PerfusionConfig to INFO level
-# logging.getLogger('pyPerfusion.PerfusionConfig').setLevel(logging.INFO)
+logging.getLogger('pyPerfusion.PerfusionSystem').setLevel(logging.INFO)
 
 # same with Sensor
 # logging.getLogger('pyPerfusion.Sensor').setLevel(logging.INFO)
@@ -35,7 +35,7 @@ utils.only_show_logs_from(['pyPerfusion.PerfusionSystem.Standard', 'pyPerfusion.
                            'pyPerfusion.PerfusionSystem.CDI'])
 
 # never show logs from Arterial Gas Mixer
-# utils.never_show_logs_from(['pyPerfusion.PerfusionConfig'])
+utils.never_show_logs_from(['pyPerfusion.PerfusionConfig'])
 
 
 SYS_PERFUSION = PerfusionSystem()
