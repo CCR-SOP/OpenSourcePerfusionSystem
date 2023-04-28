@@ -193,9 +193,6 @@ class PanelSyringeControls(wx.Panel):
         self.btn_bolus = wx.Button(self, label='Bolus')
         self.btn_bolus.SetFont(font)
 
-        self.btn_auto = wx.ToggleButton(self, label='Start Auto Injection')
-        self.btn_auto.SetFont(font)
-
         self.timer_gui_update = wx.Timer(self)
         self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
 
@@ -216,9 +213,6 @@ class PanelSyringeControls(wx.Panel):
         sizer_cfg.Add(self.btn_bolus, flags)
 
         self.sizer.Add(sizer_cfg)
-        self.sizer.AddSpacer(1)
-        self.sizer.AddSpacer(1)
-        self.sizer.Add(self.btn_auto)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetSizer(self.sizer)
@@ -229,7 +223,6 @@ class PanelSyringeControls(wx.Panel):
         self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
         self.btn_bolus.Bind(wx.EVT_BUTTON, self.OnBolus)
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
-        self.btn_auto.Bind(wx.EVT_TOGGLEBUTTON, self.on_auto)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnBasal(self, evt):
@@ -259,19 +252,9 @@ class PanelSyringeControls(wx.Panel):
         sensor.hw.set_target_volume(target_vol)
         sensor.hw.infuse_to_target_volume()
 
-    def on_auto(self, evt):
-        if evt.IsChecked():
-            self.btn_auto.SetLabel("Stop Auto Injection")
-            self.automation.start()
-        else:
-            self.btn_auto.SetLabel("Start Auto Injection")
-            self.automation.stop()
-
-        self.btn_basal.Enable(not evt.IsChecked())
-        self.btn_bolus.Enable(not evt.IsChecked())
 
     def update_controls_from_hardware(self, evt=None):
-        enable = not self.btn_auto.GetValue() and not self.automation.device.hw.is_infusing
+        enable = not self.automation.device.hw.is_infusing
         self.btn_bolus.Enable(enable)
 
     def update_config_from_controls(self):
