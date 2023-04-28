@@ -181,14 +181,16 @@ class PanelSyringeControls(wx.Panel):
         static_box.SetFont(font)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc, initial=10)  # self.automation.cfg.ul_per_min)
+        self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
         self.spin_rate.SetFont(font)
+        self.spin_rate.SetValue(int(self.automation.cfg.ul_per_min)) # should be able to do this in wx.SpinCtrlDouble? Wasn't working
         self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min):')
         self.label_rate.SetFont(font_smaller)
         self.btn_basal = wx.ToggleButton(self, label='Start Basal')
         self.btn_basal.SetFont(font_smaller)
 
-        self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc, initial=10)  #self.automation.cfg.volume_ul)
+        self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc)
+        self.spin_rate.SetValue(int(self.automation.cfg.volume_ul))
         self.spin_volume.SetFont(font)
         self.label_volume = wx.StaticText(self, label='Target Volume (ul):')
         self.label_volume.SetFont(font_smaller)
