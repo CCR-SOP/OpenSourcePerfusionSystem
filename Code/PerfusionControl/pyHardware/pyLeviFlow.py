@@ -39,6 +39,11 @@ EquipmentStatusBits = IntEnum('EquipmentStatusBits',
                                ], start=0)
 
 
+class ModbusFunction(IntEnum):
+    HoldRegister = 3
+    InputRegister = 4
+
+
 class ControlBits(IntEnum):
     ZeroAdjust = 0
     Reset = 2
@@ -105,7 +110,7 @@ ReadRegisters = {
              'CurrentFlowRate': Register(addr=1, scaling=0.01),
              'VolumePulseCounter': Register(addr=2, word_len=2),
              'Temperature': Register(addr=6, scaling=0.01),
-             'SignalStrength': Register(addr=8, scaling=100*100/8191/75, word_len=2),
+             'SignalStrength': Register(addr=8, scaling=1, word_len=2),
              'Flow': Register(addr=8, word_len=2),
              }
 
@@ -133,6 +138,8 @@ WriteRegisters = {
              'VolumeCounterReset': Register(addr=25),
              'VolumeCounterBaseUnit': Register(addr=26),
              'VolumeCounterMultiplierFactor': Register(addr=27),
+             'SerialNumber': Register(addr=119),
+             'Version': Register(addr=4097, word_len=2),
             }
 
 
@@ -158,8 +165,8 @@ class LeviFlow:
         self._event_halt = Event()
         self.mutex = Lock()
 
-        self.data_type = np.float64
-        self.buffer = np.zeros(1, dtype=self.data_type)
+        self.data_dtype = np.dtype(np.float64)
+        self.buffer = np.zeros(1, dtype=self.data_dtype)
 
     @property
     def sampling_period_ms(self):
@@ -182,12 +189,12 @@ class LeviFlow:
         self.open()
 
     def open(self, cfg=None):
-        self._lgr.debug(f'Attempting to open {self.name} with config {cfg}')
         if cfg is not None:
             self.cfg = cfg
+        self._lgr.debug(f'Attempting to open {self.name} with config {self.cfg}')
         self._queue = Queue()
         if self.cfg.port != '':
-            self._lgr.info(f'{self.name}: Opening PuraLev i30 at {self.cfg.port}')
+            self._lgr.info(f'{self.name}: Opening LeviFlow at {self.cfg.port}')
             try:
                 with self.mutex:
                     self.hw = modbus.Instrument(self.cfg.port, 1, modbus.MODE_RTU, debug=False)
@@ -199,7 +206,7 @@ class LeviFlow:
             except serial.serialutil.SerialException as e:
                 self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
                                 f'Exception: {e}')
-            raise LeviFlowException(f'Could not open LeviFlow {self.name} - {self.cfg}')
+                raise LeviFlowException(f'Could not open LeviFlow {self.name} - {self.cfg}')
 
     def close(self):
         if self.hw:
@@ -251,18 +258,50 @@ class LeviFlow:
         with self.mutex:
             self._queue.queue.clear()
 
+    def _acq_samples(self):
+        buffer_t = utils.get_epoch_ms()
+        self.buffer[0] = self.get_flow()
+        self._queue.put((self.buffer, buffer_t))
+
     def get_flow(self):
         flow = 0
         if self.hw:
             with self.mutex:
                 reg = ReadRegisters['Flow']
-                flow = self.hw.read_long(reg.addr) / 1_000.0
-        return flow
+                flow = self.hw.read_long(reg.addr, functioncode=ModbusFunction.InputRegister)
+        return flow / 1000.0
 
-    def _acq_samples(self):
-        buffer_t = utils.get_epoch_ms()
-        self.buffer[0] = self.get_flow()
-        self._queue.put((self.buffer, buffer_t))
+    def get_version(self):
+        val = 0
+        if self.hw:
+            with self.mutex:
+                reg = WriteRegisters['Version']
+                val = self.hw.read_long(reg.addr, functioncode=ModbusFunction.HoldRegister)
+        return val
+
+    def get_sn(self):
+        val = 0
+        if self.hw:
+            with self.mutex:
+                reg = WriteRegisters['SerialNumber']
+                val = self.hw.read_string(reg.addr, functioncode=ModbusFunction.HoldRegister, number_of_registers=8)
+        return val
+
+    def get_sensor_type(self):
+        val = 0
+        if self.hw:
+            with self.mutex:
+                reg = WriteRegisters['SensorType']
+                val = self.hw.read_register(reg.addr, functioncode=ModbusFunction.HoldRegister)
+        return val
+
+    def get_parameter(self, param):
+        val = 0
+        if self.hw:
+            with self.mutex:
+                reg = ReadRegisters[param]
+                val = self.hw.read_long(reg.addr, functioncode=ModbusFunction.HoldRegister)
+        return val
 
 
 class MockLeviFlow:

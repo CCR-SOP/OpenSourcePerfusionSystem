@@ -17,6 +17,8 @@ from pyHardware.pyPump11Elite import Pump11Elite, MockPump11Elite
 from pyHardware.pyGB100 import GasDevice, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 from pyHardware.pyDC import DCDevice
+from pyHardware.pyLeviFlow import *
+
 
 MOCKS = {'NIDAQAIDevice': 'AIDevice',
          'CDI': 'MockCDI',
