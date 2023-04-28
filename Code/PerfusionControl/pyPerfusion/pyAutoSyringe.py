@@ -23,6 +23,8 @@ class AutoSyringeConfig:
     ul_per_min: int = 0
     basal: bool = False
     adjust_rate_ms: int = 0
+    glucose_level: int = 0
+    max_ul_per_min: int = 0
 
 
 @dataclass
@@ -43,7 +45,17 @@ class AutoSyringeEpoConfig(AutoSyringeConfig):
 
 @dataclass
 class AutoSyringePhenylConfig(AutoSyringeConfig):
-    pressure_level_mmHg: int = 60
+    pressure_level_mmHg: int = 60  # this value should be higher
+
+
+@dataclass
+class SyringeTPNConfig(AutoSyringeConfig):
+    pass
+
+
+@dataclass
+class SyringeZosynConfig(AutoSyringeConfig):
+    pass
 
 
 class AutoSyringe:
@@ -179,3 +191,22 @@ class AutoSyringePhenyl(AutoSyringe):
     def update_on_input(self, pressure):
         if pressure < self.cfg.pressure_level_mmHg:
             self._inject(self.cfg.ul_per_min)
+
+class SyringeTPN(AutoSyringe):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.cfg = SyringeTPNConfig()
+        self._lgr = utils.get_object_logger(__name__, self.name)
+
+    def read_config(self):
+        super().read_config()
+
+
+class SyringeZosyn(AutoSyringe):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.cfg = SyringeZosynConfig()
+        self._lgr = utils.get_object_logger(__name__, self.name)
+
+    def read_config(self):
+        super().read_config()

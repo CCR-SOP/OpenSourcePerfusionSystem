@@ -58,7 +58,8 @@ class SyringeFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
 
         automation_names = ['Insulin Automation', 'Glucagon Automation',
-                            'Phenylephrine Automation', 'Epoprostenol Automation']
+                            'Phenylephrine Automation', 'Epoprostenol Automation',
+                            'TPN + Bile Salts Manual', 'Zosyn Manual']
         automations = []
         for name in automation_names:
             automations.append(SYS_PERFUSION.get_automation(name))
