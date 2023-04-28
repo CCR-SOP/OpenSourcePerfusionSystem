@@ -174,6 +174,8 @@ class PanelSyringeControls(wx.Panel):
 
         font = wx.Font()
         font.SetPointSize(int(12))
+        font_smaller = wx.Font()
+        font_smaller.SetPointSize((int(10)))
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
         static_box.SetFont(font)
@@ -181,17 +183,17 @@ class PanelSyringeControls(wx.Panel):
 
         self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
         self.spin_rate.SetFont(font)
-        self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min)')
-        self.label_rate.SetFont(font)
+        self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min):')
+        self.label_rate.SetFont(font_smaller)
         self.btn_basal = wx.ToggleButton(self, label='Start Basal')
-        self.btn_basal.SetFont(font)
+        self.btn_basal.SetFont(font_smaller)
 
         self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc)
         self.spin_volume.SetFont(font)
-        self.label_volume = wx.StaticText(self, label='Target Volume (ul)')
-        self.label_volume.SetFont(font)
+        self.label_volume = wx.StaticText(self, label='Target Volume (ul):')
+        self.label_volume.SetFont(font_smaller)
         self.btn_bolus = wx.Button(self, label='Bolus')
-        self.btn_bolus.SetFont(font)
+        self.btn_bolus.SetFont(font_smaller)
 
         self.timer_gui_update = wx.Timer(self)
         self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
