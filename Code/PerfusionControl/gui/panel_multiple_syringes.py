@@ -21,33 +21,94 @@ class SyringePanel(wx.Panel):
     def __init__(self, parent, automations):
         wx.Panel.__init__(self, parent)
         self._lgr = logging.getLogger(__name__)
+        self.automations = automations
+
+        font = wx.Font()
+        font.SetPointSize(int(16))
+        static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Pumps")
+        static_box.SetFont(font)
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.sizer = wx.GridSizer(cols=2)
 
         self.panels = []
-
-        for automation in automations:
+        for automation in self.automations:
             self._lgr.debug(automation)
             panel = PanelSyringeControls(self, automation)
             self.panels.append(panel)
+
+        # Add auto start buttons
+        auto_font = wx.Font()
+        auto_font.SetPointSize(int(14))
+        self.btn_auto_glucose = wx.Button(self, label='Start Auto Glucose Control')
+        self.btn_auto_glucose.SetFont(auto_font)
+        self.btn_auto_vaso = wx.Button(self, label='Start Auto Vasoactive Control')
+        self.btn_auto_vaso.SetFont(auto_font)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand().Border()
-        self.sizer = wx.GridSizer(cols=2)
 
         for panel in self.panels:
             self.sizer.Add(panel, flags)
 
         self.sizer.SetSizeHints(self.GetParent())
+        self.wrapper.Add(self.sizer, flags.Proportion(1))
+        self.wrapper.Add(self.btn_auto_glucose, wx.SizerFlags().Border())
+        self.wrapper.Add(self.btn_auto_vaso, wx.SizerFlags().Border())
         self.SetAutoLayout(True)
-        self.SetSizer(self.sizer)
+        self.SetSizer(self.wrapper)
         self.Layout()
 
     def __set_bindings(self):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.btn_auto_glucose.Bind(wx.EVT_BUTTON, self.on_auto_glucose)
+        self.btn_auto_vaso.Bind(wx.EVT_BUTTON, self.on_auto_vaso)
+        
+    def on_auto_glucose(self, evt):
+        counter = 0
+        if self.btn_auto_glucose.GetLabel() == "Start Auto Glucose Control":
+            self.btn_auto_glucose.SetLabel("Stop Auto Glucose Control")
+            for panel in self.panels:
+                if counter < 2:
+                    panel.spin_rate.Enable(False)
+                    panel.spin_volume.Enable(False)
+                    panel.btn_basal.Enable(False)
+                    panel.automation.start()
+                counter += 1
+        else:
+            self.btn_auto_glucose.SetLabel("Start Auto Glucose Control")
+            for panel in self.panels:
+                if counter < 2:
+                    panel.spin_rate.Enable(True)
+                    panel.spin_volume.Enable(True)
+                    panel.btn_basal.Enable(True)
+                    panel.automation.stop()
+                counter += 1
 
-    def OnClose(self, evt):
+    def on_auto_vaso(self, evt):
+        counter = 0
+        if self.btn_auto_vaso.GetLabel() == "Start Auto Vasoactive Control":
+            self.btn_auto_vaso.SetLabel("Stop Auto Vasoactive Control")
+            for panel in self.panels:
+                if 1 < counter < 4:
+                    panel.spin_rate.Enable(False)
+                    panel.spin_volume.Enable(False)
+                    panel.btn_basal.Enable(False)
+                    panel.automation.start()
+                counter += 1
+        else:
+            self.btn_auto_vaso.SetLabel("Start Auto Vasoactive Control")
+            for panel in self.panels:
+                if 1 < counter < 4:
+                    panel.spin_rate.Enable(True)
+                    panel.spin_volume.Enable(True)
+                    panel.btn_basal.Enable(True)  # cannot do this w basal button since it's not a toggle
+                    panel.automation.stop()
+                counter += 1
+
+    def OnClose(self, evt):  # not working --> double check
         for panel in self.panels:
             panel.Close()
 
