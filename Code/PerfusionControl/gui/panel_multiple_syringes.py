@@ -27,8 +27,8 @@ class SyringePanel(wx.Panel):
         font.SetPointSize(int(16))
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Pumps")
         static_box.SetFont(font)
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.VERTICAL)
-        self.sizer = wx.GridSizer(cols=2)
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
+        self.sizer = wx.FlexGridSizer(rows=5, cols=2, vgap=1, hgap=1)
 
         self.panels = []
         for automation in self.automations:
@@ -36,29 +36,38 @@ class SyringePanel(wx.Panel):
             panel = PanelSyringeControls(self, automation)
             self.panels.append(panel)
 
-        # Add auto start buttons
+        # Add auto start buttons and log
         auto_font = wx.Font()
         auto_font.SetPointSize(int(14))
         self.btn_auto_glucose = wx.Button(self, label='Start Auto Glucose Control')
         self.btn_auto_glucose.SetFont(auto_font)
         self.btn_auto_vaso = wx.Button(self, label='Start Auto Vasoactive Control')
         self.btn_auto_vaso.SetFont(auto_font)
+        self.text_log_syringes = utils.create_log_display(self, logging.INFO, ['Insulin'])  # have this do all syringes... currently outputting nothing
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Border()
+        flags = wx.SizerFlags(1)
+        flags.Expand().Border(wx.ALL, 10)
 
         for panel in self.panels:
-            self.sizer.Add(panel, flags)
+            self.sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+        self.sizer.Add(self.btn_auto_glucose, flags)
+        self.sizer.Add(self.btn_auto_vaso, flags)
+        self.sizer.Add(self.text_log_syringes, flags)
+
+        self.sizer.AddGrowableRow(0, 4)
+        self.sizer.AddGrowableRow(1, 4)
+        self.sizer.AddGrowableRow(2, 4)
+        self.sizer.AddGrowableRow(3, 1)
+        self.sizer.AddGrowableRow(4, 2)
 
         self.sizer.SetSizeHints(self.GetParent())
-        self.wrapper.Add(self.sizer, flags.Proportion(1))
-        self.wrapper.Add(self.btn_auto_glucose, wx.SizerFlags().Border())
-        self.wrapper.Add(self.btn_auto_vaso, wx.SizerFlags().Border())
-        self.SetAutoLayout(True)
+        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.SetSizer(self.wrapper)
+        self.Fit()
         self.Layout()
 
     def __set_bindings(self):
@@ -140,9 +149,10 @@ class MySyringeApp(wx.App):
 
 
 if __name__ == "__main__":
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_stream_logger(lgr, logging.DEBUG)
+    utils.setup_file_logger(lgr, logging.DEBUG, 'panel_multiple_syringes_debug')
 
     SYS_PERFUSION = PerfusionSystem()
     try:
