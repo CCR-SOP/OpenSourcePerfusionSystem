@@ -33,7 +33,8 @@ class HardwarePanel(wx.Panel):
             pumps.append(perfusion_system.get_sensor(pump_name))
 
         automation_names = ['Insulin Automation', 'Glucagon Automation',
-                            'Phenylephrine Automation', 'Epoprostenol Automation']
+                            'Phenylephrine Automation', 'Epoprostenol Automation',
+                            'TPN + Bile Salts Manual', 'Zosyn Manual']
         automations = []
         for name in automation_names:
             automations.append(perfusion_system.get_automation(name))

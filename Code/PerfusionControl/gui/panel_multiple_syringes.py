@@ -27,8 +27,9 @@ class SyringePanel(wx.Panel):
         font.SetPointSize(int(16))
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Pumps")
         static_box.SetFont(font)
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
-        self.sizer = wx.FlexGridSizer(rows=5, cols=2, vgap=1, hgap=1)
+        self.wrapper = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.sizer = wx.GridSizer(cols=2)
+        self.sizer2 = wx.FlexGridSizer(rows=1, cols=3, hgap=1, vgap=1)
 
         self.panels = []
         for automation in self.automations:
@@ -41,8 +42,10 @@ class SyringePanel(wx.Panel):
         auto_font.SetPointSize(int(14))
         self.btn_auto_glucose = wx.Button(self, label='Start Auto Glucose Control')
         self.btn_auto_glucose.SetFont(auto_font)
+        self.btn_auto_glucose.SetBackgroundColour(wx.Colour(0, 240, 0))
         self.btn_auto_vaso = wx.Button(self, label='Start Auto Vasoactive Control')
         self.btn_auto_vaso.SetFont(auto_font)
+        self.btn_auto_vaso.SetBackgroundColour(wx.Colour(0, 240, 0))
         self.text_log_syringes = utils.create_log_display(self, logging.INFO, ['Insulin'])  # have this do all syringes... currently outputting nothing
 
         self.__do_layout()
@@ -54,18 +57,17 @@ class SyringePanel(wx.Panel):
 
         for panel in self.panels:
             self.sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-        self.sizer.Add(self.btn_auto_glucose, flags)
-        self.sizer.Add(self.btn_auto_vaso, flags)
-        self.sizer.Add(self.text_log_syringes, flags)
+        self.sizer2.Add(self.btn_auto_glucose, flags)
+        self.sizer2.Add(self.btn_auto_vaso, flags)
+        self.sizer2.Add(self.text_log_syringes, flags)
 
-        self.sizer.AddGrowableRow(0, 4)
-        self.sizer.AddGrowableRow(1, 4)
-        self.sizer.AddGrowableRow(2, 4)
-        self.sizer.AddGrowableRow(3, 1)
-        self.sizer.AddGrowableRow(4, 2)
+        self.sizer2.AddGrowableCol(0, 1)
+        self.sizer2.AddGrowableCol(1, 1)
+        self.sizer2.AddGrowableCol(2, 3)
 
         self.sizer.SetSizeHints(self.GetParent())
-        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        self.wrapper.Add(self.sizer, flag=wx.ALL | wx.EXPAND, border=1)
+        self.wrapper.Add(self.sizer2, flag=wx.ALL | wx.EXPAND, border=1)
         self.SetSizer(self.wrapper)
         self.Fit()
         self.Layout()
@@ -79,6 +81,7 @@ class SyringePanel(wx.Panel):
         counter = 0
         if self.btn_auto_glucose.GetLabel() == "Start Auto Glucose Control":
             self.btn_auto_glucose.SetLabel("Stop Auto Glucose Control")
+            self.btn_auto_glucose.SetBackgroundColour(wx.Colour(240, 0, 0))
             for panel in self.panels:
                 if counter < 2:
                     panel.spin_rate.Enable(False)
@@ -88,6 +91,7 @@ class SyringePanel(wx.Panel):
                 counter += 1
         else:
             self.btn_auto_glucose.SetLabel("Start Auto Glucose Control")
+            self.btn_auto_glucose.SetBackgroundColour(wx.Colour(0, 240, 0))
             for panel in self.panels:
                 if counter < 2:
                     panel.spin_rate.Enable(True)
@@ -100,6 +104,7 @@ class SyringePanel(wx.Panel):
         counter = 0
         if self.btn_auto_vaso.GetLabel() == "Start Auto Vasoactive Control":
             self.btn_auto_vaso.SetLabel("Stop Auto Vasoactive Control")
+            self.btn_auto_vaso.SetBackgroundColour(wx.Colour(240, 0, 0))
             for panel in self.panels:
                 if 1 < counter < 4:
                     panel.spin_rate.Enable(False)
@@ -109,6 +114,7 @@ class SyringePanel(wx.Panel):
                 counter += 1
         else:
             self.btn_auto_vaso.SetLabel("Start Auto Vasoactive Control")
+            self.btn_auto_vaso.SetBackgroundColour(wx.Colour(0, 240, 0))
             for panel in self.panels:
                 if 1 < counter < 4:
                     panel.spin_rate.Enable(True)
