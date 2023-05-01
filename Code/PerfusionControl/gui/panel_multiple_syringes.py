@@ -27,7 +27,6 @@ class SyringePanel(wx.Panel):
         for automation in automations:
             self._lgr.debug(automation)
             panel = PanelSyringeControls(self, automation)
-            panel.update_controls_from_config()
             self.panels.append(panel)
 
         self.__do_layout()
