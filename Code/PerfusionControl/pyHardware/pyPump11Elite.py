@@ -12,6 +12,7 @@ from queue import Queue, Empty
 from dataclasses import dataclass
 from enum import Enum
 from time import sleep
+from binascii import hexlify
 
 import numpy as np
 import serial
@@ -399,6 +400,7 @@ class Pump11Elite:
                 # strip starting \r and ending \r
                 response = response[1:-1]
                 self._lgr.debug(f'response is ||{response}||')
+                self._lgr.debug(f'response in hex is ||{hexlify(response)}')
                 self.last_response = response
                 # JWK, this  needs to be tested more thoroughly
                 # if response[0] in PumpMap.keys():
