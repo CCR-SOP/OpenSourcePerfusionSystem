@@ -129,7 +129,7 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
 
         pump_name = 'Dialysate Inflow Pump'
-        self.panel = PanelDC(self, SYS_PERFUSION.get_sensor(pump_name).hw)
+        self.panel = PanelDC(self, SYS_PERFUSION.get_sensor(pump_name))
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
@@ -148,7 +148,7 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.setup_stream_logger(logging.getLogger(), logging.INFO)
     utils.configure_matplotlib_logging()
 
     SYS_PERFUSION = PerfusionSystem()
