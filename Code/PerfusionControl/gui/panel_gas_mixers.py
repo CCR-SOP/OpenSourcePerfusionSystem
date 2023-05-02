@@ -29,8 +29,8 @@ class GasMixerPanel(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
-        self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Arterial Gas Mixer'])
-        self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Venous Gas Mixer'])
+        self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Gas Mixer 1'])
+        self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Gas Mixer 2'])
 
         self.__do_layout()
         self.__set_bindings()
@@ -72,7 +72,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.autogasmixer = autogasmixer
 
         if self.autogasmixer.gas_device is not None:
-            # TODO we should verify the gas mixer is configured
             # for the gases we want (O2, CO2)
             self.gas1_name = self.autogasmixer.gas_device.get_gas_type(1)
             self.gas2_name = self.autogasmixer.gas_device.get_gas_type(2)
