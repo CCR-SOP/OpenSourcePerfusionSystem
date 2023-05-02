@@ -87,7 +87,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
-        self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400, initial=0, inc=1)
+        self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400,
+                                                  initial=int(self.autogasmixer.gas_device.get_total_flow()), inc=1)
         self.label_total_flow.SetFont(font)
         self.input_total_flow.SetFont(font)
 
@@ -96,7 +97,9 @@ class BaseGasMixerPanel(wx.Panel):
 
         # Gas 1 display
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1_name} % Mix:')
-        self.input_percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100, initial=0, inc=1)
+        self.input_percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100,
+                                                    initial=int(self.autogasmixer.gas_device.get_percent_value(1))
+                                                    , inc=1)
         self.label_gas1.SetFont(font)
         self.input_percent_gas1.SetFont(font)
 
@@ -233,11 +236,10 @@ class BaseGasMixerPanel(wx.Panel):
         if working_status:
             self.btn_flow.SetLabel('Disable Flow')
             self.btn_update.Enable(False)
+            self.real_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
         else:
             self.btn_flow.SetLabel('Enable Flow')
             self.btn_update.Enable(True)
-
-        self.real_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
 
         self.percent_gas1.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(1)}')
         self.percent_gas2.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(2)}')
