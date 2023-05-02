@@ -107,8 +107,10 @@ class PanelDCControl(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_update(self, evt):
+        self._lgr.debug('on update')
         new_flow = self.entered_offset.GetValue()
         if self.pump:
+            self._lgr.debug('setting flow')
             self.pump.set_flow(new_flow)
         self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)  # start timer only after dialysis is started
 
@@ -128,7 +130,7 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         wx.Frame.__init__(self, *args, **kwds)
 
-        pump_name = 'Dialysate Inflow Pump'
+        pump_name = 'Dialysis Blood Pump'
         self.panel = PanelDC(self, SYS_PERFUSION.get_sensor(pump_name))
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
@@ -148,8 +150,9 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.INFO)
+    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     utils.configure_matplotlib_logging()
+    utils.only_show_logs_from(['pyHardware.SystemHardware', 'pyHardware.pyDC_NIDAQ.Pump3', 'PanelDC'])
 
     SYS_PERFUSION = PerfusionSystem()
     try:

@@ -19,9 +19,10 @@ import pyPerfusion.utils as utils
 
 
 class NIDAQDCDevice(pyDC.DCDevice):
-    def __init__(self, name:str):
+    def __init__(self, name: str):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
+        self._lgr.debug(f'Creating {__name__} as object {name}')
         self._task = None
         self.__timeout = 1.0
         self.buf_dtype = np.dtype(np.float64)
@@ -36,11 +37,12 @@ class NIDAQDCDevice(pyDC.DCDevice):
             dev_str = 'None'
         return dev_str
 
-    def open(self, cfg: pyDC.DCChannelConfig = None):
-        super().open(cfg)
+    def open(self):
+        super().open()
         self._open_task()
 
     def _open_task(self):
+        self._lgr.debug('opening NIDAQ task')
         self._task = PyDAQmx.Task()
         try:
             devname = self.devname
@@ -64,15 +66,17 @@ class NIDAQDCDevice(pyDC.DCDevice):
             msg = f'Device "{name}" is not a valid device ID'
             self._lgr.error(msg)
             raise(pyDC.DCDeviceException(msg))
+        self._lgr.debug('Successfully opened NIDAQ task')
 
     def set_output(self, output_volts: float):
+        self._lgr.debug(f'setting output to {output_volts}')
         super().set_output(output_volts)
         self._open_task()
         try:
             written = ctypes.c_int32(0)
             self._task.WriteAnalogF64(len(self._buffer), True, self.__timeout * 5, PyDAQmx.DAQmx_Val_GroupByChannel,
                                       self._buffer, PyDAQmx.byref(written), None)
-            self._lgr.debug(f'wrote to NIDAQ device')
+            self._lgr.debug(f'wrote {self._buffer} to NIDAQ device {self.devname}')
         except PyDAQmx.DAQmxFunctions.PALResourceReservedError as e:
             msg = f'{self.cfg.device} is reserved. Check for an invalid config or output type'
             self._lgr.error(msg)
