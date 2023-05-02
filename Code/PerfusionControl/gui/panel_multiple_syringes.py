@@ -46,7 +46,7 @@ class SyringePanel(wx.Panel):
         self.btn_auto_vaso = wx.Button(self, label='Start Auto Vasoactive Control')
         self.btn_auto_vaso.SetFont(auto_font)
         self.btn_auto_vaso.SetBackgroundColour(wx.Colour(0, 240, 0))
-        self.text_log_syringes = utils.create_log_display(self, logging.INFO, ['Insulin'])  # have this do all syringes... currently outputting nothing
+        self.text_log_syringes = utils.create_log_display(self, logging.INFO, ['Pump11Elite', 'AutoSyringe', 'PanelSyringeControls'])
 
         self.__do_layout()
         self.__set_bindings()
@@ -119,11 +119,11 @@ class SyringePanel(wx.Panel):
                 if 1 < counter < 4:
                     panel.spin_rate.Enable(True)
                     panel.spin_volume.Enable(True)
-                    panel.btn_basal.Enable(True)  # cannot do this w basal button since it's not a toggle
+                    panel.btn_basal.Enable(True)
                     panel.automation.stop()
                 counter += 1
 
-    def OnClose(self, evt):  # not working --> double check
+    def OnClose(self, evt):
         for panel in self.panels:
             panel.Close()
 
@@ -159,6 +159,7 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.setup_file_logger(lgr, logging.DEBUG, 'panel_multiple_syringes_debug')
+    utils.only_show_logs_from(['pyHardware.pyPump11Elite.Pump11Elite'])
 
     SYS_PERFUSION = PerfusionSystem()
     try:

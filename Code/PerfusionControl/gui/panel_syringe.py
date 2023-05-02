@@ -243,8 +243,6 @@ class PanelSyringeControls(wx.Panel):
         else:
             sensor.hw.set_infusion_rate(infusion_rate)
             sensor.hw.set_target_volume(0)
-            # self._lgr.debug(f'Infusion rate: {infusion_rate}')
-            # self._lgr.debug(f'Target volume: {0}')
             sensor.hw.start_constant_infusion()
             self.btn_basal.SetLabel('Stop Basal')
             self.btn_basal.SetValue(False)
@@ -257,6 +255,7 @@ class PanelSyringeControls(wx.Panel):
         sensor.hw.set_infusion_rate(infusion_rate)
         sensor.hw.set_target_volume(target_vol)
         sensor.hw.infuse_to_target_volume()
+        self._lgr.info(f'Bolus syringe infusion at rate {infusion_rate} uL/min to target volume {target_vol} started')
 
 
     def update_controls_from_hardware(self, evt=None):

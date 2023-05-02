@@ -196,6 +196,7 @@ class Pump11Elite:
     def set_infusion_rate(self, rate_ul_min: int):
         # can be changed mid-run
         self._set_param('irate', f'{int(rate_ul_min)} ul/min\r')
+        self._lgr.info(f'{self.name}: Syringe infusion set at rate {rate_ul_min} uL/min')
 
     def clear_infusion_volume(self):
         self.send_wait4response('civolume\r')
@@ -215,6 +216,7 @@ class Pump11Elite:
 
     def set_target_volume(self, volume_ul):
         self._set_param('tvolume', f'{int(volume_ul)} ul\r')
+        self._lgr.info(f'{self.name}: Target infusion volume set at {volume_ul} uL')
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
@@ -307,6 +309,7 @@ class Pump11Elite:
         t = utils.get_epoch_ms()
         self.record_targeted_infusion(t)
         self.pump_state = PumpState.infusing
+        self._lgr.info(f'{self.name}: Bolus infusion started')
 
     def start_constant_infusion(self):
         """ start a constant infusion. Requires a target volume to be cleared.
@@ -316,6 +319,7 @@ class Pump11Elite:
         t = utils.get_epoch_ms()
         self.record_continuous_infusion(t, start=True)
         self.pump_state = PumpState.infusing
+        self._lgr.info(f'{self.name}: Basal syringe infusion started')
 
     def stop(self):
         """ stop an infusion. Typically, used to stop a continuous infusion
