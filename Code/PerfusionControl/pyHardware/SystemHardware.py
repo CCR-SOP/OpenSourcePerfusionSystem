@@ -7,6 +7,7 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
+import logging
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -25,28 +26,38 @@ MOCKS = {'NIDAQAIDevice': 'AIDevice',
          'NIDAQDCDevice': 'DCDevice'}
 
 
+lgr = logging.getLogger('pyHardware.SystemHardware')
+
+
 def get_object(name: str):
+
     params = {}
+    obj = None
     try:
         params = PerfusionConfig.read_section('hardware', name)
     except KeyError:
-        print(f'Could not find {name} in hardware.ini')
+        lgr.error(f'Could not find {name} in hardware.ini')
         return None
 
     try:
         class_name = params['class']
     except KeyError:
-        print(f'could not find key class in section {name}')
-        print(params)
+        lgr.error(f'could not find key class in section {name}')
+        lgr.error(params)
         return None
 
     try:
+        lgr.debug(f'Attempting to get {class_name}')
         class_ = globals().get(class_name, None)
+        lgr.debug(f'got {class_}')
     except KeyError:
-        print(f'Class {class_name} was not imported in SystemHardware')
+        lgr.error(f'Class {class_name} was not imported in SystemHardware')
         return None
 
+    if class_ is None:
+        lgr.error(f'Could not get object for {class_name}')
     obj = class_(name=name)
+
     return obj
 
 
@@ -65,7 +76,7 @@ def get_mock(name: str):
     if class_ is not None:
         obj = class_(name=name)
     else:
-        print(f'class {params["class"]} doesnt exist')
+        lgr.error(f'class {params["class"]} doesnt exist')
         obj = None
     return obj
 
@@ -89,6 +100,7 @@ class SystemHardware:
         self.hw[name] = get_object(name)
         try:
             self.hw[name].read_config()
+            self._lgr.debug(f'cfg is {self.hw[name].cfg}')
         except PerfusionConfig.HardwareException as e:
             self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
             self._lgr.info(f'Loading mock for {name}')
