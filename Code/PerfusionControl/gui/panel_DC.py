@@ -77,7 +77,6 @@ class PanelDCControl(wx.Panel):
         self.btn_stop.SetFont(font)
 
         self.timer_gui_update = wx.Timer(self)
-        self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
 
         self.__do_layout()
         self.__set_bindings()
@@ -111,6 +110,7 @@ class PanelDCControl(wx.Panel):
         new_flow = self.entered_offset.GetValue()
         if self.pump:
             self.pump.set_flow(new_flow)
+        self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)  # start timer only after dialysis is started
 
     def on_stop(self, evt):
         if self.pump:

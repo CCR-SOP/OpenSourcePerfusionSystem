@@ -37,6 +37,7 @@ class DialysisPumpPanel(wx.Panel):
         # Add auto start button as 5th panel
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
         self.btn_auto_dialysis.SetFont(font)
+        self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
 
         self.__do_layout()
         self.__set_bindings()
@@ -65,12 +66,14 @@ class DialysisPumpPanel(wx.Panel):
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
             self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
+            self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(240, 0, 0))
             for automation in self.automations:
                 automation.start()
             for panel in self.panels:
                 panel.panel_dc.entered_offset.Enable(False)
         else:
             self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
+            self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
             for automation in self.automations:
                 automation.stop()
             for panel in self.panels:
