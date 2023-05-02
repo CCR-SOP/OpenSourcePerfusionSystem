@@ -144,7 +144,7 @@ class SyringeFrame(wx.Frame):
     def OnClose(self, evt):
         self.panel.Close()
         self.Destroy()
-
+        SYS_PERFUSION.close()
 
 class MySyringeApp(wx.App):
     def OnInit(self):
