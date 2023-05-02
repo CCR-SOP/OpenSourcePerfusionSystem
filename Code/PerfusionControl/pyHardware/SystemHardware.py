@@ -41,6 +41,8 @@ def get_object(name: str):
         return None
 
     try:
+        # if name == 'Pump1':
+        print(f'{name} class name is {class_name}')
         class_ = globals().get(class_name, None)
     except KeyError:
         print(f'Class {class_name} was not imported in SystemHardware')
