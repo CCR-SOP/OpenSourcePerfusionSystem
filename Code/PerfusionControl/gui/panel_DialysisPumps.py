@@ -86,8 +86,7 @@ class TestFrame(wx.Frame):
 
         automation_names = ['Dialysate Inflow Automation',
                             'Dialysate Outflow Automation',
-                            'Dialysis Blood Automation',
-                            'Glucose Circuit Automation']
+                            'Dialysis Blood Automation']
         automations = []
         for name in automation_names:
             automations.append(SYS_PERFUSION.get_automation(name))
