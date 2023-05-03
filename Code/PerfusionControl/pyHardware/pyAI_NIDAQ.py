@@ -157,17 +157,17 @@ class NIDAQAIDevice(pyAI.AIDevice):
         if acquiring:
             self.start()
 
-    def open(self, cfg: AINIDAQDeviceConfig):
+    def open(self):
         """ Open a pyAI_NIDAQ device
             dev: the name of a valid NI device
         """
         self._task = Task()
 
         # ensure the buffer type is float64 for NIDAQ devices
-        cfg.buf_type = 'float64'
-        super().open(cfg=cfg)
-        if not self._is_valid_device_name(cfg.device_name):
-            msg = f'Device "{cfg.device_name}" is not a valid device name on this system. ' \
+        self.cfg.buf_type = 'float64'
+        super().open()
+        if not self._is_valid_device_name(self.cfg.device_name):
+            msg = f'Device "{self.cfg.device_name}" is not a valid device name on this system. ' \
                   f'Please check that the hardware had been plugged in and the correct' \
                   f'device name has been used'
             self._lgr.error(msg)

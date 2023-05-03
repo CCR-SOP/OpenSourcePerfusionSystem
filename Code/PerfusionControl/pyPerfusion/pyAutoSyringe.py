@@ -135,9 +135,6 @@ class AutoSyringeGlucagon(AutoSyringe):
         self.cfg = AutoSyringeGlucagonConfig()
         self._lgr = utils.get_object_logger(__name__, self.name)
 
-    def read_config(self):
-        super().read_config()
-
     def update_on_input(self, glucose):
         if glucose < self.cfg.glucose_level:
             self._inject(self.cfg.volume_ul)
@@ -148,9 +145,6 @@ class AutoSyringeInsulin(AutoSyringe):
         super().__init__(name)
         self.cfg = AutoSyringeInsulinConfig()
         self._lgr = utils.get_object_logger(__name__, self.name)
-
-    def read_config(self):
-        super().read_config()
 
     def update_on_input(self, glucose):
         rate = self.device.hw.get_infusion_rate()
@@ -170,9 +164,6 @@ class AutoSyringeEpo(AutoSyringe):
         self.cfg = AutoSyringeEpoConfig()
         self._lgr = utils.get_object_logger(__name__, self.name)
 
-    def read_config(self):
-        super().read_config()
-
     def update_on_input(self, pressure):
         self._lgr.debug(f'pressure is {pressure} limits is {self.cfg.pressure_level_mmHg}')
         if pressure > self.cfg.pressure_level_mmHg:
@@ -185,21 +176,16 @@ class AutoSyringePhenyl(AutoSyringe):
         self.cfg = AutoSyringePhenylConfig()
         self._lgr = utils.get_object_logger(__name__, self.name)
 
-    def read_config(self):
-        super().read_config()
-
     def update_on_input(self, pressure):
         if pressure < self.cfg.pressure_level_mmHg:
             self._inject(self.cfg.ul_per_min)
+
 
 class SyringeTPN(AutoSyringe):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = SyringeTPNConfig()
         self._lgr = utils.get_object_logger(__name__, self.name)
-
-    def read_config(self):
-        super().read_config()
 
 
 class SyringeZosyn(AutoSyringe):
@@ -208,5 +194,3 @@ class SyringeZosyn(AutoSyringe):
         self.cfg = SyringeZosynConfig()
         self._lgr = utils.get_object_logger(__name__, self.name)
 
-    def read_config(self):
-        super().read_config()

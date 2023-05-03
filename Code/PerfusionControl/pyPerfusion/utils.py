@@ -117,18 +117,29 @@ class WxTextCtrlHandler(logging.Handler):
         wx.CallAfter(self.ctrl.WriteText, s)
 
 
-def create_log_display(parent, logging_level, names_to_log):
+def create_log_display(parent, logging_level, names_to_log, use_last_name=False):
     log_display = wx.TextCtrl(parent, wx.ID_ANY, size=(300, 100),
                               style=wx.TE_MULTILINE | wx.TE_READONLY)
-    create_wx_handler(log_display, logging_level, names_to_log)
+    create_wx_handler(log_display, logging_level, names_to_log, use_last_name)
     return log_display
 
 
-def create_wx_handler(wx_control, logging_level, names_to_log):
+class LastPartFilter(logging.Filter):
+    def filter(self, record):
+        record.last_name = record.name.rsplit('.', 1)[-1]
+        return True
+
+
+def create_wx_handler(wx_control, logging_level, names_to_log, use_last_name=False):
     handler = WxTextCtrlHandler(wx_control)
     handler.setLevel(logging_level)
-    formatter = logging.Formatter('%(asctime) s - %(levelname) s - %(message) s',
-                                  '%H:%M:%S')
+    if use_last_name:
+        handler.addFilter(LastPartFilter())
+        formatter = logging.Formatter('%(asctime) s - %(levelname) s - %(last_name) s - %(message) s',
+                                      '%H:%M:%S')
+    else:
+        formatter = logging.Formatter('%(asctime) s - %(levelname) s - %(message) s',
+                                      '%H:%M:%S')
     handler.setFormatter(formatter)
     loggers = logging.root.manager.loggerDict
     for log_name in names_to_log:

@@ -114,16 +114,6 @@ class AutoGasMixerVenous(AutoGasMixer):
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = VenousAutoGasMixerConfig()
 
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
-
-    def read_config(self):
-        PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
-        # update the valid_range attribute to a list of integers
-        # as it will be read in as a list of characters
-        # self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
-        # self.cfg.O2_range = [float(x) for x in ''.join(self.cfg.O2_range).strip(' ').split(',')]
-
     def update_on_input(self, data):
         try:
             self._update_O2(data.venous_sO2)
@@ -164,15 +154,6 @@ class AutoGasMixerArterial(AutoGasMixer):
         self.cfg = ArterialAutoGasMixerConfig()
         self.o2_ch = 1
         self.co2_ch = 2
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
-
-    def read_config(self):
-        PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
-        # update the valid_range attribute to a list of integers
-        # as it will be read in as a list of characters
-        # self.cfg.pH_range = [float(x) for x in ''.join(self.cfg.pH_range).strip(' ').split(',')]
 
     def update_on_input(self, data):
         try:

@@ -18,9 +18,10 @@ import serial.tools.list_ports
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+import pyHardware.pyGeneric as pyGeneric
 
 
-class CDIException(PerfusionConfig.HardwareException):
+class CDIException(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -43,17 +44,11 @@ class CDIConfig:
     sampling_period_ms: int = 1000
 
 
-class CDI:
-    def __init__(self, name:str):
-        self.name = name
-        self._lgr = utils.get_object_logger(__name__, self.name)
-
-        self._queue = Queue()
-        self.data_dtype = np.dtype(np.float64)
+class CDI(pyGeneric.GenericDevice):
+    def __init__(self, name: str):
+        super().__init__(name)
         self.buf_len = 18
         self.samples_per_read = 18
-        self.acq_start_ms = 0
-
         self.cfg = CDIConfig()
 
         self.__serial = serial.Serial()
@@ -67,26 +62,13 @@ class CDI:
     def sampling_period_ms(self):
         return self.cfg.sampling_period_ms
 
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
-
-    def read_config(self):
-        cfg = CDIConfig()
-        PerfusionConfig.read_into_dataclass('hardware', self.name, cfg)
-        self.open(cfg)
-
     def is_open(self):
         return self.__serial and self.__serial.is_open
 
-    def open(self, cfg: CDIConfig = None) -> None:
-        self._queue = Queue()
+    def open(self) -> None:
+        super().open()
         if self.__serial.is_open:
             self.__serial.close()
-        if cfg is not None:
-            self.cfg = cfg
         self.__serial.port = self.cfg.port
         self.__serial.baudrate = 9600
         self.__serial.stopbits = serial.STOPBITS_ONE
@@ -102,6 +84,7 @@ class CDI:
             raise CDIException(f'CDI: Could not open serial port at {self.cfg.port}')
 
     def close(self):
+        super().close()
         self.stop()
         if self.__serial:
             self.__serial.close()
@@ -184,26 +167,18 @@ class CDI:
         self.is_streaming = False
 
     def start(self):
+        super().start()
         self.stop()
         self._evt_halt.clear()
-        self.acq_start_ms = utils.get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
         self.__thread.start()
 
     def stop(self):
+        super().stop()
         if self.is_streaming:
             self._evt_halt.set()
-
-    def get_data(self, timeout=0):
-        buf = None
-        t = None
-        try:
-            buf, t = self._queue.get(timeout=timeout)
-        except Empty:
-            pass
-        return buf, t
 
 
 class MockCDI(CDI):

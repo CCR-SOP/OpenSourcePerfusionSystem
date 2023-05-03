@@ -88,7 +88,6 @@ class PerfusionSystem:
         sensor = get_object(name)
         sensor = self.create_config(sensor)
         self._lgr.debug(f'created config {sensor.cfg}')
-        # sensor.read_config()
         self.sensors[name] = sensor
         if isinstance(sensor, CalculatedSensor):
             sensor.reader = self.get_sensor(sensor.cfg.sensor_name).get_reader(sensor.cfg.sensor_strategy)
@@ -133,6 +132,7 @@ class PerfusionSystem:
         # attach hardware
         if hasattr(obj.cfg, 'hw_name'):
             obj.hw = SYS_HW.get_hw(obj.cfg.hw_name)
+            obj.hw.set_parent(obj)
 
         # load strategies
         lgr.debug(f'strategies are {obj.cfg.strategy_names}')

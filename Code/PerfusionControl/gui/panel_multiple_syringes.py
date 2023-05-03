@@ -46,7 +46,10 @@ class SyringePanel(wx.Panel):
         self.btn_auto_vaso = wx.Button(self, label='Start Auto Vasoactive Control')
         self.btn_auto_vaso.SetFont(auto_font)
         self.btn_auto_vaso.SetBackgroundColour(wx.Colour(0, 240, 0))
-        self.text_log_syringes = utils.create_log_display(self, logging.INFO, ['Pump11Elite', 'AutoSyringe', 'PanelSyringeControls'])
+        log_names = []
+        for automation in self.automations:
+            log_names.append(automation.device.name)
+        self.text_log_syringes = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
 
         self.__do_layout()
         self.__set_bindings()
@@ -159,7 +162,7 @@ if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.setup_file_logger(lgr, logging.DEBUG, 'panel_multiple_syringes_debug')
-    utils.only_show_logs_from(['pyHardware.pyPump11Elite.Pump11Elite'])
+    # utils.only_show_logs_from(['pyHardware.pyPump11Elite.Pump11Elite'])
 
     SYS_PERFUSION = PerfusionSystem()
     try:

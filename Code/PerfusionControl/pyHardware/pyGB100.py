@@ -23,9 +23,10 @@ import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
+import pyHardware.pyGeneric as pyGeneric
 
 
-class GasDeviceException(PerfusionConfig.HardwareException):
+class GasDeviceException(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -81,42 +82,22 @@ class GasDeviceConfig:
     flow_limits: List = field(default_factory=lambda: [0, 100])
 
 
-class GasDevice:
+class GasDevice(pyGeneric.GenericDevice):
     def __init__(self, name: str):
-        self.name = name
-        self._lgr = utils.get_object_logger(__name__, self.name)
-
-        self.hw = None
+        super().__init__(name)
         self.cfg = GasDeviceConfig()
 
-        self._queue = None
-        self.acq_start_ms = 0
         self.baud = 115200
         self.mutex = Lock()
-
-        self.data_dtype = np.dtype(np.uint32)
+        self.hw = None
 
         self.total_flow = 0
         # assume a max of 3 channels
         self.percent = [0, 0, 0]
         self.status = False
 
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
-
-    def read_config(self):
-        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
-        # self.cfg.flow_limits = [int(x) for x in ''.join(self.cfg.flow_limits).strip(' ').split(',')]
-        self.open()
-
-    def open(self, cfg=None):
-        if cfg is not None:
-            self.cfg = cfg
-        self._queue = Queue()
-
+    def open(self):
+        super().open()
         if self.cfg.port != '':
             self._lgr.info(f'Opening GB100 gas mixer at {self.cfg.port}')
             try:
@@ -128,7 +109,7 @@ class GasDevice:
                     self.hw.serial.stopbits = 1
                     self.hw.serial.timeout = 3
             except serial.serialutil.SerialException as e:
-                self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
+                self._lgr.error(f'Could not open instrument using port {self.cfg.port}.'
                                 f'Exception: {e}')
                 raise GasDeviceException('Could not open gas device')
 
@@ -137,12 +118,7 @@ class GasDevice:
             with self.mutex:
                 self.hw.serial.close()
             self.stop()
-
-    def start(self):
-        self.acq_start_ms = utils.get_epoch_ms()
-
-    def stop(self):
-        pass
+        super().close()
 
     # channel id's are assumed to start numbering at 1 to match GB100 notation
     def get_gas_type(self, channel_num: int) -> str:
@@ -181,12 +157,12 @@ class GasDevice:
         if self.hw is not None:
             if total_flow < self.cfg.flow_limits[0]:
                 total_flow = self.cfg.flow_limits[0]
-                self._lgr.warning(f'{self.name}: Attempt set flow {total_flow} '
+                self._lgr.warning(f'Attempt set flow {total_flow} '
                                   f'lower than limit {self.cfg.flow_limits[0]}. '
                                   f'Flow being set to limit.')
             if total_flow > self.cfg.flow_limits[1]:
                 total_flow = self.cfg.flow_limits[1]
-                self._lgr.warning(f'{self.name}: Attempt set flow {total_flow} '
+                self._lgr.warning(f'Attempt set flow {total_flow} '
                                   f'higher than limit {self.cfg.flow_limits[1]}. '
                                   f'Flow being set to limit.')
             self.set_working_status(turn_on=False)
@@ -195,7 +171,7 @@ class GasDevice:
 
                 self.hw.write_long(addr, int(total_flow))
                 self.total_flow = total_flow
-                self._lgr.info(f'{self.name}: Total flow changed to {int(total_flow)}')
+                self._lgr.info(f'Total flow changed to {int(total_flow)}')
                 self.push_data()
             self.set_working_status(turn_on=True)
 
@@ -208,7 +184,7 @@ class GasDevice:
                     value = self.hw.read_register(addr, number_of_decimals=2)
                     self.percent[channel_num - 1] = value
             else:
-                self._lgr.warning(f'{self.name}: Attempt to read percent value from unsupported channel {channel_num}')
+                self._lgr.warning(f'Attempt to read percent value from unsupported channel {channel_num}')
 
         return value
 
@@ -217,11 +193,11 @@ class GasDevice:
             if 0 <= channel_num <= 3:
                 if new_percent < 0:
                     new_percent = 0
-                    self._lgr.warning(f'{self.name}: Attempt to set channel {channel_num} percent to '
+                    self._lgr.warning(f'Attempt to set channel {channel_num} percent to '
                                       f'{new_percent}. Capping at 0')
                 if new_percent > 100:
                     new_percent = 100
-                    self._lgr.warning(f'{self.name}: Attempt to set channel {channel_num} percent to '
+                    self._lgr.warning(f'Attempt to set channel {channel_num} percent to '
                                       f'{new_percent}. Capping at 100')
 
                 self.set_working_status(turn_on=False)
@@ -231,12 +207,12 @@ class GasDevice:
                     percent = int(new_percent * 100)
                     # self._lgr.debug(f'writing {percent}')
                     self.hw.write_register(addr, percent)
-                    self._lgr.info(f'{self.name} Setting channel {channel_num} to {percent/100} %')
+                    self._lgr.info(f'Setting channel {channel_num} to {percent/100} %')
                     self.push_data()
                     sleep(3.0)
                 self.set_working_status(turn_on=True)
             else:
-                self._lgr.warning(f'{self.name}: Attempt to set percent value from unsupported channel {channel_num}')
+                self._lgr.warning(f'Attempt to set percent value from unsupported channel {channel_num}')
 
     def get_sccm(self, channel_num: int) -> float:
         value = 0.0
@@ -247,7 +223,7 @@ class GasDevice:
                     value = self.hw.read_long(addr)
                     value /= 100
             else:
-                self._lgr.warning(f'{self.name}: Attempt to get sccm value from unsupported channel {channel_num}')
+                self._lgr.warning(f'Attempt to get sccm value from unsupported channel {channel_num}')
 
         return value
 
@@ -260,7 +236,7 @@ class GasDevice:
                     value = self.hw.read_long(addr)
                     value /= 100
             else:
-                self._lgr.warning(f'{self.name}: Attempt to get sccm_av value from unsupported channel {channel_num}')
+                self._lgr.warning(f'Attempt to get sccm_av value from unsupported channel {channel_num}')
 
         return value
 
@@ -273,7 +249,7 @@ class GasDevice:
                     value = self.hw.read_long(addr)
                     value /= 100
             else:
-                self._lgr.warning(f'{self.name}: Attempt to get target sccm value from unsupported channel {channel_num}')
+                self._lgr.warning(f'Attempt to get target sccm value from unsupported channel {channel_num}')
 
 
         return value
@@ -299,18 +275,6 @@ class GasDevice:
         if self._queue:
             buf = self.data_dtype.type([self.status, self.total_flow, self.percent[0], self.percent[1], self.percent[2]])
             self._queue.put((buf, utils.get_epoch_ms()))
-
-    def get_data(self):
-        buf = None
-        t = None
-        try:
-            if self._queue:
-                buf, t = self._queue.get(timeout=1.0)
-        except Empty:
-            # this can occur if there are attempts to read data before it has been acquired
-            # this is not unusual, so catch the error but do nothing
-            pass
-        return buf, t
 
 
 class MockGasDevice(GasDevice):

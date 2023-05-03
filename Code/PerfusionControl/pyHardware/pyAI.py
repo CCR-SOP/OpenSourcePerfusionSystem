@@ -20,17 +20,16 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Thread, Event
-from queue import Queue, Empty
 from dataclasses import dataclass
 
 import numpy as np
-import numpy.typing as npt
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
+import pyHardware.pyGeneric as pyGeneric
 
 
-class AIDeviceException(PerfusionConfig.HardwareException):
+class AIDeviceException(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -51,19 +50,15 @@ class AIDeviceConfig:
     data_type: str = 'float64'
 
 
-class AIDevice:
+class AIDevice(pyGeneric.GenericDevice):
     def __init__(self, name: str):
-        self.name = name
-        self._lgr = utils.get_object_logger(__name__, self.name)
-
+        super().__init__(name)
         self.__thread = None
         self._event_halt = Event()
 
         self.cfg = AIDeviceConfig()
         self.buf_dtype = np.dtype(np.uint16)
         self.ai_channels = []
-
-        self.acq_start_ms = 0
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass(self.name, 'General', self.cfg)
@@ -78,7 +73,7 @@ class AIDevice:
             self.add_channel(ch_name=ch_name, cfg=ch_cfg)
             self._lgr.info(f'read_config: added channel {ch_name} with cfg: {ch_cfg}')
 
-        self.open(self.cfg)
+        self.open()
 
     @property
     def devname(self):
@@ -104,17 +99,10 @@ class AIDevice:
     def is_acquiring(self):
         return self.__thread and self.__thread.is_alive()
 
-    @property
-    def data_dtype(self):
-        return np.dtype(self.cfg.data_type)
-
     def is_open(self):
         channels_valid = len(self.ai_channels) > 0
         valid_name = self.cfg.device_name != ''
         return valid_name and channels_valid
-
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
 
     def channel_exists(self, ch_name: str):
         ch_exists = any(ch.name == ch_name for ch in self.ai_channels)
@@ -148,22 +136,16 @@ class AIDevice:
     def remove_all_channels(self):
         self.ai_channels = []
 
-    def open(self, cfg: AIDeviceConfig):
-        self.cfg = cfg
-
-    def close(self):
-        self.stop()
-
     def start(self):
-        self.stop()
+        super().start()
         self._event_halt.clear()
-        self.acq_start_ms = utils.get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyAI {self.name}'
         self.__thread.start()
 
     def stop(self):
+        super().stop()
         if self.__thread and self.__thread.is_alive():
             self._event_halt.set()
             self.__thread.join(2.0)
@@ -185,24 +167,15 @@ class AIDevice:
             channel.put_data(buffer, buffer_t)
 
 
-class AIChannel:
+class AIChannel(pyGeneric.GenericDevice):
     def __init__(self, name: str):
-        self.name = name
-        self._lgr = utils.get_object_logger(__name__, self.name)
+        super().__init__(name)
         self.cfg = AIChannelConfig()
         self.device = None
-
-        self._queue = Queue()
-        self._q_timeout = 0.5
-
 
     @property
     def buf_len(self):
         return self.device.buf_len
-
-    @property
-    def data_dtype(self):
-        return self.device.data_dtype
 
     @property
     def sampling_period_ms(self):
@@ -211,9 +184,6 @@ class AIChannel:
     @property
     def samples_per_read(self):
         return self.device.samples_per_read
-
-    def get_acq_start_ms(self):
-        return self.device.get_acq_start_ms()
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass(self.device.name, self.name, self.cfg)
@@ -226,17 +196,6 @@ class AIChannel:
     def put_data(self, buf, t):
         data = self._calibrate(buf)
         self._queue.put((data, t))
-
-    def get_data(self):
-        buf = None
-        t = None
-        try:
-            buf, t = self._queue.get(timeout=self._q_timeout)
-        except Empty:
-            # this can occur if there are attempts to read data before it has been acquired
-            # this is not unusual, so catch the error but do nothing
-            pass
-        return buf, t
 
     def clear(self):
         with self._queue.mutex:
@@ -253,9 +212,3 @@ class AIChannel:
                            / (self.cfg.cal_pt2_reading - self.cfg.cal_pt1_reading))
                            + self.cfg.cal_pt1_target)
         return data
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass

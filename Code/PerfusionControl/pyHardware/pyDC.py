@@ -24,9 +24,10 @@ import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
+import pyHardware.pyGeneric as pyGeneric
 
 
-class DCDeviceException(Exception):
+class DCDeviceException(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -40,15 +41,12 @@ class DCChannelConfig:
     cal_pt2_volts: np.float64 = 5
     cal_pt2_flow: np.float64 = 49.7
 
-class DCDevice:
-    def __init__(self, name: str):
-        self.name = name
-        self._lgr = utils.get_object_logger(__name__, self.name)
-        self.cfg = DCChannelConfig()
-        self._queue = Queue()
-        self._q_timeout = 0.5
 
-        self.data_dtype = np.dtype(np.float64)
+class DCDevice(pyGeneric.GenericDevice):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.cfg = DCChannelConfig()
+
         self._buffer = np.zeros(1, dtype=self.data_dtype)
         self.acq_start_ms = 0
         self.buf_len = 1
@@ -75,30 +73,9 @@ class DCDevice:
                  + self.cfg.cal_pt1_volts)
         return volts
 
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
-
-    def open(self):
-        pass
-
-    def is_open(self):
-        return self.cfg is not None
-
-    def close(self):
-        self.stop()
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
-
-    def read_config(self):
-        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
-        self.open()
-
-    def start(self):
-        self.acq_start_ms = utils.get_epoch_ms()
-
     def stop(self):
         self.set_output(0)
+        super().stop()
 
     def set_flow(self, ml_per_min):
         volts = self.mlpermin_to_volts(ml_per_min)
@@ -119,14 +96,3 @@ class DCDevice:
             output_volts = self.output_range[1]
         self._buffer[0] = output_volts
         self._queue.put((self._buffer, utils.get_epoch_ms()))
-
-    def get_data(self):
-        buf = None
-        t = None
-        try:
-            buf, t = self._queue.get(timeout=self._q_timeout)
-        except Empty:
-            # this can occur if there are attempts to read data before it has been acquired
-            # this is not unusual, so catch the error but do nothing
-            pass
-        return buf, t

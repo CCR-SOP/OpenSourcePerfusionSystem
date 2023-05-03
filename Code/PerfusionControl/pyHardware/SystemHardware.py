@@ -11,6 +11,7 @@ import logging
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
+import pyHardware.pyGeneric as pyGeneric
 from pyHardware.pyAI import AIDevice, AIChannel, AIDeviceException
 from pyHardware.pyAI_NIDAQ import NIDAQAIDevice
 from pyHardware.pyCDI import CDI, MockCDI
@@ -101,7 +102,7 @@ class SystemHardware:
         try:
             self.hw[name].read_config()
             self._lgr.debug(f'cfg is {self.hw[name].cfg}')
-        except PerfusionConfig.HardwareException as e:
+        except pyGeneric.HardwareException as e:
             self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
             self._lgr.info(f'Loading mock for {name}')
 

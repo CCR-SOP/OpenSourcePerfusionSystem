@@ -7,12 +7,9 @@
     This work was created by an employee of the US Federal Gov
     and under the public domain.
 """
-from threading import Thread, Event
 from queue import Queue, Empty
 from dataclasses import dataclass
 from enum import Enum
-from time import sleep
-from binascii import hexlify
 
 import numpy as np
 import serial
@@ -20,9 +17,10 @@ import serial.tools.list_ports
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
+import pyHardware.pyGeneric as pyGeneric
 
 
-class Pump11EliteException(PerfusionConfig.HardwareException):
+class Pump11EliteException(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -108,26 +106,18 @@ def get_code_from_name(desired_name: str):
     return code
 
 
-class Pump11Elite:
-    def __init__(self, name):
-        self.name = name
-        self._lgr = utils.get_object_logger(__name__, self.name)
-        self.data_dtype = np.dtype(np.float64)
-
-        self.name = name
+class Pump11Elite(pyGeneric.GenericDevice):
+    def __init__(self, name: str):
+        super().__init__(name)
         self.cfg = Pump11EliteConfig()
-        self.cfg.name = name
-
-        self.pump_state = PumpState.idle
 
         self._serial = serial.Serial()
         self._serial.timeout = 0.10
-        self._queue = None
-        self._timeout = 0.05
 
-        self.acq_start_ms = 0
         self.period_sampling_ms = 0
         self.samples_per_read = 0
+
+        self.pump_state = PumpState.idle
 
     @property
     def is_infusing(self):
@@ -143,29 +133,17 @@ class Pump11Elite:
             self.pump_state = PumpState.infusing
         return self.pump_state == PumpState.infusing
 
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
-
     def is_open(self):
         return self._serial.is_open
 
-    def read_config(self):
-        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
-        self.open(self.cfg)
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
-
-    def open(self, cfg: Pump11EliteConfig = None) -> None:
-        self._queue = Queue()
+    def open(self) -> None:
+        super().open()
         if self._serial.is_open:
             self._serial.close()
 
-        if cfg is not None:
-            self.cfg = cfg
-            self._serial.port = self.cfg.com_port
-            self._serial.baudrate = self.cfg.baud
-            self._serial.xonxoff = True
+        self._serial.port = self.cfg.com_port
+        self._serial.baudrate = self.cfg.baud
+        self._serial.xonxoff = True
         try:
             self._serial.open()
         except serial.serialutil.SerialException as e:
@@ -176,6 +154,7 @@ class Pump11Elite:
         self.send_wait4response('poll REMOTE\r')
 
     def close(self):
+        super().close()
         if self._serial:
             self.stop()
             self._serial.close()
@@ -198,7 +177,7 @@ class Pump11Elite:
     def set_infusion_rate(self, rate_ul_min: int):
         # can be changed mid-run
         self._set_param('irate', f'{int(rate_ul_min)} ul/min\r')
-        self._lgr.info(f'{self.name}: Syringe infusion set at rate {rate_ul_min} uL/min')
+        self._lgr.info(f'Syringe infusion set at rate {rate_ul_min} uL/min')
 
     def clear_infusion_volume(self):
         self.send_wait4response('civolume\r')
@@ -210,7 +189,7 @@ class Pump11Elite:
         except ValueError as e:
             # this will happen if com port is not opened or
             # an error occurred
-            self._lgr.error(f'Error occurred parsing get_infusion_rate response for syringe {self.name}')
+            self._lgr.error(f'Error occurred parsing get_infusion_rate response for syringe')
             self._lgr.error(f'Message: {e}')
             infuse_rate = 0
             infuse_unit = ''
@@ -218,7 +197,7 @@ class Pump11Elite:
 
     def set_target_volume(self, volume_ul):
         self._set_param('tvolume', f'{int(volume_ul)} ul\r')
-        self._lgr.info(f'{self.name}: Target infusion volume set at {volume_ul} uL')
+        self._lgr.info(f'Target infusion volume set at {volume_ul} uL')
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
@@ -233,7 +212,7 @@ class Pump11Elite:
             except ValueError as e:
                 # this will happen if com port is not opened or
                 # an error occurred
-                self._lgr.error(f'Error occurred parsing get_target_volume response for syringe {self.name}')
+                self._lgr.error(f'Error occurred parsing get_target_volume response for syringe')
                 self._lgr.error(f'Message: {e}')
                 self._lgr.error(f'Response: {response}')
                 vol = 0
@@ -264,7 +243,7 @@ class Pump11Elite:
         elif not target_vol_unit or target_vol == 0:
             self._lgr.info(f'Please manually stop syringe pump and add a target volume to bolus')
         else:
-            self._lgr.error(f'Unknown target volume unit in syringe {self.name}: {target_vol_unit}')
+            self._lgr.error(f'Unknown target volume unit in syringe: {target_vol_unit}')
             target_vol = 0
         if rate_unit == 'ul/min':
             pass
@@ -275,7 +254,7 @@ class Pump11Elite:
         elif rate_unit == 'ml/sec':
             rate = rate * 60 * 1000
         else:
-            self._lgr.error(f'Unknown rate unit in syringe {self.name}: ++{rate_unit}++')
+            self._lgr.error(f'Unknown rate unit in syringe: ++{rate_unit}++')
             rate = 0
 
         buf = np.array([target_vol, rate], dtype=self.data_dtype)
@@ -295,7 +274,7 @@ class Pump11Elite:
         elif rate_unit == 'ml/sec':
             rate = rate * 60 * 1000
         else:
-            self._lgr.error(f'Unknown rate unit in syringe {self.name}: {rate_unit}')
+            self._lgr.error(f'Unknown rate unit in syringe: {rate_unit}')
             rate = 0
 
         flag = INFUSION_START if start else INFUSION_STOP
@@ -311,7 +290,7 @@ class Pump11Elite:
         t = utils.get_epoch_ms()
         self.record_targeted_infusion(t)
         self.pump_state = PumpState.infusing
-        self._lgr.info(f'{self.name}: Bolus infusion started')
+        self._lgr.info(f'Bolus infusion started')
 
     def start_constant_infusion(self):
         """ start a constant infusion. Requires a target volume to be cleared.
@@ -321,10 +300,7 @@ class Pump11Elite:
         t = utils.get_epoch_ms()
         self.record_continuous_infusion(t, start=True)
         self.pump_state = PumpState.infusing
-        self._lgr.info(f'{self.name}: Basal syringe infusion started')
-
-    def start(self):
-        pass
+        self._lgr.info(f'Basal syringe infusion started')
 
     def stop(self):
         """ stop an infusion. Typically, used to stop a continuous infusion
@@ -341,7 +317,7 @@ class Pump11Elite:
 
     def set_syringe(self, manu_code: str, syringe_size: str) -> None:
         self._set_param('syrm', f'{manu_code} {syringe_size}\r')
-        self._lgr.info(f'Setting syringe {self.name} to manufacturer: {manu_code} and size: {syringe_size}')
+        self._lgr.info(f'Setting syringe to manufacturer: {manu_code} and size: {syringe_size}')
 
     def get_syringe_info(self) -> str:
         response = self.send_wait4response('syrm\r')
@@ -373,17 +349,6 @@ class Pump11Elite:
             syringes = response.split('\n')
         return syringes
 
-    def get_data(self):
-        buf = None
-        t = None
-        try:
-            buf, t = self._queue.get(timeout=1.0)
-        except Empty:
-            # this can occur if there are attempts to read data before it has been acquired
-            # this is not unusual, so catch the error but do nothing
-            pass
-        return buf, t
-
     def get_response(self) -> str:
         resp_str = ''
         if self._serial.is_open:
@@ -398,22 +363,30 @@ class Pump11Elite:
 class MockPump11Elite(Pump11Elite):
     def __init__(self, name):
         super().__init__(name)
-        self._lgr = utils.get_object_logger(__name__, self.name)
         self._lgr.debug(f'Creating MockPump11Elite with name {name}')
         self._serial.is_open = False
         self._values = {'tvolume': '0 ul', 'irate': '0 ul/min'}
+        self.infusing = False
 
-    def open(self, cfg: Pump11EliteConfig = None) -> None:
-        self.cfg = cfg
+    @property
+    def is_infusing(self):
+        return self.infusing
+
+    def open(self) -> None:
         self._queue = Queue()
         self._serial.is_open = True
 
     def send_command(self, str2send: str):
-        pass
+        self._lgr.debug(f'str2send is {str2send}')
+        if str2send == 'irun\r':
+            self.infusing = True
+        elif str2send == 'stop\r':
+            self.infusing = False
 
     def send_wait4response(self, str2send: str) -> str:
         response = ''
         if self._serial.is_open:
+            self.send_command(str2send)
             # strip off trailing \r
             str2send = str2send[:-1]
             parts = str2send.split(' ', 1)
@@ -434,6 +407,3 @@ class MockPump11Elite(Pump11Elite):
                 self.pump_state = PumpState.idle
 
         return response
-
-    def read_from_port(self):
-        pass

@@ -55,7 +55,7 @@ class AutoDialysis:
         return self.is_streaming
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
@@ -104,12 +104,6 @@ class AutoDialysisInflow(AutoDialysis):
         self.cfg = AutoDialysisInflowConfig()
         self._lgr = utils.get_object_logger(__name__, self.name)
 
-    def read_config(self):
-        super().read_config()
-        # update the valid_range attribute to a list of integers
-        # as it will be read in as a list of characters
-        # self.cfg.K_range = [float(x) for x in ''.join(self.cfg.K_range).strip(' ').split(',')]
-
     def update_on_input(self, cdi_data):
         try:
             self._update_speed(cdi_data.hct)
@@ -131,13 +125,6 @@ class AutoDialysisOutflow(AutoDialysis):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = AutoDialysisOutflowConfig()
-
-    def read_config(self):
-        super().read_config()
-        # update the valid_range attribute to a list of integers
-        # as it will be read in as a list of characters
-        # self.cfg.hct_range = [int(x) for x in ''.join(self.cfg.hct_range).strip(' ').split(',')]
-        # self.cfg.K_range = [float(x) for x in ''.join(self.cfg.K_range).strip(' ').split(',')]
 
     def update_on_input(self, cdi_data):
         self._lgr.debug('updating outflow automation')
