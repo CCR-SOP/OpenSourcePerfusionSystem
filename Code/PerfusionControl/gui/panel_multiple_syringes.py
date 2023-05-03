@@ -49,6 +49,7 @@ class SyringePanel(wx.Panel):
         log_names = []
         for automation in self.automations:
             log_names.append(automation.device.name)
+        log_names.append('AutoSyringe')
         self.text_log_syringes = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
 
         self.__do_layout()
