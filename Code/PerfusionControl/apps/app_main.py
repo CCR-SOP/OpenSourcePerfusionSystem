@@ -31,7 +31,7 @@ class MyMainApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.setup_stream_logger(logging.getLogger(), logging.INFO)
     utils.configure_matplotlib_logging()
 
     SYS_PERFUSION = PerfusionSystem()

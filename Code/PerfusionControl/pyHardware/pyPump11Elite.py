@@ -389,7 +389,7 @@ class Pump11Elite:
         if self._serial.is_open:
             response = self._serial.read_until('\r', size=1000)
             resp_str = response.decode('ascii').strip('\r').strip('\n')
-            self._lgr.debug(f'response is ||{resp_str}||')
+            # self._lgr.debug(f'response is ||{resp_str}||')
             # self._lgr.debug(f'response in hex is ||{hexlify(response)}')
 
         return resp_str
