@@ -17,8 +17,6 @@ from gui.panel_multiple_syringes import SyringePanel
 from gui.panel_DialysisPumps import DialysisPumpPanel
 from gui.panel_gas_mixers import GasMixerPanel
 from pyPerfusion.PerfusionSystem import PerfusionSystem
-from pyPerfusion.pyAutoGasMixer import AutoGasMixerVenous, AutoGasMixerArterial
-from pyPerfusion.pyAutoDialysis import AutoDialysisInflow, AutoDialysisOutflow
 
 
 class HardwarePanel(wx.Panel):
@@ -27,7 +25,7 @@ class HardwarePanel(wx.Panel):
         wx.Panel.__init__(self, parent)
         self._lgr = logging.getLogger('HardwareControl')
 
-        pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump', 'Glucose Circuit Pump']
+        pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump']
         pumps = []
         for pump_name in pump_names:
             pumps.append(perfusion_system.get_sensor(pump_name))
@@ -42,8 +40,7 @@ class HardwarePanel(wx.Panel):
 
         automation_names = ['Dialysate Inflow Automation',
                             'Dialysate Outflow Automation',
-                            'Dialysis Blood Automation',
-                            'Glucose Circuit Automation']
+                            'Dialysis Blood Automation']
         automations = []
         for name in automation_names:
             automations.append(perfusion_system.get_automation(name))

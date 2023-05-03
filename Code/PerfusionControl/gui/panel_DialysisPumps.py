@@ -38,13 +38,20 @@ class DialysisPumpPanel(wx.Panel):
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
         self.btn_auto_dialysis.SetFont(font)
         self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
+        self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, ['pyDC_NIDAQ'])
+        self.panels.append(self.text_log_roller_pumps)
 
         self.__do_layout()
         self.__set_bindings()
 
     def close(self):
+        counter = 0
         for panel in self.panels:
-            panel.close()
+            if counter == 3:  # to close text box
+                panel.Close()
+            else:
+                panel.close()
+            counter += 1
         super().Close()
 
     def __do_layout(self):
@@ -69,15 +76,25 @@ class DialysisPumpPanel(wx.Panel):
             self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(240, 0, 0))
             for automation in self.automations:
                 automation.start()
+            counter = 0
             for panel in self.panels:
-                panel.panel_dc.entered_offset.Enable(False)
+                if counter == 3:
+                    pass
+                else:
+                    panel.panel_dc.entered_offset.Enable(False)
+                counter += 1
         else:
             self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
             self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
             for automation in self.automations:
                 automation.stop()
+            counter = 0
             for panel in self.panels:
-                panel.panel_dc.entered_offset.Enable(True)
+                if counter == 3:
+                    pass
+                else:
+                    panel.panel_dc.entered_offset.Enable(True)
+                counter += 1
 
 
 class TestFrame(wx.Frame):

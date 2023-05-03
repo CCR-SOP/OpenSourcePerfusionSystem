@@ -76,7 +76,7 @@ class NIDAQDCDevice(pyDC.DCDevice):
             written = ctypes.c_int32(0)
             self._task.WriteAnalogF64(len(self._buffer), True, self.__timeout * 5, PyDAQmx.DAQmx_Val_GroupByChannel,
                                       self._buffer, PyDAQmx.byref(written), None)
-            self._lgr.debug(f'wrote {self._buffer} to NIDAQ device {self.devname}')
+            self._lgr.info(f'wrote {self._buffer} to NIDAQ device {self.devname}')
         except PyDAQmx.DAQmxFunctions.PALResourceReservedError as e:
             msg = f'{self.cfg.device} is reserved. Check for an invalid config or output type'
             self._lgr.error(msg)

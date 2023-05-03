@@ -187,7 +187,7 @@ class Pump11Elite:
 
     def send_command(self, str2send: str):
         if self._serial.is_open:
-            self._lgr.debug(f'sending {str2send}')
+            # self._lgr.debug(f'sending {str2send}')
             self._serial.write(str2send.encode('UTF-8'))
             self._serial.flush()
 
