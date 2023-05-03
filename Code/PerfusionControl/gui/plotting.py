@@ -81,7 +81,12 @@ class SensorPlot:
             self._line.set_data(data_time, data)
 
         if self._with_readout:
-            self._line.set_label(f'{self._reader.name}: {readout:.2f} {self._sensor.cfg.units}')
+            try:
+                unit_str = f'{self._sensor.cfg.units}'
+            except AttributeError:
+                # if sensor doesn't have units, ignore
+                unit_str = ''
+            self._line.set_label(f'{self._reader.name}: {readout:.2f} {unit_str}')
             leg = self._axes.get_legend()
             if leg is not None:
                 leg_texts = leg.get_texts()
@@ -100,7 +105,11 @@ class SensorPlot:
                 self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
         if not keep_old_title:
             self._axes.set_title(f'{self._sensor.name}\n')
-            self._axes.set_ylabel(self._sensor.cfg.units)
+            try:
+                self._axes.set_ylabel(self._sensor.cfg.units)
+            except AttributeError:
+                # if sensor doesn't have units, do nothing
+                pass
 
 
 class EventPlot(SensorPlot):
