@@ -9,53 +9,59 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import threading
 import time
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.Sensor import Sensor
-from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 def main():
-    SYS_HW.load_all()
-    # SYS_HW.load_mocks()
-    SYS_HW.start()
-
-    name = 'Methylprednisone Syringe'
-    try:
-        sensor = Sensor(name=name)
-        sensor.read_config()
-        sensor.start()
-    except PerfusionConfig.MissingConfigSection:
-        print(f'Could not find sensor called {name} in sensors.ini')
-        SYS_HW.stop()
-        exit()
-        sensor = None
+    name = 'Phenylephrine'
+    sensor = SYS_PERFUSION.get_sensor(name)
 
     reader = sensor.get_reader()
     syringe = sensor.hw
-
+    #
+    print('setting target volume')
     syringe.set_target_volume(volume_ul=10_000)
-    syringe.set_infusion_rate(rate_ul_min=1_000)
-    syringe.infuse_to_target_volume()
+    # syringe.set_infusion_rate(rate_ul_min=1_000)
+    # syringe.infuse_to_target_volume()
     time.sleep(2.0)
-    syringe.set_target_volume(volume_ul=3_000)
-    syringe.set_infusion_rate(rate_ul_min=5_000)
-    syringe.infuse_to_target_volume()
-
+    # syringe.set_target_volume(volume_ul=3_000)
+    # syringe.set_infusion_rate(rate_ul_min=5_000)
+    # syringe.infuse_to_target_volume()
+    #
     syringe.close()
-
-    time.sleep(1.0)
-    ts, last_samples = reader.retrieve_buffer(5000, 5)
-    for ts, samples in zip(ts, last_samples):
-        print(f'{ts}: sample is {samples}')
-
-    sensor.stop()
-    SYS_HW.stop()
+    #
+    # time.sleep(1.0)
+    # ts, last_samples = reader.retrieve_buffer(5000, 5)
+    # for ts, samples in zip(ts, last_samples):
+    #     print(f'{ts}: sample is {samples}')
 
 
 if __name__ == '__main__':
-    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(lgr, logging.DEBUG)
+    utils.only_show_logs_from(['pyHardware.pyPump11Elite'])
+    utils.setup_file_logger(lgr, logging.DEBUG, 'ex_syringe_sensor')
+
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
+
     main()
+
+    SYS_PERFUSION.close()
+    for thread in threading.enumerate():
+        print(thread.name)

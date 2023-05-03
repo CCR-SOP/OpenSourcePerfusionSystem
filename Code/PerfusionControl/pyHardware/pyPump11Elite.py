@@ -131,6 +131,9 @@ class Pump11Elite:
         self.period_sampling_ms = 0
         self.samples_per_read = 0
 
+        self.start()
+
+
     @property
     def is_infusing(self):
         return self.pump_state == PumpState.infusing
@@ -165,9 +168,9 @@ class Pump11Elite:
             raise Pump11EliteException()
 
         # JWK, why do we need to send a blank?
-        self.send_wait4response('')
-        self.send_wait4response(f'address {self.cfg.address}\r')
-        self.send_wait4response('poll REMOTE\r')
+        self.send_command('')
+        self.send_command(f'address {self.cfg.address}\r')
+        self.send_command('poll REMOTE\r')
 
     def close(self):
         if self._serial:
@@ -182,13 +185,16 @@ class Pump11Elite:
         self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
         self.acq_start_ms = utils.get_epoch_ms()
+        self._lgr.debug(f'Started thread {self.__thread.name}')
 
     def send_wait4response(self, str2send: str) -> str:
         self.send_command(str2send)
-        self._lgr.debug('waiting for response')
-        while self.last_response == '':
-            if self._evt_halt.wait(self._timeout):
-                break
+        self._lgr.debug(f'waiting for response on {str2send}')
+        sleep(2.0)
+        self._lgr.debug(f'response is {self.last_response}')
+        #while self.last_response == '':
+        #    if self._evt_halt.wait(self._timeout):
+        #        break
         return self.last_response
 
     def send_command(self, str2send: str):
@@ -391,10 +397,12 @@ class Pump11Elite:
 
     def read_from_port(self):
         while not PerfusionConfig.MASTER_HALT.is_set():
+            self._lgr.debug('in read_from_port')
             if self._evt_halt.wait(self._timeout):
                 break
-            if self._serial.in_waiting:
-                self._lgr.debug(f'waiting for response')
+            self._lgr.debug(f'read_from_port, halt wait done')
+            if self._serial.is_open:
+                self._lgr.debug(f'serial port open')
                 self.last_response = ''
                 response = self._serial.read_until('\r', size=1000).decode('UTF-8')
                 # strip starting \r and ending \r
