@@ -255,6 +255,7 @@ class PanelSyringeControls(wx.Panel):
         sensor.hw.set_infusion_rate(infusion_rate)
         sensor.hw.set_target_volume(target_vol)
         sensor.hw.infuse_to_target_volume()
+        self.btn_basal.SetLabel('Stop Bolus')
         self._lgr.info(f'Bolus syringe infusion at rate {infusion_rate} uL/min to target volume {target_vol} started')
 
 
