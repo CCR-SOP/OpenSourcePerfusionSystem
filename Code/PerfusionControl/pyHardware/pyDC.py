@@ -76,10 +76,11 @@ class DCDevice(pyGeneric.GenericDevice):
 
     def set_flow(self, ml_per_min):
         volts = self.mlpermin_to_volts(ml_per_min)
-        self._lgr.debug(f'ml/min = {ml_per_min}, volts = {volts}')
+        self._lgr.info(f'Setting flow to {ml_per_min} ml/min')
         self.set_output(volts)
 
     def adjust_percent_of_max(self, percent: float):
+        self._lgr.info(f'Adjusting pump speed by {percent}%')
         adjust = (percent / 100.0) * (self.output_range[1] - self.output_range[0])
         volts = self.last_value + adjust
         self.set_output(volts)
@@ -91,5 +92,6 @@ class DCDevice(pyGeneric.GenericDevice):
         elif output_volts > self.output_range[1]:
             self._lgr.warning(f'Attempt to set output below {self.output_range[1]}')
             output_volts = self.output_range[1]
+        self._lgr.debug(f'Setting output to {output_volts} V')
         self._buffer[0] = output_volts
         self._queue.put((self._buffer, utils.get_epoch_ms()))

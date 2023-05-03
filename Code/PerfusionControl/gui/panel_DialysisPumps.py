@@ -38,7 +38,12 @@ class DialysisPumpPanel(wx.Panel):
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
         self.btn_auto_dialysis.SetFont(font)
         self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
-        self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, ['pyDC_NIDAQ'])
+
+        log_names = []
+        for automation in self.automations:
+            log_names.append(automation.pump.name)
+        log_names.append('AutoDialysis')
+        self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
         self.panels.append(self.text_log_roller_pumps)
 
         self.__do_layout()
@@ -124,9 +129,10 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    # utils.setup_stream_logger(lgr, logging.DEBUG)
+    utils.setup_file_logger(lgr, logging.DEBUG, 'panel_DialysisPumps')
 
     SYS_PERFUSION = PerfusionSystem()
     try:

@@ -22,12 +22,6 @@ def get_standard_log_format():
     return '%(asctime) s: %(name) s - %(levelname) s - %(message) s'
 
 
-def setup_default_logging(filename=None):
-    setup_stream_logger(logging.getLogger(), logging.INFO)
-    setup_file_logger(logging.getLogger(), logging.DEBUG, filename)
-    configure_matplotlib_logging()
-
-
 def setup_stream_logger(lgr, level):
     lgr.setLevel(level)
     ch = logging.StreamHandler()
@@ -146,3 +140,4 @@ def create_wx_handler(wx_control, logging_level, names_to_log, use_last_name=Fal
         logs_with_name = [logging.getLogger(lgr_name) for lgr_name in loggers.keys() if log_name in lgr_name]
         for lgr in logs_with_name:
             lgr.addHandler(handler)
+            lgr.propagate = False
