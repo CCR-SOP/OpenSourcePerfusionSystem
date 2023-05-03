@@ -121,18 +121,13 @@ class Pump11Elite:
         self.pump_state = PumpState.idle
 
         self._serial = serial.Serial()
+        self._serial.timeout = 0.10
         self._queue = None
-        self.__thread = None
-        self._evt_halt = Event()
-        self._timeout = 0.5
-        self.last_response = ''
+        self._timeout = 0.05
 
         self.acq_start_ms = 0
         self.period_sampling_ms = 0
         self.samples_per_read = 0
-
-        self.start()
-
 
     @property
     def is_infusing(self):
@@ -167,35 +162,18 @@ class Pump11Elite:
             self._lgr.error(f'Could not open serial port {self._serial.port}. Message: {e}')
             raise Pump11EliteException()
 
-        # JWK, why do we need to send a blank?
-        self.send_command('')
-        self.send_command(f'address {self.cfg.address}\r')
-        self.send_command('poll REMOTE\r')
+        self.send_wait4response(f'address {self.cfg.address}\r')
+        self.send_wait4response('poll REMOTE\r')
 
     def close(self):
         if self._serial:
             self.stop()
             self._serial.close()
 
-    def start(self):
-        if self.__thread:
-            self.stop()
-        self._evt_halt.clear()
-        self.__thread = Thread(target=self.read_from_port)
-        self.__thread.name = f'{__name__} {self.name}'
-        self.__thread.start()
-        self.acq_start_ms = utils.get_epoch_ms()
-        self._lgr.debug(f'Started thread {self.__thread.name}')
-
     def send_wait4response(self, str2send: str) -> str:
         self.send_command(str2send)
-        self._lgr.debug(f'waiting for response on {str2send}')
-        sleep(2.0)
-        self._lgr.debug(f'response is {self.last_response}')
-        #while self.last_response == '':
-        #    if self._evt_halt.wait(self._timeout):
-        #        break
-        return self.last_response
+        response = self.get_response()
+        return response
 
     def send_command(self, str2send: str):
         if self._serial.is_open:
@@ -203,17 +181,16 @@ class Pump11Elite:
             self._serial.write(str2send.encode('UTF-8'))
             self._serial.flush()
 
-    def _set_param(self, param, value) -> str:
+    def _set_param(self, param, value):
         """ helper function to send a properly formatted parameter-value pair"""
         response = self.send_wait4response(f'{param} {value}')
-        return response
 
     def set_infusion_rate(self, rate_ul_min: int):
         # can be changed mid-run
         self._set_param('irate', f'{int(rate_ul_min)} ul/min\r')
 
     def clear_infusion_volume(self):
-        self.send_command('civolume\r')
+        self.send_wait4response('civolume\r')
 
     def get_infusion_rate(self):
         response = self.send_wait4response('irate\r')
@@ -233,7 +210,7 @@ class Pump11Elite:
 
     def get_target_volume(self):
         response = self.send_wait4response('tvolume\r')
-        if response == 'Target volume not set':
+        if response == 'Target volume not set' or response == '':
             vol = 0
             vol_unit = ''
             # self._lgr.warning(f'Attempt to read target volume before it was set')
@@ -252,7 +229,7 @@ class Pump11Elite:
         return vol, vol_unit
 
     def clear_target_volume(self):
-        self.send_command('ctvolume\r')
+        self.send_wait4response('ctvolume\r')
 
     def get_infused_volume(self):
         response = self.send_wait4response('ivolume\r')
@@ -318,7 +295,7 @@ class Pump11Elite:
         """ infuse a set volume. Requires a target volume to be set.
         """
         # JWK, should check if target volume is set
-        self.send_command('irun\r')
+        self.send_wait4response('irun\r')
         t = utils.get_epoch_ms()
         self.record_targeted_infusion(t)
         self.pump_state = PumpState.infusing
@@ -327,28 +304,26 @@ class Pump11Elite:
         """ start a constant infusion. Requires a target volume to be cleared.
         """
         # JWK, should check if target volume is cleared
-        self.send_command('irun\r')
+        self.send_wait4response('irun\r')
         t = utils.get_epoch_ms()
         self.record_continuous_infusion(t, start=True)
         self.pump_state = PumpState.infusing
+
+    def start(self):
+        pass
 
     def stop(self):
         """ stop an infusion. Typically, used to stop a continuous infusion
             but can be used to abort a targeted infusion
         """
-        if self.__thread:
-            self.send_command('stop\r')
-            t = utils.get_epoch_ms()
-            # check if targeted volume is 0, if so, then this is a continuous injection
-            # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
-            target_vol, target_unit = self.get_target_volume()
-            if target_vol == 0:
-                self.record_continuous_infusion(t, start=False)
-            self.pump_state = PumpState.idle
-
-            self._evt_halt.set()
-            self.__thread.join(2.0)
-            self.__thread = None
+        t = utils.get_epoch_ms()
+        # check if targeted volume is 0, if so, then this is a continuous injection
+        # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
+        target_vol, target_unit = self.get_target_volume()
+        if target_vol == 0:
+            self.record_continuous_infusion(t, start=False)
+        self.send_wait4response('stop\r')
+        self.pump_state = PumpState.idle
 
     def set_syringe(self, manu_code: str, syringe_size: str) -> None:
         self._set_param('syrm', f'{manu_code} {syringe_size}\r')
@@ -395,26 +370,15 @@ class Pump11Elite:
             pass
         return buf, t
 
-    def read_from_port(self):
-        while not PerfusionConfig.MASTER_HALT.is_set():
-            self._lgr.debug('in read_from_port')
-            if self._evt_halt.wait(self._timeout):
-                break
-            self._lgr.debug(f'read_from_port, halt wait done')
-            if self._serial.is_open:
-                self._lgr.debug(f'serial port open')
-                self.last_response = ''
-                response = self._serial.read_until('\r', size=1000).decode('UTF-8')
-                # strip starting \r and ending \r
-                response = response[1:-1]
-                self._lgr.debug(f'response is ||{response}||')
-                self._lgr.debug(f'response in hex is ||{hexlify(response)}')
-                self.last_response = response
-                # JWK, this  needs to be tested more thoroughly
-                # if response[0] in PumpMap.keys():
-                # self.pump_state = PumpMap[response[0]]
-                # else:
-                # self._lgr.error(f'Unknown syringe state {response[0]} from response: {response}')
+    def get_response(self) -> str:
+        resp_str = ''
+        if self._serial.is_open:
+            response = self._serial.read_until('\r', size=1000)
+            resp_str = response.decode('ascii').strip('\r').strip('\n')
+            self._lgr.debug(f'response is ||{resp_str}||')
+            # self._lgr.debug(f'response in hex is ||{hexlify(response)}')
+
+        return resp_str
 
 
 class MockPump11Elite(Pump11Elite):

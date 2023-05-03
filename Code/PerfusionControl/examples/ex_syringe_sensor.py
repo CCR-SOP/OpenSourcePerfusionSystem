@@ -27,12 +27,12 @@ def main():
     #
     print('setting target volume')
     syringe.set_target_volume(volume_ul=10_000)
-    # syringe.set_infusion_rate(rate_ul_min=1_000)
-    # syringe.infuse_to_target_volume()
+    syringe.set_infusion_rate(rate_ul_min=1_000)
+    syringe.infuse_to_target_volume()
     time.sleep(2.0)
-    # syringe.set_target_volume(volume_ul=3_000)
-    # syringe.set_infusion_rate(rate_ul_min=5_000)
-    # syringe.infuse_to_target_volume()
+    syringe.set_target_volume(volume_ul=3_000)
+    syringe.set_infusion_rate(rate_ul_min=5_000)
+    syringe.infuse_to_target_volume()
     #
     syringe.close()
     #
