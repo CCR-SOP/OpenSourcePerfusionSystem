@@ -112,7 +112,9 @@ class PanelDCControl(wx.Panel):
         if self.pump:
             self._lgr.debug('setting flow')
             self.pump.set_flow(new_flow)
-        self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)  # start timer only after dialysis is started
+        # self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)  # start timer only after dialysis is started
+        calibrated_flow = self.pump.volts_to_mlpermin(new_flow/10)
+        self.text_real.SetValue(str(calibrated_flow))
 
     def on_stop(self, evt):
         if self.pump:
