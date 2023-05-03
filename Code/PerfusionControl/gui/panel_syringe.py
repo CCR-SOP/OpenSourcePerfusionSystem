@@ -305,9 +305,13 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.ERROR)
+    utils.setup_stream_logger(lgr, logging.ERROR)
     utils.configure_matplotlib_logging()
+    utils.only_show_logs_from(['pyHardware.pyPump11Elite'])
+    utils.setup_file_logger(lgr, logging.DEBUG, 'panel_syringe')
+
 
     SYS_PERFUSION = PerfusionSystem()
     try:
