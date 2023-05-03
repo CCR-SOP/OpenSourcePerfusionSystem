@@ -72,9 +72,11 @@ class MySensorApp(wx.App):
 
 
 if __name__ == "__main__":
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.setup_stream_logger(lgr, logging.DEBUG)
     utils.configure_matplotlib_logging()
+    utils.setup_file_logger(lgr, logging.DEBUG, 'app_main')
 
     sys = PerfusionSystem()
     sys.open()

@@ -4,10 +4,9 @@
 @author: Stephie Lux, NIH
 
 """
-import logging
 from threading import Thread, Event
 from time import sleep
-from queue import Queue, Empty
+from queue import Queue
 from enum import IntEnum
 from datetime import datetime
 from dataclasses import dataclass
@@ -37,6 +36,7 @@ class CDIData:
             for idx in range(18):
                 # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data[idx]}')
                 setattr(self, CDIIndex(idx).name, data[idx])
+
 
 @dataclass
 class CDIConfig:
@@ -168,7 +168,6 @@ class CDI(pyGeneric.GenericDevice):
 
     def start(self):
         super().start()
-        self.stop()
         self._evt_halt.clear()
 
         self.__thread = Thread(target=self.run)
@@ -176,15 +175,14 @@ class CDI(pyGeneric.GenericDevice):
         self.__thread.start()
 
     def stop(self):
-        super().stop()
         if self.is_streaming:
             self._evt_halt.set()
+        super().stop()
 
 
 class MockCDI(CDI):
     def __init__(self, name):
         super().__init__(name)
-        self._lgr = utils.get_object_logger(__name__, self.name)
         self._is_open = False
         self.last_pkt = ''
         self.last_pkt_index = 0

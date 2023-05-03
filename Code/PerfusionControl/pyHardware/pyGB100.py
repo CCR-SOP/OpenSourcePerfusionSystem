@@ -280,7 +280,6 @@ class GasDevice(pyGeneric.GenericDevice):
 class MockGasDevice(GasDevice):
     def __init__(self, name: str):
         super().__init__(name)
-        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def open(self, cfg=None):
         if cfg is not None:
@@ -296,7 +295,6 @@ class MockGasDevice(GasDevice):
 class MockGB100:
     def __init__(self):
         self.name = 'MockGB100'
-        self._lgr = utils.get_object_logger(__name__, self.name)
         self.total_flow = 0
         self.percent = [0, 0]
         self.status = False

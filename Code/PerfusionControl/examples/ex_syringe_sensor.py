@@ -14,7 +14,6 @@ import time
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-from pyPerfusion.Sensor import Sensor
 from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 

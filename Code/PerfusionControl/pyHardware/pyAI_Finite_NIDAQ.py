@@ -15,7 +15,6 @@ from dataclasses import dataclass
 import PyDAQmx
 
 import pyHardware.pyAI_NIDAQ as pyAI_NIDAQ
-import pyPerfusion.utils as utils
 
 
 @dataclass
@@ -26,7 +25,6 @@ class FiniteNIDAQAIDeviceConfig(pyAI_NIDAQ.AINIDAQDeviceConfig):
 class FiniteNIDAQAIDevice(pyAI_NIDAQ.NIDAQAIDevice):
     def __init__(self, name: str):
         super().__init__(name)
-        self._lgr = utils.get_object_logger(__name__, self.name)
         self._sample_mode = PyDAQmx.DAQmxConstants.DAQmx_Val_FiniteSamps
         self._acq_complete = False
         self._notify = None
@@ -60,7 +58,6 @@ class FiniteNIDAQAIDevice(pyAI_NIDAQ.NIDAQAIDevice):
     def run(self):
         self._acq_samples()
         self._acq_complete = True
-        self._lgr.debug(f'completed finite acq for device {self.name}/{self.cfg.device_name}')
         if self._notify:
             self._lgr.debug(f'notifying {self._notify}')
             self._notify()

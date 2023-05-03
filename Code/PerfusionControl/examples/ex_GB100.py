@@ -7,54 +7,69 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import threading
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyHardware.SystemHardware import SYS_HW
 import pyPerfusion.utils as utils
 from time import sleep
-
-PerfusionConfig.set_test_config()
-utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-#utils.setup_file_logger(logging.getLogger(), logging.DEBUG, filename='ex_gb100')
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
-SYS_HW.load('Arterial Gas Mixer')
-SYS_HW.load('Venous Gas Mixer')
-SYS_HW.start()
+def main():
+    ha_device = SYS_PERFUSION.get_sensor('Arterial Gas Mixer').hw
+    pv_device = SYS_PERFUSION.get_sensor('Venous Gas Mixer').hw
+    print(f'ha device config is {ha_device.cfg}')
 
-ha_device = SYS_HW.get_hw('Arterial Gas Mixer')
-pv_device = SYS_HW.get_hw('Venous Gas Mixer')
+    sample_CDI_output = [1] * 18
 
-print(f'ha device config is {ha_device.cfg}')
+    working_status = ha_device.get_working_status()
+    print(f'HA device working status is {working_status}')
+    working_status = pv_device.get_working_status()
+    print(f'PV device working status is {working_status}')
 
-sample_CDI_output = [1] * 18
+    print('Turn on HA device')
+    ha_device.set_working_status(turn_on=True)
+    sleep(4)
+    working_status = ha_device.get_working_status()
+    print(f'HA device working status is {working_status}')
 
-working_status = ha_device.get_working_status()
-print(f'HA device working status is {working_status}')
-working_status = pv_device.get_working_status()
-print(f'PV device working status is {working_status}')
+    total_flow = 50
+    print(f'Setting HA total flow to {total_flow}')
+    ha_device.set_total_flow(total_flow)
 
-print('Turn on HA device')
-ha_device.set_working_status(turn_on=True)
-sleep(4)
-working_status = ha_device.get_working_status()
-print(f'HA device working status is {working_status}')
+    percent = 10
+    print(f'Setting HA second channel to {percent}')
+    ha_device.set_percent_value(2, percent)
 
-total_flow = 50
-print(f'Setting HA total flow to {total_flow}')
-ha_device.set_total_flow(total_flow)
+    sleep(2)
+    ha_device.set_working_status(turn_on=True)
+    sleep(2)
 
-percent = 10
-print(f'Setting HA second channel to {percent}')
-ha_device.set_percent_value(2, percent)
+    print('Turn off HA device')
+    ha_device.set_working_status(turn_on=False)
+    working_status = ha_device.get_working_status()
+    print(f'HA device working status is {working_status}')
 
-sleep(2)
-ha_device.set_working_status(turn_on=True)
-sleep(2)
 
-print('Turn off HA device')
-ha_device.set_working_status(turn_on=False)
-working_status = ha_device.get_working_status()
-print(f'HA device working status is {working_status}')
+if __name__ == '__main__':
+    lgr = logging.getLogger()
+    PerfusionConfig.set_test_config()
+    utils.setup_stream_logger(lgr, logging.DEBUG)
+    utils.setup_file_logger(lgr, logging.DEBUG, 'ex_GB100')
 
-SYS_HW.stop()
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
+
+    main()
+
+    SYS_PERFUSION.close()
+    for thread in threading.enumerate():
+        print(thread.name)

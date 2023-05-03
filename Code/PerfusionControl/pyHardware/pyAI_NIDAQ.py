@@ -36,7 +36,6 @@ class AINIDAQDeviceConfig(pyAI.AIDeviceConfig):
 class NIDAQAIDevice(pyAI.AIDevice):
     def __init__(self, name: str):
         super().__init__(name)
-        self._lgr = utils.get_object_logger(__name__, self.name)
 
         self.cfg = AINIDAQDeviceConfig()
         self.buf_dtype = np.float64

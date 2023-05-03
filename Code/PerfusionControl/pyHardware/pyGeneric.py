@@ -90,3 +90,7 @@ class GenericDevice:
             # this is not unusual, so catch the error but do nothing
             pass
         return buf, t
+
+    def clear(self):
+        with self._queue.mutex:
+            self._queue.queue.clear()

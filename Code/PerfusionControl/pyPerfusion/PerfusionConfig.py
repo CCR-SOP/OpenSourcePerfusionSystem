@@ -26,10 +26,6 @@ ALLOW_MOCKS = True
 MASTER_HALT = Event()
 
 
-class HardwareException(Exception):
-    """Exception used to indicate a general hardware failure"""
-
-
 class MissingConfigFile(Exception):
     """Exception used to indicate a configuration file is not available"""
 

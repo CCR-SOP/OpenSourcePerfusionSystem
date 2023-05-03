@@ -87,7 +87,7 @@ class PerfusionSystem:
         self._lgr.info(f'Loading {name}')
         sensor = get_object(name)
         sensor = self.create_config(sensor)
-        self._lgr.debug(f'created config {sensor.cfg}')
+        # self._lgr.debug(f'created config {sensor.cfg}')
         self.sensors[name] = sensor
         if isinstance(sensor, CalculatedSensor):
             sensor.reader = self.get_sensor(sensor.cfg.sensor_name).get_reader(sensor.cfg.sensor_strategy)
@@ -103,7 +103,7 @@ class PerfusionSystem:
             automation.read_config()
 
             if isinstance(automation, AutoGasMixer):
-                self._lgr.debug(f'loading {automation.cfg.gas_device}, {automation.cfg.data_source}')
+                # self._lgr.debug(f'loading {automation.cfg.gas_device}, {automation.cfg.data_source}')
                 automation.gas_device = self.get_sensor(automation.cfg.gas_device).hw
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
             elif isinstance(automation, AutoDialysis):
@@ -137,17 +137,17 @@ class PerfusionSystem:
         # load strategies
         lgr.debug(f'strategies are {obj.cfg.strategy_names}')
         for name in obj.cfg.strategy_names.split(', '):
-            lgr.debug(f'Getting strategy {name}')
+            # lgr.debug(f'Getting strategy {name}')
             params = PerfusionConfig.read_section('strategies', name)
             try:
-                lgr.debug(f'Looking for {params}')
+                # lgr.debug(f'Looking for {params}')
                 strategy_class = globals().get(params['class'], None)
                 try:
-                    lgr.debug(f'Found {strategy_class}')
+                    # lgr.debug(f'Found {strategy_class}')
                     cfg = strategy_class.get_config_type()()
-                    lgr.debug(f'Config type is {cfg}')
+                    # lgr.debug(f'Config type is {cfg}')
                     PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-                    lgr.debug(f'adding strategy {name}')
+                    # lgr.debug(f'adding strategy {name}')
                     strategy = strategy_class(name)
                     strategy.cfg = cfg
                     obj.add_strategy(strategy)

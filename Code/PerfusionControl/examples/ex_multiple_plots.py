@@ -9,12 +9,12 @@ and under the public domain.
 """
 import wx
 import logging
+import threading
 
 from gui.plotting import SensorPlot, PanelPlotting
-import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class TestFrame(wx.Frame):
@@ -22,6 +22,9 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self._plots = []
+
+        sensors = [SYS_PERFUSION.get_sensor('Hepatic Artery Pressure'),
+                   SYS_PERFUSION.get_sensor('Portal Vein Flow')]
 
         sizer_plots = wx.GridSizer(cols=2)
         for idx, sensor in enumerate(sensors):
@@ -40,7 +43,6 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        SYS_HW.stop()
         for plot in self._plots:
             plot.Destroy()
         self.Destroy()
@@ -55,19 +57,28 @@ class MyTestApp(wx.App):
         return True
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
+    utils.setup_stream_logger(lgr, logging.DEBUG)
+    utils.setup_file_logger(lgr, logging.DEBUG, 'ex_multiple_plots')
     utils.configure_matplotlib_logging()
 
-    SYS_HW.load_all()
-    SYS_HW.start()
-    sensor_haflow = Sensor.Sensor(name='Hepatic Artery Pressure')
-    sensor_haflow.read_config()
-    sensor_pvflow = Sensor.Sensor(name='Portal Vein Flow')
-    sensor_pvflow.read_config()
-
-    sensors = [sensor_haflow, sensor_pvflow]
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
+
+    SYS_PERFUSION.close()
+    for thread in threading.enumerate():
+        print(thread.name)
+

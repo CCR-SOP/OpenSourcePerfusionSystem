@@ -62,7 +62,7 @@ class AutoDialysis:
 
     def run(self):
         self.is_streaming = True
-        # JWK, this assumes the take to get the data and make the
+        # JWK, this assumes the time to get the data and make the
         # adjustments is small compared to the adjust rate so timing drift
         # is small
         while not PerfusionConfig.MASTER_HALT.is_set():

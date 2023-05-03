@@ -18,11 +18,9 @@ and under the public domain.
 
 from dataclasses import dataclass, field
 from typing import List
-from queue import Queue, Empty
 
 import numpy as np
 
-import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import pyHardware.pyGeneric as pyGeneric
 
@@ -48,7 +46,6 @@ class DCDevice(pyGeneric.GenericDevice):
         self.cfg = DCChannelConfig()
 
         self._buffer = np.zeros(1, dtype=self.data_dtype)
-        self.acq_start_ms = 0
         self.buf_len = 1
         self.sampling_period_ms = 0
         self.output_range = [0, 5]

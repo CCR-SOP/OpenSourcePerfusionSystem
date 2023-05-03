@@ -7,7 +7,7 @@
     This work was created by an employee of the US Federal Gov
     and under the public domain.
 """
-from queue import Queue, Empty
+from queue import Queue
 from dataclasses import dataclass
 from enum import Enum
 
@@ -15,7 +15,6 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 
-import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 import pyHardware.pyGeneric as pyGeneric
 
@@ -166,7 +165,6 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     def send_command(self, str2send: str):
         if self._serial.is_open:
-            # self._lgr.debug(f'sending {str2send}')
             self._serial.write(str2send.encode('UTF-8'))
             self._serial.flush()
 
@@ -377,7 +375,7 @@ class MockPump11Elite(Pump11Elite):
         self._serial.is_open = True
 
     def send_command(self, str2send: str):
-        self._lgr.debug(f'str2send is {str2send}')
+        # self._lgr.debug(f'str2send is {str2send}')
         if str2send == 'irun\r':
             self.infusing = True
         elif str2send == 'stop\r':
