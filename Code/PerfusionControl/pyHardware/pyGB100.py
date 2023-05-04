@@ -189,6 +189,7 @@ class GasDevice(pyGeneric.GenericDevice):
         return value
 
     def set_percent_value(self, channel_num: int, new_percent: float):
+        gas_name = self.get_gas_type(1)
         if self.hw is not None:
             if 0 <= channel_num <= 3:
                 if new_percent < 0:
@@ -207,7 +208,7 @@ class GasDevice(pyGeneric.GenericDevice):
                     percent = int(new_percent * 100)
                     # self._lgr.debug(f'writing {percent}')
                     self.hw.write_register(addr, percent)
-                    self._lgr.info(f'Setting channel {channel_num} to {percent/100} %')
+                    self._lgr.info(f'Setting {gas_name} channel to {100 - percent/100} %')
                     self.push_data()
                     sleep(3.0)
                 self.set_working_status(turn_on=True)

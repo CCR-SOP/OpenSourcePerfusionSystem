@@ -91,9 +91,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_total_flow.SetFont(font)
         self.input_total_flow.SetFont(font)
 
-        self.label_real_total_flow = wx.StaticText(self, label='Hardware total gas flow (mL/min):')
-        self.real_total_flow = wx.TextCtrl(self, style=wx.TE_READONLY, value=str(self.autogasmixer.gas_device.get_total_flow()))
-
         # Gas 1 display
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1_name} % Mix:')
         self.input_percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100,
@@ -140,9 +137,6 @@ class BaseGasMixerPanel(wx.Panel):
 
         sizer_cfg.Add(self.label_gas1, flags)
         sizer_cfg.Add(self.input_percent_gas1, flags)
-
-        sizer_cfg.Add(self.label_real_total_flow, flags)
-        sizer_cfg.Add(self.real_total_flow, flags)
 
         sizer_cfg.Add(self.label_real_gas1, flags)
         sizer_cfg.Add(self.percent_gas1, flags)
@@ -235,7 +229,6 @@ class BaseGasMixerPanel(wx.Panel):
         if working_status:
             self.btn_flow.SetLabel('Disable Flow')
             self.btn_update.Enable(False)
-            self.real_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
         else:
             self.btn_flow.SetLabel('Enable Flow')
             self.btn_update.Enable(True)
