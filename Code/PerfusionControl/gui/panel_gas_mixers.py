@@ -91,8 +91,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_total_flow.SetFont(font)
         self.input_total_flow.SetFont(font)
 
-        self.label_real_total_flow = wx.StaticText(self, label='Actual total gas flow (mL/min):')
-        self.real_total_flow = wx.TextCtrl(self, style=wx.TE_READONLY, value='0')
+        self.label_real_total_flow = wx.StaticText(self, label='Hardware total gas flow (mL/min):')
+        self.real_total_flow = wx.TextCtrl(self, style=wx.TE_READONLY, value=str(self.autogasmixer.gas_device.get_total_flow()))
 
         # Gas 1 display
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1_name} % Mix:')
