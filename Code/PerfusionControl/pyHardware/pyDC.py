@@ -34,8 +34,8 @@ class DCChannelConfig:
     device: str = ''
     line: int = 0
     flow_range: List = field(default_factory=lambda: [0, 100])
-    cal_pt1_volts: np.float64 = 0.0
-    cal_pt1_flow: np.float64 = 0.03
+    cal_pt1_volts: np.float64 = 0.00
+    cal_pt1_flow: np.float64 = -0.03
     cal_pt2_volts: np.float64 = 5
     cal_pt2_flow: np.float64 = 49.7
 
@@ -52,6 +52,7 @@ class DCDevice(pyGeneric.GenericDevice):
 
     @property
     def last_value(self):
+
         return self._buffer[0]
 
     @property

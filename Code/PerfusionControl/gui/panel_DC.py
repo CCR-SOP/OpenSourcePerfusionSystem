@@ -76,8 +76,6 @@ class PanelDCControl(wx.Panel):
         self.btn_stop = wx.Button(self, label='Stop')
         self.btn_stop.SetFont(font)
 
-        self.timer_gui_update = wx.Timer(self)
-
         self.__do_layout()
         self.__set_bindings()
 
@@ -103,7 +101,6 @@ class PanelDCControl(wx.Panel):
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
         self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
-        self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_update(self, evt):
@@ -112,20 +109,17 @@ class PanelDCControl(wx.Panel):
         if self.pump:
             self._lgr.debug('setting flow')
             self.pump.set_flow(new_flow)
-        # self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)  # start timer only after dialysis is started
-        calibrated_flow = self.pump.volts_to_mlpermin(new_flow/10)
-        self.text_real.SetValue(str(calibrated_flow))
+            volts = new_flow/10
+            calibrated_flow = self.pump.volts_to_mlpermin(volts)
+            calibrated_flow = round(calibrated_flow, 2)
+            self.text_real.SetValue(str(calibrated_flow))
 
     def on_stop(self, evt):
         if self.pump:
             self.pump.set_flow(0)
 
-    def update_controls_from_hardware(self, evt=None):
-        if self.pump:
-            self.text_real.SetValue(f'{self.pump.last_flow:.3f}')
-
     def on_close(self, evt):
-        self.timer_gui_update.Stop()
+        pass
 
 
 class TestFrame(wx.Frame):
