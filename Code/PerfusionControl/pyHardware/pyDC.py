@@ -34,10 +34,10 @@ class DCChannelConfig:
     device: str = ''
     line: int = 0
     flow_range: List = field(default_factory=lambda: [0, 100])
-    cal_pt1_volts: np.float64 = -0.03
-    cal_pt1_flow: np.float64 = 0.0
+    cal_pt1_volts: np.float64 = 0.1  # values for pump 3 loaded right now
+    cal_pt1_flow: np.float64 = 0.806
     cal_pt2_volts: np.float64 = 5
-    cal_pt2_flow: np.float64 = 49.3
+    cal_pt2_flow: np.float64 = 49.23
 
 
 class DCDevice(pyGeneric.GenericDevice):
@@ -76,8 +76,8 @@ class DCDevice(pyGeneric.GenericDevice):
         super().stop()
 
     def set_flow(self, ml_per_min):
-        volts = ml_per_min/10
-        self._lgr.info(f'Setting flow to {ml_per_min} ml/min')
+        volts = self.mlpermin_to_volts(ml_per_min)
+        self._lgr.info(f'Setting flow to {ml_per_min} ml/min at {volts} volts')
         self.set_output(volts)
 
     def adjust_percent_of_max(self, percent: float):
