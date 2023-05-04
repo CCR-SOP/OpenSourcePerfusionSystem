@@ -34,10 +34,10 @@ class DCChannelConfig:
     device: str = ''
     line: int = 0
     flow_range: List = field(default_factory=lambda: [0, 100])
-    cal_pt1_volts: np.float64 = 0.00
-    cal_pt1_flow: np.float64 = -0.03
+    cal_pt1_volts: np.float64 = -0.03
+    cal_pt1_flow: np.float64 = 0.0
     cal_pt2_volts: np.float64 = 5
-    cal_pt2_flow: np.float64 = 49.7
+    cal_pt2_flow: np.float64 = 49.3
 
 
 class DCDevice(pyGeneric.GenericDevice):
@@ -76,7 +76,7 @@ class DCDevice(pyGeneric.GenericDevice):
         super().stop()
 
     def set_flow(self, ml_per_min):
-        volts = self.mlpermin_to_volts(ml_per_min)
+        volts = ml_per_min/10
         self._lgr.info(f'Setting flow to {ml_per_min} ml/min')
         self.set_output(volts)
 
@@ -91,7 +91,7 @@ class DCDevice(pyGeneric.GenericDevice):
             self._lgr.warning(f'Attempt to set output below {self.output_range[0]}')
             output_volts = self.output_range[0]
         elif output_volts > self.output_range[1]:
-            self._lgr.warning(f'Attempt to set output below {self.output_range[1]}')
+            self._lgr.warning(f'Attempt to set output above {self.output_range[1]}')
             output_volts = self.output_range[1]
         self._lgr.debug(f'Setting output to {output_volts} V')
         self._buffer[0] = output_volts
