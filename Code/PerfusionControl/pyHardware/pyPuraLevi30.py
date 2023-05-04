@@ -50,6 +50,10 @@ class Register:
     scaling: float = 1.0
 
 
+class ModbusFunction(IntEnum):
+    HoldRegister = 6
+    InputRegister = 4
+
 # Taken from page 31 Section 2.3.2.4.1 of Firmware H2.48 docs
 ReadRegisters = {
              'ID': Register(addr=0x3FE0, word_len=5),
@@ -179,36 +183,36 @@ class PuraLevi30:
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['State']
-                self.hw.write_register(reg.addr, PumpState.Off)
+                self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
 
     def set_speed(self, rpm: int):
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointSpeed']
-                self.hw.write_register(reg.addr, rpm)
+                self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
                 reg = WriteRegisters['State']
-                self.hw.write_register(reg.addr, PumpState.SpeedControl)
+                self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
 
     def set_flow(self, percent_of_max: float):
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointProcess']
-                self.hw.write_register(reg.addr, int(percent_of_max*100))
+                self.hw.write_register(reg.addr, int(percent_of_max*100), functioncode=ModbusFunction.HoldRegister)
                 reg = WriteRegisters['State']
-                self.hw.write_register(reg.addr, PumpState.SpeedControl)
+                self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
 
     def get_speed(self) -> int:
         if self.hw:
             with self.mutex:
                 reg = ReadRegisters['SetpointSpeed']
-                rpm = self.hw.read_register(reg.addr)
+                rpm = self.hw.read_register(reg.addr, functioncode=ModbusFunction.InputRegister)
                 return rpm
 
     def get_flow(self) -> float:
         if self.hw:
             with self.mutex:
                 reg = ReadRegisters['SetpointProcess']
-                percent = self.hw.read_register(reg.addr)
+                percent = self.hw.read_register(reg.addr, functioncode=ModbusFunction.InputRegister)
                 return percent / 100.0
 
     def get_data(self):
