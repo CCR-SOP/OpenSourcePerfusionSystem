@@ -40,7 +40,7 @@ class VenousAutoGasMixerConfig(AutoGasMixerConfig):
     O2_adjust: float = 0.0
     flow_adjust: float = 0.0
     O2_channel: int = 0
-    CO2_channel: int = 0
+    N2_channel: int = 0
 
 
 class AutoGasMixer:
@@ -51,7 +51,7 @@ class AutoGasMixer:
         self.data_source = None
         self.cfg = AutoGasMixerConfig()
 
-        self.adjust_rate_ms = 10_000
+        self.adjust_rate_ms = 600_000  # 10 minutes
 
         self.acq_start_ms = 0
         self._event_halt = Event()
@@ -119,16 +119,20 @@ class AutoGasMixerVenous(AutoGasMixer):
             self._update_O2(data.venous_sO2)
             self._update_flow(data.venous_pH)
         except AttributeError:
-            # this will happen if there is invalid CDI data
+           # this will happen if there is invalid CDI data
             pass
 
     def _update_flow(self, pH: float):
         if pH == -1:
             self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
-        elif pH < self.gas_device.cfg.pH_range[0]:
+        elif pH < self.cfg.pH_range[0]:
             self.gas_device.adjust_flow(self.cfg.flow_adjust)
-        elif pH > self.gas_device.cfg.pH_range[1]:
+            self._lgr.info(f'{self.name} is acidotic, increasing total flow by {self.cfg.flow_adjust}')
+            self._lgr.info(f'Flow updated')
+        elif pH > self.cfg.pH_range[1]:
             self.gas_device.adjust_flow(-self.cfg.flow_adjust)
+            self._lgr.info(f'{self.name} is alkalotic, decreasing total flow by {self.cfg.flow_adjust}')
+            self._lgr.info(f'Flow updated')
 
     def _update_O2(self, O2: float):
         O2_adjust = 0
@@ -138,13 +142,14 @@ class AutoGasMixerVenous(AutoGasMixer):
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
         elif O2 < self.cfg.O2_range[0]:
             O2_adjust = self.cfg.O2_adjust
-            self._lgr.warning(f'{self.name}: O2 low')
+            self._lgr.info(f'{self.name}: O2 low. Increasing O2 percentage by {O2_adjust}')
         elif O2 > self.cfg.O2_range[1]:
             O2_adjust = -self.cfg.O2_adjust
-            self._lgr.warning(f'{self.name}: O2 high')
+            self._lgr.warning(f'{self.name}: O2 high. Decreasing O2 percentage by {O2_adjust}')
         if O2_adjust != 0:
             new_percent = self.gas_device.get_percent_value(self.cfg.O2_channel) + O2_adjust
             self.gas_device.set_percent_value(self.cfg.O2_channel, new_percent)
+            self._lgr.debug(f'O2 updated')
 
 
 class AutoGasMixerArterial(AutoGasMixer):
@@ -152,7 +157,7 @@ class AutoGasMixerArterial(AutoGasMixer):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = ArterialAutoGasMixerConfig()
-        self.o2_ch = 1
+        self.o2_ch = 1  # is this obsolete?
         self.co2_ch = 2
 
     def update_on_input(self, data):
@@ -193,4 +198,5 @@ class AutoGasMixerArterial(AutoGasMixer):
         if co2_adjust != 0:
             new_percent = self.gas_device.get_percent_value(self.cfg.CO2_channel) + co2_adjust
             self.gas_device.set_percent_value(self.cfg.CO2_channel, new_percent)
+            self._lgr.debug(f'CO2 updated')
 

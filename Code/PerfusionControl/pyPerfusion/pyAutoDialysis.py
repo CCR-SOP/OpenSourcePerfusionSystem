@@ -23,7 +23,7 @@ class AutoDialysisConfig:
     pump: str = ''
     data_source: str = ''
     adjust_percent: float = 5.0
-    adjust_rate_ms: int = 10_000
+    adjust_rate_ms: int = 600_000
 
 
 @dataclass

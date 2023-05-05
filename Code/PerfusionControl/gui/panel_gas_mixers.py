@@ -29,8 +29,8 @@ class GasMixerPanel(wx.Panel):
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
-        self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Gas Mixer 1'])
-        self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Gas Mixer 2'])
+        self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Gas Mixer 1', 'Arterial Gas Mixer Automation'])
+        self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Gas Mixer 2', 'Venous Gas Mixer Automation'])
 
         self.__do_layout()
         self.__set_bindings()
