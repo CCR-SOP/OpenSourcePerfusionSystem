@@ -8,7 +8,6 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-import threading
 
 import wx
 

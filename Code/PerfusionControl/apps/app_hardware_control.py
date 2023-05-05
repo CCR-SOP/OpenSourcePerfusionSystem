@@ -114,6 +114,7 @@ if __name__ == "__main__":
     sys = PerfusionSystem()
     sys.open()
     sys.load_all()
+    sys.load_automations()
 
     app = MyHardwareApp(0)
     app.MainLoop()
