@@ -111,7 +111,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
         self.cfg = Pump11EliteConfig()
 
         self._serial = serial.Serial()
-        self._serial.timeout = 0.10
+        self._serial.timeout = 0.50
 
         self.period_sampling_ms = 0
         self.samples_per_read = 0
