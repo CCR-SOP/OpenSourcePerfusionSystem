@@ -189,6 +189,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
             # an error occurred
             self._lgr.error(f'Error occurred parsing get_infusion_rate response for syringe')
             self._lgr.error(f'Message: {e}')
+            self._lgr.error(f'Response from syringe was ||{response}||')
             infuse_rate = 0
             infuse_unit = ''
         return infuse_rate, infuse_unit
@@ -212,7 +213,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
                 # an error occurred
                 self._lgr.error(f'Error occurred parsing get_target_volume response for syringe')
                 self._lgr.error(f'Message: {e}')
-                self._lgr.error(f'Response: {response}')
+                self._lgr.error(f'Response from syringe was ||{response}||')
                 vol = 0
                 vol_unit = ''
         return vol, vol_unit
