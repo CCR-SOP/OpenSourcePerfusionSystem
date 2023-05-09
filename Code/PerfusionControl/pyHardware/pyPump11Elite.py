@@ -158,6 +158,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
             self.stop()
             self._serial.close()
         super().close()
+        self.pump_state = PumpState.idle
 
     def send_wait4response(self, str2send: str) -> str:
         self.send_command(str2send)
@@ -166,7 +167,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     def send_command(self, str2send: str):
         if self._serial.is_open:
-            self._lgr.debug(f'Sending command ||{str2send}||')
+            # self._lgr.debug(f'Sending command ||{str2send}||')
             self._serial.write(str2send.encode('UTF-8'))
             self._serial.flush()
 
@@ -184,7 +185,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     def get_infusion_rate(self):
         response = self.send_wait4response('irate\r')
-        self._lgr.debug(f'in get_infusion_rate: response = ||{response}||')
+        # self._lgr.debug(f'in get_infusion_rate: response = ||{response}||')
         try:
             infuse_rate, infuse_unit = response.split(' ')
         except ValueError as e:
@@ -309,14 +310,15 @@ class Pump11Elite(pyGeneric.GenericDevice):
         """ stop an infusion. Typically, used to stop a continuous infusion
             but can be used to abort a targeted infusion
         """
-        t = utils.get_epoch_ms()
-        # check if targeted volume is 0, if so, then this is a continuous injection
-        # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
-        target_vol, target_unit = self.get_target_volume()
-        if target_vol == 0 and target_unit == '':
-            self._lgr.debug('Stopping contiuous infusion')
-            self.record_continuous_infusion(t, start=False)
-        self.send_wait4response('stop\r')
+        if self._serial.is_open:
+            t = utils.get_epoch_ms()
+            # check if targeted volume is 0, if so, then this is a continuous injection
+            # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
+            target_vol, target_unit = self.get_target_volume()
+            if target_vol == 0 and target_unit == '':
+                # self._lgr.debug('Stopping contiuous infusion')
+                self.record_continuous_infusion(t, start=False)
+            self.send_wait4response('stop\r')
         self.pump_state = PumpState.idle
 
     def set_syringe(self, manu_code: str, syringe_size: str) -> None:
@@ -358,8 +360,8 @@ class Pump11Elite(pyGeneric.GenericDevice):
         if self._serial.is_open:
             response = self._serial.read_until('\r', size=1000)
             resp_str = response.decode('ascii').strip('\r').strip('\n')
-            self._lgr.debug(f'response is ||{resp_str}||')
-            self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
+            # self._lgr.debug(f'response is ||{resp_str}||')
+            # self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
 
         return resp_str
 
