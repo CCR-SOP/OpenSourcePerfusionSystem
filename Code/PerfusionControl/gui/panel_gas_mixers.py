@@ -236,10 +236,10 @@ class BaseGasMixerPanel(wx.Panel):
         self.btn_flow.SetValue(working_status)
         if working_status:
             self.btn_flow.SetLabel('Disable Flow')
-            self.btn_update.Enable(False)
+            # self.btn_update.Enable(False)
         else:
             self.btn_flow.SetLabel('Enable Flow')
-            self.btn_update.Enable(True)
+            # self.btn_update.Enable(True)
 
         self.real_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
 
