@@ -383,7 +383,7 @@ class MockPump11Elite(Pump11Elite):
         self._serial.is_open = True
 
     def send_command(self, str2send: str):
-        self._lgr.debug(f'str2send is {str2send}')
+        # self._lgr.debug(f'str2send is {str2send}')
         if str2send == 'irun\r':
             self.infusing = True
         elif str2send == 'stop\r':
