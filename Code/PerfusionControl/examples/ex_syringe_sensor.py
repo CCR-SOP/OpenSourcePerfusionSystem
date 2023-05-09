@@ -43,6 +43,8 @@ def main():
 
     #
     syringe.close()
+    infusing = syringe.is_infusing
+    logging.getLogger().info(f'Infusing = {infusing}')
     logging.getLogger().info('******END OF EXAMPLE')
     #
     # time.sleep(1.0)
