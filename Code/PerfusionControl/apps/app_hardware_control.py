@@ -8,6 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import threading
 
 import wx
 
@@ -92,7 +93,10 @@ class HardwareFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.panel.Close()
+        if self.panel:
+            self.panel.Close()
+        for child in self.GetChildren():
+            child.Close()
         self.Destroy()
 
 

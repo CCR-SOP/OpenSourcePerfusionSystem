@@ -8,6 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import threading
 
 import wx
 
@@ -20,9 +21,11 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 class MyMainApp(wx.App):
     def OnInit(self):
-        frame_hw = HardwareFrame(SYS_PERFUSION, None)
-        frame_sensor = SensorFrame(SYS_PERFUSION, None)
+        frame_sensor = SensorFrame(SYS_PERFUSION, None, wx.ID_ANY, "")
+        frame_hw = HardwareFrame(SYS_PERFUSION, frame_sensor, wx.ID_ANY, "")
+
         self.SetTopWindow(frame_sensor)
+
         frame_hw.Show()
         frame_sensor.Show()
         return True
@@ -49,3 +52,5 @@ if __name__ == "__main__":
     app = MyMainApp(0)
     app.MainLoop()
     SYS_PERFUSION.close()
+    for thread in threading.enumerate():
+        print(thread.name)

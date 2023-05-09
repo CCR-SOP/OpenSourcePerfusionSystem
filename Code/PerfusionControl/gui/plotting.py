@@ -185,6 +185,7 @@ class PanelPlotting(wx.Panel):
 
     def __set_bindings(self):
         self.Bind(wx.EVT_TIMER, self.OnTimer)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def plot(self):
         for plot in self._plots:
@@ -210,6 +211,10 @@ class PanelPlotting(wx.Panel):
         self._plots.append(plot)
         self.Fit()
         self.__parent.Fit()
+
+    def OnClose(self, evt):
+        self.timer_plot.Stop()
+        self.Destroy()
 
 
 class PanelPlotLT(PanelPlotting):

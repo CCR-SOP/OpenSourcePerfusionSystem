@@ -60,6 +60,8 @@ class SensorFrame(wx.Frame):
 
     def OnClose(self, evt):
         self.panel.Close()
+        for child in self.GetChildren():
+            child.Close()
         self.Destroy()
 
 
@@ -84,6 +86,7 @@ if __name__ == "__main__":
 
     app = MySensorApp(0)
     app.MainLoop()
+    print('MySensorApp closed')
     sys.close()
     for thread in threading.enumerate():
         print(thread.name)

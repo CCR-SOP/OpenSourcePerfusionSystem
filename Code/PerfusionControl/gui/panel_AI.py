@@ -65,10 +65,15 @@ class PanelAI(wx.Panel):
 
     def __set_bindings(self):
         self.collapse_pane.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_pane_changed(self, evt):
         self.sizer.Layout()
         self.Layout()
+
+    def on_close(self, evt):
+        self._panel_cal.Close()
+        self._panel_plot.Close()
 
 
 class PanelAICalibration(wx.Panel):
