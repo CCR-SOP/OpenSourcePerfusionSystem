@@ -22,6 +22,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 class AutoGasMixerConfig:
     gas_device: str = ''
     data_source: str = ''
+    adjust_rate_ms: int = 600_000
 
 
 @dataclass
@@ -51,8 +52,6 @@ class AutoGasMixer:
         self.data_source = None
         self.cfg = AutoGasMixerConfig()
 
-        self.adjust_rate_ms = 600_000  # 10 minutes
-
         self.acq_start_ms = 0
         self._event_halt = Event()
         self.__thread = None
@@ -74,7 +73,7 @@ class AutoGasMixer:
         # adjustments is small compared to the adjust rate so timing drift
         # is small
         while not PerfusionConfig.MASTER_HALT.is_set():
-            timeout = self.adjust_rate_ms / 1_000.0
+            timeout = self.cfg.adjust_rate_ms / 1_000.0
             if self._event_halt.wait(timeout):
                 break
             if self.gas_device and self.data_source:
