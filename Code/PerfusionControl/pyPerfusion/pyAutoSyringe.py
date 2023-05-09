@@ -88,7 +88,6 @@ class AutoSyringe:
         # is small
         while not PerfusionConfig.MASTER_HALT.is_set():
             timeout = self.cfg.adjust_rate_ms / 1000.0
-            self._lgr = utils.get_object_logger(__name__, self.name)
             if self._event_halt.wait(timeout):
                 break
             if self.device and self.data_source:
