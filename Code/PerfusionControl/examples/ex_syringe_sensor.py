@@ -32,6 +32,16 @@ def main():
     syringe.set_target_volume(volume_ul=3_000)
     syringe.set_infusion_rate(rate_ul_min=5_000)
     syringe.infuse_to_target_volume()
+
+    # call APIs to record responses in log
+    syringe.clear_infusion_volume()
+    syringe.get_infusion_rate()
+    syringe.get_target_volume()
+    syringe.clear_target_volume()
+    syringe.get_infused_volume()
+    syringe.clear_syringe()
+    syringe.start_constant_volume()
+
     #
     syringe.close()
     #
