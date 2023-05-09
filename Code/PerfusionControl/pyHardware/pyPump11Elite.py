@@ -10,6 +10,7 @@
 from queue import Queue
 from dataclasses import dataclass
 from enum import Enum
+from binascii import hexlify
 
 import numpy as np
 import serial
@@ -153,10 +154,10 @@ class Pump11Elite(pyGeneric.GenericDevice):
         self.send_wait4response('poll REMOTE\r')
 
     def close(self):
-        super().close()
         if self._serial:
             self.stop()
             self._serial.close()
+        super().close()
 
     def send_wait4response(self, str2send: str) -> str:
         self.send_command(str2send)
@@ -165,6 +166,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     def send_command(self, str2send: str):
         if self._serial.is_open:
+            self._lgr.debug(f'Sending command ||{str2send}||')
             self._serial.write(str2send.encode('UTF-8'))
             self._serial.flush()
 
@@ -182,6 +184,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     def get_infusion_rate(self):
         response = self.send_wait4response('irate\r')
+        self._lgr.debug(f'in get_infusion_rate: response = ||{response}||')
         try:
             infuse_rate, infuse_unit = response.split(' ')
         except ValueError as e:
@@ -263,23 +266,24 @@ class Pump11Elite(pyGeneric.GenericDevice):
     def record_continuous_infusion(self, t, start: bool):
         """ targeted infusion actions in ul and ul/min
         """
-        rate, rate_unit = self.get_infusion_rate()
-        if rate_unit == 'ul/min':
-            pass
-        elif rate_unit == 'ml/min':
-            rate = rate * 1000
-        elif rate_unit == 'ul/sec':
-            rate = rate * 60
-        elif rate_unit == 'ml/sec':
-            rate = rate * 60 * 1000
-        else:
-            self._lgr.error(f'Unknown rate unit in syringe: {rate_unit}')
-            rate = 0
+        if self.is_open():
+            rate, rate_unit = self.get_infusion_rate()
+            if rate_unit == 'ul/min':
+                pass
+            elif rate_unit == 'ml/min':
+                rate = rate * 1000
+            elif rate_unit == 'ul/sec':
+                rate = rate * 60
+            elif rate_unit == 'ml/sec':
+                rate = rate * 60 * 1000
+            else:
+                self._lgr.error(f'Unknown rate unit in syringe: ++{rate_unit}++')
+                rate = 0
 
-        flag = INFUSION_START if start else INFUSION_STOP
-        buf = np.array([flag, rate], dtype=self.data_dtype)
-        if self._queue:
-            self._queue.put((buf, t))
+            flag = INFUSION_START if start else INFUSION_STOP
+            buf = np.array([flag, rate], dtype=self.data_dtype)
+            if self._queue:
+                self._queue.put((buf, t))
 
     def infuse_to_target_volume(self):
         """ infuse a set volume. Requires a target volume to be set.
@@ -309,7 +313,8 @@ class Pump11Elite(pyGeneric.GenericDevice):
         # check if targeted volume is 0, if so, then this is a continuous injection
         # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
         target_vol, target_unit = self.get_target_volume()
-        if target_vol == 0:
+        if target_vol == 0 and target_unit == '':
+            self._lgr.debug('Stopping contiuous infusion')
             self.record_continuous_infusion(t, start=False)
         self.send_wait4response('stop\r')
         self.pump_state = PumpState.idle
@@ -353,8 +358,8 @@ class Pump11Elite(pyGeneric.GenericDevice):
         if self._serial.is_open:
             response = self._serial.read_until('\r', size=1000)
             resp_str = response.decode('ascii').strip('\r').strip('\n')
-            # self._lgr.debug(f'response is ||{resp_str}||')
-            # self._lgr.debug(f'response in hex is ||{hexlify(response)}')
+            self._lgr.debug(f'response is ||{resp_str}||')
+            self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
 
         return resp_str
 
@@ -376,7 +381,7 @@ class MockPump11Elite(Pump11Elite):
         self._serial.is_open = True
 
     def send_command(self, str2send: str):
-        # self._lgr.debug(f'str2send is {str2send}')
+        self._lgr.debug(f'str2send is {str2send}')
         if str2send == 'irun\r':
             self.infusing = True
         elif str2send == 'stop\r':

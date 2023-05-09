@@ -40,10 +40,10 @@ def main():
     syringe.clear_target_volume()
     syringe.get_infused_volume()
     syringe.clear_syringe()
-    syringe.start_constant_volume()
 
     #
     syringe.close()
+    logging.getLogger().info('******END OF EXAMPLE')
     #
     # time.sleep(1.0)
     # ts, last_samples = reader.retrieve_buffer(5000, 5)
