@@ -9,6 +9,7 @@ and under the public domain.
 """
 import logging
 from time import time_ns
+import sys
 
 import wx
 import serial
@@ -140,3 +141,14 @@ def create_wx_handler(wx_control, logging_level, names_to_log, use_last_name=Fal
         logs_with_name = [logging.getLogger(lgr_name) for lgr_name in loggers.keys() if log_name in lgr_name]
         for lgr in logs_with_name:
             lgr.addHandler(handler)
+
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logging.critical('Uncaught exception, ', exc_info=(exc_type, exc_value, exc_traceback))
+
+
+def catch_unhandled_exceptions():
+    sys.excepthook = handle_exception

@@ -109,6 +109,7 @@ class MyHardwareApp(wx.App):
 
 
 if __name__ == "__main__":
+    utils.catch_unhandled_exceptions()
     lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
     utils.setup_stream_logger(lgr, logging.DEBUG)
