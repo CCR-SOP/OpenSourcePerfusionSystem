@@ -26,8 +26,9 @@ class Pump11EliteException(pyGeneric.HardwareException):
 
 DATA_VERSION = 3
 
-INFUSION_START = -2
 INFUSION_STOP = -1
+INFUSION_START = -2
+INFUSION_ERROR = -3
 
 
 DEFAULT_SYRINGES = {
@@ -161,9 +162,15 @@ class Pump11Elite(pyGeneric.GenericDevice):
         self.pump_state = PumpState.idle
 
     def send_wait4response(self, str2send: str) -> str:
-        self.send_command(str2send)
-        response = self.get_response()
-        return response
+        resp_str = None
+        if self._serial.is_open:
+            self.send_command(str2send)
+
+            response = self._serial.read_until('\r', size=1000)
+            resp_str = response.decode('ascii').strip('\r').strip('\n')
+            self._lgr.debug(f'str2send=||{str2send}||, response is ||{resp_str}||')
+            self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
+        return resp_str
 
     def send_command(self, str2send: str):
         if self._serial.is_open:
@@ -173,7 +180,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     def _set_param(self, param, value):
         """ helper function to send a properly formatted parameter-value pair"""
-        response = self.send_wait4response(f'{param} {value}')
+        self.send_wait4response(f'{param} {value}')
 
     def set_infusion_rate(self, rate_ul_min: int):
         # can be changed mid-run
@@ -184,18 +191,20 @@ class Pump11Elite(pyGeneric.GenericDevice):
         self.send_wait4response('civolume\r')
 
     def get_infusion_rate(self):
+        infuse_rate = None
+        infuse_unit = None
         response = self.send_wait4response('irate\r')
-        # self._lgr.debug(f'in get_infusion_rate: response = ||{response}||')
-        try:
-            infuse_rate, infuse_unit = response.split(' ')
-        except ValueError as e:
-            # this will happen if com port is not opened or
-            # an error occurred
-            self._lgr.error(f'Error occurred parsing get_infusion_rate response for syringe')
-            self._lgr.error(f'Message: {e}')
-            self._lgr.error(f'Response from syringe was ||{response}||')
-            infuse_rate = 0
-            infuse_unit = ''
+        if response is not None:
+            # self._lgr.debug(f'in get_infusion_rate: response = ||{response}||')
+            try:
+                infuse_rate, infuse_unit = response.split(' ')
+            except ValueError as e:
+                # this will happen if com port is not opened or
+                # an error occurred
+                self._lgr.error(f'Error occurred parsing get_infusion_rate response for syringe')
+                self._lgr.error(f'Message: {e}')
+                self._lgr.error(f'Response from syringe was ||{response}||')
+
         return infuse_rate, infuse_unit
 
     def set_target_volume(self, volume_ul):
@@ -203,13 +212,10 @@ class Pump11Elite(pyGeneric.GenericDevice):
         self._lgr.info(f'Target infusion volume set at {volume_ul} uL')
 
     def get_target_volume(self):
+        vol = None
+        vol_unit = None
         response = self.send_wait4response('tvolume\r')
-        if response == 'Target volume not set' or response == '':
-            vol = 0
-            vol_unit = ''
-            # self._lgr.warning(f'Attempt to read target volume before it was set')
-            # Doesn't need a warning - normal functionality during basal infusions
-        else:
+        if response is not None and response != 'Target volume not set':
             try:
                 vol, vol_unit = response.split(' ')
             except ValueError as e:
@@ -218,16 +224,17 @@ class Pump11Elite(pyGeneric.GenericDevice):
                 self._lgr.error(f'Error occurred parsing get_target_volume response for syringe')
                 self._lgr.error(f'Message: {e}')
                 self._lgr.error(f'Response from syringe was ||{response}||')
-                vol = 0
-                vol_unit = ''
         return vol, vol_unit
 
     def clear_target_volume(self):
         self.send_wait4response('ctvolume\r')
 
     def get_infused_volume(self):
+        vol = None
+        vol_unit = None
         response = self.send_wait4response('ivolume\r')
-        vol, vol_unit = response.split(' ')
+        if response is not None:
+            vol, vol_unit = response.split(' ')
         return vol, vol_unit
 
     def clear_syringe(self) -> None:
@@ -239,36 +246,17 @@ class Pump11Elite(pyGeneric.GenericDevice):
         """
         target_vol, target_vol_unit = self.get_target_volume()
         rate, rate_unit = self.get_infusion_rate()
-        if target_vol_unit == 'ul':
-            pass
-        elif target_vol_unit == 'ml':
-            target_vol = target_vol * 1000
-        elif not target_vol_unit or target_vol == 0:
-            self._lgr.info(f'Please manually stop syringe pump and add a target volume to bolus')
-        else:
-            self._lgr.error(f'Unknown target volume unit in syringe: {target_vol_unit}')
-            target_vol = 0
-        if rate_unit == 'ul/min':
-            pass
-        elif rate_unit == 'ml/min':
-            rate = rate * 1000
-        elif rate_unit == 'ul/sec':
-            rate = rate * 60
-        elif rate_unit == 'ml/sec':
-            rate = rate * 60 * 1000
-        else:
-            self._lgr.error(f'Unknown rate unit in syringe: ++{rate_unit}++')
-            rate = 0
-
-        buf = np.array([target_vol, rate], dtype=self.data_dtype)
-        if self._queue:
-            self._queue.put((buf, t))
-
-    def record_continuous_infusion(self, t, start: bool):
-        """ targeted infusion actions in ul and ul/min
-        """
-        if self.is_open():
-            rate, rate_unit = self.get_infusion_rate()
+        if target_vol_unit is not None:
+            if target_vol_unit == 'ul':
+                pass
+            elif target_vol_unit == 'ml':
+                target_vol = target_vol * 1000
+            elif not target_vol_unit or target_vol == 0:
+                self._lgr.info(f'Please manually stop syringe pump and add a target volume to bolus')
+            else:
+                self._lgr.error(f'Unknown target volume unit in syringe: {target_vol_unit}')
+                target_vol = 0
+        if rate_unit is not None:
             if rate_unit == 'ul/min':
                 pass
             elif rate_unit == 'ml/min':
@@ -280,11 +268,37 @@ class Pump11Elite(pyGeneric.GenericDevice):
             else:
                 self._lgr.error(f'Unknown rate unit in syringe: ++{rate_unit}++')
                 rate = 0
-
-            flag = INFUSION_START if start else INFUSION_STOP
-            buf = np.array([flag, rate], dtype=self.data_dtype)
+        if rate is not None and target_vol is not None:
+            buf = np.array([target_vol, rate], dtype=self.data_dtype)
             if self._queue:
                 self._queue.put((buf, t))
+        else:
+            self._lgr.error('Could not record targeted infusion due to bad response from syringe')
+
+    def record_continuous_infusion(self, t, start: bool):
+        """ targeted infusion actions in ul and ul/min
+        """
+        rate = 0
+        flag = INFUSION_ERROR
+        if self.is_open():
+            rate, rate_unit = self.get_infusion_rate()
+            if rate_unit is not None:
+                if rate_unit == 'ul/min':
+                    pass
+                elif rate_unit == 'ml/min':
+                    rate = rate * 1000
+                elif rate_unit == 'ul/sec':
+                    rate = rate * 60
+                elif rate_unit == 'ml/sec':
+                    rate = rate * 60 * 1000
+                else:
+                    self._lgr.error(f'Unknown rate unit in syringe: ++{rate_unit}++')
+            if rate is None:
+                rate = 0
+            flag = INFUSION_START if start else INFUSION_STOP
+        buf = np.array([flag, rate], dtype=self.data_dtype)
+        if self._queue:
+            self._queue.put((buf, t))
 
     def infuse_to_target_volume(self):
         """ infuse a set volume. Requires a target volume to be set.
@@ -299,24 +313,29 @@ class Pump11Elite(pyGeneric.GenericDevice):
     def start_constant_infusion(self):
         """ start a constant infusion. Requires a target volume to be cleared.
         """
-        # JWK, should check if target volume is cleared
-        self.send_wait4response('irun\r')
-        t = utils.get_epoch_ms()
-        self.record_continuous_infusion(t, start=True)
-        self.pump_state = PumpState.infusing
-        self._lgr.info(f'Basal syringe infusion started')
+        if self.is_open():
+            # JWK, should check if target volume is cleared
+            self.send_wait4response('irun\r')
+            t = utils.get_epoch_ms()
+            self.record_continuous_infusion(t, start=True)
+            self.pump_state = PumpState.infusing
+            self._lgr.info(f'Basal syringe infusion started')
+        else:
+            self._lgr.warning('Attempt to start basal infusion while hardware is closed')
 
     def stop(self):
         """ stop an infusion. Typically, used to stop a continuous infusion
             but can be used to abort a targeted infusion
         """
-        if self._serial.is_open:
+        if self._serial.is_open and self.pump_state == PumpState.infusing:
             t = utils.get_epoch_ms()
             # check if targeted volume is 0, if so, then this is a continuous injection
             # so record the stop. If non-zero, then it is an attempt to abort a targeted injection
             target_vol, target_unit = self.get_target_volume()
-            if target_vol == 0 and target_unit == '':
-                # self._lgr.debug('Stopping contiuous infusion')
+            if target_vol is None:
+                self._lgr.error(f'Did not receive a valid response from get_target_volume'
+                                f'when trying to stop a continuous infusion')
+            elif target_vol == 0:
                 self.record_continuous_infusion(t, start=False)
             self.send_wait4response('stop\r')
         self.pump_state = PumpState.idle
@@ -354,16 +373,6 @@ class Pump11Elite(pyGeneric.GenericDevice):
             # First and last values of each syringe's volume string are '\n', remove these, then separate by '\n'
             syringes = response.split('\n')
         return syringes
-
-    def get_response(self) -> str:
-        resp_str = ''
-        if self._serial.is_open:
-            response = self._serial.read_until('\r', size=1000)
-            resp_str = response.decode('ascii').strip('\r').strip('\n')
-            # self._lgr.debug(f'response is ||{resp_str}||')
-            # self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
-
-        return resp_str
 
 
 class MockPump11Elite(Pump11Elite):

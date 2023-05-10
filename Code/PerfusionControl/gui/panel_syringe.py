@@ -258,7 +258,6 @@ class PanelSyringeControls(wx.Panel):
         self.btn_basal.SetLabel('Stop Bolus')
         self._lgr.info(f'Bolus syringe infusion at rate {infusion_rate} uL/min to target volume {target_vol} started')
 
-
     def update_controls_from_hardware(self, evt=None):
         enable = not self.automation.device.hw.is_infusing
         self.btn_bolus.Enable(enable)
