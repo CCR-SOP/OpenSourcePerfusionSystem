@@ -14,6 +14,8 @@ import sys
 import colorlog
 
 import wx
+import wx.richtext
+import wx.html
 import serial
 import serial.tools.list_ports
 import numpy as np
@@ -43,16 +45,20 @@ def get_color_standard_log_format():
 
 
 def get_gui_log_format():
-    return '%(asctime)s--%(last_name)s--%(message)s'
+    return '%(asctime)s--%(last_name)s</p>--%(message)s'
 
 
 class MyGuiFormatter(logging.Formatter):
     def format(self, record):
         orig_format = self._style._fmt
+        level_str = ''
+        time_str = '%(asctime)s'
+        name_str = '<font color=\"blue\">%(last_name)s</font>'
 
         if record.levelno > logging.INFO:
-            self._style._fmt = f'++%(levelname)s++\n{orig_format}\n++END %(levelname)s++'
+            level_str = '<font color=\"red\">%(levelname)s</font>:  '
 
+        self._style._fmt = f'{level_str}{time_str}--{name_str}--%(message)s<br>'
         result = logging.Formatter.format(self, record)
 
         self._style._fmt = orig_format
@@ -124,6 +130,12 @@ def never_show_logs_from(names_to_hide):
         handler.addFilter(Blacklist(names_to_hide))
 
 
+def write_to_text_ctrl(ctrl, msg, levelno):
+    # ctrl.AppendToPage(msg)
+    ctrl.Append(msg)
+    ctrl.SetSelection(ctrl.GetItemCount()-1)
+
+
 class WxTextCtrlHandler(logging.Handler):
     def __init__(self, ctrl):
         logging.Handler.__init__(self)
@@ -132,15 +144,15 @@ class WxTextCtrlHandler(logging.Handler):
     def emit(self, record):
         s = self.format(record) + '\n'
         if bool(self.ctrl):
-            wx.CallAfter(self.ctrl.WriteText, s)
+            wx.CallAfter(write_to_text_ctrl, self.ctrl, s, record.levelno)
         else:
             logging.getLogger().error(f'Attempt to log to deleted TextCtrl {self.ctrl} with'
                                       f'message {self.format(record)}')
 
 
 def create_log_display(parent, logging_level, names_to_log, use_last_name=False):
-    log_display = wx.TextCtrl(parent, wx.ID_ANY, size=(300, 100),
-                              style=wx.TE_MULTILINE | wx.TE_READONLY)
+    txt_style = wx.VSCROLL | wx.HSCROLL | wx.TE_READONLY | wx.BORDER_SIMPLE
+    log_display = wx.html.SimpleHtmlListBox(parent, -1, size=(300, 150), style=txt_style)
     create_wx_handler(log_display, logging_level, names_to_log, use_last_name)
     return log_display
 

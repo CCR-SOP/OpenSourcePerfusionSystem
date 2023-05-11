@@ -11,6 +11,7 @@ from queue import Queue
 from dataclasses import dataclass
 from enum import Enum
 from binascii import hexlify
+from threading import Lock
 
 import numpy as np
 import serial
@@ -114,6 +115,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
         self._serial = serial.Serial()
         self._serial.timeout = 0.10
+        self._lock = Lock()
 
         self.period_sampling_ms = 0
         self.samples_per_read = 0
@@ -122,16 +124,16 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     @property
     def is_infusing(self):
-        # response = self.send_wait4response('status\r')
-        # status = response.split(' ')[-1]
-        # if status == '':
-        #     return self.pump_state
-        # if status[0].islower():
-        #     self.pump_state = PumpState.idle
-        # elif status[0] == 'W':
-        #     self.pump_state = PumpState.withdrawing
-        # elif status[0] == 'I':
-        #     self.pump_state = PumpState.infusing
+        response = self.send_wait4response('status\r')
+        status = response.split(' ')[-1]
+        if status == '':
+            return self.pump_state
+        if status[0].islower():
+            self.pump_state = PumpState.idle
+        elif status[0] == 'W':
+            self.pump_state = PumpState.withdrawing
+        elif status[0] == 'I':
+            self.pump_state = PumpState.infusing
         return self.pump_state == PumpState.infusing
 
     def is_open(self):
@@ -156,28 +158,25 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     def close(self):
         if self._serial:
-            self.stop()
-            self._serial.close()
+            with self._lock:
+                self.stop()
+                self._serial.close()
         super().close()
         self.pump_state = PumpState.idle
 
     def send_wait4response(self, str2send: str) -> str:
         resp_str = None
         if self._serial.is_open:
-            self.send_command(str2send)
+            with self._lock:
+                self._serial.write(str2send.encode('UTF-8'))
+                self._serial.flush()
 
-            response = self._serial.read_until('\r', size=1000)
-            resp_str = response.decode('ascii').strip('\r').strip('\n')
-            str2send = str2send.strip('\r')
-            self._lgr.debug(f"str2send=||{str2send}||, response is ||{resp_str}||\n")
-            self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
+                response = self._serial.read_until('\r', size=1000)
+                resp_str = response.decode('ascii').strip('\r').strip('\n')
+                str2send = str2send.strip('\r')
+                self._lgr.debug(f"str2send=||{str2send}||, response is ||{resp_str}||\n")
+                self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
         return resp_str
-
-    def send_command(self, str2send: str):
-        if self._serial.is_open:
-            # self._lgr.debug(f'Sending command ||{str2send}||')
-            self._serial.write(str2send.encode('UTF-8'))
-            self._serial.flush()
 
     def _set_param(self, param, value):
         """ helper function to send a properly formatted parameter-value pair"""
