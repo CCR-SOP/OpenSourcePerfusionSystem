@@ -61,8 +61,7 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_default_logging('ex_volume_by_flow', logging.DEBUG)
 
     SYS_PERFUSION = PerfusionSystem()
     try:

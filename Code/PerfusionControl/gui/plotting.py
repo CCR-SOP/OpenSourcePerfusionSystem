@@ -243,7 +243,6 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_default_logging('plotting', logging.DEBUG)
     app = MyTestApp(0)
     app.MainLoop()

@@ -19,6 +19,17 @@ import numpy as np
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
+def get_epoch_ms():
+    return np.uint64(time_ns() / 1_000_000.0)
+
+
+# utility function to return all available comports in a list
+# typically used in a GUI to provide a selection of com ports
+def get_avail_com_ports() -> list:
+    ports = [comport.device for comport in serial.tools.list_ports.comports()]
+    return ports
+
+
 def get_standard_log_format():
     return '%(asctime) s: %(name) s - %(levelname) s - %(message) s'
 
@@ -44,30 +55,12 @@ def setup_file_logger(lgr, level, filename=None):
     lgr.addHandler(ch)
 
 
-def filter_legend_messages(record):
-    # print(record.module)
-    if record.module == 'matplotlib.legend':
-        return False
-    return True
-
-
-def configure_matplotlib_logging():
+def disable_matplotlib_logging():
     # matplotlib logs to the root logger and can create
     # a lot of debug messages, this will only log warning
     # or higher levels
     lgr = logging.getLogger('matplotlib')
     lgr.setLevel(logging.WARNING)
-
-
-# utility function to return all available comports in a list
-# typically used in a GUI to provide a selection of com ports
-def get_avail_com_ports() -> list:
-    ports = [comport.device for comport in serial.tools.list_ports.comports()]
-    return ports
-
-
-def get_epoch_ms():
-    return np.uint64(time_ns() / 1_000_000.0)
 
 
 # helper function to create a logger with consistent naming
@@ -109,7 +102,11 @@ class WxTextCtrlHandler(logging.Handler):
 
     def emit(self, record):
         s = self.format(record) + '\n'
-        wx.CallAfter(self.ctrl.WriteText, s)
+        if bool(self.ctrl):
+            wx.CallAfter(self.ctrl.WriteText, s)
+        else:
+            logging.getLogger().error(f'Attempt to log to deleted TextCtrl {self.ctrl} with'
+                                      f'message {self.format(record)}')
 
 
 def create_log_display(parent, logging_level, names_to_log, use_last_name=False):
@@ -150,5 +147,16 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logging.critical('Uncaught exception, ', exc_info=(exc_type, exc_value, exc_traceback))
     # raise exc_type
 
+
 def catch_unhandled_exceptions():
     sys.excepthook = handle_exception
+
+
+def setup_default_logging(app_name, stream_level):
+    catch_unhandled_exceptions()
+
+    lgr = logging.getLogger()
+    lgr.setLevel(logging.DEBUG)
+    disable_matplotlib_logging()
+    setup_stream_logger(lgr, stream_level)
+    setup_file_logger(lgr, logging.DEBUG, app_name)

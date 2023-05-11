@@ -58,12 +58,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == '__main__':
-    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(lgr, logging.DEBUG)
-    utils.setup_file_logger(lgr, logging.DEBUG, 'ex_multiple_plots')
-    utils.configure_matplotlib_logging()
-
+    utils.setup_default_logging('ex_multiple_plots', logging.DEBUG)
     SYS_PERFUSION = PerfusionSystem()
     try:
         SYS_PERFUSION.open()

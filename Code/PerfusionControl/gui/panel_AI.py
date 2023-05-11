@@ -217,10 +217,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(lgr, logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_default_logging('panel_AI', logging.DEBUG)
 
     SYS_PERFUSION = PerfusionSystem()
     try:

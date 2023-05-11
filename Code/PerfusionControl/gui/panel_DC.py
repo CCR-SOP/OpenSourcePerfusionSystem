@@ -144,9 +144,7 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
-    utils.only_show_logs_from(['pyHardware.SystemHardware', 'pyHardware.pyDC_NIDAQ.Pump3', 'PanelDC'])
+    utils.setup_default_logging('panel_DC', logging.DEBUG)
 
     SYS_PERFUSION = PerfusionSystem()
     try:

@@ -283,10 +283,8 @@ class MyTestApp(wx.App):
 
 
 if __name__ == "__main__":
-    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(lgr, logging.DEBUG)
-    utils.setup_file_logger(lgr, logging.DEBUG, 'panel_gas_mixers_debug')
+    utils.setup_default_logging('panel_gas_mixers', logging.DEBUG)
 
     SYS_PERFUSION = PerfusionSystem()
     try:

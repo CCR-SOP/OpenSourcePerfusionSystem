@@ -8,23 +8,22 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-import threading
 
 import wx
 
-import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from gui.panel_multiple_syringes import SyringePanel
 from gui.panel_DialysisPumps import DialysisPumpPanel
 from gui.panel_gas_mixers import GasMixerPanel
 from pyPerfusion.PerfusionSystem import PerfusionSystem
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class HardwarePanel(wx.Panel):
     def __init__(self, parent, perfusion_system):
         self.parent = parent
         wx.Panel.__init__(self, parent)
-        self._lgr = logging.getLogger('HardwareControl')
+        self._lgr = logging.getLogger('HardwarePanel')
 
         pump_names = ['Dialysate Inflow Pump', 'Dialysate Outflow Pump', 'Dialysis Blood Pump']
         pumps = []
@@ -109,12 +108,8 @@ class MyHardwareApp(wx.App):
 
 
 if __name__ == "__main__":
-    utils.catch_unhandled_exceptions()
-    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(lgr, logging.DEBUG)
-    utils.configure_matplotlib_logging()
-    utils.setup_file_logger(lgr, logging.DEBUG, 'app_hardware_control')
+    utils.setup_default_logging('app_hardware_control', logging.DEBUG)
 
     sys = PerfusionSystem()
     sys.open()

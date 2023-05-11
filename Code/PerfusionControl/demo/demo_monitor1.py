@@ -38,7 +38,7 @@ class TestFrame(wx.Frame):
 
         self._lgr = logging.getLogger(__name__)
         utils.setup_stream_logger(self._lgr, logging.DEBUG)
-        utils.configure_matplotlib_logging()
+        utils.disable_matplotlib_logging()
 
         self.hw_stream = AI(period_sample_ms=100)
         self.hw_events = [AI(period_sample_ms=1000, read_period_ms=3000),

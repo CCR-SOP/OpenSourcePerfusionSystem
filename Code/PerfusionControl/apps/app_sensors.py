@@ -13,16 +13,16 @@ import threading
 import wx
 
 from gui.panel_AI import PanelAI
-import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.PerfusionSystem import PerfusionSystem
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class SensorPanel(wx.Panel):
     def __init__(self, parent, perfusion_system):
         self.parent = parent
         wx.Panel.__init__(self, parent)
-        self._lgr = logging.getLogger('AppSensors')
+        self._lgr = logging.getLogger('SensorPanel')
         self.sys = perfusion_system
         sensor_names = ['Hepatic Artery Flow', 'Portal Vein Flow', 'Hepatic Artery Pressure', 'Portal Vein Pressure']
 
@@ -74,12 +74,8 @@ class MySensorApp(wx.App):
 
 
 if __name__ == "__main__":
-    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(lgr, logging.DEBUG)
-    utils.configure_matplotlib_logging()
-    utils.setup_file_logger(lgr, logging.DEBUG, 'app_main')
-
+    utils.setup_default_logging('app_sensors', logging.DEBUG)
     sys = PerfusionSystem()
     sys.open()
     sys.load_all()

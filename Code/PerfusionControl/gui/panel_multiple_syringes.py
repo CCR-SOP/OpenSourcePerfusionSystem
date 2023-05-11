@@ -159,11 +159,8 @@ class MySyringeApp(wx.App):
 
 
 if __name__ == "__main__":
-    lgr = logging.getLogger()
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(lgr, logging.DEBUG)
-    utils.setup_file_logger(lgr, logging.DEBUG, 'panel_multiple_syringes')
-    # utils.only_show_logs_from(['pyHardware.pyPump11Elite.Pump11Elite'])
+    utils.setup_default_logging('panel_multiple_syringes', logging.DEBUG)
 
     SYS_PERFUSION = PerfusionSystem()
     try:
