@@ -122,16 +122,16 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
     @property
     def is_infusing(self):
-        response = self.send_wait4response('status\r')
-        status = response.split(' ')[-1]
-        if status == '':
-            return self.pump_state
-        if status[0].islower():
-            self.pump_state = PumpState.idle
-        elif status[0] == 'W':
-            self.pump_state = PumpState.withdrawing
-        elif status[0] == 'I':
-            self.pump_state = PumpState.infusing
+        # response = self.send_wait4response('status\r')
+        # status = response.split(' ')[-1]
+        # if status == '':
+        #     return self.pump_state
+        # if status[0].islower():
+        #     self.pump_state = PumpState.idle
+        # elif status[0] == 'W':
+        #     self.pump_state = PumpState.withdrawing
+        # elif status[0] == 'I':
+        #     self.pump_state = PumpState.infusing
         return self.pump_state == PumpState.infusing
 
     def is_open(self):
