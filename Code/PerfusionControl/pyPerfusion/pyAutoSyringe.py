@@ -164,7 +164,7 @@ class AutoSyringeEpo(AutoSyringe):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, pressure):
-        self._lgr.debug(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
+        self._lgr.warning(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
         if pressure > self.cfg.pressure_level_mmHg:  # dilates, decreases pressure
             self._inject(self.cfg.ul_per_min)
             self._lgr.debug(f'Epo injection set to {self.cfg.ul_per_min}')

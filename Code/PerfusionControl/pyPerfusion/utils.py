@@ -8,8 +8,10 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+from logging.handlers import RotatingFileHandler
 from time import time_ns
 import sys
+import colorlog
 
 import wx
 import serial
@@ -31,28 +33,55 @@ def get_avail_com_ports() -> list:
 
 
 def get_standard_log_format():
-    return '%(asctime) s: %(name) s - %(levelname) s - %(message) s'
+    return '%(asctime) s: %(name)s | %(levelname)s | ' \
+           '%(filename)s:%(lineno)s | %(message) s'
+
+
+def get_color_standard_log_format():
+    return '%(asctime) s: %(blue)s%(name)s%(reset)s | %(log_color)s%(levelname)s%(reset)s | ' \
+           '%(yellow)s%(filename)s:%(lineno)s%(reset)s | %(message) s'
+
+
+def get_gui_log_format():
+    return '%(asctime)s--%(last_name)s--%(message)s'
+
+
+class MyGuiFormatter(logging.Formatter):
+    def format(self, record):
+        orig_format = self._style._fmt
+
+        if record.levelno > logging.INFO:
+            self._style._fmt = f'++%(levelname)s++\n{orig_format}\n++END %(levelname)s++'
+
+        result = logging.Formatter.format(self, record)
+
+        self._style._fmt = orig_format
+
+        return result
 
 
 def setup_stream_logger(lgr, level):
     lgr.setLevel(level)
-    ch = logging.StreamHandler()
-    ch.setLevel(level)
-    formatter = logging.Formatter('%(name) s - %(levelname) s - %(message) s')
-    ch.setFormatter(formatter)
-    lgr.addHandler(ch)
+    stdout = colorlog.StreamHandler(stream=sys.stdout)
+    stdout.setLevel(level)
+    fmt = colorlog.ColoredFormatter(get_color_standard_log_format())
+
+    stdout.setFormatter(fmt)
+    lgr.addHandler(stdout)
 
 
 def setup_file_logger(lgr, level, filename=None):
     if not filename:
         filename = lgr.name
     lgr.setLevel(level)
-    ch = logging.FileHandler(PerfusionConfig.ACTIVE_CONFIG.get_folder('logs') / f'{filename}.log')
+    handler = RotatingFileHandler(PerfusionConfig.ACTIVE_CONFIG.get_folder('logs') / f'{filename}.log',
+                                  backupCount=3)
+    handler.doRollover()
 
-    ch.setLevel(level)
-    formatter = logging.Formatter('%(asctime) s: %(name) s - %(levelname) s - %(message) s')
-    ch.setFormatter(formatter)
-    lgr.addHandler(ch)
+    handler.setLevel(level)
+    formatter = logging.Formatter(get_standard_log_format())
+    handler.setFormatter(formatter)
+    lgr.addHandler(handler)
 
 
 def disable_matplotlib_logging():
@@ -70,14 +99,14 @@ def get_object_logger(module_name: str, object_name: str):
     return logging.getLogger(f'{module_name}.{object_name}')
 
 
-# borrowed from https://stackoverflow.com/questions/17275334/what-is-a-correct-way-to-filter-different-loggers-using-python-logging
 class Whitelist(logging.Filter):
     def __init__(self, whitelist):
         super().__init__()
-        self.whitelist = [logging.Filter(name) for name in whitelist]
+        self.whitelist = whitelist
 
     def filter(self, record):
-        return any(f.filter(record) for f in self.whitelist)
+        matches = [name in record.name for name in self.whitelist]
+        return any(matches)
 
 
 class Blacklist(Whitelist):
@@ -125,19 +154,10 @@ class LastPartFilter(logging.Filter):
 def create_wx_handler(wx_control, logging_level, names_to_log, use_last_name=False):
     handler = WxTextCtrlHandler(wx_control)
     handler.setLevel(logging_level)
-    if use_last_name:
-        handler.addFilter(LastPartFilter())
-        formatter = logging.Formatter('%(asctime) s - %(levelname) s - %(last_name) s - %(message) s',
-                                      '%H:%M:%S')
-    else:
-        formatter = logging.Formatter('%(asctime) s - %(levelname) s - %(message) s',
-                                      '%H:%M:%S')
-    handler.setFormatter(formatter)
-    loggers = logging.root.manager.loggerDict
-    for log_name in names_to_log:
-        logs_with_name = [logging.getLogger(lgr_name) for lgr_name in loggers.keys() if log_name in lgr_name]
-        for lgr in logs_with_name:
-            lgr.addHandler(handler)
+    handler.addFilter(Whitelist(names_to_log))
+    handler.addFilter(LastPartFilter())
+    handler.setFormatter(MyGuiFormatter(get_gui_log_format(), '%a %I:%M:%S %p'))
+    logging.getLogger().addHandler(handler)
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):
