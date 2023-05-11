@@ -18,7 +18,7 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 class GasMixerPanel(wx.Panel):
     def __init__(self, parent, automations):
-        wx.Panel.__init__(self, parent)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
 
         self.panels = []
@@ -26,8 +26,8 @@ class GasMixerPanel(wx.Panel):
             panel = BaseGasMixerPanel(self, automation)
             self.panels.append(panel)
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
+        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
 
         self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Arterial Gas Mixer'])
         self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Venous Gas Mixer'])
@@ -65,7 +65,7 @@ class GasMixerPanel(wx.Panel):
 
 class BaseGasMixerPanel(wx.Panel):
     def __init__(self, parent, autogasmixer):
-        wx.Panel.__init__(self, parent)
+        super().__init__(parent)
         self.name = autogasmixer.name
         self._lgr = utils.get_object_logger(__name__, self.name)
 
@@ -82,8 +82,8 @@ class BaseGasMixerPanel(wx.Panel):
         font = wx.Font()
         font.SetPointSize(int(12))
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
+        self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         # Total flow display
         self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
@@ -133,47 +133,46 @@ class BaseGasMixerPanel(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 2).Expand()
 
-        sizer_cfg = wx.FlexGridSizer(cols=2)
-        sizer_cfg.AddGrowableCol(0, 2)
-        sizer_cfg.AddGrowableCol(1, 1)
+        self.sizer_cfg = wx.FlexGridSizer(cols=2)
+        self.sizer_cfg.AddGrowableCol(0, 2)
+        self.sizer_cfg.AddGrowableCol(1, 1)
 
-        sizer_cfg.Add(self.label_total_flow, flags)
-        sizer_cfg.Add(self.input_total_flow, flags)
+        self.sizer_cfg.Add(self.label_total_flow, flags)
+        self.sizer_cfg.Add(self.input_total_flow, flags)
 
-        sizer_cfg.Add(self.label_gas1, flags)
-        sizer_cfg.Add(self.input_percent_gas1, flags)
+        self.sizer_cfg.Add(self.label_gas1, flags)
+        self.sizer_cfg.Add(self.input_percent_gas1, flags)
 
-        sizer_cfg.Add(self.label_real_total_flow, flags)
-        sizer_cfg.Add(self.real_total_flow, flags)
+        self.sizer_cfg.Add(self.label_real_total_flow, flags)
+        self.sizer_cfg.Add(self.real_total_flow, flags)
 
-        sizer_cfg.Add(self.label_real_gas1, flags)
-        sizer_cfg.Add(self.percent_gas1, flags)
-        sizer_cfg.Add(self.label_target_flow_gas1, flags)
-        sizer_cfg.Add(self.target_flow_gas1, flags)
-        sizer_cfg.Add(self.label_flow_gas1, flags)
-        sizer_cfg.Add(self.flow_gas1, flags)
+        self.sizer_cfg.Add(self.label_real_gas1, flags)
+        self.sizer_cfg.Add(self.percent_gas1, flags)
+        self.sizer_cfg.Add(self.label_target_flow_gas1, flags)
+        self.sizer_cfg.Add(self.target_flow_gas1, flags)
+        self.sizer_cfg.Add(self.label_flow_gas1, flags)
+        self.sizer_cfg.Add(self.flow_gas1, flags)
 
-        sizer_cfg.Add(self.label_gas2, flags)
-        sizer_cfg.Add(self.percent_gas2, flags)
-        sizer_cfg.Add(self.label_target_flow_gas2, flags)
-        sizer_cfg.Add(self.target_flow_gas2, flags)
-        sizer_cfg.Add(self.label_flow_gas2, flags)
-        sizer_cfg.Add(self.flow_gas2, flags)
+        self.sizer_cfg.Add(self.label_gas2, flags)
+        self.sizer_cfg.Add(self.percent_gas2, flags)
+        self.sizer_cfg.Add(self.label_target_flow_gas2, flags)
+        self.sizer_cfg.Add(self.target_flow_gas2, flags)
+        self.sizer_cfg.Add(self.label_flow_gas2, flags)
+        self.sizer_cfg.Add(self.flow_gas2, flags)
 
-        sizer_cfg.Add(self.btn_update, flags)
-        sizer_cfg.Add(self.btn_flow, flags)
+        self.sizer_cfg.Add(self.btn_update, flags)
+        self.sizer_cfg.Add(self.btn_flow, flags)
 
-        sizer_cfg.Add(self.chk_auto, flags)
-        sizer_cfg.AddSpacer(1)
-        sizer_cfg.SetSizeHints(self.GetParent())
+        self.sizer_cfg.Add(self.chk_auto, flags)
+        self.sizer_cfg.AddSpacer(1)
+        self.sizer_cfg.SetSizeHints(self.GetParent())
 
-        self.sizer.Add(sizer_cfg, flags)
+        self.sizer.Add(self.sizer_cfg, flags)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
         self.SetSizer(self.sizer)
         self.Layout()
-
 
         self.update_controls_from_hardware()
 
@@ -260,7 +259,7 @@ class BaseGasMixerPanel(wx.Panel):
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        wx.Frame.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
 
         automation_names = ['Arterial Gas Mixer Automation', 'Venous Gas Mixer Automation']
         automations = []

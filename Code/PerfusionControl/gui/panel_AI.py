@@ -22,7 +22,7 @@ from pyPerfusion.Strategy_ReadWrite import Reader
 
 class PanelAI(wx.Panel):
     def __init__(self, parent, sensor: Sensor.Sensor, reader: Reader):
-        wx.Panel.__init__(self, parent, -1)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
@@ -36,8 +36,8 @@ class PanelAI(wx.Panel):
             ch_name = f'{self._sensor.hw.device.name} Channel: {self._sensor.hw.name}'
         else:
             ch_name = "NA"
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=ch_name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=ch_name)
+        self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
         self.sizer_pane = wx.BoxSizer(wx.VERTICAL)
 
         self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
@@ -78,7 +78,7 @@ class PanelAI(wx.Panel):
 
 class PanelAICalibration(wx.Panel):
     def __init__(self, parent, sensor: Sensor, reader: Reader):
-        super().__init__(parent, -1)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
@@ -110,22 +110,21 @@ class PanelAICalibration(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
 
-        sizer = wx.GridSizer(cols=4)
-        sizer.Add(self.label_cal_pt1, flags)
-        sizer.Add(self.spin_cal_pt1, flags)
-        sizer.Add(self.btn_cal_pt1, flags)
-        sizer.Add(self.label_cal_pt1_val, flags)
+        self.sizer = wx.GridSizer(cols=4)
+        self.sizer.Add(self.label_cal_pt1, flags)
+        self.sizer.Add(self.spin_cal_pt1, flags)
+        self.sizer.Add(self.btn_cal_pt1, flags)
+        self.sizer.Add(self.label_cal_pt1_val, flags)
 
-        sizer.Add(self.label_cal_pt2, flags)
-        sizer.Add(self.spin_cal_pt2, flags)
-        sizer.Add(self.btn_cal_pt2, flags)
-        sizer.Add(self.label_cal_pt2_val, flags)
+        self.sizer.Add(self.label_cal_pt2, flags)
+        self.sizer.Add(self.spin_cal_pt2, flags)
+        self.sizer.Add(self.btn_cal_pt2, flags)
+        self.sizer.Add(self.label_cal_pt2_val, flags)
 
-        sizer.Add(self.btn_load_cal, flags)
-        sizer.Add(self.btn_save_cal, flags)
-        sizer.Add(self.btn_reset_cal, flags)
-        sizer.Add(self.btn_calibrate, flags)
-        self.sizer = sizer
+        self.sizer.Add(self.btn_load_cal, flags)
+        self.sizer.Add(self.btn_save_cal, flags)
+        self.sizer.Add(self.btn_reset_cal, flags)
+        self.sizer.Add(self.btn_calibrate, flags)
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -195,8 +194,7 @@ class PanelAICalibration(wx.Panel):
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         self._lgr = logging.getLogger(__name__)
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
 
         sensor = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
         self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))

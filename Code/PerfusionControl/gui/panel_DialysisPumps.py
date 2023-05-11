@@ -18,15 +18,15 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 class DialysisPumpPanel(wx.Panel):
     def __init__(self, parent, automations):
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
-        wx.Panel.__init__(self, parent)
         self.automations = automations
 
         font = wx.Font()
         font.SetPointSize(int(16))
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
-        static_box.SetFont(font)
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
+        self.static_box.SetFont(font)
+        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
         self.sizer = wx.GridSizer(cols=2)
 
         self.panels = []
@@ -104,7 +104,7 @@ class DialysisPumpPanel(wx.Panel):
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        wx.Frame.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
 
         automation_names = ['Dialysate Inflow Automation',
                             'Dialysate Outflow Automation',

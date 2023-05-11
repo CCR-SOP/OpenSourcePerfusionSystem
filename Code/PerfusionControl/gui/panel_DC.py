@@ -19,7 +19,7 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 class PanelDC(wx.Panel):
     def __init__(self, parent, sensor):
         self.name = sensor.name
-        wx.Panel.__init__(self, parent, -1)
+        super().__init__(parent)
         self._logger = logging.getLogger(__name__)
         self.parent = parent
         self.pump = sensor.hw
@@ -29,9 +29,9 @@ class PanelDC(wx.Panel):
         font = wx.Font()
         font.SetPointSize(int(16))
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
-        static_box.SetFont(font)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
+        self.static_box.SetFont(font)
+        self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         self.__do_layout()
         self.__set_bindings()
@@ -54,7 +54,7 @@ class PanelDC(wx.Panel):
 class PanelDCControl(wx.Panel):
     def __init__(self, parent, pump):
         self.name = pump.name
-        wx.Panel.__init__(self, parent)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.pump = pump
 
@@ -81,17 +81,17 @@ class PanelDCControl(wx.Panel):
 
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 2).Expand()
-        sizer_cfg = wx.GridSizer(rows=3, cols=2, vgap=1, hgap=1)
+        self.sizer_cfg = wx.GridSizer(rows=3, cols=2, vgap=1, hgap=1)
 
-        sizer_cfg.Add(self.label_offset, flags)
-        sizer_cfg.Add(self.label_real, flags)
-        sizer_cfg.Add(self.entered_offset, flags)
-        sizer_cfg.Add(self.text_real, flags)
-        sizer_cfg.Add(self.btn_change_rate, flags)
-        sizer_cfg.Add(self.btn_stop, flags)
+        self.sizer_cfg.Add(self.label_offset, flags)
+        self.sizer_cfg.Add(self.label_real, flags)
+        self.sizer_cfg.Add(self.entered_offset, flags)
+        self.sizer_cfg.Add(self.text_real, flags)
+        self.sizer_cfg.Add(self.btn_change_rate, flags)
+        self.sizer_cfg.Add(self.btn_stop, flags)
 
-        sizer_cfg.SetSizeHints(self.GetParent())
-        self.sizer.Add(sizer_cfg, flags)
+        self.sizer_cfg.SetSizeHints(self.GetParent())
+        self.sizer.Add(self.sizer_cfg, flags)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
@@ -122,7 +122,7 @@ class PanelDCControl(wx.Panel):
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        wx.Frame.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
 
         pump_name = 'Dialysis Blood Pump'
         self.panel = PanelDC(self, SYS_PERFUSION.get_sensor(pump_name))

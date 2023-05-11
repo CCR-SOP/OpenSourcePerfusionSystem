@@ -23,14 +23,14 @@ BAUD_RATES = ['9600', '38400', '57600', '115200']
 
 class PanelSyringe(wx.Panel):
     def __init__(self, parent, automation):
-        wx.Panel.__init__(self, parent)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.automation = automation
 
         self._panel_cfg = PanelSyringeConfig(self, self.automation.device.hw)
         self._panel_ctrl = PanelSyringeControls(self, self.automation)
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
+        self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         self.__do_layout()
         self.__set_bindings()
@@ -80,24 +80,24 @@ class PanelSyringeConfig(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
 
-        sizer_cfg = wx.GridSizer(cols=2)
-        sizer_cfg.Add(self.label_port, flags)
-        sizer_cfg.Add(self.combo_port, flags)
+        self.sizer_cfg = wx.GridSizer(cols=2)
+        self.sizer_cfg.Add(self.label_port, flags)
+        self.sizer_cfg.Add(self.combo_port, flags)
 
-        sizer_cfg.Add(self.label_baud, flags)
-        sizer_cfg.Add(self.choice_baud, flags)
+        self.sizer_cfg.Add(self.label_baud, flags)
+        self.sizer_cfg.Add(self.choice_baud, flags)
 
-        sizer_cfg.Add(self.btn_open, flags)
-        sizer_cfg.AddSpacer(2)
+        self.sizer_cfg.Add(self.btn_open, flags)
+        self.sizer_cfg.AddSpacer(2)
 
-        sizer_cfg.Add(self.label_manufacturer, flags)
-        sizer_cfg.Add(self.label_sizes, flags)
-        sizer_cfg.Add(self.combo_manufacturer, flags)
-        sizer_cfg.Add(self.combo_sizes, flags)
+        self.sizer_cfg.Add(self.label_manufacturer, flags)
+        self.sizer_cfg.Add(self.label_sizes, flags)
+        self.sizer_cfg.Add(self.combo_manufacturer, flags)
+        self.sizer_cfg.Add(self.combo_sizes, flags)
 
-        # sizer_cfg.Add(self.btn_load_cfg, flags)
-        # sizer_cfg.Add(self.btn_save_cfg, flags)
-        self.sizer.Add(sizer_cfg)
+        # self.sizer_cfg.Add(self.btn_load_cfg, flags)
+        # self.sizer_cfg.Add(self.btn_save_cfg, flags)
+        self.sizer.Add(self.sizer_cfg)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
@@ -131,7 +131,7 @@ class PanelSyringeConfig(wx.Panel):
         if not self.syringe.is_open():
             self.syringe.cfg.com_port = port
             self.syringe.cfg.baud = baud
-            self.syringe.open(self.syringe.cfg)
+            self.syringe.open()
 
             self.btn_open.SetLabel('Close')
         else:
@@ -165,7 +165,7 @@ class PanelSyringeConfig(wx.Panel):
 
 class PanelSyringeControls(wx.Panel):
     def __init__(self, parent, automation):
-        super().__init__(parent, -1)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.automation = automation
 
@@ -204,21 +204,21 @@ class PanelSyringeControls(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Expand()
 
-        sizer_cfg = wx.FlexGridSizer(cols=3)
+        self.sizer_cfg = wx.FlexGridSizer(cols=3)
 
-        sizer_cfg.Add(self.label_rate, flags)
-        sizer_cfg.Add(self.spin_rate, flags)
-        sizer_cfg.Add(self.btn_basal, flags)
+        self.sizer_cfg.Add(self.label_rate, flags)
+        self.sizer_cfg.Add(self.spin_rate, flags)
+        self.sizer_cfg.Add(self.btn_basal, flags)
 
-        sizer_cfg.Add(self.label_volume, flags)
-        sizer_cfg.Add(self.spin_volume, flags)
-        sizer_cfg.Add(self.btn_bolus, flags)
+        self.sizer_cfg.Add(self.label_volume, flags)
+        self.sizer_cfg.Add(self.spin_volume, flags)
+        self.sizer_cfg.Add(self.btn_bolus, flags)
 
-        sizer_cfg.AddGrowableCol(0, 2)
-        sizer_cfg.AddGrowableCol(1, 1)
-        sizer_cfg.AddGrowableCol(2, 2)
+        self.sizer_cfg.AddGrowableCol(0, 2)
+        self.sizer_cfg.AddGrowableCol(1, 1)
+        self.sizer_cfg.AddGrowableCol(2, 2)
 
-        self.sizer.Add(sizer_cfg)
+        self.sizer.Add(self.sizer_cfg)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetSizer(self.sizer)
@@ -285,7 +285,7 @@ class PanelSyringeControls(wx.Panel):
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        wx.Frame.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
 
         automation = SYS_PERFUSION.get_automation('Phenylephrine Automation')
         self.panel = PanelSyringe(self, automation)

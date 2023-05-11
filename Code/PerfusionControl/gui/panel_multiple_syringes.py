@@ -19,15 +19,15 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 class SyringePanel(wx.Panel):
     def __init__(self, parent, automations):
-        wx.Panel.__init__(self, parent)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.automations = automations
 
         font = wx.Font()
         font.SetPointSize(int(16))
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Pumps")
-        static_box.SetFont(font)
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Pumps")
+        self.static_box.SetFont(font)
+        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
         self.sizer = wx.GridSizer(cols=2)
         self.sizer2 = wx.FlexGridSizer(rows=1, cols=3, hgap=1, vgap=1)
 
@@ -134,7 +134,7 @@ class SyringePanel(wx.Panel):
 
 class SyringeFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        wx.Frame.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
 
         automation_names = ['Insulin Automation', 'Glucagon Automation',
                             'Phenylephrine Automation', 'Epoprostenol Automation',
