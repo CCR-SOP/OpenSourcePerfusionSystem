@@ -168,7 +168,8 @@ class Pump11Elite(pyGeneric.GenericDevice):
 
             response = self._serial.read_until('\r', size=1000)
             resp_str = response.decode('ascii').strip('\r').strip('\n')
-            self._lgr.debug(f'str2send=||{str2send}||, response is ||{resp_str}||')
+            str2send = str2send.strip('\r')
+            self._lgr.debug(f"str2send=||{str2send}||, response is ||{resp_str}||\n")
             self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
         return resp_str
 
@@ -202,8 +203,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
                 # this will happen if com port is not opened or
                 # an error occurred
                 self._lgr.error(f'Error occurred parsing get_infusion_rate response for syringe')
-                self._lgr.error(f'Message: {e}')
-                self._lgr.error(f'Response from syringe was ||{response}||')
+                self._lgr.exception(e)
 
         return infuse_rate, infuse_unit
 
