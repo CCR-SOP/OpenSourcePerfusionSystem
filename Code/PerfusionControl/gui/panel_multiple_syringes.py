@@ -32,10 +32,18 @@ class SyringePanel(wx.Panel):
         self.sizer2 = wx.FlexGridSizer(rows=1, cols=3, hgap=1, vgap=1)
 
         self.panels = []
+        self.panels_vaso = []
+        self.panels_glucose = []
         for automation in self.automations:
-            self._lgr.debug(automation)
+            self._lgr.warning(automation.device.name)
             panel = PanelSyringeControls(self, automation)
             self.panels.append(panel)
+            if automation.device.name == 'Epoprostenol' or automation.device.name == 'Phenylephrine':
+                self.panels_vaso.append(panel)
+                self._lgr.warning(f' Added {automation.device.name} to panels_vaso')
+            elif automation.device.name == 'Glucagon' or automation.device.name == 'Insulin':
+                self.panels_glucose.append(panel)
+                self._lgr.warning(f' Added {automation.device.name} to panels_glucose')
 
         # Add auto start buttons and log
         auto_font = wx.Font()
@@ -82,50 +90,44 @@ class SyringePanel(wx.Panel):
         self.btn_auto_vaso.Bind(wx.EVT_BUTTON, self.on_auto_vaso)
         
     def on_auto_glucose(self, evt):
-        counter = 0
         if self.btn_auto_glucose.GetLabel() == "Start Auto Glucose Control":
             self.btn_auto_glucose.SetLabel("Stop Auto Glucose Control")
             self.btn_auto_glucose.SetBackgroundColour(wx.Colour(240, 0, 0))
-            for panel in self.panels:
-                if counter < 2:
-                    panel.spin_rate.Enable(False)
-                    panel.spin_volume.Enable(False)
-                    panel.btn_basal.Enable(False)
-                    panel.automation.start()
-                counter += 1
+            for panel in self.panels_glucose:
+                panel.spin_rate.Enable(False)
+                panel.spin_volume.Enable(False)
+                panel.btn_basal.Enable(False)
+                panel.btn_bolus.Enable(False)
+                panel.automation.start()
         else:
             self.btn_auto_glucose.SetLabel("Start Auto Glucose Control")
             self.btn_auto_glucose.SetBackgroundColour(wx.Colour(0, 240, 0))
-            for panel in self.panels:
-                if counter < 2:
-                    panel.spin_rate.Enable(True)
-                    panel.spin_volume.Enable(True)
-                    panel.btn_basal.Enable(True)
-                    panel.automation.stop()
-                counter += 1
+            for panel in self.panels_glucose:
+                panel.spin_rate.Enable(True)
+                panel.spin_volume.Enable(True)
+                panel.btn_basal.Enable(True)
+                panel.btn_bolus.Enable(True)
+                panel.automation.stop()
 
     def on_auto_vaso(self, evt):
-        counter = 0
         if self.btn_auto_vaso.GetLabel() == "Start Auto Vasoactive Control":
             self.btn_auto_vaso.SetLabel("Stop Auto Vasoactive Control")
             self.btn_auto_vaso.SetBackgroundColour(wx.Colour(240, 0, 0))
-            for panel in self.panels:
-                if 1 < counter < 4:
-                    panel.spin_rate.Enable(False)
-                    panel.spin_volume.Enable(False)
-                    panel.btn_basal.Enable(False)
-                    panel.automation.start()
-                counter += 1
+            for panel in self.panels_vaso:
+                panel.spin_rate.Enable(False)
+                panel.spin_volume.Enable(False)
+                panel.btn_basal.Enable(False)
+                panel.btn_bolus.Enable(False)
+                panel.automation.start()
         else:
             self.btn_auto_vaso.SetLabel("Start Auto Vasoactive Control")
             self.btn_auto_vaso.SetBackgroundColour(wx.Colour(0, 240, 0))
-            for panel in self.panels:
-                if 1 < counter < 4:
-                    panel.spin_rate.Enable(True)
-                    panel.spin_volume.Enable(True)
-                    panel.btn_basal.Enable(True)
-                    panel.automation.stop()
-                counter += 1
+            for panel in self.panels_vaso:
+                panel.spin_rate.Enable(True)
+                panel.spin_volume.Enable(True)
+                panel.btn_basal.Enable(True)
+                panel.btn_bolus.Enable(True)
+                panel.automation.stop()
 
     def OnClose(self, evt):
         for panel in self.panels:
