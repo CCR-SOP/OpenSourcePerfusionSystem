@@ -95,9 +95,8 @@ class Reader:
             idx = np.linspace(start_idx, file_size_in_samples - 1, samples_needed, dtype=np.uint64)
             try:
                 data = data[idx]
-            except IndexError as e:
-                self._lgr.exception(e)
-                self._lgr.error(f'idx = {idx}')
+            except IndexError :
+                self._lgr.exception(f'idx = {idx}')
                 return None, None
 
         data_time = np.linspace(start_idx * period, file_size_in_samples * period,

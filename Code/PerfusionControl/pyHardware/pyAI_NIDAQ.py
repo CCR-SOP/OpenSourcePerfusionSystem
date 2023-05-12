@@ -78,24 +78,23 @@ class NIDAQAIDevice(pyAI.AIDevice):
                     ch.put_data(buf, buffer_t)
                     offset += self.samples_per_read
         except PyDAQmx.ReadBufferTooSmallError:
-            self._lgr.error(f'ReadBufferTooSmallError when reading {self.devname}')
+            self._lgr.exception(f'ReadBufferTooSmallError when reading {self.devname}')
             self._lgr.error(f'Samples/read = {self.samples_per_read}, '
-                           f'Acq Buffer len = {len(self._acq_buf)}, '
-                           f'Total channels = {len(self.ai_channels)}')
-        except PyDAQmx.DAQmxFunctions.CanNotPerformOpWhenNoChansInTaskError:
-            self._lgr.error(f'Attempt to acquire data from {self.devname} before channels were added')
+                            f'Acq Buffer len = {len(self._acq_buf)}, '
+                            f'Total channels = {len(self.ai_channels)}')
+        except PyDAQmx.DAQmxFunctions.CanNotPerformOpWhenNoChansInTaskError as e:
+            self._lgr.exception(f'Attempt to acquire data from {self.devname} before channels were added')
         except PyDAQmx.DAQmxFunctions.WaitUntilDoneDoesNotIndicateDoneError:
-            self._lgr.warning(f'For device {self.name}, read not completed before timeout in _acq_samples.')
+            self._lgr.exception(f'For device {self.name}, read not completed before timeout in _acq_samples.')
         except PyDAQmx.DAQmxFunctions.InvalidTaskError:
-            self._lgr.error(f'For device {self.name}, invalid task error in _acq_samples.')
+            self._lgr.exception(f'For device {self.name}, invalid task error in _acq_samples.')
 
 
     def _is_valid_device_name(self, device):
         try:
             bytes_needed = PyDAQmx.DAQmxGetSysDevNames(None, 0)
-        except PyDAQmx.DAQError as e:
-            self._lgr.error('Error occurred trying to get valid NIDAQ device names')
-            self._lgr.error(f'Error is {str(e)}')
+        except PyDAQmx.DAQError:
+            self._lgr.exception('Error occurred trying to get valid NIDAQ device names')
             return False
         else:
             dev_names = ctypes.create_string_buffer(bytes_needed)
@@ -122,23 +121,22 @@ class NIDAQAIDevice(pyAI.AIDevice):
         except PyDAQmx.DevCannotBeAccessedError as e:
             msg = f'Could not access device "{self.cfg.device_name}". Please ensure device is ' \
                   f'plugged in and assigned the correct device name'
-            self._lgr.error(msg)
+            self._lgr.exception(msg)
         except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
             msg = f'Channel "{self.ai_channels.keys()}" does not exist on device {self.cfg.device_name}'
-            self._lgr.error(msg)
+            self._lgr.exception(msg)
         except PyDAQmx.DAQmxFunctions.PhysicalChannelNotSpecifiedError:
             msg = f'A input channel/line must be specified.'
-            self._lgr.error(msg)
-            self._lgr.error(f'task is {self._task}')
+            self._lgr.exception(msg)
         except PyDAQmx.DAQmxFunctions.InvalidDeviceIDError:
             msg = f'Device "{self.devname}" is not a valid device ID'
-            self._lgr.error(msg)
+            self._lgr.exception(msg)
         except PyDAQmx.DAQmxFunctions.InvalidTaskError:
             msg = f'Invalid task for {self.devname}'
-            self._lgr.error(msg)
+            self._lgr.exception(msg)
         except PyDAQmx.DAQmxFunctions.CanNotPerformOpWhenNoChansInTaskError:
             msg = f'No channels added for {self.devname}'
-            self._lgr.error(msg)
+            self._lgr.exception(msg)
         except Exception as e:
             msg = f'Generic exception for {self.devname}'
             self._lgr.exception(e)
