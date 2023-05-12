@@ -79,8 +79,7 @@ class CDI(pyGeneric.GenericDevice):
             self.__serial.open()
         except serial.serialutil.SerialException as e:
             self.__serial = None
-            self._lgr.error(f'CDI: Could not open serial port {self.cfg.port}')
-            self._lgr.error(f'CDI: Message: {e}')
+            self._lgr.exception(f'CDI: Could not open serial port {self.cfg.port}')
             raise CDIException(f'CDI: Could not open serial port at {self.cfg.port}')
 
     def close(self):
@@ -150,8 +149,8 @@ class CDI(pyGeneric.GenericDevice):
                                 loops += 1
                         elif loops > 10:
                             break
-                except serial.SerialException as e:
-                    self._lgr.error(f'CDI: error attempting to read response. Message {e}')
+                except serial.SerialException:
+                    self._lgr.exception(f'CDI: error attempting to read response.')
                     # assuming this is an occasional glitch so log, but keep going
 
                 if good_response:

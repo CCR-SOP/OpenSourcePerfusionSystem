@@ -47,11 +47,11 @@ class NIDAQDCDevice(pyDC.DCDevice):
         except PyDAQmx.DevCannotBeAccessedError as e:
             msg = f'Could not access device "{self.cfg.device}". Please ensure device is '\
                   f'plugged in and assigned the correct device name'
-            self._lgr.error(msg)
+            self._lgr.exception(msg)
             raise(pyDC.DCDeviceException(msg))
         except PyDAQmx.DAQmxFunctions.PhysicalChanDoesNotExistError:
             msg = f'Channel "{self.cfg.line}" does not exist on device {self.cfg.device}'
-            self._lgr.error(msg)
+            self._lgr.exception(msg)
             raise(pyDC.DCDeviceException(msg))
         except PyDAQmx.DAQmxFunctions.InvalidDeviceIDError:
             if self.cfg:
@@ -59,7 +59,7 @@ class NIDAQDCDevice(pyDC.DCDevice):
             else:
                 name = 'None'
             msg = f'Device "{name}" is not a valid device ID'
-            self._lgr.error(msg)
+            self._lgr.exception(msg)
             raise(pyDC.DCDeviceException(msg))
 
     def set_output(self, output_volts: float):
@@ -71,5 +71,4 @@ class NIDAQDCDevice(pyDC.DCDevice):
                                       self._buffer, PyDAQmx.byref(written), None)
         except PyDAQmx.DAQmxFunctions.PALResourceReservedError as e:
             msg = f'{self.cfg.device} is reserved. Check for an invalid config or output type'
-            self._lgr.error(msg)
-            self._lgr.error(e)
+            self._lgr.exception(msg)

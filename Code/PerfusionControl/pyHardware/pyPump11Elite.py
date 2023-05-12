@@ -149,8 +149,8 @@ class Pump11Elite(pyGeneric.GenericDevice):
         self._serial.xonxoff = True
         try:
             self._serial.open()
-        except serial.serialutil.SerialException as e:
-            self._lgr.error(f'Could not open serial port {self._serial.port}. Message: {e}')
+        except serial.serialutil.SerialException:
+            self._lgr.exception(f'Could not open serial port {self._serial.port}.')
             raise Pump11EliteException()
 
         self.send_wait4response(f'address {self.cfg.address}\r')
@@ -201,8 +201,7 @@ class Pump11Elite(pyGeneric.GenericDevice):
             except ValueError as e:
                 # this will happen if com port is not opened or
                 # an error occurred
-                self._lgr.error(f'Error occurred parsing get_infusion_rate response for syringe')
-                self._lgr.exception(e)
+                self._lgr.exception(f'Error occurred parsing get_infusion_rate response for syringe')
 
         return infuse_rate, infuse_unit
 

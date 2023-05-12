@@ -151,11 +151,9 @@ class PerfusionSystem:
                     strategy = strategy_class(name)
                     strategy.cfg = cfg
                     obj.add_strategy(strategy)
-                except AttributeError as e:
-                    self._lgr.error(f'Could not find strategy class for {name}')
-                    self._lgr.exception(e)
+                except AttributeError:
+                    self._lgr.exception(f'Could not find strategy class for {name}')
                     pass
-            except AttributeError as e:
-                lgr.error(f'Could not create algorithm {params["algorithm"]} for {__name__} {self.name}')
-                lgr.exception(e)
+            except AttributeError:
+                lgr.exception(f'Could not create algorithm {params["algorithm"]} for {__name__} {self.name}')
         return obj
