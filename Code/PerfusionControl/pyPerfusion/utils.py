@@ -130,8 +130,10 @@ def never_show_logs_from(names_to_hide):
         handler.addFilter(Blacklist(names_to_hide))
 
 
-def write_to_text_ctrl(ctrl, msg, levelno):
+def write_to_text_ctrl(ctrl, msg):
     # ctrl.AppendToPage(msg)
+    if ctrl.GetItemCount() > 5:
+        ctrl.Delete(0)
     ctrl.Append(msg)
     ctrl.SetSelection(ctrl.GetItemCount()-1)
 
@@ -144,7 +146,7 @@ class WxTextCtrlHandler(logging.Handler):
     def emit(self, record):
         s = self.format(record) + '\n'
         if bool(self.ctrl):
-            wx.CallAfter(write_to_text_ctrl, self.ctrl, s, record.levelno)
+            wx.CallAfter(write_to_text_ctrl, self.ctrl, s)
         else:
             logging.getLogger().error(f'Attempt to log to deleted TextCtrl {self.ctrl} with'
                                       f'message {self.format(record)}')
