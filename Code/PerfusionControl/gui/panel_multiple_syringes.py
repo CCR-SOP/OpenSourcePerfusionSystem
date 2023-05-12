@@ -35,15 +35,12 @@ class SyringePanel(wx.Panel):
         self.panels_vaso = []
         self.panels_glucose = []
         for automation in self.automations:
-            self._lgr.warning(automation.device.name)
             panel = PanelSyringeControls(self, automation)
             self.panels.append(panel)
             if automation.device.name == 'Epoprostenol' or automation.device.name == 'Phenylephrine':
                 self.panels_vaso.append(panel)
-                self._lgr.warning(f' Added {automation.device.name} to panels_vaso')
             elif automation.device.name == 'Glucagon' or automation.device.name == 'Insulin':
                 self.panels_glucose.append(panel)
-                self._lgr.warning(f' Added {automation.device.name} to panels_glucose')
 
         # Add auto start buttons and log
         auto_font = wx.Font()

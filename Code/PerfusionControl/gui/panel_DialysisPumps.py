@@ -27,48 +27,45 @@ class DialysisPumpPanel(wx.Panel):
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.static_box.SetFont(font)
         self.wrapper = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
-        self.sizer = wx.GridSizer(cols=2)
+        self.sizer = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
 
         self.panels = []
         for automation in automations:
             panel = PanelDC(self, automation.pump)
             self.panels.append(panel)
 
-        # Add auto start button as 5th panel
-        self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
-        self.btn_auto_dialysis.SetFont(font)
-        self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
-
+        # Add log
         log_names = []
         for automation in self.automations:
             log_names.append(automation.pump.name)
         log_names.append('AutoDialysis')
         self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
-        self.panels.append(self.text_log_roller_pumps)
+
+        # Add auto start button
+        self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
+        self.btn_auto_dialysis.SetFont(font)
+        self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
 
         self.__do_layout()
         self.__set_bindings()
 
     def close(self):
-        counter = 0
         for panel in self.panels:
-            if counter == 3:  # to close text box
-                panel.Close()
-            else:
-                panel.close()
-            counter += 1
+            panel.close()
         super().Close()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand().Border()
 
         for panel in self.panels:
-            self.sizer.Add(panel, flags)
+            self.sizer.Add(panel, proportion=1, flag=wx.ALL | wx.EXPAND)
+
+        self.sizer.Add(self.text_log_roller_pumps, proportion=1, flag=wx.ALL | wx.EXPAND)
+        self.sizer.Add(self.btn_auto_dialysis, proportion=1, flag=wx.ALL | wx.EXPAND)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.wrapper.Add(self.sizer, flags.Proportion(1))
-        self.wrapper.Add(self.btn_auto_dialysis, wx.SizerFlags().Border())
-        self.SetAutoLayout(True)
+
         self.SetSizer(self.wrapper)
         self.Layout()
 
@@ -81,25 +78,15 @@ class DialysisPumpPanel(wx.Panel):
             self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(240, 0, 0))
             for automation in self.automations:
                 automation.start()
-            counter = 0
             for panel in self.panels:
-                if counter == 3:
-                    pass
-                else:
-                    panel.panel_dc.entered_offset.Enable(False)
-                counter += 1
+                panel.panel_dc.entered_offset.Enable(False)
         else:
             self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
             self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
             for automation in self.automations:
                 automation.stop()
-            counter = 0
             for panel in self.panels:
-                if counter == 3:
-                    pass
-                else:
-                    panel.panel_dc.entered_offset.Enable(True)
-                counter += 1
+                panel.panel_dc.entered_offset.Enable(True)
 
 
 class TestFrame(wx.Frame):
