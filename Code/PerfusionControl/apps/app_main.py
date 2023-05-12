@@ -33,7 +33,7 @@ class MyMainApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_default_logging('app_main', logging.DEBUG)
+    utils.setup_default_logging('app_main', logging.INFO)
     SYS_PERFUSION = PerfusionSystem()
     try:
         SYS_PERFUSION.open()
