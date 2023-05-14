@@ -24,14 +24,19 @@ class DialysisPumpPanel(wx.Panel):
 
         font = wx.Font()
         font.SetPointSize(int(16))
+
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.static_box.SetFont(font)
-        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
+
+        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
+        flagsExpand = wx.SizerFlags(1)
+        flagsExpand.Expand().Border(wx.ALL, 5)
         self.sizer = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
 
         self.panels = []
         for automation in automations:
             panel = PanelDC(self, automation.pump)
+            self.sizer.Add(panel, proportion=1, flag=wx.ALL | wx.EXPAND, border=1)
             self.panels.append(panel)
 
         # Add log
@@ -40,11 +45,13 @@ class DialysisPumpPanel(wx.Panel):
             log_names.append(automation.pump.name)
         log_names.append('AutoDialysis')
         self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
+        self.sizer.Add(self.text_log_roller_pumps, flagsExpand)
 
         # Add auto start button
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
         self.btn_auto_dialysis.SetFont(font)
         self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
+        self.sizer.Add(self.btn_auto_dialysis, flagsExpand)
 
         self.__do_layout()
         self.__set_bindings()
@@ -55,18 +62,16 @@ class DialysisPumpPanel(wx.Panel):
         super().Close()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Border()
-
-        for panel in self.panels:
-            self.sizer.Add(panel, proportion=1, flag=wx.ALL | wx.EXPAND)
-
-        self.sizer.Add(self.text_log_roller_pumps, proportion=1, flag=wx.ALL | wx.EXPAND)
-        self.sizer.Add(self.btn_auto_dialysis, proportion=1, flag=wx.ALL | wx.EXPAND)
+        self.sizer.AddGrowableRow(0, 3)
+        self.sizer.AddGrowableRow(1, 3)
+        self.sizer.AddGrowableRow(2, 1)
+        self.sizer.AddGrowableCol(0, 1)
+        self.sizer.AddGrowableCol(1, 1)
 
         self.sizer.SetSizeHints(self.GetParent())
-        self.wrapper.Add(self.sizer, flags.Proportion(1))
-
+        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.SetSizer(self.wrapper)
+        self.Fit()
         self.Layout()
 
     def __set_bindings(self):

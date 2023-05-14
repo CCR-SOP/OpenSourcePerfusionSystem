@@ -204,19 +204,22 @@ class PanelSyringeControls(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Expand()
 
-        self.sizer_cfg = wx.FlexGridSizer(cols=3)
+        self.sizer_cfg = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
 
         self.sizer_cfg.Add(self.label_rate, flags)
         self.sizer_cfg.Add(self.spin_rate, flags)
-        self.sizer_cfg.Add(self.btn_basal, flags)
 
         self.sizer_cfg.Add(self.label_volume, flags)
         self.sizer_cfg.Add(self.spin_volume, flags)
+
+        self.sizer_cfg.Add(self.btn_basal, flags)
         self.sizer_cfg.Add(self.btn_bolus, flags)
 
         self.sizer_cfg.AddGrowableCol(0, 2)
         self.sizer_cfg.AddGrowableCol(1, 1)
-        self.sizer_cfg.AddGrowableCol(2, 2)
+        self.sizer_cfg.AddGrowableRow(0, 1)
+        self.sizer_cfg.AddGrowableRow(1, 1)
+        self.sizer_cfg.AddGrowableRow(2, 1)
 
         self.sizer.Add(self.sizer_cfg)
 

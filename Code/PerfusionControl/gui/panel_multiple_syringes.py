@@ -25,58 +25,61 @@ class SyringePanel(wx.Panel):
 
         font = wx.Font()
         font.SetPointSize(int(16))
+
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Pumps")
         self.static_box.SetFont(font)
-        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
-        self.sizer = wx.GridSizer(cols=2)
-        self.sizer2 = wx.FlexGridSizer(rows=1, cols=3, hgap=1, vgap=1)
+
+        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
+        flagsExpand = wx.SizerFlags(1)
+        flagsExpand.Expand().Border(wx.ALL, 5)
+        self.sizer = wx.FlexGridSizer(rows=3, cols=3, hgap=1, vgap=1)
 
         self.panels = []
         self.panels_vaso = []
         self.panels_glucose = []
         for automation in self.automations:
             panel = PanelSyringeControls(self, automation)
+            self.sizer.Add(panel, proportion=1, flag=wx.ALL | wx.EXPAND, border=1)
             self.panels.append(panel)
             if automation.device.name == 'Epoprostenol' or automation.device.name == 'Phenylephrine':
                 self.panels_vaso.append(panel)
             elif automation.device.name == 'Glucagon' or automation.device.name == 'Insulin':
                 self.panels_glucose.append(panel)
 
-        # Add auto start buttons and log
+        # Add auto start buttons
         auto_font = wx.Font()
         auto_font.SetPointSize(int(14))
         self.btn_auto_glucose = wx.Button(self, label='Start Auto Glucose Control')
         self.btn_auto_glucose.SetFont(auto_font)
         self.btn_auto_glucose.SetBackgroundColour(wx.Colour(0, 240, 0))
+        self.sizer.Add(self.btn_auto_glucose, flagsExpand)
+
         self.btn_auto_vaso = wx.Button(self, label='Start Auto Vasoactive Control')
         self.btn_auto_vaso.SetFont(auto_font)
         self.btn_auto_vaso.SetBackgroundColour(wx.Colour(0, 240, 0))
+        self.sizer.Add(self.btn_auto_vaso, flagsExpand)
+
+        # Add log
         log_names = []
         for automation in self.automations:
             log_names.append(automation.device.name)
         log_names.append('AutoSyringe')
         self.text_log_syringes = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
+        self.sizer.Add(self.text_log_syringes, flagsExpand)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags(1)
-        flags.Expand().Border(wx.ALL, 10)
-
-        for panel in self.panels:
-            self.sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-        self.sizer2.Add(self.btn_auto_glucose, flags)
-        self.sizer2.Add(self.btn_auto_vaso, flags)
-        self.sizer2.Add(self.text_log_syringes, flags)
-
-        self.sizer2.AddGrowableCol(0, 1)
-        self.sizer2.AddGrowableCol(1, 1)
-        self.sizer2.AddGrowableCol(2, 3)
+        self.sizer.AddGrowableRow(0, 1)
+        self.sizer.AddGrowableRow(1, 1)
+        self.sizer.AddGrowableRow(2, 2)
+        self.sizer.AddGrowableCol(0, 1)
+        self.sizer.AddGrowableCol(1, 1)
+        self.sizer.AddGrowableCol(2, 1)
 
         self.sizer.SetSizeHints(self.GetParent())
-        self.wrapper.Add(self.sizer, flag=wx.ALL | wx.EXPAND, border=1)
-        self.wrapper.Add(self.sizer2, flag=wx.ALL | wx.EXPAND, border=1)
+        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.SetSizer(self.wrapper)
         self.Fit()
         self.Layout()
@@ -135,9 +138,8 @@ class SyringeFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
 
-        automation_names = ['Insulin Automation', 'Glucagon Automation',
-                            'Phenylephrine Automation', 'Epoprostenol Automation',
-                            'TPN + Bile Salts Manual', 'Zosyn Manual']
+        automation_names = ['Insulin Automation', 'Epoprostenol Automation', 'TPN + Bile Salts Manual',
+                            'Glucagon Automation', 'Phenylephrine Automation', 'Zosyn Manual']
         automations = []
         for name in automation_names:
             automations.append(SYS_PERFUSION.get_automation(name))
