@@ -4,10 +4,9 @@
 @author: Stephie Lux, NIH
 
 """
-import logging
 from threading import Thread, Event
 from time import sleep
-from queue import Queue, Empty
+from queue import Queue
 from enum import IntEnum
 from datetime import datetime
 from dataclasses import dataclass
@@ -16,11 +15,12 @@ import numpy as np
 import serial
 import serial.tools.list_ports
 
-from pyPerfusion.utils import get_epoch_ms
+import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+import pyHardware.pyGeneric as pyGeneric
 
 
-class CDIException(Exception):
+class CDIException(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -32,36 +32,29 @@ CDIIndex = IntEnum('CDIIndex', ['arterial_pH', 'arterial_CO2', 'arterial_O2', 'a
 
 class CDIData:
     def __init__(self, data):
-        self._lgr = logging.getLogger(__name__)
-        # self._lgr.debug(f'Data is {data}')
         if data is not None:
             for idx in range(18):
                 # self._lgr.debug(f'Setting {CDIIndex(idx).name} to {data[idx]}')
                 setattr(self, CDIIndex(idx).name, data[idx])
 
+
 @dataclass
 class CDIConfig:
-    name: str = 'CDI'
     port: str = ''
     sampling_period_ms: int = 1000
 
 
-class CDIStreaming:
-    def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
-        self.name = name
-        self._queue = Queue()
-        self.data_type = np.float64
+class CDI(pyGeneric.GenericDevice):
+    def __init__(self, name: str):
+        super().__init__(name)
         self.buf_len = 18
         self.samples_per_read = 18
-        self.acq_start_ms = 0
-
         self.cfg = CDIConfig()
 
         self.__serial = serial.Serial()
-        self._timeout = 5.0
+        self._timeout = 1.0
 
-        self._event_halt = Event()
+        self._evt_halt = Event()
         self.__thread = None
         self.is_streaming = False
 
@@ -69,26 +62,13 @@ class CDIStreaming:
     def sampling_period_ms(self):
         return self.cfg.sampling_period_ms
 
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
-
-    def read_config(self):
-        cfg = CDIConfig()
-        PerfusionConfig.read_into_dataclass('hardware', self.name, cfg)
-        self.open(cfg)
-
     def is_open(self):
         return self.__serial and self.__serial.is_open
 
-    def open(self, cfg: CDIConfig = None) -> None:
-        self._queue = Queue()
+    def open(self) -> None:
+        super().open()
         if self.__serial.is_open:
             self.__serial.close()
-        if cfg is not None:
-            self.cfg = cfg
         self.__serial.port = self.cfg.port
         self.__serial.baudrate = 9600
         self.__serial.stopbits = serial.STOPBITS_ONE
@@ -99,18 +79,17 @@ class CDIStreaming:
             self.__serial.open()
         except serial.serialutil.SerialException as e:
             self.__serial = None
-            self._lgr.error(f'CDI: Could not open serial port {self.cfg.port}')
-            self._lgr.error(f'CDI: Message: {e}')
+            self._lgr.exception(f'CDI: Could not open serial port {self.cfg.port}')
             raise CDIException(f'CDI: Could not open serial port at {self.cfg.port}')
 
-
     def close(self):
+        super().close()
         self.stop()
         if self.__serial:
             self.__serial.close()
 
     def parse_response(self, response: str):
-        data = np.zeros(0, dtype=self.data_type)
+        data = np.zeros(0, dtype=self.data_dtype)
         if response is None:
             return data
 
@@ -119,7 +98,7 @@ class CDIStreaming:
         expected_vars = max(CDIIndex).value + 1
 
         if len(fields) == expected_vars + 2:
-            data = np.zeros(expected_vars, dtype=self.data_type)
+            data = np.zeros(expected_vars, dtype=self.data_dtype)
             # skip first field which is SN and timestamp
             # timestamp will be ignored,  we will use the timestamp when the response arrives
             # self.timestamp = fields[0][-8:]
@@ -127,10 +106,10 @@ class CDIStreaming:
                 # get code and convert string hex value to an actual integer
                 code = int(field[0:2].upper(), 16)
                 try:
-                    value = self.data_type(field[4:])
+                    value = self.data_dtype.type(field[4:])
                 except ValueError:
                     # self._lgr.error(f'Field {code} (value={field[4:]}) is out-of-range')
-                    value = self.data_type(-1)
+                    value = self.data_dtype.type(-1)
                 data[code] = value
         else:
             # this may be a result of an incomplete serial response.
@@ -149,10 +128,14 @@ class CDIStreaming:
 
     def run(self):  # continuous data stream
         self.is_streaming = True
-        self._event_halt.clear()
+        self._evt_halt.clear()
         good_response = False
         loops = 0
-        while not self._event_halt.is_set():
+        # only wait for a second so if the MASTER HALT is set,
+        # we can break out of the loop
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            if self._evt_halt.wait(self._timeout):
+                break
             if self.is_open():
                 resp = ''
                 try:
@@ -166,30 +149,25 @@ class CDIStreaming:
                                 loops += 1
                         elif loops > 10:
                             break
-                except serial.SerialException as e:
-                    self._lgr.error(f'CDI: error attempting to read response. Message {e}')
+                except serial.SerialException:
+                    self._lgr.exception(f'CDI: error attempting to read response.')
                     # assuming this is an occasional glitch so log, but keep going
 
                 if good_response:
                     data = self.parse_response(resp)
-                    self._lgr.debug(f'data is {data}')
-                    ts = get_epoch_ms()
+                    ts = utils.get_epoch_ms()
                     self._queue.put((data, ts))
-                    self._lgr.debug('put data')
                     good_response = False
                 else:
                     msg = f'CDI: Failed to read good response after multiple attempts. ' \
                           f'Something may be wrong with CDI interface'
                     self._lgr.error(msg)
                     raise CDIException(msg)
-            else:
-                sleep(1.0)
         self.is_streaming = False
 
     def start(self):
-        self.stop()
-        self._event_halt.clear()
-        self.acq_start_ms = get_epoch_ms()
+        super().start()
+        self._evt_halt.clear()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyCDI'
@@ -197,21 +175,12 @@ class CDIStreaming:
 
     def stop(self):
         if self.is_streaming:
-            self._event_halt.set()
-
-    def get_data(self, timeout=0):
-        buf = None
-        t = None
-        try:
-            buf, t = self._queue.get(timeout=timeout)
-        except Empty:
-            pass
-        return buf, t
+            self._evt_halt.set()
+        super().stop()
 
 
-class MockCDI(CDIStreaming):
+class MockCDI(CDI):
     def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
         super().__init__(name)
         self._is_open = False
         self.last_pkt = ''
@@ -229,9 +198,6 @@ class MockCDI(CDIStreaming):
     def close(self):
         pass
 
-    def request_data(self, timeout=30):  # request single data packet
-        return self._form_pkt()
-
     def read_from_serial(self):
         pkt_stx = 0x2
         pkt_etx = 0x3
@@ -239,7 +205,9 @@ class MockCDI(CDIStreaming):
         ts = datetime.now()
         timestamp = f'{ts.hour:02d}:{ts.minute:02d}:{ts.second:02d}'
         # self._lgr.debug(f'timestamp is {timestamp}')
-        data = [f'{idx.value:02x}{idx.value*2:04d}\t' for idx in CDIIndex]
+        cdi_array = [idx.value*2 for idx in CDIIndex]
+        cdi_array[CDIIndex.K] = 1
+        data = [f'{idx.value:02x}{cdi_array[idx.value]:04d}\t' for idx in CDIIndex]
         data_str = ''.join(data)
         crc = 0
         pkt = f'{pkt_stx}{pkt_dev}{timestamp}\t{data_str}{crc}{pkt_etx}\r\n'

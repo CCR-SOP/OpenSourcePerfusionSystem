@@ -11,53 +11,49 @@ import wx
 import time
 import logging
 
-from pyPerfusion.plotting import SensorPlot, PanelPlotting
-import pyPerfusion.Sensor as Sensor
+from gui.plotting import SensorPlot, PanelPlotting
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
+        self._lgr = logging.getLogger('ex_volume_by_flow')
 
-        self.panel = PanelPlotting(self)
-        self.panel.plot_frame_ms = 10_000
-        self.plotvol = SensorPlot(sensor_volume, self.panel.axes, readout=True)
-        self.plotflow = SensorPlot(sensor_flow, self.panel.axes, readout=True)
+        sensors = [SYS_PERFUSION.get_sensor('Hepatic Artery Flow'),
+                   SYS_PERFUSION.get_sensor('Hepatic Artery Volume')]
 
-        self.plotflow.set_reader(sensor_flow.get_reader('RMS_11pt'))
-        self.plotvol.set_reader(sensor_volume.get_reader('VolumeByFlow'), color='y')
+        self._plots = []
+        sizer_plots = wx.GridSizer(cols=2)
+        for idx, sensor in enumerate(sensors):
+            panel = PanelPlotting(self)
+            self._plots.append(panel)
+            plot = SensorPlot(sensor, panel.axes, readout=True)
+            plot.set_reader(sensor.get_reader())
+            self._lgr.debug(f'reader fqpn = {sensor.get_reader().fqpn}')
+            sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
+            panel.add_plot(plot)
+            sensor.start()
 
-        self.panel.add_plot(self.plotflow)
-        self.panel.add_plot(self.plotvol)
-
-        sensor_flow.open()
-        sensor_flow.start()
-        sensor_volume.open()
-        sensor_volume.start()
+        self.SetSizer(sizer_plots)
 
         # example of calibrating the zero flow, normally this would
         # be done using a button on a panel
         print('Calibrating in 2 seconds')
         time.sleep(2.0)
-        sensor_volume.get_writer('VolumeByFlow').reset()
-
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor_volume.stop()
-        sensor_flow.stop()
-        SYS_HW.stop()
-        self.panel.Destroy()
+        for plot in self._plots:
+            plot.Close()
         self.Destroy()
 
 
 class MyTestApp(wx.App):
     def OnInit(self):
-        frame = TestFrame(None, wx.ID_ANY, "")
+        frame = TestFrame(None)
         self.SetTopWindow(frame)
         frame.Show()
         return True
@@ -65,19 +61,19 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_default_logging('ex_volume_by_flow', logging.DEBUG)
 
-    SYS_HW.load_hardware_from_config()
-    SYS_HW.start()
-    sensor_flow = Sensor.Sensor(name='Hepatic Artery Flow')
-    sensor_flow.read_config()
-
-    sensor_volume = Sensor.CalculatedSensor(name='Hepatic Artery Volume')
-    sensor_volume.read_config()
-    sensor_volume.reader = sensor_flow.get_reader(sensor_volume.cfg.sensor_strategy)
-    sensor_volume.hw = sensor_flow.hw
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
-
+    SYS_PERFUSION.close()

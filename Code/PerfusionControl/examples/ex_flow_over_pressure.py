@@ -13,14 +13,13 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import wx
-import time
 import logging
+import threading
 
-from pyPerfusion.plotting import SensorPlot, PanelPlotting
+from gui.plotting import SensorPlot, PanelPlotting
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyHardware.SystemHardware import SYS_HW
-import pyPerfusion.Sensor as Sensor
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class TestFrame(wx.Frame):
@@ -29,6 +28,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
+        sensor_foverp = SYS_PERFUSION.get_sensor('HA Flow Over Pressure')
         self.panel = PanelPlotting(self)
         self.panel.plot_frame_ms = 10_000
         self.plot = SensorPlot(sensor_foverp, self.panel.axes, readout=True)
@@ -40,7 +40,6 @@ class TestFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        sensor_foverp.stop()
         self.panel.Destroy()
         self.Destroy()
 
@@ -53,31 +52,24 @@ class MyTestApp(wx.App):
         return True
 
 
-if __name__ == "__main__":
-    logger = logging.getLogger(__name__)
+if __name__ == '__main__':
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logger, logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_default_logging('ex_flow_over_pressure', logging.DEBUG)
 
-    SYS_HW.load_hardware_from_config()
-    # SYS_HW.load_mocks()
-    SYS_HW.start()
-
-    sensor_foverp = Sensor.DivisionSensor(name='HA Flow Over Pressure')
-    sensor_foverp.read_config()
-
-    sensor_flow = Sensor.Sensor(name=sensor_foverp.cfg.dividend_name)
-    sensor_flow.read_config()
-    sensor_pressure = Sensor.Sensor(name=sensor_foverp.cfg.divisor_name)
-    sensor_pressure.read_config()
-
-    sensor_foverp.reader_dividend = sensor_flow.get_reader(name=sensor_foverp.cfg.dividend_strategy)
-    sensor_foverp.reader_divisor = sensor_pressure.get_reader(name=sensor_foverp.cfg.divisor_strategy)
-    sensor_foverp.hw = sensor_flow.hw
-
-    sensor_flow.start()
-    sensor_pressure.start()
-    sensor_foverp.start()
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
+
+    SYS_PERFUSION.close()
+    for thread in threading.enumerate():
+        print(thread.name)

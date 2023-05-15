@@ -23,8 +23,8 @@ class FiniteNIDAQAIDeviceConfig(pyAI_NIDAQ.AINIDAQDeviceConfig):
 
 
 class FiniteNIDAQAIDevice(pyAI_NIDAQ.NIDAQAIDevice):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name: str):
+        super().__init__(name)
         self._sample_mode = PyDAQmx.DAQmxConstants.DAQmx_Val_FiniteSamps
         self._acq_complete = False
         self._notify = None
@@ -58,7 +58,6 @@ class FiniteNIDAQAIDevice(pyAI_NIDAQ.NIDAQAIDevice):
     def run(self):
         self._acq_samples()
         self._acq_complete = True
-        self._lgr.debug(f'completed finite acq for device {self.cfg.name}/{self.cfg.device_name}')
         if self._notify:
             self._lgr.debug(f'notifying {self._notify}')
             self._notify()

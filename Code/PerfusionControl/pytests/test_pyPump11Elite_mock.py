@@ -14,7 +14,7 @@ Author: John Kakareka
 import pytest
 import os
 
-import pyPerfusion.pyPump11Elite as pyPump11Elite
+import pyHardware.pyPump11Elite as pyPump11Elite
 
 
 @pytest.fixture

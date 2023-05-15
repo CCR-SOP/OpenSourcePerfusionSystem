@@ -45,8 +45,11 @@ class SensorPlot:
         readout_color = 'black'
         if not self._reader:
             return
+
         try:
             data_time, data = self._reader.retrieve_buffer(frame_ms, plot_len)
+            if data_time is not None:
+                data_time = np.divide(data_time, 1000.0)
         except ValueError:
             # this can happen if no data has been collected, so don't print a message
             # as it can flood the logs
@@ -57,18 +60,19 @@ class SensorPlot:
             return
 
         readout = data[-1]
-        if self._sensor.cfg.valid_range is not None:
-            low_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[0],
-                                                where=data < self._sensor.cfg.valid_range[0], color='r')
-            high_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[1],
-                                                 where=data > self._sensor.cfg.valid_range[1], color='r')
-            self._invalid = [low_range, high_range]
+        if hasattr(self._sensor.cfg, 'valid_range'):
+            if self._sensor.cfg.valid_range is not None:
+                low_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[0],
+                                                    where=data < self._sensor.cfg.valid_range[0], color='r')
+                high_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[1],
+                                                     where=data > self._sensor.cfg.valid_range[1], color='r')
+                self._invalid = [low_range, high_range]
 
-            if self._with_readout:
-                if readout < self._sensor.cfg.valid_range[0]:
-                    readout_color = 'orange'
-                elif readout > self._sensor.cfg.valid_range[1]:
-                    readout_color = 'red'
+                if self._with_readout:
+                    if readout < self._sensor.cfg.valid_range[0]:
+                        readout_color = 'orange'
+                    elif readout > self._sensor.cfg.valid_range[1]:
+                        readout_color = 'red'
 
         if self._line is None:
             self._line, = self._axes.plot(data_time, data, color=self._color)
@@ -77,7 +81,12 @@ class SensorPlot:
             self._line.set_data(data_time, data)
 
         if self._with_readout:
-            self._line.set_label(f'{self._reader.name}: {readout:.2f} {self._sensor.cfg.units}')
+            try:
+                unit_str = f'{self._sensor.cfg.units}'
+            except AttributeError:
+                # if sensor doesn't have units, ignore
+                unit_str = ''
+            self._line.set_label(f'{self._reader.name}: {readout:.2f} {unit_str}')
             leg = self._axes.get_legend()
             if leg is not None:
                 leg_texts = leg.get_texts()
@@ -86,17 +95,21 @@ class SensorPlot:
                     txt.set_fontsize('large')
                     # self._display.set_color(readout_color)
 
-
     def set_reader(self, reader, color=None, keep_old_title=False):
         self._reader = reader
         self._line = None
         self._color = color
-        if self._sensor.cfg.valid_range is not None:
-            rng = self._sensor.cfg.valid_range
-            self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+        if hasattr(self._sensor.cfg, 'valid_range'):
+            if self._sensor.cfg.valid_range is not None:
+                rng = self._sensor.cfg.valid_range
+                self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
         if not keep_old_title:
             self._axes.set_title(f'{self._sensor.name}\n')
-            self._axes.set_ylabel(self._sensor.cfg.units)
+            try:
+                self._axes.set_ylabel(self._sensor.cfg.units)
+            except AttributeError:
+                # if sensor doesn't have units, do nothing
+                pass
 
 
 class EventPlot(SensorPlot):
@@ -134,7 +147,6 @@ class PanelPlotting(wx.Panel):
         self._plot_frame_ms = 5_000
 
         self.fig = matplotlib.figure.Figure()
-        self.fig.set_tight_layout(True)
         self._axes = self.fig.add_subplot(111)
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
 
@@ -146,7 +158,7 @@ class PanelPlotting(wx.Panel):
         self.__set_bindings()
 
         self.timer_plot = wx.Timer(self)
-        self.timer_plot.Start(200, wx.TIMER_CONTINUOUS)
+        self.timer_plot.Start(100, wx.TIMER_CONTINUOUS)
 
     @property
     def axes(self):
@@ -173,6 +185,7 @@ class PanelPlotting(wx.Panel):
 
     def __set_bindings(self):
         self.Bind(wx.EVT_TIMER, self.OnTimer)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def plot(self):
         for plot in self._plots:
@@ -198,6 +211,10 @@ class PanelPlotting(wx.Panel):
         self._plots.append(plot)
         self.Fit()
         self.__parent.Fit()
+
+    def OnClose(self, evt):
+        self.timer_plot.Stop()
+        self.Destroy()
 
 
 class PanelPlotLT(PanelPlotting):
@@ -226,7 +243,6 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_default_logging('plotting', logging.DEBUG)
     app = MyTestApp(0)
     app.MainLoop()

@@ -15,17 +15,12 @@ import threading
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.Sensor import Sensor
-from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.pyCDI import CDIIndex, CDIData
+from pyPerfusion.PerfusionSystem import PerfusionSystem
+from pyHardware.pyCDI import CDIIndex, CDIData
 
 
 def main():
-    SYS_HW.load_hardware_from_config()
-    # SYS_HW.load_mocks()
-    SYS_HW.start()
-
-    sensor = Sensor(name='CDI')
-    sensor.read_config()
+    sensor = SYS_PERFUSION.get_sensor(name='CDI')
 
     sensor.start()
     reader = sensor.get_reader()
@@ -55,13 +50,24 @@ def main():
     except AttributeError:
         print('arterial_pH is not a valid attribute of CDIData')
 
-    sensor.stop()
-    SYS_HW.stop()
-
 
 if __name__ == '__main__':
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
     PerfusionConfig.set_test_config()
+    utils.setup_default_logging('ex_CDI_sensor', logging.DEBUG)
+
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
+
     main()
+
+    SYS_PERFUSION.close()
     for thread in threading.enumerate():
         print(thread.name)

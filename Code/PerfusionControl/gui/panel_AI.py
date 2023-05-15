@@ -13,16 +13,16 @@ import logging
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.plotting import PanelPlotting, SensorPlot
+from gui.plotting import PanelPlotting, SensorPlot
 import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
-from pyHardware.SystemHardware import SYS_HW
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 from pyPerfusion.Strategy_ReadWrite import Reader
 
 
 class PanelAI(wx.Panel):
     def __init__(self, parent, sensor: Sensor.Sensor, reader: Reader):
-        wx.Panel.__init__(self, parent, -1)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
@@ -33,11 +33,11 @@ class PanelAI(wx.Panel):
         self._panel_cal = PanelAICalibration(self, sensor, reader)
 
         if self._sensor.hw is not None:
-            ch_name = f'{self._sensor.hw.device.cfg.name} Channel: {self._sensor.hw.cfg.name}'
+            ch_name = f'{self._sensor.hw.device.name} Channel: {self._sensor.hw.name}'
         else:
             ch_name = "NA"
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=ch_name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=ch_name)
+        self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
         self.sizer_pane = wx.BoxSizer(wx.VERTICAL)
 
         self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
@@ -65,15 +65,20 @@ class PanelAI(wx.Panel):
 
     def __set_bindings(self):
         self.collapse_pane.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+        self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_pane_changed(self, evt):
         self.sizer.Layout()
         self.Layout()
 
+    def on_close(self, evt):
+        self._panel_cal.Close()
+        self._panel_plot.Close()
+
 
 class PanelAICalibration(wx.Panel):
     def __init__(self, parent, sensor: Sensor, reader: Reader):
-        super().__init__(parent, -1)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
@@ -105,22 +110,21 @@ class PanelAICalibration(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
 
-        sizer = wx.GridSizer(cols=4)
-        sizer.Add(self.label_cal_pt1, flags)
-        sizer.Add(self.spin_cal_pt1, flags)
-        sizer.Add(self.btn_cal_pt1, flags)
-        sizer.Add(self.label_cal_pt1_val, flags)
+        self.sizer = wx.GridSizer(cols=4)
+        self.sizer.Add(self.label_cal_pt1, flags)
+        self.sizer.Add(self.spin_cal_pt1, flags)
+        self.sizer.Add(self.btn_cal_pt1, flags)
+        self.sizer.Add(self.label_cal_pt1_val, flags)
 
-        sizer.Add(self.label_cal_pt2, flags)
-        sizer.Add(self.spin_cal_pt2, flags)
-        sizer.Add(self.btn_cal_pt2, flags)
-        sizer.Add(self.label_cal_pt2_val, flags)
+        self.sizer.Add(self.label_cal_pt2, flags)
+        self.sizer.Add(self.spin_cal_pt2, flags)
+        self.sizer.Add(self.btn_cal_pt2, flags)
+        self.sizer.Add(self.label_cal_pt2_val, flags)
 
-        sizer.Add(self.btn_load_cal, flags)
-        sizer.Add(self.btn_save_cal, flags)
-        sizer.Add(self.btn_reset_cal, flags)
-        sizer.Add(self.btn_calibrate, flags)
-        self.sizer = sizer
+        self.sizer.Add(self.btn_load_cal, flags)
+        self.sizer.Add(self.btn_save_cal, flags)
+        self.sizer.Add(self.btn_reset_cal, flags)
+        self.sizer.Add(self.btn_calibrate, flags)
 
         self.SetSizer(self.sizer)
         self.Layout()
@@ -183,21 +187,22 @@ class PanelAICalibration(wx.Panel):
         self._sensor.hw.write_config()
 
     def on_load_cfg(self, evt):
-        self._sensor.hw.read_config(self._sensor.hw.cfg.name)
+        self._sensor.hw.read_config(self._sensor.hw.name)
         self.update_controls_from_config()
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         self._lgr = logging.getLogger(__name__)
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
+
+        sensor = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
         self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
+
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
     def on_close(self, evt):
-        SYS_HW.stop()
-        sensor.close()
+        self.panel.Close()
         self.Destroy()
 
 
@@ -211,14 +216,19 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_default_logging('panel_AI', logging.DEBUG)
 
-    SYS_HW.load_hardware_from_config()
-    SYS_HW.start()
-    sensor = Sensor.Sensor(name='Hepatic Artery Flow')
-    sensor.read_config()
-    sensor.start()
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
+    SYS_PERFUSION.close()

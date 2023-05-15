@@ -8,23 +8,49 @@
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-import logging
+
 from threading import Thread, Event
+from dataclasses import dataclass, field
+from typing import List
 
-from time import sleep
+from pyHardware.pyCDI import CDIData
+import pyPerfusion.utils as utils
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
-from pyPerfusion.pyCDI import CDIData
-from pyPerfusion.utils import get_epoch_ms
+
+@dataclass
+class AutoGasMixerConfig:
+    gas_device: str = ''
+    data_source: str = ''
+    adjust_rate_ms: int = 600_000
+
+
+@dataclass
+class ArterialAutoGasMixerConfig(AutoGasMixerConfig):
+    pH_range: List = field(default_factory=lambda: [0, 100])
+    flow_adjust: float = 0.0
+    O2_channel: int = 0
+    CO2_channel: int = 0
+    CO2_adjust: float = 0.0
+
+
+@dataclass
+class VenousAutoGasMixerConfig(AutoGasMixerConfig):
+    pH_range: List = field(default_factory=lambda: [0, 100])
+    O2_range: List = field(default_factory=lambda: [0, 100])
+    O2_adjust: float = 0.0
+    flow_adjust: float = 0.0
+    O2_channel: int = 0
+    N2_channel: int = 0
 
 
 class AutoGasMixer:
-    def __init__(self, name: str, gas_device, cdi_reader):
-        self._lgr = logging.getLogger(__name__)
+    def __init__(self, name: str):
         self.name = name
-        self.gas_device = gas_device
-        self.cdi_reader = cdi_reader
-
-        self.adjust_rate_ms = 10_000
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.gas_device = None
+        self.data_source = None
+        self.cfg = AutoGasMixerConfig()
 
         self.acq_start_ms = 0
         self._event_halt = Event()
@@ -35,130 +61,141 @@ class AutoGasMixer:
     def is_running(self):
         return self.is_streaming
 
+    def write_config(self):
+        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
+
+    def read_config(self):
+        PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
+
     def run(self):
         self.is_streaming = True
-        next_t = self.acq_start_ms + self.adjust_rate_ms
-        # sleep only 1 second so the thread can be terminated
-        # in a quicker fashion. if adjust_rate is smaller, then use that
-        sleep_time = min(1_000, self.adjust_rate_ms)
-        while not self._event_halt.is_set():
-            if get_epoch_ms() > next_t:
-                if self.gas_device and self.cdi_reader:
-                    ts, all_vars = self.cdi_reader.get_last_acq()
-                    if all_vars is not None:
-                        cdi_data = CDIData(all_vars)
-                        self.update_gas_on_cdi(cdi_data)
-                    else:
-                        self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
-                next_t += self.adjust_rate_ms
-            else:
-                sleep(sleep_time/1_000)
+        # JWK, this assumes the take to get the data and make the
+        # adjustments is small compared to the adjust rate so timing drift
+        # is small
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            timeout = self.cfg.adjust_rate_ms / 1_000.0
+            if self._event_halt.wait(timeout):
+                break
+            if self.gas_device and self.data_source:
+                ts, all_vars = self.data_source.get_last_acq()
+                if all_vars is not None:
+                    cdi_data = CDIData(all_vars)
+                    self.update_on_input(cdi_data)
+                # else:
+                    # self._lgr.debug(f'{self.name} No CDI data. Cannot run gas mixers automatically')
 
     def start(self):
         self.stop()
         self._event_halt.clear()
-        self.acq_start_ms = get_epoch_ms()
+        self.acq_start_ms = utils.get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'AutoGasMixer {self.name}'
         self.__thread.start()
-        self._lgr.debug(f'AutoGasMixer {self.name} started')
+        self._lgr.info(f'AutoGasMixer {self.name} started')
 
     def stop(self):
         if self.is_streaming:
             self._event_halt.set()
             self.is_streaming = False
-            self._lgr.debug(f'AutoGasMixer {self.name} stopped')
+            self._lgr.info(f'AutoGasMixer {self.name} stopped')
 
-    def update_gas_on_cdi(self, cdi_data):
+    def update_on_input(self, data):
         # this is the base class, so do nothing
-        self._lgr.warning('Attempting to use the base AutoGasMixer class, no adjustment will be made')
+        # This can be used when an automation object needs to be supplied
+        # but no automation is necessary (e.g., panel_gas_mixers)
+        pass
 
 
 class AutoGasMixerVenous(AutoGasMixer):
-    def __init__(self, name: str, gas_device, cdi_reader):
-        super().__init__(name, gas_device, cdi_reader)
-        self.o2_ch = 1
-        self.co2_ch = 2
-        self.o2_adjust = 1  # in %
-        self.flow_adjust = 5
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = VenousAutoGasMixerConfig()
 
-    def update_gas_on_cdi(self, cdi_data):
+    def update_on_input(self, data):
         try:
-            self._update_O2(cdi_data.venous_sO2)
-            self._update_flow(cdi_data.venous_pH)
+            self._update_O2(data.venous_sO2)
+            self._update_flow(data.venous_pH)
         except AttributeError:
-            # this will happen if there is invalid CDI data
+           # this will happen if there is invalid CDI data
             pass
 
     def _update_flow(self, pH: float):
         if pH == -1:
             self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
-        elif pH < self.gas_device.cfg.pH_range[0]:
-            self.gas_device.adjust_flow(self.flow_adjust)
-        elif pH > self.gas_device.cfg.pH_range[1]:
-            self.gas_device.adjust_flow(-self.flow_adjust)
+        elif pH < self.cfg.pH_range[0]:
+            self.gas_device.adjust_flow(self.cfg.flow_adjust)
+            self._lgr.info(f'{self.name} is acidotic, increasing total flow by {self.cfg.flow_adjust}')
+            self._lgr.info(f'Flow updated')
+        elif pH > self.cfg.pH_range[1]:
+            self.gas_device.adjust_flow(-self.cfg.flow_adjust)
+            self._lgr.info(f'{self.name} is alkalotic, decreasing total flow by {self.cfg.flow_adjust}')
+            self._lgr.info(f'Flow updated')
 
     def _update_O2(self, O2: float):
-        o2_adjust = 0
-        o2 = self.gas_device.get_percent_value(self.o2_ch)
+        O2_adjust = 0
 
+        self._lgr.debug(f'O2={O2}, limits={self.cfg.O2_range}')
         if O2 == -1:
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
-        elif O2 < self.gas_device.cfg.O2_range[0]:
-            o2_adjust = self.o2_adjust
-            self._lgr.warning(f'{self.name}: O2 low')
-        elif O2 > self.gas_device.cfg.O2_range[1]:
-            o2_adjust = -self.o2_adjust
-            self._lgr.warning(f'{self.name}: O2 high')
-        new_percent = o2 + o2_adjust
-        if o2_adjust is not 0:
-            self.gas_device.set_percent_value(self.o2_ch, new_percent)
+        elif O2 < self.cfg.O2_range[0]:
+            O2_adjust = self.cfg.O2_adjust
+            self._lgr.info(f'{self.name}: O2 low. Increasing O2 percentage by {O2_adjust}')
+        elif O2 > self.cfg.O2_range[1]:
+            O2_adjust = -self.cfg.O2_adjust
+            self._lgr.warning(f'{self.name}: O2 high. Decreasing O2 percentage by {O2_adjust}')
+        if O2_adjust != 0:
+            new_percent = self.gas_device.get_percent_value(self.cfg.O2_channel) + O2_adjust
+            self.gas_device.set_percent_value(self.cfg.O2_channel, new_percent)
+            self._lgr.debug(f'O2 updated')
 
 
 class AutoGasMixerArterial(AutoGasMixer):
-    def __init__(self, name: str, gas_device, cdi_reader):
-        super().__init__(name, gas_device, cdi_reader)
-        self.o2_ch = 1
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = ArterialAutoGasMixerConfig()
+        self.o2_ch = 1  # is this obsolete?
         self.co2_ch = 2
 
-        self.co2_adjust = 1  # in %
-
-    def update_gas_on_cdi(self, cdi_data):
+    def update_on_input(self, data):
         try:
-            self.update_CO2(cdi_data.arterial_pH, cdi_data.arterial_CO2)
+            self.update_CO2(data.arterial_pH, data.arterial_CO2)
         except AttributeError:
             # this will happen if there is invalid CDI data
             pass
 
     def update_CO2(self, pH: float, CO2: float):
+        self._lgr.debug('update_CO2')
         co2_adjust = 0
-        co2 = self.gas_device.get_percent_value(self.co2_ch)
-
         check_co2 = False
+        self._lgr.debug(f'ph = {pH}, CO2={CO2}, pH limits={self.cfg.pH_range}')
         if pH == -1:
             self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
             check_co2 = True
-        elif pH > self.gas_device.cfg.pH_range[1]:
-            co2_adjust = self.co2_adjust
+        elif pH > self.cfg.pH_range[1]:
+            co2_adjust = self.cfg.CO2_adjust
             self._lgr.warning(f'{self.name}: pH high, blood alkalotic')
-        elif pH < self.gas_device.cfg.pH_range[0]:
-            co2_adjust = -self.co2_adjust
+        elif pH < self.cfg.pH_range[0]:
+            co2_adjust = -self.cfg.CO2_adjust
             self._lgr.warning(f'{self.name}: pH low, blood acidotic')
         else:
             check_co2 = True
 
-        if check_co2 is True:  # only check CO2 is pH checking didn't work - pH more important parameter to monitor
+        # only check CO2 is pH checking didn't work - pH more important parameter to monitor
+        if check_co2 is True:
             if CO2 == -1:
                 self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
             elif CO2 < self.gas_device.cfg.CO2_range[0]:
-                co2_adjust = self.co2_adjust
+                co2_adjust = self.cfg.CO2_adjust
                 self._lgr.warning(f'{self.name}: CO2 low, blood alkalotic')
             elif CO2 > self.gas_device.cfg.CO2_range[1]:
-                co2_adjust = -self.co2_adjust
+                co2_adjust = -self.cfg.CO2_adjust
                 self._lgr.warning(f'{self.name}: CO2 high, blood acidotic')
 
-        new_percent = co2 + co2_adjust
-        if co2_adjust is not 0:
-            self.gas_device.set_percent_value(self.co2_ch, new_percent)
+        if co2_adjust != 0:
+            new_percent = self.gas_device.get_percent_value(self.cfg.CO2_channel) + co2_adjust
+            self.gas_device.set_percent_value(self.cfg.CO2_channel, new_percent)
+            self._lgr.debug(f'CO2 updated')
 

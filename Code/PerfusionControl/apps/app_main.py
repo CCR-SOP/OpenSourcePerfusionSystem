@@ -8,6 +8,7 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
+import threading
 
 import wx
 
@@ -15,15 +16,16 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from apps.app_sensors import SensorFrame
 from apps.app_hardware_control import HardwareFrame
-from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.Sensor import Sensor
+from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class MyMainApp(wx.App):
     def OnInit(self):
-        frame_hw = HardwareFrame(None, wx.ID_ANY, "")
-        frame_sensor = SensorFrame(None, wx.ID_ANY, "")
+        frame_sensor = SensorFrame(SYS_PERFUSION, None, wx.ID_ANY, "")
+        frame_hw = HardwareFrame(SYS_PERFUSION, frame_sensor, wx.ID_ANY, "")
+
         self.SetTopWindow(frame_sensor)
+
         frame_hw.Show()
         frame_sensor.Show()
         return True
@@ -31,15 +33,20 @@ class MyMainApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
-
-    SYS_HW.load_hardware_from_config()
-    SYS_HW.start()
-
-    # Load CDI sensor
-    # cdi_sensor = Sensor(name='CDI')
-    # cdi_sensor.read_config()
+    utils.setup_default_logging('app_main', logging.INFO)
+    SYS_PERFUSION = PerfusionSystem()
+    try:
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyMainApp(0)
     app.MainLoop()
+    SYS_PERFUSION.close()
+    for thread in threading.enumerate():
+        print(thread.name)

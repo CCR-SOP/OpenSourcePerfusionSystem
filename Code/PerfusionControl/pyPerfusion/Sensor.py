@@ -14,49 +14,58 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Thread, Event
-import logging
-import time
 from dataclasses import dataclass, field
-from typing import Protocol, TypeVar, List
+from typing import List
 
 import numpy as np
-import numpy.typing as npt
 
-import pyPerfusion.Strategies as Strategies
-import pyPerfusion.PerfusionConfig as PerfusionConfig
+
 from pyHardware.SystemHardware import SYS_HW
-
-
-class HWProtocol(Protocol):
-    T = TypeVar("T", bound=npt.NBitBase)
-
-    def get_buf_info(self) -> (int, np.dtype):
-        pass
-
-    def get_data(self) -> (np.int32, np.dtype[T]):
-        pass
-
-    def sampling_period_ms(self):
-        pass
+from pyPerfusion.Strategy_ReadWrite import *
+from pyPerfusion.Strategy_Processing import *
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 @dataclass
-class SensorConfig:
-    name: str = ''
-    hw_name: str = ''
+class BaseSensorConfig:
     strategy_names: str = ''
+
+
+@dataclass
+class SensorConfig(BaseSensorConfig):
+    hw_name: str = ''
     units: str = ''
     valid_range: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
-class CalculatedSensorConfig(SensorConfig):
-    samples_per_calc: int = 1
-    sensor_strategy: str = ''
+class ActuatorWriterConfig(BaseSensorConfig):
+    units: str = ''
+    hw_name: str = ''
 
 
 @dataclass
-class DivisionSensorConfig(SensorConfig):
+class GasMixerConfig(BaseSensorConfig):
+    hw_name: str = ''
+
+
+@dataclass
+class SyringeConfig(BaseSensorConfig):
+    hw_name: str = ''
+    target_ul: int = 0
+    rate_ul_per_min: int = 0
+
+
+@dataclass
+class CalculatedSensorConfig(BaseSensorConfig):
+    sensor_name: str = ''
+    sensor_strategy: str = ''
+    samples_per_calc: int = 0
+    units: str = ''
+
+
+@dataclass
+class DivisionSensorConfig(BaseSensorConfig):
     dividend_name: str = ''
     divisor_name: str = ''
     dividend_strategy: str = ''
@@ -66,52 +75,28 @@ class DivisionSensorConfig(SensorConfig):
 
 class Sensor:
     def __init__(self, name: str):
-        self._lgr = logging.getLogger(__name__)
-        self._lgr.info(f'Creating Sensor object {name}')
+        self.name = name
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self._lgr.info(f'Creating {__name__} object {name}')
         self.__thread = None
         self._evt_halt = Event()
+        self._timeout = 0.5
         self.hw = None
 
-        self.cfg = SensorConfig(name=name)
+        self.cfg = SensorConfig()
 
         self._strategies = []
 
     @property
-    def name(self):
-        return self.cfg.name
+    def data_dtype(self):
+        return self.hw.data_dtype
 
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('sensors', self.cfg.name, self.cfg)
+    @property
+    def sampling_period_ms(self):
+        return self.hw.sampling_period_ms
 
-    def read_config(self):
-        self._lgr.debug(f'Reading config for {self.cfg.name}')
-        PerfusionConfig.read_into_dataclass('sensors', self.cfg.name, self.cfg)
-        # update the valid_range attribute to a list of integers
-        # as it will be read in as a list of characters
-        self.cfg.valid_range = [int(x) for x in ''.join(self.cfg.valid_range).split(',')]
-
-        # attach hardware
-        self._lgr.info(f'Attaching hw {self.cfg.hw_name} to {self.cfg.name}')
-        self.hw = SYS_HW.get_hw(self.cfg.hw_name)
-
-        # load strategies
-        self._lgr.debug(f'strategies are {self.cfg.strategy_names}')
-        for name in self.cfg.strategy_names.split(', '):
-            self._lgr.debug(f'Getting strategy {name}')
-            params = PerfusionConfig.read_section('strategies', name)
-            self._lgr.debug(f'Attempting to get algorithm {params["algorithm"]}')
-            try:
-                strategy_class = Strategies.get_class(params['algorithm'])
-                self._lgr.debug(f'Found {strategy_class}')
-                cfg = strategy_class.get_config_type()()
-                self._lgr.debug(f'Config type is {cfg}')
-                PerfusionConfig.read_into_dataclass('strategies', name, cfg)
-                cfg.name = name
-                self._lgr.debug('adding strategy')
-                self.add_strategy(strategy_class(cfg))
-            except AttributeError as e:
-                self._lgr.error(f'Could not create algorithm {params["algorithm"]} for sensor {self.cfg.name}')
-                self._lgr.error(f'Error message is {e}')
+    def get_acq_start_ms(self):
+        return self.hw.get_acq_start_ms()
 
     def add_strategy(self, strategy):
         strategy.open(sensor=self)
@@ -127,26 +112,34 @@ class Sensor:
 
     def get_writer(self, name: str = None):
         if name is None:
-            writer = self._strategies[-1]
+            try:
+                writer = self._strategies[-1]
+            except IndexError as e:
+                self._lgr.error(f'No strategies exist for {name}')
+                self._lgr.exception(e)
+                writer = None
         else:
-            writer = [strategy for strategy in self._strategies if strategy.cfg.name == name]
-            if len(writer) > 0:
-                writer = writer[0]
-            else:
-                return None
+            try:
+                writer = [strategy for strategy in self._strategies if strategy.name == name]
+                if len(writer) > 0:
+                    writer = writer[0]
+                else:
+                    return None
+            except IndexError as e:
+                self._lgr.error(f'No strategies exist for {name}')
+                writer = None
         return writer
 
     def run(self):
-        while not self._evt_halt.is_set():
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            if self._evt_halt.wait(self._timeout):
+                break
             if self.hw is not None:
                 data_buf, t = self.hw.get_data()
                 if data_buf is not None:
-                  buf = data_buf
-                  for strategy in self._strategies:
+                    buf = data_buf
+                    for strategy in self._strategies:
                         buf, t = strategy.process_buffer(buf, t)
-
-                else:
-                   time.sleep(0.5)
 
     def open(self):
         pass
@@ -161,9 +154,9 @@ class Sensor:
             self.stop()
         self._evt_halt.clear()
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'Sensor ({self.cfg.name})'
+        self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
-        self._lgr.debug(f'{self.cfg.name} sensor started')
+        # self._lgr.debug(f'{self.name} sensor started')
 
     def stop(self):
         self._evt_halt.set()
@@ -174,39 +167,88 @@ class Sensor:
 
 class CalculatedSensor(Sensor):
     def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
         super().__init__(name)
-        self.cfg = CalculatedSensorConfig(name=name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = CalculatedSensorConfig()
         self.reader = None
 
+    @property
+    def sampling_period_ms(self):
+        return self.reader.sensor.sampling_period_ms
+
+    @property
+    def data_dtype(self):
+        return self.reader.data_dtype
+
+    def get_acq_start_ms(self):
+        return self.reader.sensor.get_acq_start_ms()
+
+    def add_strategy(self, strategy):
+        # CalculatedSensor won't be fully active until the readers are set
+        # wait until run() to open them
+        self._strategies.append(strategy)
+
     def run(self):
-        while not self._evt_halt.is_set():
+        for strategy in self._strategies:
+            strategy.open(sensor=self)
+
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            if self._evt_halt.wait(self._timeout):
+                break
             t, data_buf = self.reader.get_data_from_last_read(self.cfg.samples_per_calc)
             if data_buf is not None:
                 buf = data_buf
                 for strategy in self._strategies:
                     buf, t = strategy.process_buffer(buf, t)
 
-            else:
-                time.sleep(0.5)
-
 
 class DivisionSensor(Sensor):
     def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
         super().__init__(name)
-        self.cfg = DivisionSensorConfig(name=name)
-        self.reader = None
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = DivisionSensorConfig()
         self.reader_dividend = None
         self.reader_divisor = None
 
+    @property
+    def sampling_period_ms(self):
+        return self.reader_dividend.sensor.sampling_period_ms
+
+    @property
+    def data_dtype(self):
+        return self.reader_dividend.data_dtype
+
+    def get_acq_start_ms(self):
+        return self.reader_dividend.sensor.get_acq_start_ms()
+
+    def add_strategy(self, strategy):
+        # Division won't be fully active until the readers are set
+        # wait until run() to open them
+        self._strategies.append(strategy)
+
     def run(self):
-        while not self._evt_halt.is_set():
+        for strategy in self._strategies:
+            strategy.open(sensor=self)
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            if self._evt_halt.wait(self._timeout):
+                break
             t_f, dividend = self.reader_dividend.get_data_from_last_read(self.cfg.samples_per_calc)
             t_p, divisor = self.reader_divisor.get_data_from_last_read(self.cfg.samples_per_calc)
             if dividend is not None and divisor is not None:
                 buf = np.divide(dividend, divisor)
                 for strategy in self._strategies:
                     buf, t = strategy.process_buffer(buf, t_f)
-            else:
-                time.sleep(0.5)
+
+
+class GasMixerSensor(Sensor):
+    def __init__(self, name):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = GasMixerConfig()
+
+
+class SyringeSensor(Sensor):
+    def __init__(self, name):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = SyringeConfig()

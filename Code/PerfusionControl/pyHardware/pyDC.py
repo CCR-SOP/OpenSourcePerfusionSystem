@@ -15,80 +15,84 @@ the data being written to the analog output channel.
 This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
-import logging
-from time import time_ns
-from dataclasses import dataclass
-from collections import deque
+
+from dataclasses import dataclass, field
+from typing import List
 
 import numpy as np
 
-import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.utils import get_epoch_ms
+import pyPerfusion.utils as utils
+import pyHardware.pyGeneric as pyGeneric
 
-class DCDeviceException(Exception):
+
+class DCDeviceException(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
 @dataclass
 class DCChannelConfig:
-    name: str = 'Channel'
     device: str = ''
     line: int = 0
-    output_volts: float = 0.0
+    flow_range: List = field(default_factory=lambda: [0, 100])
+    cal_pt1_volts: np.float64 = 0.1  # values for pump 3 loaded right now
+    cal_pt1_flow: np.float64 = 0.806
+    cal_pt2_volts: np.float64 = 5
+    cal_pt2_flow: np.float64 = 49.23
 
 
-class DCDevice:
-    def __init__(self):
-        self._lgr = logging.getLogger(__name__)
-        self.cfg = None
-        self._queue = self._queue = deque(maxlen=100)
-        self._buffer = np.zeros(1, dtype=np.float64)
-        self.acq_start_ms = 0
+class DCDevice(pyGeneric.GenericDevice):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.cfg = DCChannelConfig()
+
+        self._buffer = np.zeros(1, dtype=self.data_dtype)
         self.buf_len = 1
-        self.data_type = float
         self.sampling_period_ms = 0
+        self.output_range = [0, 5]
 
     @property
-    def devname(self):
-        return 'dc'
+    def last_value(self):
 
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
+        return self._buffer[0]
 
-    def open(self, cfg: DCChannelConfig):
-        self.cfg = cfg
+    @property
+    def last_flow(self):
+        return self.volts_to_mlpermin(self.last_value)
 
-    def is_open(self):
-        return self.cfg is not None
+    def volts_to_mlpermin(self, volts):
+        ml_per_min = (((volts - self.cfg.cal_pt1_volts) * (self.cfg.cal_pt2_flow - self.cfg.cal_pt1_flow))
+                      / (self.cfg.cal_pt2_volts - self.cfg.cal_pt1_volts)) + self.cfg.cal_pt1_flow
+        return ml_per_min
 
-    def close(self):
-        self.stop()
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.cfg.name, self.cfg)
-
-    def read_config(self, channel_name: str = None):
-        if channel_name is None:
-            channel_name = self.cfg.name
-        PerfusionConfig.read_into_dataclass('hardware', channel_name, self.cfg)
-
-    def start(self):
-        self.acq_start_ms = get_epoch_ms()
+    def mlpermin_to_volts(self, ml_per_min):
+        volts = ((((ml_per_min - self.cfg.cal_pt1_flow)
+                 * (self.cfg.cal_pt2_volts - self.cfg.cal_pt1_volts))
+                 / (self.cfg.cal_pt2_flow - self.cfg.cal_pt1_flow))
+                 + self.cfg.cal_pt1_volts)
+        return volts
 
     def stop(self):
         self.set_output(0)
+        super().stop()
+
+    def set_flow(self, ml_per_min):
+        volts = self.mlpermin_to_volts(ml_per_min)
+        self._lgr.info(f'Setting flow to {ml_per_min} ml/min at {volts} volts')
+        self.set_output(volts)
+
+    def adjust_percent_of_max(self, percent: float):
+        self._lgr.info(f'Adjusting pump speed by {percent}%')
+        adjust = (percent / 100.0) * (self.output_range[1] - self.output_range[0])
+        volts = self.last_value + adjust
+        self.set_output(volts)
 
     def set_output(self, output_volts: float):
+        if output_volts < self.output_range[0]:
+            self._lgr.warning(f'Attempt to set output below {self.output_range[0]}')
+            output_volts = self.output_range[0]
+        elif output_volts > self.output_range[1]:
+            self._lgr.warning(f'Attempt to set output above {self.output_range[1]}')
+            output_volts = self.output_range[1]
+        self._lgr.debug(f'Setting output to {output_volts} V')
         self._buffer[0] = output_volts
-        self._queue.append((self._buffer, get_epoch_ms()))
-
-    def get_data(self):
-        buf = None
-        t = None
-        try:
-            buf, t = self._queue.pop()
-        except IndexError:
-            # this can occur if there are attempts to read data before it has been acquired
-            # this is not unusual, so catch the error but do nothing
-            pass
-        return buf, t
+        self._queue.put((self._buffer, utils.get_epoch_ms()))

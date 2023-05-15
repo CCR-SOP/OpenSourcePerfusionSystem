@@ -9,7 +9,7 @@ import logging
 
 import wx
 
-from pyPerfusion.panel_AI import PanelAI, DEV_LIST
+from gui.panel_AI import PanelAI, DEV_LIST
 from pyHardware.pyAI_NIDAQ import NIDAQ_AI
 from pyPerfusion.SensorStream import SensorStream
 import pyPerfusion.PerfusionConfig as PerfusionConfig
@@ -23,7 +23,7 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         sizer = wx.GridSizer(cols=2)
         utils.setup_stream_logger(logging.getLogger(__name__), logging.DEBUG)
-        utils.configure_matplotlib_logging()
+        utils.disable_matplotlib_logging()
 
         self.acq = NIDAQ_AI(period_ms=100, volts_p2p=5, volts_offset=2.5)
         self.sensors = [

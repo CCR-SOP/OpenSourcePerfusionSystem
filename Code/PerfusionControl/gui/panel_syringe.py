@@ -9,28 +9,28 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-from time import sleep
+
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
-import pyPerfusion.pyPump11Elite as pyPump11Elite
-from pyHardware.SystemHardware import SYS_HW
-from pyPerfusion.Sensor import Sensor
+import pyHardware.pyPump11Elite as pyPump11Elite
+from pyPerfusion.PerfusionSystem import PerfusionSystem
+
+
+BAUD_RATES = ['9600', '38400', '57600', '115200']
 
 
 class PanelSyringe(wx.Panel):
-    def __init__(self, parent, sensor):
-        wx.Panel.__init__(self, parent, -1)
+    def __init__(self, parent, automation):
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
-        self.parent = parent
-        self.sensor = sensor
-        syringe = self.sensor.hw
+        self.automation = automation
 
-        self._panel_cfg = PanelSyringeConfig(self, syringe)
-        self._panel_ctrl = PanelSyringeControls(self, syringe, self.sensor)
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=syringe.name)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self._panel_cfg = PanelSyringeConfig(self, self.automation.device.hw)
+        self._panel_ctrl = PanelSyringeControls(self, self.automation)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
+        self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         self.__do_layout()
         self.__set_bindings()
@@ -40,10 +40,10 @@ class PanelSyringe(wx.Panel):
 
         self.sizer.Add(self._panel_cfg, flags.Proportion(2))
         self.sizer.Add(self._panel_ctrl, flags.Proportion(2))
-        self.sizer.SetSizeHints(self.parent)
+        self.sizer.SetSizeHints(self.GetParent())
+        self.SetAutoLayout(True)
         self.SetSizer(self.sizer)
         self.Layout()
-        self.Fit()
 
     def __set_bindings(self):
         pass
@@ -51,9 +51,8 @@ class PanelSyringe(wx.Panel):
 
 class PanelSyringeConfig(wx.Panel):
     def __init__(self, parent, syringe: pyPump11Elite.Pump11Elite):
-        super().__init__(parent, -1)
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
-        self.parent = parent
         self.syringe = syringe
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -81,29 +80,29 @@ class PanelSyringeConfig(wx.Panel):
     def __do_layout(self):
         flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
 
-        sizer_cfg = wx.GridSizer(cols=2)
-        sizer_cfg.Add(self.label_port, flags)
-        sizer_cfg.Add(self.combo_port, flags)
+        self.sizer_cfg = wx.GridSizer(cols=2)
+        self.sizer_cfg.Add(self.label_port, flags)
+        self.sizer_cfg.Add(self.combo_port, flags)
 
-        sizer_cfg.Add(self.label_baud, flags)
-        sizer_cfg.Add(self.choice_baud, flags)
+        self.sizer_cfg.Add(self.label_baud, flags)
+        self.sizer_cfg.Add(self.choice_baud, flags)
 
-        sizer_cfg.Add(self.btn_open, flags)
-        sizer_cfg.AddSpacer(2)
+        self.sizer_cfg.Add(self.btn_open, flags)
+        self.sizer_cfg.AddSpacer(2)
 
-        sizer_cfg.Add(self.label_manufacturer, flags)
-        sizer_cfg.Add(self.label_sizes, flags)
-        sizer_cfg.Add(self.combo_manufacturer, flags)
-        sizer_cfg.Add(self.combo_sizes, flags)
+        self.sizer_cfg.Add(self.label_manufacturer, flags)
+        self.sizer_cfg.Add(self.label_sizes, flags)
+        self.sizer_cfg.Add(self.combo_manufacturer, flags)
+        self.sizer_cfg.Add(self.combo_sizes, flags)
 
-        # sizer_cfg.Add(self.btn_load_cfg, flags)
-        # sizer_cfg.Add(self.btn_save_cfg, flags)
-        self.sizer.Add(sizer_cfg)
+        # self.sizer_cfg.Add(self.btn_load_cfg, flags)
+        # self.sizer_cfg.Add(self.btn_save_cfg, flags)
+        self.sizer.Add(self.sizer_cfg)
 
-        self.sizer.SetSizeHints(self.parent)
+        self.sizer.SetSizeHints(self.GetParent())
+        self.SetAutoLayout(True)
         self.SetSizer(self.sizer)
         self.Layout()
-        self.Fit()
 
     def __set_bindings(self):
         self.btn_open.Bind(wx.EVT_TOGGLEBUTTON, self.OnOpen)
@@ -114,7 +113,6 @@ class PanelSyringeConfig(wx.Panel):
 
     def OnPortDropDown(self, evt):
         ports = utils.get_avail_com_ports()
-        self._lgr.info(f'Available com ports are {ports}')
         self.combo_port.Set(ports)
 
     def OnManufacturer(self, evt):
@@ -133,7 +131,7 @@ class PanelSyringeConfig(wx.Panel):
         if not self.syringe.is_open():
             self.syringe.cfg.com_port = port
             self.syringe.cfg.baud = baud
-            self.syringe.open(self.syringe.cfg)
+            self.syringe.open()
 
             self.btn_open.SetLabel('Close')
         else:
@@ -166,63 +164,66 @@ class PanelSyringeConfig(wx.Panel):
 
 
 class PanelSyringeControls(wx.Panel):
-    def __init__(self, parent, syringe: pyPump11Elite.Pump11Elite, sensor):
-        super().__init__(parent, -1)
+    def __init__(self, parent, automation):
+        super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
-        self.parent = parent
-        self.syringe = syringe
-        self.sensor = sensor
-        self.reader = self.sensor.get_reader()
+        self.automation = automation
+
         self._inc = 1
         self._vol_inc = 100
 
         font = wx.Font()
         font.SetPointSize(int(12))
+        font_smaller = wx.Font()
+        font_smaller.SetPointSize((int(10)))
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.syringe.name)
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
         static_box.SetFont(font)
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
-        self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc)
+        self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc, initial=int(self.automation.cfg.ul_per_min))
         self.spin_rate.SetFont(font)
-        self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min)')
-        self.label_rate.SetFont(font)
+        self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min):')
+        self.label_rate.SetFont(font_smaller)
         self.btn_basal = wx.ToggleButton(self, label='Start Basal')
-        self.btn_basal.SetFont(font)
+        self.btn_basal.SetFont(font_smaller)
 
-        self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc)
+        self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc, initial=int(self.automation.cfg.volume_ul))
         self.spin_volume.SetFont(font)
-        self.label_volume = wx.StaticText(self, label='Target Volume (ul)')
-        self.label_volume.SetFont(font)
+        self.label_volume = wx.StaticText(self, label='Target Volume (ul):')
+        self.label_volume.SetFont(font_smaller)
         self.btn_bolus = wx.Button(self, label='Bolus')
-        self.btn_bolus.SetFont(font)
+        self.btn_bolus.SetFont(font_smaller)
 
-        # self.btn_save_cfg = wx.Button(self, label='Save')
-        # self.btn_load_cfg = wx.Button(self, label='Load')
+        self.timer_gui_update = wx.Timer(self)
+        self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 5).Center()
+        flags = wx.SizerFlags().Border(wx.ALL, 5).Expand()
 
-        sizer_cfg = wx.GridSizer(cols=3)
+        self.sizer_cfg = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
 
-        sizer_cfg.Add(self.label_rate, flags)
-        sizer_cfg.Add(self.spin_rate, flags)
-        sizer_cfg.Add(self.btn_basal, flags)
+        self.sizer_cfg.Add(self.label_rate, flags)
+        self.sizer_cfg.Add(self.spin_rate, flags)
 
-        sizer_cfg.Add(self.label_volume, flags)
-        sizer_cfg.Add(self.spin_volume, flags)
-        sizer_cfg.Add(self.btn_bolus, flags)
+        self.sizer_cfg.Add(self.label_volume, flags)
+        self.sizer_cfg.Add(self.spin_volume, flags)
 
-        # sizer_cfg.Add(self.btn_save_cfg, flags)
-        # sizer_cfg.Add(self.btn_load_cfg, flags)
+        self.sizer_cfg.Add(self.btn_basal, flags)
+        self.sizer_cfg.Add(self.btn_bolus, flags)
 
+        self.sizer_cfg.AddGrowableCol(0, 2)
+        self.sizer_cfg.AddGrowableCol(1, 1)
+        self.sizer_cfg.AddGrowableRow(0, 1)
+        self.sizer_cfg.AddGrowableRow(1, 1)
+        self.sizer_cfg.AddGrowableRow(2, 1)
 
-        self.sizer.Add(sizer_cfg)
+        self.sizer.Add(self.sizer_cfg)
 
-        self.sizer.SetSizeHints(self.parent)
+        self.sizer.SetSizeHints(self.GetParent())
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
@@ -230,76 +231,77 @@ class PanelSyringeControls(wx.Panel):
     def __set_bindings(self):
         self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
         self.btn_bolus.Bind(wx.EVT_BUTTON, self.OnBolus)
-        # self.btn_save_cfg.Bind(wx.EVT_BUTTON, self.on_save_cfg)
-        # self.btn_load_cfg.Bind(wx.EVT_BUTTON, self.on_load_cfg)
-
+        self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnBasal(self, evt):
         infusion_rate = self.spin_rate.GetValue()
-        if self.syringe.is_infusing:
-            self.syringe.set_target_volume(0)
+        sensor = self.automation.device
+        if sensor.hw.is_infusing:
+            sensor.hw.set_target_volume(0)
             self.btn_basal.SetLabel('Start Basal')
             self.btn_basal.SetValue(True)
-            self.syringe.stop()
+            sensor.hw.stop()
             self._lgr.info(f'Basal syringe infusion halted')
         else:
-            self.syringe.set_infusion_rate(infusion_rate)
-            self.syringe.set_target_volume(0)
-            # self._lgr.debug(f'Infusion rate: {infusion_rate}')
-            # self._lgr.debug(f'Target volume: {0}')
-            self.syringe.start_constant_infusion()
+            sensor.hw.set_infusion_rate(infusion_rate)
+            sensor.hw.set_target_volume(0)
+            sensor.hw.start_constant_infusion()
             self.btn_basal.SetLabel('Stop Basal')
             self.btn_basal.SetValue(False)
             self._lgr.info(f'Basal syringe infusion at rate {infusion_rate} uL/min started')
 
     def OnBolus(self, evt):
+        sensor = self.automation.device
         infusion_rate = self.spin_rate.GetValue()
         target_vol = self.spin_volume.GetValue()
-        self.syringe.set_infusion_rate(infusion_rate)
-        self.syringe.set_target_volume(target_vol)
-        self.syringe.infuse_to_target_volume()
+        sensor.hw.set_infusion_rate(infusion_rate)
+        sensor.hw.set_target_volume(target_vol)
+        sensor.hw.infuse_to_target_volume()
+        self.btn_basal.SetLabel('Stop Bolus')
+        self._lgr.info(f'Bolus syringe infusion at rate {infusion_rate} uL/min to target volume {target_vol} started')
 
-        sleep(1)
-        ts, last_samples = self.reader.retrieve_buffer(5000, 5)
-        for ts, samples in zip(ts, last_samples):
-            self._lgr.info(f' At time {ts}, {self.sensor.name} infused a bolus at rate {samples[0]} uL/min with '
-                           f'target volume of {samples[1]} uL')
+    def update_controls_from_hardware(self, evt=None):
+        enable = not self.automation.device.hw.is_infusing
+        self.btn_bolus.Enable(enable)
 
     def update_config_from_controls(self):
-        self.syringe.cfg.initial_injection_rate = int(self.spin_rate.GetValue())
-        self.syringe.cfg.initial_target_volume = int(self.spin_volume.GetValue())
+        self.automation.cfg.ul_per_min = int(self.spin_rate.GetValue())
+        self.automation.cfg.volume_ul = int(self.spin_volume.GetValue())
 
     def update_controls_from_config(self):
-        self._lgr.debug(f'config is {self.syringe.cfg}')
-        self.spin_volume.SetValue(self.syringe.cfg.initial_target_volume)
-        self.spin_rate.SetValue(self.syringe.cfg.initial_injection_rate)
+        self.spin_volume.SetValue(self.automation.cfg.volume_ul)
+        self.spin_rate.SetValue(self.automation.cfg.ul_per_min)
 
     def on_save_cfg(self, evt):
         self.update_config_from_controls()
-        self.syringe.write_config()
+        self.automation.device.hw.write_config()
 
     def on_load_cfg(self, evt):
-        self.syringe.read_config()
+        self.automation.device.hw.read_config()
         self.update_controls_from_config()
+
+    def OnClose(self, evt):
+        self.timer_gui_update.Stop()
+        self.automation.device.hw.stop()
 
 
 class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
-        kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
-        wx.Frame.__init__(self, *args, **kwds)
+        super().__init__(*args, **kwds)
 
-        self.panel = PanelSyringe(self, trial_sensor)
-        self.trial_sensor = trial_sensor
+        automation = SYS_PERFUSION.get_automation('Phenylephrine Automation')
+        self.panel = PanelSyringe(self, automation)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        SYS_HW.stop()
-        self.trial_sensor.stop()
+        self.panel.Close()
         self.Destroy()
+
 
 class MyTestApp(wx.App):
     def OnInit(self):
-        frame = TestFrame(None, wx.ID_ANY, "")
+        frame = TestFrame(None)
         self.SetTopWindow(frame)
         frame.Show()
         return True
@@ -307,21 +309,19 @@ class MyTestApp(wx.App):
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
-    utils.setup_stream_logger(logging.getLogger(), logging.DEBUG)
-    utils.configure_matplotlib_logging()
+    utils.setup_default_logging('panel_syringe', logging.DEBUG)
 
-    SYS_HW.load_hardware_from_config()
-
-    name = 'Insulin'
+    SYS_PERFUSION = PerfusionSystem()
     try:
-        trial_sensor = Sensor(name=name)
-        trial_sensor.read_config()
-        trial_sensor.start()
-    except PerfusionConfig.MissingConfigSection:
-        print(f'Could not find sensor called {name} in sensors.ini')
-        SYS_HW.stop()
-        exit()
-        trial_sensor = None
+        SYS_PERFUSION.open()
+        SYS_PERFUSION.load_all()
+        SYS_PERFUSION.load_automations()
+    except Exception as e:
+        # if anything goes wrong loading the perfusion system
+        # close the hardware and exit the program
+        SYS_PERFUSION.close()
+        raise e
 
     app = MyTestApp(0)
     app.MainLoop()
+    SYS_PERFUSION.close()

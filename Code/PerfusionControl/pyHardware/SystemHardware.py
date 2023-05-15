@@ -8,220 +8,137 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 import logging
-import time
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-import pyHardware.pyAI as pyAI
-import serial.serialutil
-from pyHardware.pyAI_NIDAQ import NIDAQAIDevice, AINIDAQDeviceConfig
-import pyPerfusion.pyCDI as pyCDI
-import pyPerfusion.pyPump11Elite as pyPump11Elite
-import pyHardware.pyGB100 as pyGB100
+import pyPerfusion.utils as utils
+import pyHardware.pyGeneric as pyGeneric
+from pyHardware.pyAI import AIDevice, AIChannel, AIDeviceException
+from pyHardware.pyAI_NIDAQ import NIDAQAIDevice
+from pyHardware.pyCDI import CDI, MockCDI
+from pyHardware.pyPump11Elite import Pump11Elite, MockPump11Elite
+from pyHardware.pyGB100 import GasDevice, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
-import pyHardware.pyDC as pyDC
+from pyHardware.pyDC import DCDevice
+
+MOCKS = {'NIDAQAIDevice': 'AIDevice',
+         'CDI': 'MockCDI',
+         'Pump11Elite': 'MockPump11Elite',
+         'GasDevice': 'MockGasDevice',
+         'NIDAQDCDevice': 'DCDevice'}
+
+
+lgr = logging.getLogger('pyHardware.SystemHardware')
+
+
+def get_object(name: str):
+
+    params = {}
+    obj = None
+    try:
+        params = PerfusionConfig.read_section('hardware', name)
+    except KeyError:
+        lgr.error(f'Could not find {name} in hardware.ini')
+        return None
+
+    try:
+        class_name = params['class']
+    except KeyError:
+        lgr.error(f'could not find key class in section {name}')
+        lgr.error(params)
+        return None
+
+    try:
+        lgr.debug(f'Attempting to get {class_name}')
+        class_ = globals().get(class_name, None)
+        lgr.debug(f'got {class_}')
+    except KeyError:
+        lgr.error(f'Class {class_name} was not imported in SystemHardware')
+        return None
+
+    if class_ is None:
+        lgr.error(f'Could not get object for {class_name}')
+    obj = class_(name=name)
+
+    return obj
+
+
+def get_mock(name: str):
+    params = PerfusionConfig.read_section('hardware', name)
+    if params:
+        mock_name = MOCKS[params['class']]
+    else:
+        return None
+
+    try:
+        class_ = globals().get(mock_name, None)
+    except KeyError:
+        class_ = None
+
+    if class_ is not None:
+        obj = class_(name=name)
+    else:
+        lgr.error(f'class {params["class"]} doesnt exist')
+        obj = None
+    return obj
 
 
 class SystemHardware:
-    def __init__(self):
-        self._lgr = logging.getLogger(__name__)
-        self.mocks_enabled = False
-
-        self.ni_dev1 = NIDAQAIDevice()
-        self.ni_dev2 = NIDAQAIDevice()
-
-        self.syringes = []
-
-        self.ha_mixer = None
-        self.pv_mixer = None
-
-        self.dialysate_outflow = None
-        self.glucose_circuit = None
-        self.dialysate_inflow = None
-        self.dialysis_blood = None
-
-        self.cdi = None
-
-        self.mock_device = None
-        self.mock_cdi = None
-        self.mock_syringe = None
-        self.mock_ha_mixer = None
-        self.mock_pv_mixer = None
-
-
-    def load_hardware_from_config(self):
-        try:
-            self.ni_dev1.cfg = AINIDAQDeviceConfig(name='Dev1')
-            self.ni_dev1.read_config()
-            self.ni_dev2.cfg = AINIDAQDeviceConfig(name='Dev2')
-            self.ni_dev2.read_config()
-        except pyAI.AIDeviceException as e:
-            self._lgr.error(e)
-
-        try:
-            self.ha_mixer = pyGB100.GasDevice(name='Arterial Gas Mixer')
-            self.ha_mixer.read_config()
-        except Exception as e:
-            self._lgr.error(f'Error trying to create {self.ha_mixer.name}')
-            self._lgr.error(f'GasDevice exception: {e}')
-
-        try:
-            self.pv_mixer = pyGB100.GasDevice(name='Venous Gas Mixer')
-            self.pv_mixer.read_config()
-        except Exception as e:
-            self._lgr.error(f'Error trying to create {self.pv_mixer.name}')
-            self._lgr.error(f'GasDevice exception: {e}')
-
-        try:
-            self.cdi = pyCDI.CDIStreaming(name='CDI')
-            self.cdi.read_config()
-        except Exception as e:
-            self._lgr.error('Error trying to create CDI')
-            self._lgr.error(f'CDI exception: {e}')
-
-        try:
-            self.dialysate_inflow = NIDAQDCDevice()
-            self.dialysate_inflow.cfg = pyDC.DCChannelConfig(name='Dialysate Inflow Pump')
-            self.dialysate_inflow.read_config()
-
-            self.dialysate_outflow = NIDAQDCDevice()
-            self.dialysate_outflow.cfg = pyDC.DCChannelConfig(name='Dialysate Outflow Pump')
-            self.dialysate_outflow.read_config()
-
-            self.dialysis_blood = NIDAQDCDevice()
-            self.dialysis_blood.cfg = pyDC.DCChannelConfig(name='Dialysis Blood Pump')
-            self.dialysis_blood.read_config()
-
-            self.glucose_circuit = NIDAQDCDevice()
-            self.glucose_circuit.cfg = pyDC.DCChannelConfig(name='Glucose Circuit Pump')
-            self.glucose_circuit.read_config()
-        except pyDC.DCDeviceException as e:
-            self._lgr.error(e)
-
-        all_syringe_names = PerfusionConfig.get_section_names('syringes')
-        real_syringe_names = all_syringe_names[1:]
-        # self._lgr.debug(f' Excluding mock: {real_syringe_names}')
-        for name in real_syringe_names:
-            syringe = pyPump11Elite.Pump11Elite(name=name)
-            syringe.read_config()
-            self._lgr.debug(f'read syringe {name}: {syringe}')
-            self.syringes.append(syringe)
-
-
-    def load_mocks(self):
+    def __init__(self, name: str = "Standard"):
+        self.name = name
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        PerfusionConfig.MASTER_HALT.clear()
         self.mocks_enabled = True
-        self.mock_device = pyAI.AIDevice()
-        self.mock_cdi = pyCDI.MockCDI('mock_cdi')
-        self.mock_syringe = pyPump11Elite.MockPump11Elite(name='mock_syringe')
 
-        self.mock_device.cfg = pyAI.AIDeviceConfig(name='FakeEvents')
-        self.mock_device.read_config()
-        self.mock_cdi.cfg = pyCDI.CDIConfig(name='mock_cdi')
-        self.mock_cdi.read_config()
-        self.mock_syringe.cfg = pyPump11Elite.SyringeConfig(name='mock_syringe')
-        self.mock_syringe.read_config()
+        self.hw = {}
 
-        self.mock_ha_mixer = pyGB100.GasDevice(name='Arterial Gas Mixer')
-        self.mock_ha_mixer.hw = pyGB100.MockGB100()
-        self.mock_pv_mixer = pyGB100.GasDevice(name='Venous Gas Mixer')
-        self.mock_pv_mixer.hw = pyGB100.MockGB100()
+    def load_all(self):
+        self._lgr.info('loading all hardware')
+        all_names = PerfusionConfig.get_section_names('hardware')
+        for name in all_names:
+            self.load(name)
+
+    def load(self, name: str):
+        self.hw[name] = get_object(name)
+        try:
+            self.hw[name].read_config()
+            self._lgr.debug(f'cfg is {self.hw[name].cfg}')
+        except pyGeneric.HardwareException as e:
+            self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
+            self._lgr.info(f'Loading mock for {name}')
+
+            self.hw[name] = get_mock(name)
+            self.hw[name].read_config()
+
+        if isinstance(self.hw[name], NIDAQAIDevice) or isinstance(self.hw[name], AIDevice):
+            for ch in self.hw[name].ai_channels:
+                self.hw[ch.name] = ch
 
     def start(self):
+        self._lgr.info('starting all hardware')
+        PerfusionConfig.MASTER_HALT.clear()
+
         try:
-            self.ni_dev1.start()
-            self.ni_dev2.start()
-        except pyAI.AIDeviceException as e:
+            for name, device in self.hw.items():
+                if type(device) != AIChannel:
+                    self._lgr.debug(f'Starting {name}')
+                    device.start()
+        except AIDeviceException as e:
+            self._lgr.debug('Exception caught')
             self._lgr.error(e)
-        for syringe in self.syringes:
-            syringe.start()
-
-        if self.cdi:
-            self.cdi.start()
-
-        if self.ha_mixer:
-            self.ha_mixer.start()
-        if self.pv_mixer:
-            self.pv_mixer.start()
-
-        if self.mocks_enabled:
-            self.mock_device.start()
-            self.mock_cdi.start()
-            self.mock_syringe.start()
-            self.mock_ha_mixer.start()
-            self.mock_pv_mixer.start()
 
     def stop(self):
-        try:
-            self.ni_dev1.stop()
-            self.ni_dev2.stop()
-        except pyAI.AIDeviceException as e:
-            self._lgr.error(e)
+        PerfusionConfig.MASTER_HALT.set()
 
         try:
-            self.glucose_circuit.stop()
-            self.dialysate_inflow.stop()
-            self.dialysate_outflow.stop()
-            self.dialysis_blood.stop()
-
-        except pyDC.DCDeviceException as e:
+            for name, device in self.hw.items():
+                if type(device) != AIChannel:
+                    device.stop()
+        except AIDeviceException as e:
             self._lgr.error(e)
-
-        for syringe in self.syringes:
-            syringe.stop()
-
-        if self.cdi:
-            self.cdi.stop()
-
-        if self.ha_mixer:
-            self.ha_mixer.stop()
-        if self.pv_mixer:
-            self.pv_mixer.stop()
-            
-        if self.mocks_enabled:
-            self.mock_device.stop()
-            self.mock_cdi.stop()
-            self.mock_syringe.stop()
-            self.mock_ha_mixer.stop()
-            self.mock_pv_mixer.stop()
+        self._lgr.info('all hardware stopped')
 
     def get_hw(self, name: str = None):
-        self._lgr.debug(f'Getting hardware named: {name}')
-        hw = None
-        if hw is None:
-            if name == 'Glucose Circuit Pump':
-                hw = self.glucose_circuit
-            elif name == 'Dialysate Inflow Pump':
-                hw = self.dialysate_inflow
-            elif name == 'Dialysate Outflow Pump':
-                hw = self.dialysate_outflow
-            elif name == 'Dialysis Blood Pump':
-                hw = self.dialysis_blood
-            elif name == 'Arterial Gas Mixer':
-                hw = self.ha_mixer
-            elif name == 'Venous Gas Mixer':
-                hw = self.pv_mixer
-            elif name == 'CDI':
-                hw = self.cdi
-        if hw is None:
-            hw = self.ni_dev1.ai_channels.get(name, None)
-        if hw is None:
-            hw = self.ni_dev2.ai_channels.get(name, None)
-        if hw is None:
-            hw = next((syringe for syringe in self.syringes if syringe.name == name), None)
-
-        if self.mocks_enabled:
-            if hw is None and self.mock_device is not None:
-                hw = self.mock_device.ai_channels.get(name, None)
-            if hw is None:
-                if name == "mock_cdi":
-                    hw = self.mock_cdi
-                elif name == "mock_syringe":
-                    hw = self.mock_syringe
-                elif name == "mock_ha_mixer":
-                    hw = self.mock_ha_mixer
-                elif name == "mock_pv_mixer":
-                    hw = self.mock_pv_mixer
-
-        self._lgr.debug(f'Found {hw}')
+        hw = self.hw.get(name, None)
         return hw
 
 
