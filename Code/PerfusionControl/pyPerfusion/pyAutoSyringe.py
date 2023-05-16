@@ -111,7 +111,7 @@ class AutoSyringe:
         if self.is_streaming:
             self._event_halt.set()
             self.is_streaming = False
-            self._lgr.debug(f'{__name__} {self.name} stopped')
+            self._lgr.info(f'{__name__} {self.name} stopped')
 
     def update_on_input(self, data):
         # this is the base class, so do nothing
@@ -167,7 +167,10 @@ class AutoSyringeEpo(AutoSyringe):
         self._lgr.warning(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
         if pressure > self.cfg.pressure_level_mmHg:  # dilates, decreases pressure
             self._inject(self.cfg.ul_per_min)
-            self._lgr.debug(f'Epo injection set to {self.cfg.ul_per_min}')
+            self._lgr.info(f'Epo injection set to {self.cfg.ul_per_min}')
+        elif pressure < self.cfg.pressure_level_mmHg:
+            self.stop()
+            self._lgr.info(f'Epo injection stopped')
 
 
 class AutoSyringePhenyl(AutoSyringe):
@@ -177,10 +180,13 @@ class AutoSyringePhenyl(AutoSyringe):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, pressure):
-        self._lgr.debug(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
+        self._lgr.warning(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
         if pressure < self.cfg.pressure_level_mmHg:  # constricts, increase pressure
             self._inject(self.cfg.ul_per_min)
-            self._lgr.debug(f'Phenyl injection set to {self.cfg.ul_per_min}')
+            self._lgr.info(f'Phenyl injection set to {self.cfg.ul_per_min}')
+        elif pressure > self.cfg.pressure_level_mmHg:
+            self.stop()
+            self._lgr.info(f'Phenyl injection stopped')
 
 
 class SyringeTPN(AutoSyringe):
