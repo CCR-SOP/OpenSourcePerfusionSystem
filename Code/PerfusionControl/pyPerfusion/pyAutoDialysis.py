@@ -106,7 +106,7 @@ class AutoDialysisInflow(AutoDialysis):
 
     def update_on_input(self, cdi_data):
         try:
-            self._update_speed(cdi_data.hct)
+            self._update_speed(cdi_data.K)
         except AttributeError:
             # this will happen if there is invalid CDI data
             pass
@@ -116,10 +116,10 @@ class AutoDialysisInflow(AutoDialysis):
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
         elif K < self.cfg.K_range[0]:
             self._lgr.info(f'K ({K}) below min of {self.cfg.K_range[0]}')
-            self.pump.hw.adjust_percent_of_max(self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(self.cfg.adjust_percent/10)
         elif K > self.cfg.K_range[1]:
             self._lgr.info(f'K ({K}) above max of {self.cfg.K_range[1]}')
-            self.pump.hw.adjust_percent_of_max(-self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(-self.cfg.adjust_percent/10)  # stephie make this better later
 
 
 class AutoDialysisOutflow(AutoDialysis):

@@ -127,11 +127,9 @@ class AutoGasMixerVenous(AutoGasMixer):
         elif pH < self.cfg.pH_range[0]:
             self.gas_device.adjust_flow(self.cfg.flow_adjust)
             self._lgr.info(f'{self.name} is acidotic, increasing total flow by {self.cfg.flow_adjust}')
-            self._lgr.info(f'Flow updated')
         elif pH > self.cfg.pH_range[1]:
             self.gas_device.adjust_flow(-self.cfg.flow_adjust)
             self._lgr.info(f'{self.name} is alkalotic, decreasing total flow by {self.cfg.flow_adjust}')
-            self._lgr.info(f'Flow updated')
 
     def _update_O2(self, O2: float):
         O2_adjust = 0
@@ -167,6 +165,7 @@ class AutoGasMixerArterial(AutoGasMixer):
             pass
 
     def update_CO2(self, pH: float, CO2: float):
+        # update logic to adjust total flow for pH ranges 7.15 - 7.55 and to add CO2 if above 7.55 for temp time and then turn off
         self._lgr.debug('update_CO2')
         co2_adjust = 0
         check_co2 = False
@@ -175,13 +174,16 @@ class AutoGasMixerArterial(AutoGasMixer):
             self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
             check_co2 = True
         elif pH > self.cfg.pH_range[1]:
-            co2_adjust = self.cfg.CO2_adjust
-            self._lgr.warning(f'{self.name}: pH high, blood alkalotic')
+            # co2_adjust = self.cfg.CO2_adjust
+            self.gas_device.adjust_flow(-self.cfg.flow_adjust)
+            self._lgr.info(f'{self.name} is alkalotic, decreasing total flow by {self.cfg.flow_adjust}')
         elif pH < self.cfg.pH_range[0]:
-            co2_adjust = -self.cfg.CO2_adjust
-            self._lgr.warning(f'{self.name}: pH low, blood acidotic')
+            # co2_adjust = -self.cfg.CO2_adjust
+            self.gas_device.adjust_flow(self.cfg.flow_adjust)
+            self._lgr.info(f'{self.name} is acidotic, increasing total flow by {self.cfg.flow_adjust}')
         else:
-            check_co2 = True
+           pass
+           # check_co2 = True
 
         # only check CO2 is pH checking didn't work - pH more important parameter to monitor
         if check_co2 is True:
