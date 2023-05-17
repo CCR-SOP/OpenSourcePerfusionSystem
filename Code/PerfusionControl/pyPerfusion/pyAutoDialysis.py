@@ -116,10 +116,10 @@ class AutoDialysisInflow(AutoDialysis):
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
         elif K < self.cfg.K_range[0]:
             self._lgr.info(f'K ({K}) below min of {self.cfg.K_range[0]}')
-            self.pump.hw.adjust_percent_of_max(self.cfg.adjust_percent/10)
+            self.pump.hw.adjust_percent_of_max(-0.5)  # self.cfg.adjust_percent/10)
         elif K > self.cfg.K_range[1]:
             self._lgr.info(f'K ({K}) above max of {self.cfg.K_range[1]}')
-            self.pump.hw.adjust_percent_of_max(-self.cfg.adjust_percent/10)  # stephie make this better later
+            self.pump.hw.adjust_percent_of_max(0.5)  # self.cfg.adjust_percent/10)  # TODO: stephie make this better later
 
 
 class AutoDialysisOutflow(AutoDialysis):
@@ -141,16 +141,16 @@ class AutoDialysisOutflow(AutoDialysis):
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
         elif K < self.cfg.K_range[0]:
             self._lgr.info(f'K ({K}) below min of {self.cfg.K_range[0]}')
-            self.pump.hw.adjust_percent_of_max(self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(-0.5)
         elif K > self.cfg.K_range[1]:
             self._lgr.info(f'K ({K}) above max of {self.cfg.K_range[1]}')
-            self.pump.hw.adjust_percent_of_max(-self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(0.5)  # TODO: fix
 
         if hct == -1:
             self._lgr.warning(f'{self.name} hct is out of range. Cannot be adjusted automatically')
         elif hct < self.cfg.hct_range[0]:
             self._lgr.info(f'hct ({hct}) below min of {self.cfg.hct_range[0]}')
-            self.pump.hw.adjust_percent_of_max(self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(0.5)
         elif hct > self.cfg.hct_range[1]:
             self._lgr.info(f'hct ({hct}) above max of {self.cfg.hct_range[1]}')
-            self.pump.hw.adjust_percent_of_max(-self.cfg.adjust_percent)
+            self.pump.hw.adjust_percent_of_max(-0.5)
