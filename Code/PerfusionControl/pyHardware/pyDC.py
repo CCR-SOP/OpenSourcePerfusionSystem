@@ -81,10 +81,10 @@ class DCDevice(pyGeneric.GenericDevice):
         self.set_output(volts)
 
     def adjust_percent_of_max(self, flow_adjust: float):  # rename - do not use percentages
-        self._lgr.info(f'Adjusting pump speed by flow_adjust')
         adjust = flow_adjust
-        volts = self.last_value + adjust
-        if volts <= 1.5: # do not let automation exceed 15 mL/min
+        volts = self.last_value + adjust/10
+        self._lgr.info(f'Adjusting pump speed by {flow_adjust} and volts are {volts}')
+        if 0.05 <= volts <= 1:  # do not let automation exceed 10 mL/min
             self.set_output(volts)
 
     def set_output(self, output_volts: float):

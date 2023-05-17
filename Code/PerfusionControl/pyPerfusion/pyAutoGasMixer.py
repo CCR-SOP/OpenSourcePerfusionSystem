@@ -139,14 +139,14 @@ class AutoGasMixerVenous(AutoGasMixer):
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
         elif O2 < self.cfg.O2_range[0]:
             O2_adjust = self.cfg.O2_adjust
-            self._lgr.info(f'{self.name}: O2 low. Increasing O2 percentage by {O2_adjust}')
+            self._lgr.info(f'{self.name}: O2 low. Increasing O2 percentage by {O2_adjust}%')
         elif O2 > self.cfg.O2_range[1]:
             O2_adjust = -self.cfg.O2_adjust
-            self._lgr.warning(f'{self.name}: O2 high. Decreasing O2 percentage by {O2_adjust}')
+            self._lgr.warning(f'{self.name}: O2 high. Decreasing O2 percentage by {O2_adjust}%')
         if O2_adjust != 0:
             new_percent = self.gas_device.get_percent_value(self.cfg.O2_channel) + O2_adjust
-            self.gas_device.set_percent_value(self.cfg.O2_channel, new_percent)
-            self._lgr.debug(f'O2 updated')
+            self.gas_device.set_percent_value(2, 100-new_percent)  # only adjust channel 2
+            self._lgr.info(f'O2 updated to {new_percent}')
 
 
 class AutoGasMixerArterial(AutoGasMixer):
