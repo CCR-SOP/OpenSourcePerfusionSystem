@@ -25,19 +25,24 @@ class DialysisPumpPanel(wx.Panel):
         font = wx.Font()
         font.SetPointSize(int(16))
 
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.static_box.SetFont(font)
 
-        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
-        flagsExpand = wx.SizerFlags(1)
-        flagsExpand.Expand().Border(wx.ALL, 5)
-        self.sizer = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
+        # self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
+        self.gridsizer = wx.GridSizer(rows=2, cols=2, vgap=5, hgap=5)
 
         self.panels = []
+        self.configs = []
         for automation in automations:
             panel = PanelDC(self, automation.pump)
-            self.sizer.Add(panel, proportion=1, flag=wx.ALL | wx.EXPAND, border=1)
             self.panels.append(panel)
+            if automation.name == 'Dialysate Inflow Automation':
+                self.configs.append(DialysateInflowConfig(self, automation))
+            elif automation.name == 'Dialysate Outflow Automation':
+                self.configs.append(DialysateOutflowConfig(self, automation))
+            elif automation.name == 'Dialysis Blood Automation':
+                self.configs.append(DialysisBloodConfig(self, automation))
 
         # Add log
         log_names = []
@@ -45,13 +50,11 @@ class DialysisPumpPanel(wx.Panel):
             log_names.append(automation.pump.name)
         log_names.append('AutoDialysis')
         self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
-        self.sizer.Add(self.text_log_roller_pumps, flagsExpand)
 
         # Add auto start button
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
         self.btn_auto_dialysis.SetFont(font)
         self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
-        self.sizer.Add(self.btn_auto_dialysis, flagsExpand)
 
         self.__do_layout()
         self.__set_bindings()
@@ -62,20 +65,32 @@ class DialysisPumpPanel(wx.Panel):
         super().Close()
 
     def __do_layout(self):
-        self.sizer.AddGrowableRow(0, 3)
-        self.sizer.AddGrowableRow(1, 3)
-        self.sizer.AddGrowableRow(2, 1)
-        self.sizer.AddGrowableCol(0, 1)
-        self.sizer.AddGrowableCol(1, 1)
+        flags = wx.SizerFlags().Expand().Border(wx.ALL, 1)
+
+        configsizer = wx.BoxSizer(wx.HORIZONTAL)
+        for config in self.configs:
+            configsizer.Add(config, flags)
+
+        for idx, panel in enumerate(self.panels):
+            self.gridsizer.Add(panel, flags=flags)
+        self.gridsizer.Add(self.btn_auto_dialysis, flags)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(configsizer, flags=flags.Proportion(0))
+        sizer.Add(self.text_log_roller_pumps, flags=flags.Proportion(2))
+
+        self.sizer.Add(self.gridsizer, flags=flags.Proportion(1))
+        self.sizer.Add(sizer, flags=flags)
 
         self.sizer.SetSizeHints(self.GetParent())
-        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
-        self.SetSizer(self.wrapper)
+        self.SetSizer(self.sizer)
         self.Fit()
         self.Layout()
 
     def __set_bindings(self):
         self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
+        for pane in self.configs:
+            pane.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
@@ -92,6 +107,112 @@ class DialysisPumpPanel(wx.Panel):
                 automation.stop()
             for panel in self.panels:
                 panel.panel_dc.entered_offset.Enable(True)
+
+    def on_pane_changed(self, evt):
+        self.sizer.Layout()
+        self.Layout()
+
+
+class AutomationConfig(wx.CollapsiblePane):
+    def __init__(self, parent, automation):
+        super().__init__(parent, label=automation.name)
+        self._lgr = logging.getLogger(__name__)
+        self.automation = automation
+
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.label_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.spin_sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.btn_update = wx.Button(self.GetPane(), label='Update Automation')
+        self.btn_load = wx.Button(self.GetPane(), label='Load From Config')
+        self.btn_save = wx.Button(self.GetPane(), label='Save From Config')
+
+        self.labels = {}
+        self.spins = {}
+
+        self.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60*1_000, 60*60*1_000))
+        self.add_var('adjust_percent', 'Flow Adjust (ml/min)', (0, 1, 100))
+
+    def add_var(self, config_name, lbl_name, limits, decimal_places=0):
+        self.labels[config_name] = wx.StaticText(self.GetPane(), label=lbl_name)
+        self.spins[config_name] = wx.SpinCtrlDouble(self.GetPane(),
+                                                    min=limits[0], max=limits[2], inc=limits[1],
+                                                    initial=getattr(self.automation.cfg, config_name))
+        self.spins[config_name].SetDigits(decimal_places)
+
+    def add_range(self, config_name, lbl_name, limits, decimal_places=0):
+        cfg_name = f'{config_name}_min'
+        self.labels[cfg_name] = wx.StaticText(self.GetPane(), label=f'{lbl_name} min')
+        self.spins[cfg_name] = wx.SpinCtrlDouble(self.GetPane(),
+                                                 min=limits[0], max=limits[2], inc=limits[1],
+                                                 initial=getattr(self.automation.cfg, config_name)[0])
+        self.spins[cfg_name].SetDigits(decimal_places)
+
+        cfg_name = f'{config_name}_max'
+        self.labels[cfg_name] = wx.StaticText(self.GetPane(), label=f'{lbl_name} max')
+        self.spins[cfg_name] = wx.SpinCtrlDouble(self.GetPane(),
+                                                 min=limits[0], max=limits[2], inc=limits[1],
+                                                 initial=getattr(self.automation.cfg, config_name)[1])
+        self.spins[cfg_name].SetDigits(decimal_places)
+
+    def do_layout(self):
+        flags = wx.SizerFlags(1).Expand().Border(wx.ALL, 2)
+        for label in self.labels.values():
+            self.label_sizer.Add(label, flags)
+
+        for spin in self.spins.values():
+            self.spin_sizer.Add(spin, flags)
+
+        self.sizer.Add(self.label_sizer, flags)
+        self.sizer.Add(self.spin_sizer, flags)
+
+        btnsizer = wx.BoxSizer(wx.HORIZONTAL)
+        btnsizer.Add(self.btn_update, flags)
+        btnsizer.Add(self.btn_load, flags)
+        btnsizer.Add(self.btn_save, flags)
+        self.sizer.Add(btnsizer, flags)
+
+        self.sizer.SetSizeHints(self.GetParent())
+        self.GetPane().SetSizer(self.sizer)
+        self.Fit()
+        self.Layout()
+
+    def set_bindings(self):
+        pass
+
+
+class DialysateInflowConfig(AutomationConfig):
+    def __init__(self, parent, automation):
+        super().__init__(parent, automation)
+        self._lgr = logging.getLogger(__name__)
+
+        self.add_range('K_range', 'K', limits=(0, 1, 10))
+
+        self.do_layout()
+        self.set_bindings()
+
+    def set_bindings(self):
+        pass
+
+
+class DialysateOutflowConfig(AutomationConfig):
+    def __init__(self, parent, automation):
+        super().__init__(parent, automation)
+
+        self.add_range('K_range', 'K', limits=(0, 1, 10))
+        self.add_range('hct_range', 'hct', limits=(0, 1, 100))
+
+        self.do_layout()
+        self.set_bindings()
+
+    def __set_bindings(self):
+        pass
+
+
+class DialysisBloodConfig(AutomationConfig):
+    def __init__(self, parent, automation):
+        super().__init__(parent, automation)
+        self.do_layout()
 
 
 class TestFrame(wx.Frame):
