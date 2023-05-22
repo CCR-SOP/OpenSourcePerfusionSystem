@@ -48,11 +48,10 @@ class DCDevice(pyGeneric.GenericDevice):
         self._buffer = np.zeros(1, dtype=self.data_dtype)
         self.buf_len = 1
         self.sampling_period_ms = 0
-        self.output_range = [0, 5]
+        self.output_range = [0, 1.5]  # true maximum is 5V but do not want to allow flows above 15 mL/min
 
     @property
     def last_value(self):
-
         return self._buffer[0]
 
     @property
@@ -65,10 +64,8 @@ class DCDevice(pyGeneric.GenericDevice):
         return ml_per_min
 
     def mlpermin_to_volts(self, ml_per_min):
-        volts = ((((ml_per_min - self.cfg.cal_pt1_flow)
-                 * (self.cfg.cal_pt2_volts - self.cfg.cal_pt1_volts))
-                 / (self.cfg.cal_pt2_flow - self.cfg.cal_pt1_flow))
-                 + self.cfg.cal_pt1_volts)
+        volts = ((((ml_per_min - self.cfg.cal_pt1_flow) * (self.cfg.cal_pt2_volts - self.cfg.cal_pt1_volts))
+                 / (self.cfg.cal_pt2_flow - self.cfg.cal_pt1_flow)) + self.cfg.cal_pt1_volts)
         return volts
 
     def stop(self):
@@ -80,12 +77,10 @@ class DCDevice(pyGeneric.GenericDevice):
         self._lgr.info(f'Setting flow to {ml_per_min} ml/min at {volts} volts')
         self.set_output(volts)
 
-    def adjust_percent_of_max(self, flow_adjust: float):  # rename - do not use percentages
-        adjust = flow_adjust
-        volts = self.last_value + adjust/10
+    def adjust_flow_rate(self, flow_adjust: float):
+        volts = self.last_value + self.mlpermin_to_volts(flow_adjust)
         self._lgr.info(f'Adjusting pump speed by {flow_adjust} and volts are {volts}')
-        if 0.05 <= volts <= 1:  # do not let automation exceed 10 mL/min
-            self.set_output(volts)
+        self.set_output(volts)
 
     def set_output(self, output_volts: float):
         if output_volts < self.output_range[0]:

@@ -109,8 +109,7 @@ class PanelDCControl(wx.Panel):
         if self.pump:
             self._lgr.debug('setting flow')
             self.pump.set_flow(new_flow)
-            # volts = self.pump.mlpermin_to_volts(new_flow)
-            self.text_real.SetValue(str(round(new_flow*0.97, 2)))  # TODO: pull last_value and calibrate, put in automation
+            self.text_real.SetValue(str(round(self.pump.last_flow, 2)))
 
     def on_stop(self, evt):
         if self.pump:
