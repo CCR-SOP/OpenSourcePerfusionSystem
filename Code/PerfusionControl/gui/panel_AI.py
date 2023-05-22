@@ -140,8 +140,8 @@ class PanelAICalibration(wx.Panel):
 
     def on_reset_cal(self, evt):
         self._sensor.hw.cfg.cal_pt1_target = 0.0
-        self._sensor.hw.cfg.cal_pt1_reading = 1.0
-        self._sensor.hw.cfg.cal_pt2_target = 0.0
+        self._sensor.hw.cfg.cal_pt1_reading = 0.0
+        self._sensor.hw.cfg.cal_pt2_target = 1.0
         self._sensor.hw.cfg.cal_pt2_reading = 1.0
         self.update_controls_from_config()
 
