@@ -32,10 +32,7 @@ class SensorPanel(wx.Panel):
         for name in sensor_names:
             sensor = self.sys.get_sensor(name)
             self.sensors[name] = sensor
-            if name == "Hepatic Artery Flow":
-                panel = PanelAI(self, sensor, reader=sensor.get_reader('MovAvg_11pt'))
-            else:
-                panel = PanelAI(self, sensor, reader=sensor.get_reader())
+            panel = PanelAI(self, sensor, reader=sensor.get_reader('MovAvg_11pt'))
             self.panels.append(panel)
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 
