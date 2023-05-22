@@ -8,7 +8,8 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Thread, Event
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 
 from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
@@ -40,12 +41,14 @@ class AutoSyringeInsulinConfig(AutoSyringeConfig):
 
 @dataclass
 class AutoSyringeEpoConfig(AutoSyringeConfig):
-    pressure_level_mmHg: int = 60
+   # pressure_level_mmHg: int = 60
+    pressure_range_mmHg: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
 class AutoSyringePhenylConfig(AutoSyringeConfig):
-    pressure_level_mmHg: int = 60  # this value should be higher
+    # pressure_level_mmHg: int = 60  # this value should be higher
+    pressure_range_mmHg: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
@@ -164,11 +167,11 @@ class AutoSyringeEpo(AutoSyringe):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, pressure):
-        self._lgr.warning(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
-        if pressure > self.cfg.pressure_level_mmHg:  # dilates, decreases pressure
+        self._lgr.info(f'pressure is {pressure} and limit is {self.cfg.pressure_range_mmHg[1]}')
+        if pressure > self.cfg.pressure_range_mmHg[1]:  # dilates, decreases pressure
             self._inject(self.cfg.ul_per_min)
             self._lgr.info(f'Epo injection set to {self.cfg.ul_per_min}')
-        elif pressure < self.cfg.pressure_level_mmHg:
+        elif pressure <= (self.cfg.pressure_range_mmHg[0]+self.cfg.pressure_range_mmHg[1])/2:  # stop at midpoint
             self.stop()
             self._lgr.info(f'Epo injection stopped')
 
@@ -180,11 +183,11 @@ class AutoSyringePhenyl(AutoSyringe):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, pressure):
-        self._lgr.warning(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
-        if pressure < self.cfg.pressure_level_mmHg:  # constricts, increase pressure
+        self._lgr.warning(f'pressure is {pressure} and limit is {self.cfg.pressure_range_mmHg[0]}')
+        if pressure < self.cfg.pressure_range_mmHg[0]:  # constricts, increase pressure
             self._inject(self.cfg.ul_per_min)
             self._lgr.info(f'Phenyl injection set to {self.cfg.ul_per_min}')
-        elif pressure > self.cfg.pressure_level_mmHg:
+        elif pressure >= (self.cfg.pressure_range_mmHg[0]+self.cfg.pressure_range_mmHg[1])/2:  # stop at midpoint
             self.stop()
             self._lgr.info(f'Phenyl injection stopped')
 
