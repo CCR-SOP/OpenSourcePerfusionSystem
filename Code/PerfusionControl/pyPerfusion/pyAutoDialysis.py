@@ -29,13 +29,16 @@ class AutoDialysisConfig:
 
 @dataclass
 class AutoDialysisInflowConfig(AutoDialysisConfig):
-    K_range: List = field(default_factory=lambda: [0, 100])
+    K_min: float = 2.0
+    K_max: float = 6.0
 
 
 @dataclass
 class AutoDialysisOutflowConfig(AutoDialysisConfig):
-    hct_range: List = field(default_factory=lambda: [0, 100])
-    K_range: List = field(default_factory=lambda: [0, 100])
+    K_min: float = 2.0
+    K_max: float = 6.0
+    hct_min: float = 2.0
+    hct_max: float = 6.0
 
 
 class AutoDialysis:
@@ -56,7 +59,7 @@ class AutoDialysis:
         return self.is_streaming
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg, classname=self.__class__.__name__)
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
@@ -120,7 +123,6 @@ class AutoDialysisInflow(AutoDialysis):
         elif K > self.cfg.K_range[1]:
             self._lgr.info(f'K ({K}) above max of {self.cfg.K_range[1]}')
             self.pump.hw.adjust_flow_rate(self.cfg.adjust_rate)
-
 
 class AutoDialysisOutflow(AutoDialysis):
     def __init__(self, name: str):

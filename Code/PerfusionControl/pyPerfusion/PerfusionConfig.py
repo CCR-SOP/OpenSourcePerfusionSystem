@@ -86,7 +86,7 @@ def read_into_dataclass(cfg_name: str, section_name: str, cfg, fm: FolderManagem
                 normal_value = True
                 if ',' in value:
                     try:
-                        value = [float(x.strip()) for x in ''.join(value).split(',')]
+                        value = [float(x.strip()) for x in ''.join(value).strip('[]').split(',')]
                         normal_value = False
                     except ValueError:
                         # a comma was found, but the values are not all numbers, so this
@@ -102,7 +102,7 @@ def read_into_dataclass(cfg_name: str, section_name: str, cfg, fm: FolderManagem
         raise MissingConfigSection(f'{section_name} in {filename}')
 
 
-def write_from_dataclass(cfg_name: str, section_name: str, cfg, fm: FolderManagement = None):
+def write_from_dataclass(cfg_name: str, section_name: str, cfg, classname: str, fm: FolderManagement = None):
     fm = fm or ACTIVE_CONFIG
     parser = ConfigParser()
     parser.optionxform = str
@@ -111,7 +111,10 @@ def write_from_dataclass(cfg_name: str, section_name: str, cfg, fm: FolderManage
         parser.read(filename)
     if not parser.has_section(section_name):
         parser.add_section(section_name)
-    parser[section_name] = asdict(cfg)
+    items = {'class': classname}
+    items.update(asdict(cfg))
+    parser[section_name] = items
+
     with open(filename, 'w') as file:
         parser.write(file)
 

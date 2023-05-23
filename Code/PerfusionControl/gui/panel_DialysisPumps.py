@@ -126,9 +126,13 @@ class AutomationConfig(wx.CollapsiblePane):
         self.btn_update = wx.Button(self.GetPane(), label='Update Automation')
         self.btn_load = wx.Button(self.GetPane(), label='Load From Config')
         self.btn_save = wx.Button(self.GetPane(), label='Save From Config')
+        self.btn_save.Enable(False)
+        self.btn_update.Enable(False)
 
         self.labels = {}
         self.spins = {}
+
+        self.change_detected = False
 
         self.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60*1_000, 60*60*1_000))
         self.add_var('adjust_percent', 'Flow Adjust (ml/min)', (0, 1, 100))
@@ -178,35 +182,75 @@ class AutomationConfig(wx.CollapsiblePane):
         self.Layout()
 
     def set_bindings(self):
-        pass
+        self.btn_update.Bind(wx.EVT_BUTTON, self.on_update)
+        self.btn_load.Bind(wx.EVT_BUTTON, self.on_load_cfg)
+        self.btn_save.Bind(wx.EVT_BUTTON, self.on_save_cfg)
+        for spin in self.spins.values():
+            spin.Bind(wx.EVT_SPINCTRLDOUBLE, self.on_change)
+
+    def on_change(self, evt):
+        evt.GetEventObject().SetBackgroundColour(wx.RED)
+        self.btn_update.Enable(True)
+        self.btn_save.Enable(True)
+
+    def on_update(self, evt):
+        self.update_config_from_controls()
+        self.clear_backgrounds()
+        self.btn_update.Enable(False)
+
+    def update_config_from_controls(self):
+        for cfg_name, ctrl in self.spins.items():
+            setattr(self.automation.cfg, cfg_name, ctrl.GetValue())
+
+    def update_controls_from_config(self):
+        try:
+            for cfg_name, ctrl in self.spins.items():
+                ctrl.SetValue(str(getattr(self.automation.cfg, cfg_name)))
+        except AttributeError:
+            # this should only happen if the hardware didn't load
+            pass
+
+    def on_save_cfg(self, evt):
+        self.update_config_from_controls()
+        self.automation.write_config()
+        self.btn_save.Enable(False)
+        self.clear_backgrounds()
+
+    def on_load_cfg(self, evt):
+        self.automation.read_config()
+        self.update_controls_from_config()
+        self.btn_save.Enable(False)
+        self.btn_update.Enable(False)
+        self.clear_backgrounds()
+
+    def clear_backgrounds(self):
+        for spin in self.spins.values():
+            spin.SetBackgroundColour(wx.WHITE)
+            spin.Refresh()
 
 
 class DialysateInflowConfig(AutomationConfig):
     def __init__(self, parent, automation):
         super().__init__(parent, automation)
-        self._lgr = logging.getLogger(__name__)
 
-        self.add_range('K_range', 'K', limits=(0, 1, 10))
+        self.add_var('K_min', 'K (min)', limits=(0, 1, 10))
+        self.add_var('K_max', 'K (max)', limits=(0, 1, 10))
 
         self.do_layout()
         self.set_bindings()
-
-    def set_bindings(self):
-        pass
 
 
 class DialysateOutflowConfig(AutomationConfig):
     def __init__(self, parent, automation):
         super().__init__(parent, automation)
 
-        self.add_range('K_range', 'K', limits=(0, 1, 10))
-        self.add_range('hct_range', 'hct', limits=(0, 1, 100))
+        self.add_var('K_min', 'K (min)', limits=(0, 1, 10))
+        self.add_var('K_max', 'K (max)', limits=(0, 1, 10))
+        self.add_var('hct_min', 'hct (min)', limits=(0, 1, 10))
+        self.add_var('hct_max', 'hct (max)', limits=(0, 1, 10))
 
         self.do_layout()
         self.set_bindings()
-
-    def __set_bindings(self):
-        pass
 
 
 class DialysisBloodConfig(AutomationConfig):
