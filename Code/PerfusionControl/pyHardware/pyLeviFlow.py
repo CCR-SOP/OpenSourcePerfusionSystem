@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from enum import IntEnum
 from queue import Queue, Empty
 from threading import Lock, Thread, Event
-from time import sleep
 
 import minimalmodbus as modbus
 import serial
@@ -23,6 +22,7 @@ import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
+import pyHardware.pyGeneric as pyGeneric
 
 
 class LeviFlowException(Exception):
@@ -151,22 +151,19 @@ class LeviFlowConfig:
     sampling_period_ms: int = 1_000
 
 
-class LeviFlow:
-    def __init__(self, name: str):
-        self.name = name
-        self._lgr = utils.get_object_logger(__name__, self.name)
+class LeviFlow(pyGeneric.GenericDevice):
+    def __init__(self, name):
+        super().__init__(name)
         self.cfg = LeviFlowConfig()
         self.hw = None
 
-        self._queue = Queue()
-        self.acq_start_ms = 0
-
-        self.__thread = None
-        self._event_halt = Event()
         self.mutex = Lock()
 
-        self.data_dtype = np.dtype(np.float64)
         self.buffer = np.zeros(1, dtype=self.data_dtype)
+        self._evt_halt = Event()
+        self.__thread = None
+        self.is_streaming = False
+        self._timeout = 1.0
 
     @property
     def sampling_period_ms(self):
@@ -176,21 +173,7 @@ class LeviFlow:
             val = 0
         return val
 
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
-
-    def read_config(self):
-        self._lgr.debug(f'Reading config for {self.name}')
-        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
-        self._lgr.debug(f'Config = {self.cfg}')
-        self.open()
-
-    def open(self, cfg=None):
-        if cfg is not None:
-            self.cfg = cfg
+    def open(self):
         self._lgr.debug(f'Attempting to open {self.name} with config {self.cfg}')
         self._queue = Queue()
         if self.cfg.port != '':
@@ -215,8 +198,8 @@ class LeviFlow:
             self.stop()
 
     def start(self):
-        self.stop()
-        self._event_halt.clear()
+        super().start()
+        self._evt_halt.clear()
         self.acq_start_ms = utils.get_epoch_ms()
 
         self.__thread = Thread(target=self.run)
@@ -224,24 +207,17 @@ class LeviFlow:
         self.__thread.start()
 
     def stop(self):
-        if self.__thread and self.__thread.is_alive():
-            self._lgr.debug(f'Stopping {self.__thread.name}')
-            self._event_halt.set()
+        if self.is_streaming:
+            self._evt_halt.set()
             self.__thread.join(2.0)
             self.__thread = None
+            super().stop()
 
     def run(self):
-        next_t = utils.get_epoch_ms()
-        offset = 0
-        while not self._event_halt.is_set():
-            next_t += offset + self.cfg.sampling_period_ms
-            delay = next_t - utils.get_epoch_ms()
-            if delay > 0:
-                sleep(delay / 1_000.0)
-                offset = 0
-            else:
-                offset = -delay
-            self._acq_samples()
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            period_timeout = self.cfg.sampling_period_ms / 1_000.0
+            if not self._event_halt.wait(timeout=period_timeout):
+                self._acq_samples()
 
     def get_data(self):
         buf = None

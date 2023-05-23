@@ -20,8 +20,6 @@ import minimalmodbus as modbus
 import serial
 import numpy as np
 
-import pyPerfusion.PerfusionConfig as PerfusionConfig
-from pyPerfusion.utils import get_epoch_ms
 import pyHardware.pyGeneric as pyGeneric
 
 
@@ -119,7 +117,6 @@ WriteRegisters = {
 
 @dataclass
 class PuraLevi30Config:
-    name: str = 'i30'
     port: str = ''
     baud: int = 57600
     serial_num: str = 'nnnnnn-nnnn'
@@ -128,28 +125,12 @@ class PuraLevi30Config:
 
 class PuraLevi30(pyGeneric.GenericDevice):
     def __init__(self, name):
-        self._lgr = logging.getLogger(__name__)
-        self.name = name
+        super().__init__(name)
+        self.cfg = PuraLevi30Config()
+
         self.hw = None
-        self.cfg = PuraLevi30Config(name=name)
 
-        self._queue = None
-        self.acq_start_ms = 0
         self.mutex = Lock()
-
-        self.data_type = np.uint32
-
-    def get_acq_start_ms(self):
-        return self.acq_start_ms
-
-    def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.cfg.name, self.cfg)
-
-    def read_config(self):
-        self._lgr.debug(f'Reading config for {self.cfg.name}')
-        PerfusionConfig.read_into_dataclass('hardware', self.cfg.name, self.cfg)
-        self._lgr.debug(f'Config = {self.cfg}')
-        self.open()
 
     def open(self):
         if self.cfg.port != '':
@@ -172,9 +153,6 @@ class PuraLevi30(pyGeneric.GenericDevice):
             with self.mutex:
                 self.hw.serial.close()
             self.stop()
-
-    def start(self):
-        self.acq_start_ms = get_epoch_ms()
 
     def stop(self):
         if self.hw:
