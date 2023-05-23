@@ -76,6 +76,9 @@ class PanelDCControl(wx.Panel):
         self.btn_stop = wx.Button(self, label='Stop')
         self.btn_stop.SetFont(font)
 
+        self.timer_gui_update = wx.Timer(self)
+        self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
+
         self.__do_layout()
         self.__set_bindings()
 
@@ -102,6 +105,10 @@ class PanelDCControl(wx.Panel):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
         self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
         self.Bind(wx.EVT_CLOSE, self.on_close)
+        self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
+
+    def update_controls_from_hardware(self, evt):
+        self.text_real.SetValue(str(round(self.pump.last_flow, 2)))
 
     def on_update(self, evt):
         self._lgr.debug('on update')
@@ -109,15 +116,14 @@ class PanelDCControl(wx.Panel):
         if self.pump:
             self._lgr.debug('setting flow')
             self.pump.set_flow(new_flow)
-            # volts = self.pump.mlpermin_to_volts(new_flow)
-            self.text_real.SetValue(str(new_flow*0.99))
+            self.text_real.SetValue(str(round(self.pump.last_flow, 2)))
 
     def on_stop(self, evt):
         if self.pump:
             self.pump.set_flow(0)
 
     def on_close(self, evt):
-        pass
+        self.timer_gui_update.Stop()
 
 
 class TestFrame(wx.Frame):

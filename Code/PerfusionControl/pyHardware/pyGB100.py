@@ -165,9 +165,6 @@ class GasDevice(pyGeneric.GenericDevice):
                 self._lgr.warning(f'Attempt set flow {total_flow} '
                                   f'higher than limit {self.cfg.flow_limits[1]}. '
                                   f'Flow being set to limit.')
-            previously_on = self.get_working_status()
-            if previously_on:
-                self.set_working_status(turn_on=False)
             with self.mutex:
                 addr = MainBoardOffsets['Total flow'].value
 
@@ -175,8 +172,6 @@ class GasDevice(pyGeneric.GenericDevice):
                 self.total_flow = total_flow
                 self._lgr.info(f'Total flow changed to {int(total_flow)}')
                 self.push_data()
-            if previously_on:
-                self.set_working_status(turn_on=True)
 
     def get_percent_value(self, channel_num: int) -> float:
         value = 0.0
@@ -203,10 +198,6 @@ class GasDevice(pyGeneric.GenericDevice):
                     new_percent = 100
                     self._lgr.warning(f'Attempt to set channel {channel_num} percent to '
                                       f'{new_percent}. Capping at 100')
-
-                previously_on = self.get_working_status()
-                if previously_on:
-                    self.set_working_status(turn_on=False)
                 with self.mutex:
                     addr = ChannelAddr[channel_num - 1] + ChannelRegisterOffsets['Percent value'].value
                     # self._lgr.debug(f'requesting new percent {new_percent}')
@@ -215,10 +206,6 @@ class GasDevice(pyGeneric.GenericDevice):
                     self.hw.write_register(addr, percent)
                     self._lgr.info(f'Setting {gas_name} channel to {100 - percent/100} %')
                     self.push_data()
-
-                if previously_on:
-                    sleep(3.0)
-                    self.set_working_status(turn_on=True)
             else:
                 self._lgr.warning(f'Attempt to set percent value from unsupported channel {channel_num}')
 

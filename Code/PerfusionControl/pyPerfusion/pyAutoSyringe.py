@@ -8,7 +8,8 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Thread, Event
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 
 from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
@@ -29,23 +30,25 @@ class AutoSyringeConfig:
 
 @dataclass
 class AutoSyringeGlucagonConfig(AutoSyringeConfig):
-    glucose_level: int = 0
+    # glucose_level: int = 0
+    glucose_range: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
 class AutoSyringeInsulinConfig(AutoSyringeConfig):
-    glucose_level: int = 0
+    # glucose_level: int = 0
+    glucose_range: List = field(default_factory=lambda: [0, 100])
     max_ul_per_min: int = 0
 
 
 @dataclass
 class AutoSyringeEpoConfig(AutoSyringeConfig):
-    pressure_level_mmHg: int = 60
+    pressure_range_mmHg: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
 class AutoSyringePhenylConfig(AutoSyringeConfig):
-    pressure_level_mmHg: int = 60  # this value should be higher
+    pressure_range_mmHg: List = field(default_factory=lambda: [0, 100])
 
 
 @dataclass
@@ -111,7 +114,7 @@ class AutoSyringe:
         if self.is_streaming:
             self._event_halt.set()
             self.is_streaming = False
-            self._lgr.debug(f'{__name__} {self.name} stopped')
+            self._lgr.info(f'{__name__} {self.name} stopped')
 
     def update_on_input(self, data):
         # this is the base class, so do nothing
@@ -135,8 +138,11 @@ class AutoSyringeGlucagon(AutoSyringe):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, glucose):
-        if glucose < self.cfg.glucose_level:
+        if glucose < self.cfg.glucose_range[0]:
             self._inject(self.cfg.volume_ul)
+        elif glucose >= (self.cfg.glucose_range[0]+self.cfg.glucose_range[1]) / 2:
+            self.stop()
+            self._lgr.info(f'Glucagon injection stopped')
 
 
 class AutoSyringeInsulin(AutoSyringe):
@@ -153,8 +159,9 @@ class AutoSyringeInsulin(AutoSyringe):
             else:
                 self._lgr.warning(f'Max infusion rate of {self.cfg.max_ul_per_min} reached')
             self._inject(rate)
-        else:
-            self.device.hw.stop()
+        elif glucose <= (self.cfg.glucose_range[0] + self.cfg.glucose_range[1]) / 2:
+            self.stop()
+            self._lgr.info(f'Insulin injection stopped')
 
 
 class AutoSyringeEpo(AutoSyringe):
@@ -164,10 +171,13 @@ class AutoSyringeEpo(AutoSyringe):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, pressure):
-        self._lgr.warning(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
-        if pressure > self.cfg.pressure_level_mmHg:  # dilates, decreases pressure
+        self._lgr.info(f'pressure is {pressure} and limit is {self.cfg.pressure_range_mmHg[1]}')
+        if pressure > self.cfg.pressure_range_mmHg[1]:  # dilates, decreases pressure
             self._inject(self.cfg.ul_per_min)
-            self._lgr.debug(f'Epo injection set to {self.cfg.ul_per_min}')
+            self._lgr.info(f'Epo injection set to {self.cfg.ul_per_min}')
+        elif pressure <= (self.cfg.pressure_range_mmHg[0]+self.cfg.pressure_range_mmHg[1]) / 2:  # stop at midpoint
+            self.stop()
+            self._lgr.info(f'Epo injection stopped')
 
 
 class AutoSyringePhenyl(AutoSyringe):
@@ -177,10 +187,13 @@ class AutoSyringePhenyl(AutoSyringe):
         self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, pressure):
-        self._lgr.debug(f'pressure is {pressure} and limit is {self.cfg.pressure_level_mmHg}')
-        if pressure < self.cfg.pressure_level_mmHg:  # constricts, increase pressure
+        self._lgr.warning(f'pressure is {pressure} and limit is {self.cfg.pressure_range_mmHg[0]}')
+        if pressure < self.cfg.pressure_range_mmHg[0]:  # constricts, increase pressure
             self._inject(self.cfg.ul_per_min)
-            self._lgr.debug(f'Phenyl injection set to {self.cfg.ul_per_min}')
+            self._lgr.info(f'Phenyl injection set to {self.cfg.ul_per_min}')
+        elif pressure >= (self.cfg.pressure_range_mmHg[0]+self.cfg.pressure_range_mmHg[1]) / 2:  # stop at midpoint
+            self.stop()
+            self._lgr.info(f'Phenyl injection stopped')
 
 
 class SyringeTPN(AutoSyringe):

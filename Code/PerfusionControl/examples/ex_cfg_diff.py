@@ -102,11 +102,11 @@ def main():
     PerfusionConfig.set_test_config()
     git_fm = FolderManagement(project_name='PerfusionControl', base_path=Path('../'), default_structure=False)
     git_fm.add_folder('config')
-    compare_file('hardware', git_fm)
-    compare_file('NI_Dev1', git_fm)
-    compare_file('NI_Dev2', git_fm)
-    compare_file('sensors', git_fm)
-    compare_file('strategies', git_fm)
+    # compare_file('hardware', git_fm)
+    # compare_file('NI_Dev1', git_fm)
+    # compare_file('NI_Dev2', git_fm)
+    # compare_file('sensors', git_fm)
+    # compare_file('strategies', git_fm)
     compare_file('automations', git_fm)
 
 
