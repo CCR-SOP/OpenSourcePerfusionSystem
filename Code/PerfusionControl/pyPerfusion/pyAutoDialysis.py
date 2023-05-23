@@ -117,12 +117,13 @@ class AutoDialysisInflow(AutoDialysis):
     def _update_speed(self, K: float):
         if K == -1:
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
-        elif K < self.cfg.K_range[0]:
-            self._lgr.info(f'K ({K}) below min of {self.cfg.K_range[0]}')
+        elif K < self.cfg.K_min:
+            self._lgr.info(f'K ({K}) below min of {self.cfg.K_min}')
             self.pump.hw.adjust_flow_rate(-self.cfg.adjust_rate)
-        elif K > self.cfg.K_range[1]:
-            self._lgr.info(f'K ({K}) above max of {self.cfg.K_range[1]}')
+        elif K > self.cfg.K_max:
+            self._lgr.info(f'K ({K}) above max of {self.cfg.K_max}')
             self.pump.hw.adjust_flow_rate(self.cfg.adjust_rate)
+
 
 class AutoDialysisOutflow(AutoDialysis):
     def __init__(self, name: str):
@@ -141,18 +142,18 @@ class AutoDialysisOutflow(AutoDialysis):
     def _update_speed(self, hct: float, K: float):
         if K == -1:
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
-        elif K < self.cfg.K_range[0]:
-            self._lgr.info(f'K ({K}) below min of {self.cfg.K_range[0]}')
+        elif K < self.cfg.K_min:
+            self._lgr.info(f'K ({K}) below min of {self.cfg.K_min}')
             self.pump.hw.adjust_flow_rate(-self.cfg.adjust_rate)
-        elif K > self.cfg.K_range[1]:
-            self._lgr.info(f'K ({K}) above max of {self.cfg.K_range[1]}')
+        elif K > self.cfg.K_max:
+            self._lgr.info(f'K ({K}) above max of {self.cfg.K_max}')
             self.pump.hw.adjust_flow_rate(self.cfg.adjust_rate)
 
         if hct == -1:
             self._lgr.warning(f'{self.name} hct is out of range. Cannot be adjusted automatically')
-        elif hct < self.cfg.hct_range[0]:
-            self._lgr.info(f'hct ({hct}) below min of {self.cfg.hct_range[0]}')
+        elif hct < self.cfg.hct_min:
+            self._lgr.info(f'hct ({hct}) below min of {self.cfg.hct_min}')
             self.pump.hw.adjust_flow_rate(self.cfg.adjust_rate)
-        elif hct > self.cfg.hct_range[1]:
-            self._lgr.info(f'hct ({hct}) above max of {self.cfg.hct_range[1]}')
+        elif hct > self.cfg.hct_max:
+            self._lgr.info(f'hct ({hct}) above max of {self.cfg.hct_max}')
             self.pump.hw.adjust_flow_rate(-self.cfg.adjust_rate)

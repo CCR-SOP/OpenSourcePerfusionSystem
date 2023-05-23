@@ -32,9 +32,6 @@ class AutomationConfig(wx.CollapsiblePane):
 
         self.change_detected = False
 
-        self.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60*1_000, 60*60*1_000))
-        self.add_var('adjust_percent', 'Flow Adjust (ml/min)', (0, 1, 100))
-
     def add_var(self, config_name, lbl_name, limits, decimal_places=0):
         self.labels[config_name] = wx.StaticText(self.GetPane(), label=lbl_name)
         self.spins[config_name] = wx.SpinCtrlDouble(self.GetPane(),
