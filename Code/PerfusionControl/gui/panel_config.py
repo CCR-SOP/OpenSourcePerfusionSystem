@@ -21,9 +21,9 @@ class AutomationConfig(wx.CollapsiblePane):
         self.label_sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.spin_sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.btn_update = wx.Button(self.GetPane(), label='Update Automation')
-        self.btn_load = wx.Button(self.GetPane(), label='Load From Config')
-        self.btn_save = wx.Button(self.GetPane(), label='Save From Config')
+        self.btn_update = wx.Button(self.GetPane(), label='Update')
+        self.btn_load = wx.Button(self.GetPane(), label='Load')
+        self.btn_save = wx.Button(self.GetPane(), label='Save')
         self.btn_save.Enable(False)
         self.btn_update.Enable(False)
 

@@ -29,8 +29,8 @@ class GasMixerPanel(wx.Panel):
             self.panels.append(panel)
             if automation.name == 'Arterial Gas Mixer Automation':
                 self.config_arterial = AutomationConfig(self, automation)
-                self.config_arterial.add_var('pH_min', 'pH (min)', limits=(0, 1, 14), decimal_places=2)
-                self.config_arterial.add_var('pH_max', 'pH (max)', limits=(0, 1, 14), decimal_places=2)
+                self.config_arterial.add_var('pH_min', 'pH (min)', limits=(0, 0.01, 14), decimal_places=2)
+                self.config_arterial.add_var('pH_max', 'pH (max)', limits=(0, 0.01, 14), decimal_places=2)
                 self.config_arterial.add_var('CO2_min', 'CO2 (min)', limits=(0, 1, 100))
                 self.config_arterial.add_var('CO2_max', 'CO2 (max)', limits=(0, 1, 100))
                 self.config_arterial.add_var('O2_min', 'O2 (min)', limits=(0, 1, 100))
