@@ -15,7 +15,7 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 def main():
-    sensor = SYS_PERFUSION.get_sensor('Flow')
+    sensor = SYS_PERFUSION.get_sensor('Test LeviFlow')
 
     print(f'Converter Serial # is {sensor.hw.get_sn()}')
 
