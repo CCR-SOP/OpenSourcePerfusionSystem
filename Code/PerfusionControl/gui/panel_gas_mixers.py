@@ -14,6 +14,7 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.PerfusionSystem import PerfusionSystem
+from gui.panel_config import AutomationConfig
 
 
 class GasMixerPanel(wx.Panel):
@@ -22,10 +23,28 @@ class GasMixerPanel(wx.Panel):
         self._lgr = logging.getLogger(__name__)
 
         self.panels = []
+        self.configs = []
         for automation in automations:
             panel = BaseGasMixerPanel(self, automation)
             self.panels.append(panel)
-
+            if automation.name == 'Arterial Gas Mixer Automation':
+                self.config_arterial = AutomationConfig(self, automation)
+                self.config_arterial.add_var('pH_min', 'pH (min)', limits=(0, 1, 14), decimal_places=2)
+                self.config_arterial.add_var('pH_max', 'pH (max)', limits=(0, 1, 14), decimal_places=2)
+                self.config_arterial.add_var('CO2_min', 'CO2 (min)', limits=(0, 1, 100))
+                self.config_arterial.add_var('CO2_max', 'CO2 (max)', limits=(0, 1, 100))
+                self.config_arterial.add_var('O2_min', 'O2 (min)', limits=(0, 1, 100))
+                self.config_arterial.add_var('O2_max', 'O2 (max)', limits=(0, 1, 100))
+                self.config_arterial.do_layout()
+                self.config_arterial.set_bindings()
+            elif automation.name == 'Venous Gas Mixer Automation':
+                self.config_venous = AutomationConfig(self, automation)
+                self.config_venous.add_var('pH_min', 'pH (min)', limits=(0, 1, 14), decimal_places=2)
+                self.config_venous.add_var('pH_max', 'pH (max)', limits=(0, 1, 14), decimal_places=2)
+                self.config_venous.add_var('O2_min', 'O2 (min)', limits=(0, 1, 100))
+                self.config_venous.add_var('O2_max', 'O2 (max)', limits=(0, 1, 100))
+                self.config_venous.do_layout()
+                self.config_venous.set_bindings()
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
         self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
 
@@ -39,12 +58,18 @@ class GasMixerPanel(wx.Panel):
         flags = wx.SizerFlags().Expand().Border()
         self.sizer = wx.FlexGridSizer(cols=2, vgap=1, hgap=1)
 
+        configsizer = wx.BoxSizer(wx.HORIZONTAL)
+        for config in self.configs:
+            configsizer.Add(config, flags)
+
         for panel in self.panels:
             self.sizer.Add(panel, flags)
 
         self.sizer.AddGrowableCol(0, 1)
         self.sizer.AddGrowableCol(1, 1)
 
+        self.sizer.Add(self.config_arterial, flags.Proportion(0))
+        self.sizer.Add(self.config_venous, flags.Proportion(0))
         self.sizer.Add(self.text_log_arterial, flags)
         self.sizer.Add(self.text_log_venous, flags)
 
@@ -57,6 +82,12 @@ class GasMixerPanel(wx.Panel):
 
     def __set_bindings(self):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.config_arterial.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+        self.config_venous.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+
+    def on_pane_changed(self, evt):
+        self.sizer.Layout()
+        self.Layout()
 
     def OnClose(self, evt):
         for panel in self.panels:
@@ -165,6 +196,7 @@ class BaseGasMixerPanel(wx.Panel):
 
         self.sizer_cfg.Add(self.chk_auto, flags)
         self.sizer_cfg.AddSpacer(1)
+
         self.sizer_cfg.SetSizeHints(self.GetParent())
 
         self.sizer.Add(self.sizer_cfg, flags)

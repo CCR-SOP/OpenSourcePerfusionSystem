@@ -27,9 +27,13 @@ class AutoGasMixerConfig:
 
 @dataclass
 class ArterialAutoGasMixerConfig(AutoGasMixerConfig):
-    pH_range: List = field(default_factory=lambda: [0, 100])
-    CO2_range: List = field(default_factory=lambda: [0, 100])
-    O2_range: List = field(default_factory=lambda: [0, 100])
+    pH_min: float = 0.0
+    pH_max: float = 0.0
+    CO2_min: float = 0.0
+    CO2_max: float = 0.0
+    O2_min: float = 0.0
+    O2_max: float = 0.0
+
     CO2_adjust: float = 0.0
     flow_adjust: float = 0.0
     O2_channel: int = 0
@@ -38,8 +42,11 @@ class ArterialAutoGasMixerConfig(AutoGasMixerConfig):
 
 @dataclass
 class VenousAutoGasMixerConfig(AutoGasMixerConfig):
-    pH_range: List = field(default_factory=lambda: [0, 100])
-    O2_range: List = field(default_factory=lambda: [0, 100])
+    pH_min: float = 0.0
+    pH_max: float = 0.0
+    O2_min: float = 0.0
+    O2_max: float = 0.0
+
     O2_adjust: float = 0.0
     flow_adjust: float = 0.0
     O2_channel: int = 0

@@ -15,6 +15,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from gui.panel_syringe import PanelSyringeControls
 from pyPerfusion.PerfusionSystem import PerfusionSystem
+from gui.panel_config import AutomationConfig
 
 
 class SyringePanel(wx.Panel):

@@ -106,7 +106,8 @@ class DialysisPumpPanel(wx.Panel):
     def __set_bindings(self):
         self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
         for pane in self.configs:
-            pane.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+            for pane in self.configs:
+                pane.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
