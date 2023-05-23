@@ -22,6 +22,7 @@ import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.utils import get_epoch_ms
+import pyHardware.pyGeneric as pyGeneric
 
 
 
@@ -125,7 +126,7 @@ class PuraLevi30Config:
     device_addr: int = 0
 
 
-class PuraLevi30:
+class PuraLevi30(pyGeneric.GenericDevice):
     def __init__(self, name):
         self._lgr = logging.getLogger(__name__)
         self.name = name
@@ -150,10 +151,7 @@ class PuraLevi30:
         self._lgr.debug(f'Config = {self.cfg}')
         self.open()
 
-    def open(self, cfg=None):
-        self._lgr.debug(f'Attempting to open {self.name} with config {cfg}')
-        if cfg is not None:
-            self.cfg = cfg
+    def open(self):
         if self.cfg.port != '':
             self._lgr.info(f'{self.name}: Opening PuraLev i30 at {self.cfg.port}')
             try:
@@ -165,9 +163,8 @@ class PuraLevi30:
                     self.hw.serial.stopbits = 1
                     self.hw.serial.timeout = 3
             except serial.serialutil.SerialException as e:
-                self._lgr.error(f'{self.name}: Could not open instrument using port {self.cfg.port}.'
-                                f'Exception: {e}')
-            raise i30Exception(f'Could not open Puralev {self.name} - {self.cfg}')
+                self._lgr.exception(e)
+                raise i30Exception(f'Could not open Puralev {self.name} - {self.cfg}')
         self._queue = Queue()
 
     def close(self):

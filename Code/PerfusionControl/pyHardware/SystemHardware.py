@@ -20,6 +20,7 @@ from pyHardware.pyGB100 import GasDevice, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 from pyHardware.pyDC import DCDevice
 from pyHardware.pyLeviFlow import *
+from pyHardware.pyPuraLevi30 import *
 
 
 MOCKS = {'NIDAQAIDevice': 'AIDevice',
