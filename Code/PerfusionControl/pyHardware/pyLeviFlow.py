@@ -25,7 +25,7 @@ import pyPerfusion.utils as utils
 import pyHardware.pyGeneric as pyGeneric
 
 
-class LeviFlowException(Exception):
+class LeviFlowException(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -280,9 +280,9 @@ class LeviFlow(pyGeneric.GenericDevice):
         return val
 
 
-class MockLeviFlow:
-    def __init__(self):
-        self._lgr = logging.getLogger(__name__)
+class MockLeviFlow(pyGeneric.GenericDevice):
+    def __init__(self, name: str):
+        super().__init__(name)
         self.flow = 0
 
     def read_register(self, addr, number_of_decimals=0):
