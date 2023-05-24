@@ -21,13 +21,17 @@ from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 from pyHardware.pyDC import DCDevice
 from pyHardware.pyLeviFlow import *
 from pyHardware.pyPuraLevi30 import *
+from pyHardware.pyCITSens import *
 
 
 MOCKS = {'NIDAQAIDevice': 'AIDevice',
          'CDI': 'MockCDI',
          'Pump11Elite': 'MockPump11Elite',
          'GasDevice': 'MockGasDevice',
-         'NIDAQDCDevice': 'DCDevice'}
+         'NIDAQDCDevice': 'DCDevice',
+         'PuraLevi30': 'Mocki30',
+         'LeviFlow': 'MockLeviFlow',
+         'CITSens': 'MockCITSens'}
 
 
 lgr = logging.getLogger('pyHardware.SystemHardware')

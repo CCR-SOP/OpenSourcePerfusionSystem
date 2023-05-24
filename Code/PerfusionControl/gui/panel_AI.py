@@ -196,7 +196,7 @@ class TestFrame(wx.Frame):
         self._lgr = logging.getLogger(__name__)
         super().__init__(*args, **kwds)
 
-        sensor = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
+        sensor = SYS_PERFUSION.get_sensor('Test Glucose')
         self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
