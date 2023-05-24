@@ -15,6 +15,7 @@ import pyPerfusion.utils as utils
 from gui.panel_multiple_syringes import SyringePanel
 from gui.panel_DialysisPumps import DialysisPumpPanel
 from gui.panel_gas_mixers import GasMixerPanel
+from gui.panel_levitronix_pumps import LeviPumpPanel
 from pyPerfusion.PerfusionSystem import PerfusionSystem
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 
@@ -51,6 +52,12 @@ class HardwarePanel(wx.Panel):
             automations.append(perfusion_system.get_automation(name))
         self.panel_gas_mixers = GasMixerPanel(self, automations)
 
+        sensor_names = ['Arterial PuraLev', 'Venous PuraLev']
+        sensors = []
+        for name in sensor_names:
+            sensors.append(perfusion_system.get_sensor(name))
+        self.panel_levitronix_pumps = LeviPumpPanel(self, sensors)
+
         static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
         self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
@@ -65,6 +72,7 @@ class HardwarePanel(wx.Panel):
         self.sizer.Add(self.panel_syringes, flags.Proportion(2))
         self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(2))
         self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
+        self.sizer.Add(self.panel_levitronix_pumps, flags.Proportion(2))
 
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start

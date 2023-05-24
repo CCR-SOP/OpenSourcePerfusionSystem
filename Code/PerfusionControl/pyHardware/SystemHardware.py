@@ -19,6 +19,9 @@ from pyHardware.pyPump11Elite import Pump11Elite, MockPump11Elite
 from pyHardware.pyGB100 import GasDevice, MockGasDevice
 from pyHardware.pyDC_NIDAQ import NIDAQDCDevice
 from pyHardware.pyDC import DCDevice
+from pyHardware.pyLeviFlow import *
+from pyHardware.pyPuraLevi30 import *
+
 
 MOCKS = {'NIDAQAIDevice': 'AIDevice',
          'CDI': 'MockCDI',
@@ -125,7 +128,6 @@ class SystemHardware:
         except AIDeviceException as e:
             self._lgr.debug('Exception caught')
             self._lgr.error(e)
-
     def stop(self):
         PerfusionConfig.MASTER_HALT.set()
 
