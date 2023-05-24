@@ -18,13 +18,11 @@ from threading import Lock
 
 import minimalmodbus as modbus
 import serial
-import numpy as np
 
 import pyHardware.pyGeneric as pyGeneric
 
 
-
-class i30Exception(Exception):
+class i30Exception(pyGeneric.HardwareException):
     """Exception used to pass simple device configuration error messages, mostly for display in GUI"""
 
 
@@ -202,9 +200,9 @@ class PuraLevi30(pyGeneric.GenericDevice):
         return buf, t
 
 
-class Mocki30:
-    def __init__(self):
-        self._lgr = logging.getLogger(__name__)
+class Mocki30(pyGeneric.GenericDevice):
+    def __init__(self, name: str):
+        super().__init__(name)
         self.state = PumpState.Off
         self.speed = 0
         self.process = 0
