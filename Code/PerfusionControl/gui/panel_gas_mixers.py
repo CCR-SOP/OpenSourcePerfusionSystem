@@ -58,10 +58,6 @@ class GasMixerPanel(wx.Panel):
         flags = wx.SizerFlags().Expand().Border()
         self.sizer = wx.FlexGridSizer(cols=2, vgap=1, hgap=1)
 
-        configsizer = wx.BoxSizer(wx.HORIZONTAL)
-        for config in self.configs:
-            configsizer.Add(config, flags)
-
         for panel in self.panels:
             self.sizer.Add(panel, flags)
 
