@@ -157,7 +157,7 @@ class BaseLeviPumpPanel(wx.Panel):
         self.ChangeRPM()
         self.input_speed.SetBackgroundColour(wx.WHITE)
         self.input_speed.Refresh()
-        # TODO: update value_corr_flow - eventually tie to flow sensor but calculate for now
+        # TODO: update value_corr_flow - eventually tie to flow sensor but "calculate" for now
         rpm = self.input_speed.GetValue()
         flow = 0.5*rpm  # fake equation
         self.value_corr_flow.SetValue(str(flow))
