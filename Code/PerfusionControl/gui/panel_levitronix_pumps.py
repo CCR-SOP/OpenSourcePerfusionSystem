@@ -18,12 +18,12 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 class BaseLeviPumpPanel(wx.Panel):
-    def __init__(self, parent, autolevipump):
+    def __init__(self, parent, sensor):  # autolevipump eventually
         super().__init__(parent)
-        self.name = autolevipump.name  # TODO: update name
+        self.name = sensor.name
         self._lgr = utils.get_object_logger(__name__, self.name)
 
-        self.autolevipump = autolevipump
+        self.autolevipump = sensor
 
         font = wx.Font()
         font.SetPointSize(int(12))
@@ -32,8 +32,8 @@ class BaseLeviPumpPanel(wx.Panel):
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         # Pump speed and flow
-        self.label_speed= wx.StaticText(self, label='Speed (rpm):')
-        self.input_speed= wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=1700, initial=0, inc=25)
+        self.label_speed = wx.StaticText(self, label='Speed (rpm):')
+        self.input_speed = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=1700, initial=0, inc=25)
         self.label_speed.SetFont(font)
         self.input_speed.SetFont(font)
 
@@ -95,12 +95,12 @@ class BaseLeviPumpPanel(wx.Panel):
 
     def OnStart(self, evt):
         flow = self.value_corr_flow.GetValue()
-        if flow is '0':  # correct syntax?
+        if flow != '0':
             self.ChangeRPM()
-            self.autolevipump.start()  # TODO: add functionality
+            self.autolevipump.hw.start()  # TODO: remove hw. eventually
             self.btn_start.SetLabel('Stop')
         else:
-            self.autolevipump.stop()
+            self.autolevipump.hw.stop()
             self.btn_start.SetLabel('Start)')
 
     def OnChangeSpeed(self, evt):
@@ -111,11 +111,12 @@ class BaseLeviPumpPanel(wx.Panel):
         self.ChangeRPM()
         self.input_speed.SetBackgroundColour(wx.WHITE)
         self.input_speed.Refresh()
-        self.btn_update.Enable(False)
+        # self.btn_update.Enable(False)  # needed?
+        # TODO: update value_corr_flow
 
     def ChangeRPM(self):
         rpm = self.input_speed.GetValue()
-        self.sensor.hw.set_speed(rpm=rpm)  # TODO: add functionality
+        self.autolevipump.hw.set_speed(rpm=rpm)
         sleep(1.0)  # needed?
 
 
@@ -124,11 +125,13 @@ class TestFrame(wx.Frame):
         super().__init__(*args, **kwds)
 
         # TODO: add dummy automation in config, pyPerfusion
-        automation_names = ['Arterial Pump Automation', 'Venous Pump Automation']
-        automations = []
-        for name in automation_names:
-            automations.append(SYS_PERFUSION.get_automation(name))
-        self.panel = LeviPumpPanel(self, automations)
+        # automation_names = ['Arterial Pump Automation', 'Venous Pump Automation']
+        # automations = []
+        # for name in automation_names:
+            # automations.append(SYS_PERFUSION.get_automation(name))
+        name = 'Test i30'
+        sensor = SYS_PERFUSION.get_sensor(name)
+        self.panel = BaseLeviPumpPanel(self, sensor)  # change to automations eventually
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
