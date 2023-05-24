@@ -114,6 +114,10 @@ class PerfusionSystem:
             elif isinstance(automation, AutoDialysis):
                 automation.pump = self.get_sensor(automation.cfg.pump)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
+            elif isinstance(automation, AutoSyringeVaso):
+                automation.constrictor = self.get_sensor(automation.cfg.constrictor)
+                automation.dilator = self.get_sensor(automation.cfg.dilator)
+                automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
             elif isinstance(automation, AutoSyringe):
                 automation.device = self.get_sensor(automation.cfg.device)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
