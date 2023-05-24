@@ -14,6 +14,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from gui.panel_DC import PanelDC
 from pyPerfusion.PerfusionSystem import PerfusionSystem
+from gui.panel_config import AutomationConfig
 
 
 class DialysisPumpPanel(wx.Panel):
@@ -25,19 +26,39 @@ class DialysisPumpPanel(wx.Panel):
         font = wx.Font()
         font.SetPointSize(int(16))
 
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
         self.static_box.SetFont(font)
 
-        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
-        flagsExpand = wx.SizerFlags(1)
-        flagsExpand.Expand().Border(wx.ALL, 5)
-        self.sizer = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
+        # self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
+        self.gridsizer = wx.GridSizer(rows=2, cols=2, vgap=5, hgap=5)
 
         self.panels = []
+        self.configs = []
         for automation in automations:
             panel = PanelDC(self, automation.pump)
-            self.sizer.Add(panel, proportion=1, flag=wx.ALL | wx.EXPAND, border=1)
             self.panels.append(panel)
+            if automation.name == 'Dialysate Inflow Automation':
+                config = AutomationConfig(self, automation)
+                config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60 * 1_000, 60 * 60 * 1_000))
+                config.add_var('adjust_rate', 'Flow (ml/min)', (0, 0.1, 100), decimal_places=1)
+                config.add_var('K_min', 'K (min)', limits=(0, 1, 10))
+                config.add_var('K_max', 'K (max)', limits=(0, 1, 10))
+                config.do_layout()
+                config.set_bindings()
+                self.configs.append(config)
+            elif automation.name == 'Dialysate Outflow Automation':
+                config = AutomationConfig(self, automation)
+                config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60 * 1_000, 60 * 60 * 1_000))
+                config.add_var('adjust_rate', 'Flow (ml/min)', (0, 0.1, 100), decimal_places=1)
+                config.add_var('K_min', 'K (min)', limits=(0, 1, 10))
+                config.add_var('K_max', 'K (max)', limits=(0, 1, 10))
+                config.add_var('hct_min', 'hct (min)', limits=(0, 1, 100))
+                config.add_var('hct_max', 'hct (max)', limits=(0, 1, 100))
+                config.do_layout()
+                config.set_bindings()
+                self.configs.append(config)
+
 
         # Add log
         log_names = []
@@ -45,13 +66,11 @@ class DialysisPumpPanel(wx.Panel):
             log_names.append(automation.pump.name)
         log_names.append('AutoDialysis')
         self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
-        self.sizer.Add(self.text_log_roller_pumps, flagsExpand)
 
         # Add auto start button
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
         self.btn_auto_dialysis.SetFont(font)
         self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
-        self.sizer.Add(self.btn_auto_dialysis, flagsExpand)
 
         self.__do_layout()
         self.__set_bindings()
@@ -62,20 +81,33 @@ class DialysisPumpPanel(wx.Panel):
         super().Close()
 
     def __do_layout(self):
-        self.sizer.AddGrowableRow(0, 3)
-        self.sizer.AddGrowableRow(1, 3)
-        self.sizer.AddGrowableRow(2, 1)
-        self.sizer.AddGrowableCol(0, 1)
-        self.sizer.AddGrowableCol(1, 1)
+        flags = wx.SizerFlags().Expand().Border(wx.ALL, 1)
+
+        configsizer = wx.BoxSizer(wx.HORIZONTAL)
+        for config in self.configs:
+            configsizer.Add(config, flags)
+
+        for idx, panel in enumerate(self.panels):
+            self.gridsizer.Add(panel, flags=flags)
+        self.gridsizer.Add(self.btn_auto_dialysis, flags)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(configsizer, flags=flags.Proportion(0))
+        sizer.Add(self.text_log_roller_pumps, flags=flags.Proportion(2))
+
+        self.sizer.Add(self.gridsizer, flags=flags.Proportion(1))
+        self.sizer.Add(sizer, flags=flags)
 
         self.sizer.SetSizeHints(self.GetParent())
-        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
-        self.SetSizer(self.wrapper)
+        self.SetSizer(self.sizer)
         self.Fit()
         self.Layout()
 
     def __set_bindings(self):
         self.btn_auto_dialysis.Bind(wx.EVT_BUTTON, self.on_auto)
+        for pane in self.configs:
+            for pane in self.configs:
+                pane.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
@@ -92,6 +124,10 @@ class DialysisPumpPanel(wx.Panel):
                 automation.stop()
             for panel in self.panels:
                 panel.panel_dc.entered_offset.Enable(True)
+
+    def on_pane_changed(self, evt):
+        self.sizer.Layout()
+        self.Layout()
 
 
 class TestFrame(wx.Frame):

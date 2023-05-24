@@ -99,8 +99,13 @@ class PerfusionSystem:
     def load_automations(self):
         all_names = PerfusionConfig.get_section_names('automations')
         for name in all_names:
-            automation = get_object(name, config='automations')
-            automation.read_config()
+            try:
+                automation = get_object(name, config='automations')
+                automation.read_config()
+            except AttributeError as e:
+                self._lgr.error(f'Failed to read config for {name}')
+                self._lgr.exception(e)
+                continue
 
             if isinstance(automation, AutoGasMixer):
                 # self._lgr.debug(f'loading {automation.cfg.gas_device}, {automation.cfg.data_source}')

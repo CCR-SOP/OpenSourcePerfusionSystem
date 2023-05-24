@@ -27,9 +27,12 @@ class AutoGasMixerConfig:
 
 @dataclass
 class ArterialAutoGasMixerConfig(AutoGasMixerConfig):
-    pH_range: List = field(default_factory=lambda: [0, 100])
-    CO2_range: List = field(default_factory=lambda: [0, 100])
-    O2_range: List = field(default_factory=lambda: [0, 100])
+    pH_min: float = 0.0
+    pH_max: float = 0.0
+    CO2_min: float = 0.0
+    CO2_max: float = 0.0
+    O2_min: float = 0.0
+    O2_max: float = 0.0
     CO2_adjust: float = 0.0
     flow_adjust: float = 0.0
     O2_channel: int = 0
@@ -38,8 +41,11 @@ class ArterialAutoGasMixerConfig(AutoGasMixerConfig):
 
 @dataclass
 class VenousAutoGasMixerConfig(AutoGasMixerConfig):
-    pH_range: List = field(default_factory=lambda: [0, 100])
-    O2_range: List = field(default_factory=lambda: [0, 100])
+    pH_min: float = 0.0
+    pH_max: float = 0.0
+    O2_min: float = 0.0
+    O2_max: float = 0.0
+
     O2_adjust: float = 0.0
     flow_adjust: float = 0.0
     O2_channel: int = 0
@@ -126,10 +132,10 @@ class AutoGasMixerVenous(AutoGasMixer):
     def _update_flow(self, pH: float):
         if pH == -1:
             self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
-        elif pH < self.cfg.pH_range[0]:
+        elif pH < self.cfg.pH_min:
             self.gas_device.adjust_flow(self.cfg.flow_adjust)
             self._lgr.info(f'{self.name} is acidotic, increasing total flow by {self.cfg.flow_adjust}')
-        elif pH > self.cfg.pH_range[1]:
+        elif pH > self.cfg.pH_max:
             self.gas_device.adjust_flow(-self.cfg.flow_adjust)
             self._lgr.info(f'{self.name} is alkalotic, decreasing total flow by {self.cfg.flow_adjust}')
 
@@ -138,10 +144,10 @@ class AutoGasMixerVenous(AutoGasMixer):
 
         if O2 == -1:
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
-        elif O2 < self.cfg.O2_range[0]:
+        elif O2 < self.cfg.O2_min:
             O2_adjust = self.cfg.O2_adjust
             self._lgr.info(f'{self.name}: O2 low. Increasing O2 percentage by {O2_adjust}%')
-        elif O2 > self.cfg.O2_range[1]:
+        elif O2 > self.cfg.O2_max:
             O2_adjust = -self.cfg.O2_adjust
             self._lgr.warning(f'{self.name}: O2 high. Decreasing O2 percentage by {O2_adjust}%')
         if O2_adjust != 0:
@@ -170,10 +176,10 @@ class AutoGasMixerArterial(AutoGasMixer):
         if pH == -1:
             self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
             check_co2 = True
-        elif pH > self.cfg.pH_range[1]:
+        elif pH > self.cfg.pH_min:
             co2_adjust = self.cfg.CO2_adjust
             self._lgr.info(f'{self.name} is alkalotic, increasing CO2')
-        elif pH < self.cfg.pH_range[0]:
+        elif pH < self.cfg.pH_max:
             co2_adjust = -self.cfg.CO2_adjust
             self._lgr.info(f'{self.name} is acidotic, decreasing C02')
         else:
@@ -182,10 +188,10 @@ class AutoGasMixerArterial(AutoGasMixer):
         if check_co2 is True:
             if CO2 == -1:
                 self._lgr.warning(f'{self.name}: CO2 is out of range. Cannot be adjusted automatically')
-            elif CO2 < self.cfg.CO2_range[0]:
+            elif CO2 < self.cfg.CO2_min:
                 co2_adjust = self.cfg.CO2_adjust
                 self._lgr.warning(f'{self.name}: CO2 low, blood alkalotic')
-            elif CO2 > self.cfg.CO2_range[1]:
+            elif CO2 > self.cfg.CO2_max:
                 co2_adjust = -self.cfg.CO2_adjust
                 self._lgr.warning(f'{self.name}: CO2 high, blood acidotic')
 
@@ -198,9 +204,9 @@ class AutoGasMixerArterial(AutoGasMixer):
 
         if O2 == -1:
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
-        elif O2 < self.cfg.O2_range[0]:
+        elif O2 < self.cfg.O2_min:
             self.gas_device.adjust_flow(self.cfg.flow_adjust)
             self._lgr.info(f'{self.name}: O2 low. Increasing total flow by {self.cfg.flow_adjust}')
-        elif O2 > self.cfg.O2_range[1]:
+        elif O2 > self.cfg.O2_max:
             self.gas_device.adjust_flow(self.cfg.flow_adjust)
             self._lgr.warning(f'{self.name}: O2 high. Decreasing total flow by {self.cfg.flow_adjust}')

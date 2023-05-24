@@ -29,13 +29,16 @@ class AutoDialysisConfig:
 
 @dataclass
 class AutoDialysisInflowConfig(AutoDialysisConfig):
-    K_range: List = field(default_factory=lambda: [0, 100])
+    K_min: float = 2.0
+    K_max: float = 6.0
 
 
 @dataclass
 class AutoDialysisOutflowConfig(AutoDialysisConfig):
-    hct_range: List = field(default_factory=lambda: [0, 100])
-    K_range: List = field(default_factory=lambda: [0, 100])
+    K_min: float = 2.0
+    K_max: float = 6.0
+    hct_min: float = 2.0
+    hct_max: float = 6.0
 
 
 class AutoDialysis:
@@ -56,7 +59,7 @@ class AutoDialysis:
         return self.is_streaming
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg, classname=self.__class__.__name__)
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
@@ -114,11 +117,11 @@ class AutoDialysisInflow(AutoDialysis):
     def _update_speed(self, K: float):
         if K == -1:
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
-        elif K < self.cfg.K_range[0]:
-            self._lgr.info(f'K ({K}) below min of {self.cfg.K_range[0]}')
+        elif K < self.cfg.K_min:
+            self._lgr.info(f'K ({K}) below min of {self.cfg.K_min}')
             self.pump.hw.adjust_flow_rate(-self.cfg.adjust_rate)
-        elif K > self.cfg.K_range[1]:
-            self._lgr.info(f'K ({K}) above max of {self.cfg.K_range[1]}')
+        elif K > self.cfg.K_max:
+            self._lgr.info(f'K ({K}) above max of {self.cfg.K_max}')
             self.pump.hw.adjust_flow_rate(self.cfg.adjust_rate)
 
 
@@ -139,18 +142,18 @@ class AutoDialysisOutflow(AutoDialysis):
     def _update_speed(self, hct: float, K: float):
         if K == -1:
             self._lgr.warning(f'{self.name} K is out of range. Cannot be adjusted automatically')
-        elif K < self.cfg.K_range[0]:
-            self._lgr.info(f'K ({K}) below min of {self.cfg.K_range[0]}')
+        elif K < self.cfg.K_min:
+            self._lgr.info(f'K ({K}) below min of {self.cfg.K_min}')
             self.pump.hw.adjust_flow_rate(-self.cfg.adjust_rate)
-        elif K > self.cfg.K_range[1]:
-            self._lgr.info(f'K ({K}) above max of {self.cfg.K_range[1]}')
+        elif K > self.cfg.K_max:
+            self._lgr.info(f'K ({K}) above max of {self.cfg.K_max}')
             self.pump.hw.adjust_flow_rate(self.cfg.adjust_rate)
 
         if hct == -1:
             self._lgr.warning(f'{self.name} hct is out of range. Cannot be adjusted automatically')
-        elif hct < self.cfg.hct_range[0]:
-            self._lgr.info(f'hct ({hct}) below min of {self.cfg.hct_range[0]}')
+        elif hct < self.cfg.hct_min:
+            self._lgr.info(f'hct ({hct}) below min of {self.cfg.hct_min}')
             self.pump.hw.adjust_flow_rate(self.cfg.adjust_rate)
-        elif hct > self.cfg.hct_range[1]:
-            self._lgr.info(f'hct ({hct}) above max of {self.cfg.hct_range[1]}')
+        elif hct > self.cfg.hct_max:
+            self._lgr.info(f'hct ({hct}) above max of {self.cfg.hct_max}')
             self.pump.hw.adjust_flow_rate(-self.cfg.adjust_rate)

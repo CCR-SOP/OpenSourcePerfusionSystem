@@ -15,6 +15,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from gui.panel_syringe import PanelSyringeControls
 from pyPerfusion.PerfusionSystem import PerfusionSystem
+from gui.panel_config import AutomationConfig
 
 
 class SyringePanel(wx.Panel):
@@ -28,23 +29,35 @@ class SyringePanel(wx.Panel):
 
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Syringe Pumps")
         self.static_box.SetFont(font)
-
         self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
-        flagsExpand = wx.SizerFlags(1)
-        flagsExpand.Expand().Border(wx.ALL, 5)
-        self.sizer = wx.FlexGridSizer(rows=3, cols=3, hgap=1, vgap=1)
 
         self.panels = []
         self.panels_vaso = []
         self.panels_glucose = []
+        self.configs_vaso = []
+        self.configs_glucose = []
         for automation in self.automations:
             panel = PanelSyringeControls(self, automation)
-            self.sizer.Add(panel, proportion=1, flag=wx.ALL | wx.EXPAND, border=1)
-            self.panels.append(panel)
             if automation.device.name == 'Epoprostenol' or automation.device.name == 'Phenylephrine':
                 self.panels_vaso.append(panel)
+                config = AutomationConfig(self, automation)
+                config.add_var('pressure_mmHg_min', 'Arterial mmHg (min)', limits=(0, 1, 200))
+                config.add_var('pressure_mmHg_max', 'Arterial mmHg (max)', limits=(0, 1, 200))
+                config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', limits=(0, 1, 1e6))
+                config.do_layout()
+                config.set_bindings()
+                self.configs_vaso.append(config)
             elif automation.device.name == 'Glucagon' or automation.device.name == 'Insulin':
                 self.panels_glucose.append(panel)
+                config = AutomationConfig(self, automation)
+                config.add_var('glucose_min', 'Glucose (min)', limits=(0, 1, 1000))
+                config.add_var('glucose_max', 'Glucose (max)', limits=(0, 1, 1000))
+                config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', limits=(0, 1, 1e6))
+                config.do_layout()
+                config.set_bindings()
+                self.configs_glucose.append(config)
+            else:
+                self.panels.append(panel)
 
         # Add auto start buttons
         auto_font = wx.Font()
@@ -52,12 +65,10 @@ class SyringePanel(wx.Panel):
         self.btn_auto_glucose = wx.Button(self, label='Start Auto Glucose Control')
         self.btn_auto_glucose.SetFont(auto_font)
         self.btn_auto_glucose.SetBackgroundColour(wx.Colour(0, 240, 0))
-        self.sizer.Add(self.btn_auto_glucose, flagsExpand)
 
         self.btn_auto_vaso = wx.Button(self, label='Start Auto Vasoactive Control')
         self.btn_auto_vaso.SetFont(auto_font)
         self.btn_auto_vaso.SetBackgroundColour(wx.Colour(0, 240, 0))
-        self.sizer.Add(self.btn_auto_vaso, flagsExpand)
 
         # Add log
         log_names = []
@@ -65,21 +76,40 @@ class SyringePanel(wx.Panel):
             log_names.append(automation.device.name)
         log_names.append('AutoSyringe')
         self.text_log_syringes = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
-        self.sizer.Add(self.text_log_syringes, flagsExpand)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        self.sizer.AddGrowableRow(0, 1)
-        self.sizer.AddGrowableRow(1, 1)
-        self.sizer.AddGrowableRow(2, 2)
-        self.sizer.AddGrowableCol(0, 1)
-        self.sizer.AddGrowableCol(1, 1)
-        self.sizer.AddGrowableCol(2, 1)
+        flags = wx.SizerFlags().Expand().Border()
 
-        self.sizer.SetSizeHints(self.GetParent())
-        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        for panel in self.panels_vaso:
+            sizer.Add(panel, flags)
+
+        sizer.Add(self.btn_auto_vaso, flags)
+        for config in self.configs_vaso:
+            sizer.Add(config, flags.Proportion(0))
+        self.wrapper.Add(sizer, flags)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        for panel in self.panels_glucose:
+            sizer.Add(panel, flags)
+
+        sizer.Add(self.btn_auto_glucose, flags)
+        for config in self.configs_glucose:
+            sizer.Add(config, flags.Proportion(0))
+        self.wrapper.Add(sizer, flags)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        for panel in self.panels:
+            self._lgr.debug(f'adding {panel.automation.name}')
+            sizer.Add(panel, flags)
+
+        sizer.Add(self.text_log_syringes, flags)
+        self.wrapper.Add(sizer, flags)
+
+        self.wrapper.SetSizeHints(self.GetParent())
         self.SetSizer(self.wrapper)
         self.Fit()
         self.Layout()
@@ -88,7 +118,15 @@ class SyringePanel(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.btn_auto_glucose.Bind(wx.EVT_BUTTON, self.on_auto_glucose)
         self.btn_auto_vaso.Bind(wx.EVT_BUTTON, self.on_auto_vaso)
-        
+        for config in self.configs_vaso:
+            config.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+        for config in self.configs_glucose:
+            config.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+
+    def on_pane_changed(self, evt):
+        self.wrapper.Layout()
+        self.Layout()
+
     def on_auto_glucose(self, evt):
         if self.btn_auto_glucose.GetLabel() == "Start Auto Glucose Control":
             self.btn_auto_glucose.SetLabel("Stop Auto Glucose Control")
@@ -131,6 +169,10 @@ class SyringePanel(wx.Panel):
 
     def OnClose(self, evt):
         for panel in self.panels:
+            panel.Close()
+        for panel in self.panels_glucose:
+            panel.Close()
+        for panel in self.panels_vaso:
             panel.Close()
 
 
