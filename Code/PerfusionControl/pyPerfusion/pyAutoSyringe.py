@@ -42,12 +42,6 @@ class AutoSyringeInsulinConfig(AutoSyringeConfig):
 
 
 @dataclass
-class AutoSyringeVasoConfig(AutoSyringeConfig):
-    pressure_mmHg_min: float = 0.0
-    pressure_mmHg_max: float = 0.0
-
-
-@dataclass
 class AutoSyringeEpoConfig(AutoSyringeConfig):
     pressure_range_mmHg: List = field(default_factory=lambda: [0, 100])
 
@@ -169,31 +163,6 @@ class AutoSyringeInsulin(AutoSyringe):
             self.stop()
             self._lgr.info(f'Insulin injection stopped')
 
-
-class AutoSyringeVaso(AutoSyringe):
-    def __init__(self, name: str):
-        super().__init__(name)
-        self.cfg = AutoSyringeVasoConfig()
-        self.direction = 0
-
-    def update_on_input(self, pressure):
-        mid_pressure = (self.cfg.pressure_mmHg_min+self.cfg.pressure_mmHg_max) / 2
-        if pressure > self.cfg.pressure_mmHg_max:  # dilates, decreases pressure
-            self._inject(self.cfg.ul_per_min)
-            self.direction = -1
-            self._lgr.info(f'Epo injection set to {self.cfg.ul_per_min} (pressure is {pressure} mmHg)')
-        elif pressure <= mid_pressure and self.direction == -1:  # stop at midpoint
-            self.stop()
-            self._lgr.info(f'Epo injection stopped, reached {pressure} mmHg')
-            self.direction = 0
-        elif pressure < self.cfg.pressure_mmHg_min:  # constricts, increase pressure
-            self._inject(self.cfg.ul_per_min)
-            self._lgr.info(f'Phenyl injection set to {self.cfg.ul_per_min}')
-            self.direction = 1
-        elif pressure >= mid_pressure and self.direction == 1:  # stop at midpoint
-            self.stop()
-            self._lgr.info(f'Phenyl injection stopped')
-            self.direction = 0
 
 class AutoSyringeEpo(AutoSyringe):
     def __init__(self, name: str):
