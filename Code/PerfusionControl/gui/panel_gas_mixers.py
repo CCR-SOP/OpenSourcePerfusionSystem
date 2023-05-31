@@ -115,17 +115,19 @@ class BaseGasMixerPanel(wx.Panel):
         font = wx.Font()
         font.SetPointSize(int(12))
 
-        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
+        self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name, style=wx.ALIGN_CENTER_HORIZONTAL)
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         # Adjustable parameters
-        self.text_flow_adjust = wx.TextCtrl(self, value='Total (mL/min):')
+        self.text_flow_adjust = wx.TextCtrl(self, value='Total Flow\n(mL/min)',
+                                            style=wx.TE_READONLY | wx.BORDER_NONE | wx.TE_MULTILINE | wx.TE_RICH)
         self.spin_flow_adjust = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400,
                                                   initial=int(self.autogasmixer.gas_device.get_total_flow()), inc=1)
         self.text_flow_adjust.SetFont(font)
         self.spin_flow_adjust.SetFont(font)
 
-        self.slider_mix = wx.Slider(self, value=0, minValue=0, maxValue=100, style=wx.SL_INVERSE | wx.SL_VALUE_LABEL)
+        self.slider_mix = wx.Slider(self, value=0, minValue=0, maxValue=100,
+                                    style=wx.SL_INVERSE | wx.SL_VALUE_LABEL)
 
         self.label_gas1 = wx.StaticText(self, label=f'{self.gas1_name}', style=wx.ALIGN_LEFT)
         self.label_gas2 = wx.StaticText(self, label=f'{self.gas2_name}', style=wx.ALIGN_RIGHT)
@@ -136,11 +138,15 @@ class BaseGasMixerPanel(wx.Panel):
         self.label_gas2_mix = wx.StaticText(self, label=f'0 %', style=wx.ALIGN_RIGHT)
         self.label_gas1_flow = wx.StaticText(self, label=f'ml/min', style=wx.ALIGN_LEFT)
         self.label_gas2_flow = wx.StaticText(self, label=f'ml/min', style=wx.ALIGN_RIGHT)
+        self.label_gas1_mix.SetFont(font)
+        self.label_gas2_mix.SetFont(font)
+        self.label_gas1_flow.SetFont(font)
+        self.label_gas2_flow.SetFont(font)
 
         # Buttons for functionality
         self.btn_flow = wx.ToggleButton(self, label='Enable Flow')
         self.btn_update = wx.Button(self, label='Update')
-        self.chk_auto = wx.CheckBox(self, label='Auto Adjust based on CDI')
+        self.btn_auto = wx.ToggleButton(self, label='Automate')
 
         self.timer_gui_update = wx.Timer(self)
         self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
@@ -182,14 +188,8 @@ class BaseGasMixerPanel(wx.Panel):
         sizerH = wx.BoxSizer(wx.HORIZONTAL)
         sizerH.Add(self.btn_update, flags)
         sizerH.Add(self.btn_flow, flags)
-        self.sizer.Add(sizerH)
-
-        self.sizer.Add(self.chk_auto, flags)
-        self.sizer.AddSpacer(1)
-
-        self.sizer.SetSizeHints(self.GetParent())
-
-        # self.sizer.Add(self.sizer_cfg, flags)
+        sizerH.Add(self.btn_auto, flags)
+        self.sizer.Add(sizerH, flags)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
@@ -205,7 +205,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.spin_flow_adjust.Bind(wx.EVT_TEXT, self.OnChangeFlow)
         self.slider_mix.Bind(wx.EVT_SLIDER, self.OnChangeGas)
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
-        self.Bind(wx.EVT_CHECKBOX, self.OnAuto)
+        self.Bind(wx.EVT_TOGGLEBUTTON, self.OnAuto)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def update_controls(self):
@@ -218,8 +218,8 @@ class BaseGasMixerPanel(wx.Panel):
         gas1_flow_actual = self.autogasmixer.gas_device.get_target_sccm(1)
         gas2_flow_actual = self.autogasmixer.gas_device.get_target_sccm(2)
 
-        self.label_gas1_mix.SetLabel(f'{gas1_mix_actual} %')
-        self.label_gas2_mix.SetLabel(f'{gas2_mix_actual} %')
+        self.label_gas1_mix.SetLabel(f'{gas1_mix_actual}%')
+        self.label_gas2_mix.SetLabel(f'{gas2_mix_actual}%')
         self.label_gas1_flow.SetLabel(f'{gas1_flow_actual} ml/min')
         self.label_gas2_flow.SetLabel(f'{gas2_flow_actual} ml/min')
 
@@ -227,6 +227,9 @@ class BaseGasMixerPanel(wx.Panel):
         self.warn_on_difference(self.label_gas2_mix, gas2_mix_actual, gas2_mix_set)
         self.warn_on_difference(self.label_gas1_flow, gas1_flow_actual, gas1_flow_set)
         self.warn_on_difference(self.label_gas2_flow, gas2_flow_actual, gas2_flow_set)
+
+        # need to call Layout to ensure all text is aligned
+        self.Layout()
 
     def warn_on_difference(self, ctrl, actual, set_value):
         color = self.normal_color
@@ -244,19 +247,23 @@ class BaseGasMixerPanel(wx.Panel):
         self.slider_mix.SetValue(int(self.autogasmixer.gas_device.get_percent_value(1)))
 
     def OnAuto(self, evt):
-        if not self.chk_auto.IsChecked():
+        self._lgr.debug(f'button value is {self.btn_auto.GetValue()}')
+        if not self.btn_auto.GetValue():
             self._update_manual_entries()
             self.autogasmixer.stop()
+            self.btn_auto.SetLabel('Automate')
         else:
             self.autogasmixer.start()
-        self.slider_mix.Enable(not self.chk_auto.IsChecked())
-        self.spin_flow_adjust.Enable(not self.chk_auto.IsChecked())
+            self.btn_auto.SetLabel('Switch to Manual Control')
+        self.slider_mix.Enable(not self.btn_auto.GetValue())
+        self.spin_flow_adjust.Enable(not self.btn_auto.GetValue())
+        self.Refresh()
 
     def OnFlow(self, evt):
         working_status = self.autogasmixer.gas_device.get_working_status()
         if working_status == 0:  # 0 is off
             self.autogasmixer.gas_device.set_working_status(turn_on=True)
-            if self.chk_auto.IsChecked():
+            if self.btn_auto.GetValue():
                 self.autogasmixer.start()
             else:
                 self._update_manual_entries()
