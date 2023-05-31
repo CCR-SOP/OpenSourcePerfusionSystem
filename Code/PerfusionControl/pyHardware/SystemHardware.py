@@ -27,7 +27,9 @@ MOCKS = {'NIDAQAIDevice': 'AIDevice',
          'CDI': 'MockCDI',
          'Pump11Elite': 'MockPump11Elite',
          'GasDevice': 'MockGasDevice',
-         'NIDAQDCDevice': 'DCDevice'}
+         'NIDAQDCDevice': 'DCDevice',
+         'PuraLevi30': 'Mocki30',
+         'LeviFlow': 'MockLeviFlow'}
 
 
 lgr = logging.getLogger('pyHardware.SystemHardware')
