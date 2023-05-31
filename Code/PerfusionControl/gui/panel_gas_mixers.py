@@ -10,6 +10,8 @@ and under the public domain.
 import logging
 
 import wx
+import wx.lib.colourdb
+import numpy as np
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
@@ -106,45 +108,34 @@ class BaseGasMixerPanel(wx.Panel):
             self.gas1_name = "NA"
             self.gas2_name = "NA"
 
+        wx.lib.colourdb.updateColourDB()
+        self.normal_color = self.GetBackgroundColour()
+        self.warning_color = wx.Colour('orange')
+
         font = wx.Font()
         font.SetPointSize(int(12))
 
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
-        # Total flow display
-        self.label_total_flow = wx.StaticText(self, label='Total gas flow (mL/min):')
-        self.input_total_flow = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400,
+        # Adjustable parameters
+        self.text_flow_adjust = wx.TextCtrl(self, value='Total (mL/min):')
+        self.spin_flow_adjust = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400,
                                                   initial=int(self.autogasmixer.gas_device.get_total_flow()), inc=1)
-        self.label_total_flow.SetFont(font)
-        self.input_total_flow.SetFont(font)
+        self.text_flow_adjust.SetFont(font)
+        self.spin_flow_adjust.SetFont(font)
 
-        self.label_real_total_flow = wx.StaticText(self, label='Total flow set on hardware (mL/min):')
-        self.real_total_flow = wx.TextCtrl(self, style=wx.TE_READONLY,
-                                                    value=str(self.autogasmixer.gas_device.get_total_flow()))
+        self.slider_mix = wx.Slider(self, value=0, minValue=0, maxValue=100, style=wx.SL_INVERSE | wx.SL_VALUE_LABEL)
 
-        # Gas 1 display
-        self.label_gas1 = wx.StaticText(self, label=f'{self.gas1_name} % Mix:')
-        self.input_percent_gas1 = wx.SpinCtrlDouble(self, wx.ID_ANY | wx.EXPAND, min=0, max=100,
-                                                    initial=int(self.autogasmixer.gas_device.get_percent_value(1))
-                                                    , inc=1)
+        self.label_gas1 = wx.StaticText(self, label=f'{self.gas1_name}', style=wx.ALIGN_LEFT)
+        self.label_gas2 = wx.StaticText(self, label=f'{self.gas2_name}', style=wx.ALIGN_RIGHT)
         self.label_gas1.SetFont(font)
-        self.input_percent_gas1.SetFont(font)
+        self.label_gas2.SetFont(font)
 
-        self.label_real_gas1 = wx.StaticText(self, label=f'Actual {self.gas1_name} % Mix:')
-        self.percent_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY, value='0')
-        self.label_flow_gas1 = wx.StaticText(self, label=f'{self.gas1_name} actual flow (mL/min):')
-        self.flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY)
-        self.label_target_flow_gas1 = wx.StaticText(self, label=f'{self.gas1_name} target flow (mL/min):')
-        self.target_flow_gas1 = wx.TextCtrl(self, style=wx.TE_READONLY)
-
-        # Gas 2 display
-        self.label_gas2 = wx.StaticText(self, label=f'{self.gas2_name} % Mix:')
-        self.percent_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY)
-        self.label_flow_gas2 = wx.StaticText(self, label=f'{self.gas2_name} actual flow (mL/min):')
-        self.flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY)
-        self.label_target_flow_gas2 = wx.StaticText(self, label=f'{self.gas2_name} target flow (mL/min):')
-        self.target_flow_gas2 = wx.TextCtrl(self, style=wx.TE_READONLY)
+        self.label_gas1_mix = wx.StaticText(self, label=f'0 %', style=wx.ALIGN_LEFT)
+        self.label_gas2_mix = wx.StaticText(self, label=f'0 %', style=wx.ALIGN_RIGHT)
+        self.label_gas1_flow = wx.StaticText(self, label=f'ml/min', style=wx.ALIGN_LEFT)
+        self.label_gas2_flow = wx.StaticText(self, label=f'ml/min', style=wx.ALIGN_RIGHT)
 
         # Buttons for functionality
         self.btn_flow = wx.ToggleButton(self, label='Enable Flow')
@@ -158,44 +149,47 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 2).Expand()
+        flags = wx.SizerFlags().Expand().Proportion(1)
 
-        self.sizer_cfg = wx.FlexGridSizer(cols=2)
-        self.sizer_cfg.AddGrowableCol(0, 2)
-        self.sizer_cfg.AddGrowableCol(1, 1)
+        sizerH = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.sizer_cfg.Add(self.label_total_flow, flags)
-        self.sizer_cfg.Add(self.input_total_flow, flags)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.label_gas1, flags)
+        sizer.Add(self.label_gas1_flow, flags)
+        sizer.Add(self.label_gas1_mix, flags)
 
-        self.sizer_cfg.Add(self.label_gas1, flags)
-        self.sizer_cfg.Add(self.input_percent_gas1, flags)
+        sizerH.Add(sizer, flags.Proportion(1))
 
-        self.sizer_cfg.Add(self.label_real_total_flow, flags)
-        self.sizer_cfg.Add(self.real_total_flow, flags)
+        sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.sizer_cfg.Add(self.label_real_gas1, flags)
-        self.sizer_cfg.Add(self.percent_gas1, flags)
-        self.sizer_cfg.Add(self.label_target_flow_gas1, flags)
-        self.sizer_cfg.Add(self.target_flow_gas1, flags)
-        self.sizer_cfg.Add(self.label_flow_gas1, flags)
-        self.sizer_cfg.Add(self.flow_gas1, flags)
+        sizerf = wx.BoxSizer(wx.HORIZONTAL)
+        sizerf.Add(self.text_flow_adjust, flags)
+        sizerf.Add(self.spin_flow_adjust, flags)
+        sizer.Add(sizerf, wx.SizerFlags().Center())
 
-        self.sizer_cfg.Add(self.label_gas2, flags)
-        self.sizer_cfg.Add(self.percent_gas2, flags)
-        self.sizer_cfg.Add(self.label_target_flow_gas2, flags)
-        self.sizer_cfg.Add(self.target_flow_gas2, flags)
-        self.sizer_cfg.Add(self.label_flow_gas2, flags)
-        self.sizer_cfg.Add(self.flow_gas2, flags)
+        sizer.AddSpacer(1)
+        sizer.Add(self.slider_mix, flags)
+        sizerH.Add(sizer, wx.SizerFlags().Proportion(3))
 
-        self.sizer_cfg.Add(self.btn_update, flags)
-        self.sizer_cfg.Add(self.btn_flow, flags)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.label_gas2, flags)
+        sizer.Add(self.label_gas2_flow, flags)
+        sizer.Add(self.label_gas2_mix, flags)
 
-        self.sizer_cfg.Add(self.chk_auto, flags)
-        self.sizer_cfg.AddSpacer(1)
+        sizerH.Add(sizer, flags.Proportion(1))
+        self.sizer.Add(sizerH, flags.Proportion(4))
 
-        self.sizer_cfg.SetSizeHints(self.GetParent())
+        sizerH = wx.BoxSizer(wx.HORIZONTAL)
+        sizerH.Add(self.btn_update, flags)
+        sizerH.Add(self.btn_flow, flags)
+        self.sizer.Add(sizerH)
 
-        self.sizer.Add(self.sizer_cfg, flags)
+        self.sizer.Add(self.chk_auto, flags)
+        self.sizer.AddSpacer(1)
+
+        self.sizer.SetSizeHints(self.GetParent())
+
+        # self.sizer.Add(self.sizer_cfg, flags)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
@@ -207,17 +201,47 @@ class BaseGasMixerPanel(wx.Panel):
     def __set_bindings(self):
         self.btn_flow.Bind(wx.EVT_TOGGLEBUTTON, self.OnFlow)
         self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
-        self.input_total_flow.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeFlow)
-        self.input_total_flow.Bind(wx.EVT_TEXT, self.OnChangeFlow)
-        self.input_percent_gas1.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeGas)
-        self.input_percent_gas1.Bind(wx.EVT_TEXT, self.OnChangeGas)
+        self.spin_flow_adjust.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeFlow)
+        self.spin_flow_adjust.Bind(wx.EVT_TEXT, self.OnChangeFlow)
+        self.slider_mix.Bind(wx.EVT_SLIDER, self.OnChangeGas)
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
         self.Bind(wx.EVT_CHECKBOX, self.OnAuto)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
+    def update_controls(self):
+        gas1_mix_set = self.autogasmixer.gas_device.percent[0]
+        gas2_mix_set = self.autogasmixer.gas_device.percent[1]
+        gas1_flow_set = self.autogasmixer.gas_device.total_flow * (gas1_mix_set / 100.0)
+        gas2_flow_set =  self.autogasmixer.gas_device.total_flow * (gas2_mix_set / 100.0)
+        gas1_mix_actual = self.autogasmixer.gas_device.get_percent_value(1)
+        gas2_mix_actual = self.autogasmixer.gas_device.get_percent_value(2)
+        gas1_flow_actual = self.autogasmixer.gas_device.get_target_sccm(1)
+        gas2_flow_actual = self.autogasmixer.gas_device.get_target_sccm(2)
+
+        self.label_gas1_mix.SetLabel(f'{gas1_mix_actual} %')
+        self.label_gas2_mix.SetLabel(f'{gas2_mix_actual} %')
+        self.label_gas1_flow.SetLabel(f'{gas1_flow_actual} ml/min')
+        self.label_gas2_flow.SetLabel(f'{gas2_flow_actual} ml/min')
+
+        self.warn_on_difference(self.label_gas1_mix, gas1_mix_actual, gas1_mix_set)
+        self.warn_on_difference(self.label_gas2_mix, gas2_mix_actual, gas2_mix_set)
+        self.warn_on_difference(self.label_gas1_flow, gas1_flow_actual, gas1_flow_set)
+        self.warn_on_difference(self.label_gas2_flow, gas2_flow_actual, gas2_flow_set)
+
+    def warn_on_difference(self, ctrl, actual, set_value):
+        color = self.normal_color
+        tooltip_msg = ''
+
+        if not np.isclose(actual, set_value):
+            color = self.warning_color
+            tooltip_msg = f'Expected {set_value}'
+        ctrl.SetBackgroundColour(color)
+        ctrl.SetToolTip(tooltip_msg)
+        ctrl.Refresh()
+
     def _update_manual_entries(self):
-        self.input_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
-        self.input_percent_gas1.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(1)}')
+        self.spin_flow_adjust.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
+        self.slider_mix.SetValue(int(self.autogasmixer.gas_device.get_percent_value(1)))
 
     def OnAuto(self, evt):
         if not self.chk_auto.IsChecked():
@@ -225,8 +249,8 @@ class BaseGasMixerPanel(wx.Panel):
             self.autogasmixer.stop()
         else:
             self.autogasmixer.start()
-        self.input_percent_gas1.Enable(not self.chk_auto.IsChecked())
-        self.input_total_flow.Enable(not self.chk_auto.IsChecked())
+        self.slider_mix.Enable(not self.chk_auto.IsChecked())
+        self.spin_flow_adjust.Enable(not self.chk_auto.IsChecked())
 
     def OnFlow(self, evt):
         working_status = self.autogasmixer.gas_device.get_working_status()
@@ -242,20 +266,20 @@ class BaseGasMixerPanel(wx.Panel):
 
     def OnChangeFlow(self, evt):
         self.btn_update.Enable(True)
-        self.input_total_flow.SetBackgroundColour(wx.RED)
+        self.spin_flow_adjust.SetBackgroundColour(wx.RED)
 
     def OnChangeGas(self, evt):
         self.btn_update.Enable(True)
-        self.input_percent_gas1.SetBackgroundColour(wx.RED)
+        self.slider_mix.SetBackgroundColour(wx.RED)
 
     def OnUpdate(self, evt):
-        self.autogasmixer.gas_device.set_percent_value(2, 100 - float(self.input_percent_gas1.GetValue()))
-        self.autogasmixer.gas_device.set_total_flow(int(self.input_total_flow.GetValue()))
-        self.input_total_flow.SetBackgroundColour(wx.WHITE)
-        self.input_total_flow.Refresh()
+        self.autogasmixer.gas_device.set_percent_value(2, 100 - float(self.slider_mix.GetValue()))
+        self.autogasmixer.gas_device.set_total_flow(int(self.spin_flow_adjust.GetValue()))
+        self.spin_flow_adjust.SetBackgroundColour(wx.WHITE)
+        self.spin_flow_adjust.Refresh()
+        self.slider_mix.SetBackgroundColour(self.normal_color)
+        self.slider_mix.Refresh()
 
-        self.input_percent_gas1.SetBackgroundColour(wx.WHITE)
-        self.input_percent_gas1.Refresh()
         self.btn_update.Enable(False)
 
     def update_controls_from_hardware(self, evt=None):
@@ -268,16 +292,7 @@ class BaseGasMixerPanel(wx.Panel):
             self.btn_flow.SetLabel('Enable Flow')
             # self.btn_update.Enable(True)
 
-        self.real_total_flow.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
-
-        self.percent_gas1.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(1)}')
-        self.percent_gas2.SetValue(f'{self.autogasmixer.gas_device.get_percent_value(2)}')
-
-        self.target_flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_target_sccm(1)}')
-        self.target_flow_gas2.SetValue(f'{self.autogasmixer.gas_device.get_target_sccm(2)}')
-
-        self.flow_gas1.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(1)}')
-        self.flow_gas2.SetValue(f'{self.autogasmixer.gas_device.get_sccm_av(2)}')
+        self.update_controls()
 
     def OnClose(self, evt):
         self.timer_gui_update.Stop()
