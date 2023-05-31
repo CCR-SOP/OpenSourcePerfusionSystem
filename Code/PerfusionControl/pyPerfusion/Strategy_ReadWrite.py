@@ -157,8 +157,8 @@ class ReaderPoints(Reader):
         return ts, data_chunk
 
     def retrieve_buffer(self, last_ms, samples_needed, index: int = None):
-        data_time = []
-        data = []
+        data_time = np.zeros(0, dtype=self.data_dtype)
+        data = np.zeros(0, dtype=self.data_dtype)
 
         fid = open(self.fqpn, 'rb')
         fid.seek(0)
@@ -172,10 +172,10 @@ class ReaderPoints(Reader):
                     data_chunk = np.fromfile(fid, dtype=self.data_dtype,
                                              count=self.cfg.samples_per_timestamp)
                     if index is None:
-                        data.append(data_chunk)
+                        data = np.append(data, data_chunk)
                     else:
-                        data.append(data_chunk[index])
-                    data_time.append((ts - self.sensor.get_acq_start_ms()) / 1000.0)
+                        data = np.append(data, data_chunk[index])
+                    data_time = np.append(data_time, ts - self.sensor.get_acq_start_ms())
                 else:
                     fid.seek(self.bytes_per_chunk-self.cfg.bytes_per_timestamp, SEEK_CUR)
 
