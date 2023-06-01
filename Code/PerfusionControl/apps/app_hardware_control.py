@@ -69,8 +69,8 @@ class HardwarePanel(wx.Panel):
 
         self.sizer = wx.GridSizer(cols=2)
 
-        self.sizer.Add(self.panel_syringes, flags.Proportion(2))
-        self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(2))
+        self.sizer.Add(self.panel_syringes, flags.Proportion(1))
+        self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(1))
         self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
         self.sizer.Add(self.panel_levitronix_pumps, flags.Proportion(2))
 

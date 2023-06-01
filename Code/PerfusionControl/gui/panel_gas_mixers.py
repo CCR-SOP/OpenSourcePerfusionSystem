@@ -30,62 +30,44 @@ class GasMixerPanel(wx.Panel):
             panel = BaseGasMixerPanel(self, automation)
             self.panels.append(panel)
             if automation.name == 'Arterial Gas Mixer Automation':
-                self.config_arterial = AutomationConfig(self, automation)
-                self.config_arterial.add_var('pH_min', 'pH (min)', limits=(0, 0.01, 14), decimal_places=2)
-                self.config_arterial.add_var('pH_max', 'pH (max)', limits=(0, 0.01, 14), decimal_places=2)
-                self.config_arterial.add_var('CO2_min', 'CO2 (min)', limits=(0, 1, 100))
-                self.config_arterial.add_var('CO2_max', 'CO2 (max)', limits=(0, 1, 100))
-                self.config_arterial.add_var('O2_min', 'O2 (min)', limits=(0, 1, 100))
-                self.config_arterial.add_var('O2_max', 'O2 (max)', limits=(0, 1, 100))
-                self.config_arterial.do_layout()
-                self.config_arterial.set_bindings()
+                panel.config.add_var('pH_min', 'pH (min)', limits=(0, 0.01, 14), decimal_places=2)
+                panel.config.add_var('pH_max', 'pH (max)', limits=(0, 0.01, 14), decimal_places=2)
+                panel.config.add_var('CO2_min', 'CO2 (min)', limits=(0, 1, 100))
+                panel.config.add_var('CO2_max', 'CO2 (max)', limits=(0, 1, 100))
+                panel.config.add_var('O2_min', 'O2 (min)', limits=(0, 1, 100))
+                panel.config.add_var('O2_max', 'O2 (max)', limits=(0, 1, 100))
+                panel.config.do_layout()
+                panel.config.set_bindings()
             elif automation.name == 'Venous Gas Mixer Automation':
-                self.config_venous = AutomationConfig(self, automation)
-                self.config_venous.add_var('pH_min', 'pH (min)', limits=(0, 1, 14), decimal_places=2)
-                self.config_venous.add_var('pH_max', 'pH (max)', limits=(0, 1, 14), decimal_places=2)
-                self.config_venous.add_var('O2_min', 'O2 (min)', limits=(0, 1, 100))
-                self.config_venous.add_var('O2_max', 'O2 (max)', limits=(0, 1, 100))
-                self.config_venous.do_layout()
-                self.config_venous.set_bindings()
+                panel.config.add_var('pH_min', 'pH (min)', limits=(0, 1, 14), decimal_places=2)
+                panel.config.add_var('pH_max', 'pH (max)', limits=(0, 1, 14), decimal_places=2)
+                panel.config.add_var('O2_min', 'O2 (min)', limits=(0, 1, 100))
+                panel.config.add_var('O2_max', 'O2 (max)', limits=(0, 1, 100))
+                panel.config.do_layout()
+                panel.config.set_bindings()
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
-        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
+        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
-        self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Arterial Gas Mixer'])
-        self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Venous Gas Mixer'])
+        # self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Arterial Gas Mixer'])
+        # self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Venous Gas Mixer'])
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
         flags = wx.SizerFlags().Expand().Border()
-        self.sizer = wx.FlexGridSizer(cols=2, vgap=1, hgap=1)
 
-        for panel in self.panels:
-            self.sizer.Add(panel, flags)
+        self.wrapper.Add(self.panels[0], flags.Proportion(1))
+        self.wrapper.Add(self.panels[1], flags.Proportion(1))
 
-        self.sizer.AddGrowableCol(0, 1)
-        self.sizer.AddGrowableCol(1, 1)
-
-        self.sizer.Add(self.config_arterial, flags.Proportion(0))
-        self.sizer.Add(self.config_venous, flags.Proportion(0))
-        self.sizer.Add(self.text_log_arterial, flags)
-        self.sizer.Add(self.text_log_venous, flags)
-
-        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
-
-        self.sizer.SetSizeHints(self.GetParent())
+        self.wrapper.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
         self.SetSizer(self.wrapper)
         self.Layout()
 
     def __set_bindings(self):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
-        self.config_arterial.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
-        self.config_venous.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
-    def on_pane_changed(self, evt):
-        self.sizer.Layout()
-        self.Layout()
 
     def OnClose(self, evt):
         for panel in self.panels:
@@ -148,6 +130,11 @@ class BaseGasMixerPanel(wx.Panel):
         self.btn_update = wx.Button(self, label='Update')
         self.btn_auto = wx.ToggleButton(self, label='Automate')
 
+        self._lgr.debug(f'text log looking for {self.autogasmixer.gas_device.name}')
+        self.text_log = utils.create_log_display(self, logging.INFO, [self.autogasmixer.gas_device.name])
+
+        self.config = AutomationConfig(self, self.autogasmixer)
+
         self.timer_gui_update = wx.Timer(self)
         self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
 
@@ -155,41 +142,41 @@ class BaseGasMixerPanel(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Proportion(1)
+        sizer_gas1 = wx.BoxSizer(wx.VERTICAL)
+        sizer_gas1.Add(self.label_gas1, wx.SizerFlags().Proportion(1))
+        sizer_gas1.Add(self.label_gas1_flow, wx.SizerFlags().Proportion(1))
+        sizer_gas1.Add(self.label_gas1_mix, wx.SizerFlags().Proportion(1))
 
-        sizerH = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_gas2 = wx.BoxSizer(wx.VERTICAL)
+        sizer_gas2.Add(self.label_gas2, wx.SizerFlags().Proportion(1))
+        sizer_gas2.Add(self.label_gas2_flow, wx.SizerFlags().Proportion(1).Right())
+        sizer_gas2.Add(self.label_gas2_mix, wx.SizerFlags().Proportion(1).Right())
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.label_gas1, flags)
-        sizer.Add(self.label_gas1_flow, flags)
-        sizer.Add(self.label_gas1_mix, flags)
+        sizer_flow = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_flow.Add(self.text_flow_adjust)
+        sizer_flow.Add(self.spin_flow_adjust)
 
-        sizerH.Add(sizer, flags.Proportion(1))
+        sizer_adjust = wx.BoxSizer(wx.VERTICAL)
+        sizer_adjust.Add(sizer_flow, wx.SizerFlags().Center())
+        sizer_adjust.Add(self.slider_mix, wx.SizerFlags().Expand())
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer_control = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_control.Add(sizer_gas1, wx.SizerFlags().Proportion(1))
+        sizer_control.Add(sizer_adjust, wx.SizerFlags().Proportion(3))
+        sizer_control.Add(sizer_gas2, wx.SizerFlags().Proportion(1))
 
-        sizerf = wx.BoxSizer(wx.HORIZONTAL)
-        sizerf.Add(self.text_flow_adjust, flags)
-        sizerf.Add(self.spin_flow_adjust, flags)
-        sizer.Add(sizerf, wx.SizerFlags().Center())
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_buttons.Add(self.config, wx.SizerFlags().Proportion(0))
+        sizer_buttons.Add(self.btn_update, wx.SizerFlags().Expand())
+        sizer_buttons.Add(self.btn_flow, wx.SizerFlags().Expand())
+        sizer_buttons.Add(self.btn_auto, wx.SizerFlags().Expand())
 
-        sizer.AddSpacer(1)
-        sizer.Add(self.slider_mix, flags)
-        sizerH.Add(sizer, wx.SizerFlags().Proportion(3))
+        sizer_bottom = wx.BoxSizer(wx.VERTICAL)
+        sizer_bottom.Add(sizer_buttons, wx.SizerFlags().Proportion(1).Expand())
+        sizer_bottom.Add(self.text_log, wx.SizerFlags().Proportion(3).Expand())
 
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.label_gas2, flags)
-        sizer.Add(self.label_gas2_flow, flags)
-        sizer.Add(self.label_gas2_mix, flags)
-
-        sizerH.Add(sizer, flags.Proportion(1))
-        self.sizer.Add(sizerH, flags.Proportion(4))
-
-        sizerH = wx.BoxSizer(wx.HORIZONTAL)
-        sizerH.Add(self.btn_update, flags)
-        sizerH.Add(self.btn_flow, flags)
-        sizerH.Add(self.btn_auto, flags)
-        self.sizer.Add(sizerH, flags)
+        self.sizer.Add(sizer_control)
+        self.sizer.Add(sizer_bottom, wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
@@ -207,6 +194,11 @@ class BaseGasMixerPanel(wx.Panel):
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnAuto)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.config.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+
+    def on_pane_changed(self, evt):
+        self.sizer.Layout()
+        self.Layout()
 
     def update_controls(self):
         gas1_mix_set = self.autogasmixer.gas_device.percent[0]
@@ -228,16 +220,13 @@ class BaseGasMixerPanel(wx.Panel):
         self.warn_on_difference(self.label_gas1_flow, gas1_flow_actual, gas1_flow_set)
         self.warn_on_difference(self.label_gas2_flow, gas2_flow_actual, gas2_flow_set)
 
-        # need to call Layout to ensure all text is aligned
-        self.Layout()
-
     def warn_on_difference(self, ctrl, actual, set_value):
         color = self.normal_color
         tooltip_msg = ''
 
         if not np.isclose(actual, set_value):
             color = self.warning_color
-            tooltip_msg = f'Expected {set_value}'
+            tooltip_msg = f'Expected {set_value:02f}'
         ctrl.SetBackgroundColour(color)
         ctrl.SetToolTip(tooltip_msg)
         ctrl.Refresh()
@@ -282,6 +271,7 @@ class BaseGasMixerPanel(wx.Panel):
     def OnUpdate(self, evt):
         self.autogasmixer.gas_device.set_percent_value(2, 100 - float(self.slider_mix.GetValue()))
         self.autogasmixer.gas_device.set_total_flow(int(self.spin_flow_adjust.GetValue()))
+        self.spin_flow_adjust.SetValue(self.autogasmixer.gas_device.get_total_flow())
         self.spin_flow_adjust.SetBackgroundColour(wx.WHITE)
         self.spin_flow_adjust.Refresh()
         self.slider_mix.SetBackgroundColour(self.normal_color)
