@@ -55,6 +55,21 @@ class AutoSyringeVasoConfig:
 
 
 @dataclass
+class AutoSyringeGlucoseConfig:
+    data_source: str = ''
+    increase: str = ''
+    decrease: str = ''
+    decrease_volume_ul: int = 0
+    decrease_ul_per_min: int = 0
+    increase_volume_ul: int = 0
+    increase_ul_per_min: int = 0
+    basal: bool = False
+    adjust_rate_ms: int = 0
+    pressure_mmHg_min: float = 0.0
+    pressure_mmHg_max: float = 0.0
+
+
+@dataclass
 class AutoSyringeEpoConfig(AutoSyringeConfig):
     pressure_mmHg_min: float = 0.0
     pressure_mmHg_max: float = 0.0
@@ -145,6 +160,51 @@ class AutoSyringe:
             self.device.hw.set_target_volume(value)
             self.device.hw.infuse_to_target_volume()
 
+
+class AutoSyringeGlucose(AutoSyringe):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.cfg = AutoSyringeGlucoseConfig()
+        self.direction = 0
+        self.increase = None
+        self.decrease = None
+
+    def update_on_input(self, pressure):
+        mid_pressure = (self.cfg.pressure_mmHg_min+self.cfg.pressure_mmHg_max) / 2
+        if pressure > self.cfg.pressure_mmHg_max:  # dilates, decreases pressure
+            self._inject_increase(self.cfg.increase_ul_per_min)
+            self.direction = -1
+            self._lgr.info(f'{self.increase.name} injection set to {self.cfg.increase_ul_per_min} (pressure is {pressure} mmHg)')
+        elif pressure <= mid_pressure and self.direction == -1:  # stop at midpoint
+            self.stop()
+            self._lgr.info(f'{self.decrease.name} injection stopped, reached {pressure} mmHg')
+            self.direction = 0
+        elif pressure < self.cfg.pressure_mmHg_min:  # constricts, increase pressure
+            self._inject_decrease(self.cfg.decrease_ul_per_min)
+            self._lgr.info(f'{self.decrease.name} injection set to {self.cfg.decrease_ul_per_min}')
+            self.direction = 1
+        elif pressure >= mid_pressure and self.direction == 1:  # stop at midpoint
+            self.stop()
+            self._lgr.info(f'{self.decrease.name} injection stopped')
+            self.direction = 0
+
+    def _inject_decrease(self, value):
+        if self.cfg.basal:
+            self.decrease.hw.set_target_volume(0)
+            self.decrease.hw.set_infusion_rate(value)
+            self.decrease.hw.start_constant_infusion()
+        else:
+            self.decrease.hw.set_target_volume(value)
+            self.decrease.hw.infuse_to_target_volume()
+
+    def _inject_increase(self, value):
+        if self.cfg.basal:
+            self.increase.hw.set_target_volume(0)
+            self.increase.hw.set_infusion_rate(value)
+            self.increase.hw.start_constant_infusion()
+        else:
+            self.increase.hw.set_target_volume(value)
+            self.increase.hw.infuse_to_target_volume()
 
 class AutoSyringeGlucagon(AutoSyringe):
     def __init__(self, name: str):

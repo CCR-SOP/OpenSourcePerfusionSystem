@@ -13,6 +13,7 @@ import wx
 
 import pyPerfusion.utils as utils
 from gui.panel_multiple_syringes import SyringePanel
+from gui.panel_syringes_all import PanelAllSyringes
 from gui.panel_DialysisPumps import DialysisPumpPanel
 from gui.panel_gas_mixers import GasMixerPanel
 from gui.panel_levitronix_pumps import LeviPumpPanel
@@ -31,12 +32,12 @@ class HardwarePanel(wx.Panel):
         for pump_name in pump_names:
             pumps.append(perfusion_system.get_sensor(pump_name))
 
-        automation_names = ['Insulin Automation', 'Epoprostenol Automation', 'TPN + Bile Salts Manual',
-                            'Glucagon Automation', 'Phenylephrine Automation', 'Zosyn Manual']
-        automations = []
-        for name in automation_names:
-            automations.append(perfusion_system.get_automation(name))
-        self.panel_syringes = SyringePanel(self, automations)
+        vaso = perfusion_system.get_automation('Vasoactive Automation')
+        glucose = perfusion_system.get_automation('Glucose Automation')
+        manual = [perfusion_system.get_automation('TPN + Bile Salts Manual'),
+                  perfusion_system.get_automation('Zosyn Manual')]
+
+        self.panel_syringes = PanelAllSyringes(self, vaso, glucose, manual)
 
         automation_names = ['Dialysate Inflow Automation',
                             'Dialysate Outflow Automation',
