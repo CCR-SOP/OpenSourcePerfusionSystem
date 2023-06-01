@@ -133,7 +133,6 @@ class AutoSyringeGlucagon(AutoSyringe):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = AutoSyringeGlucagonConfig()
-        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, glucose):
         if glucose < self.cfg.glucose_min:
@@ -147,7 +146,6 @@ class AutoSyringeInsulin(AutoSyringe):
     def __init__(self, name: str):
         super().__init__(name)
         self.cfg = AutoSyringeInsulinConfig()
-        self._lgr = utils.get_object_logger(__name__, self.name)
 
     def update_on_input(self, glucose):
         rate = self.device.hw.get_infusion_rate()
