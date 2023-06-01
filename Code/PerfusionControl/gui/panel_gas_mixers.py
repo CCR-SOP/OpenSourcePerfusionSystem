@@ -130,8 +130,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.btn_update = wx.Button(self, label='Update')
         self.btn_auto = wx.ToggleButton(self, label='Automate')
 
-        self._lgr.debug(f'text log looking for {self.autogasmixer.gas_device.name}')
-        self.text_log = utils.create_log_display(self, logging.INFO, [self.autogasmixer.gas_device.name])
+        self.text_log = utils.create_log_display(self, logging.INFO, [self.autogasmixer.gas_device.parent.name])
 
         self.config = AutomationConfig(self, self.autogasmixer)
 
