@@ -8,7 +8,8 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 from threading import Thread, Event
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 
 from pyPerfusion.utils import get_epoch_ms
 import pyPerfusion.PerfusionConfig as PerfusionConfig
@@ -39,14 +40,30 @@ class AutoSyringeInsulinConfig(AutoSyringeConfig):
 
 
 @dataclass
+class AutoSyringeVasoConfig:
+    data_source: str = ''
+    constrictor: str = ''
+    dilator: str = ''
+    constrictor_volume_ul: int = 0
+    constrictor_ul_per_min: int = 0
+    dilator_volume_ul: int = 0
+    dilator_ul_per_min: int = 0
+    basal: bool = False
+    adjust_rate_ms: int = 0
+    pressure_mmHg_min: float = 0.0
+    pressure_mmHg_max: float = 0.0
+
+
+@dataclass
 class AutoSyringeEpoConfig(AutoSyringeConfig):
-    pressure_mmHg_min: int = 0
-    pressure_mmHg_max: int = 0
+    pressure_mmHg_min: float = 0.0
+    pressure_mmHg_max: float = 0.0
+
 
 @dataclass
 class AutoSyringePhenylConfig(AutoSyringeConfig):
-    pressure_mmHg_min: int = 0
-    pressure_mmHg_max: int = 0
+    pressure_mmHg_min: float = 0.0
+    pressure_mmHg_max: float = 0.0
 
 
 @dataclass
@@ -149,7 +166,7 @@ class AutoSyringeInsulin(AutoSyringe):
 
     def update_on_input(self, glucose):
         rate = self.device.hw.get_infusion_rate()
-        if glucose > self.cfg.glucose_max:
+        if glucose > self.cfg.glucose_min:
             if rate < self.cfg.max_ul_per_min:
                 rate += 1
             else:
@@ -158,6 +175,52 @@ class AutoSyringeInsulin(AutoSyringe):
         elif glucose <= (self.cfg.glucose_min + self.cfg.glucose_max) / 2:
             self.stop()
             self._lgr.info(f'Insulin injection stopped')
+
+
+class AutoSyringeVaso(AutoSyringe):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.cfg = AutoSyringeVasoConfig()
+        self.direction = 0
+        self.constrictor = None
+        self.dilator = None
+
+    def update_on_input(self, pressure):
+        mid_pressure = (self.cfg.pressure_mmHg_min+self.cfg.pressure_mmHg_max) / 2
+        if pressure > self.cfg.pressure_mmHg_max:  # dilates, decreases pressure
+            self._inject_dilator(self.cfg.dilator_ul_per_min)
+            self.direction = -1
+            self._lgr.info(f'{self.dilator.name} injection set to {self.cfg.dilator_ul_per_min} (pressure is {pressure} mmHg)')
+        elif pressure <= mid_pressure and self.direction == -1:  # stop at midpoint
+            self.stop()
+            self._lgr.info(f'{self.dilator.name} injection stopped, reached {pressure} mmHg')
+            self.direction = 0
+        elif pressure < self.cfg.pressure_mmHg_min:  # constricts, increase pressure
+            self._inject_constrictor(self.cfg.constrictor_ul_per_min)
+            self._lgr.info(f'{self.constrictor.name} injection set to {self.cfg.constrictor_ul_per_min}')
+            self.direction = 1
+        elif pressure >= mid_pressure and self.direction == 1:  # stop at midpoint
+            self.stop()
+            self._lgr.info(f'{self.constrictor.name} injection stopped')
+            self.direction = 0
+
+    def _inject_constrictor(self, value):
+        if self.cfg.basal:
+            self.constrictor.hw.set_target_volume(0)
+            self.constrictor.hw.set_infusion_rate(value)
+            self.constrictor.hw.start_constant_infusion()
+        else:
+            self.constrictor.hw.set_target_volume(value)
+            self.constrictor.hw.infuse_to_target_volume()
+
+    def _inject_dilator(self, value):
+        if self.cfg.basal:
+            self.dilator.hw.set_target_volume(0)
+            self.dilator.hw.set_infusion_rate(value)
+            self.dilator.hw.start_constant_infusion()
+        else:
+            self.dilator.hw.set_target_volume(value)
+            self.dilator.hw.infuse_to_target_volume()
 
 
 class AutoSyringeEpo(AutoSyringe):
