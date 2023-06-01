@@ -101,8 +101,8 @@ class BaseGasMixerPanel(wx.Panel):
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         # Adjustable parameters
-        self.text_flow_adjust = wx.TextCtrl(self, value='Total Flow\n(mL/min)',
-                                            style=wx.TE_READONLY | wx.BORDER_NONE | wx.TE_MULTILINE | wx.TE_RICH)
+        self.text_flow_adjust = wx.TextCtrl(self, value='Total Flow (mL/min)',
+                                            style=wx.TE_READONLY | wx.BORDER_NONE)
         self.spin_flow_adjust = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=400,
                                                   initial=int(self.autogasmixer.gas_device.get_total_flow()), inc=1)
         self.text_flow_adjust.SetFont(font)
@@ -147,16 +147,16 @@ class BaseGasMixerPanel(wx.Panel):
         sizer_gas1.Add(self.label_gas1_mix, wx.SizerFlags().Proportion(1))
 
         sizer_gas2 = wx.BoxSizer(wx.VERTICAL)
-        sizer_gas2.Add(self.label_gas2, wx.SizerFlags().Proportion(1))
+        sizer_gas2.Add(self.label_gas2, wx.SizerFlags().Proportion(1).Right())
         sizer_gas2.Add(self.label_gas2_flow, wx.SizerFlags().Proportion(1).Right())
         sizer_gas2.Add(self.label_gas2_mix, wx.SizerFlags().Proportion(1).Right())
 
         sizer_flow = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_flow.Add(self.text_flow_adjust)
-        sizer_flow.Add(self.spin_flow_adjust)
+        sizer_flow.Add(self.text_flow_adjust, wx.SizerFlags().CenterVertical().Proportion(2).Border(wx.RIGHT, 5))
+        sizer_flow.Add(self.spin_flow_adjust, wx.SizerFlags().CenterVertical().Proportion(1))
 
         sizer_adjust = wx.BoxSizer(wx.VERTICAL)
-        sizer_adjust.Add(sizer_flow, wx.SizerFlags().Center())
+        sizer_adjust.Add(sizer_flow, wx.SizerFlags().Center().Proportion(1))
         sizer_adjust.Add(self.slider_mix, wx.SizerFlags().Expand())
 
         sizer_control = wx.BoxSizer(wx.HORIZONTAL)
