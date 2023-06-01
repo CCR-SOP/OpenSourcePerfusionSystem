@@ -82,16 +82,16 @@ class DialysisPumpPanel(wx.Panel):
         for config in self.configs:
             configsizer.Add(config)
 
-        pumpsizer = wx.BoxSizer(wx.HORIZONTAL)
+        pumpsizer = wx.BoxSizer(wx.VERTICAL)
         for idx, panel in enumerate(self.panels):
             pumpsizer.Add(panel, flags=wx.SizerFlags().Proportion(1).Expand())
 
         sizerbottom = wx.BoxSizer(wx.VERTICAL)
         sizerbottom.Add(configsizer, flags=wx.SizerFlags().Proportion(0))
-        sizerbottom.Add(self.text_log_roller_pumps, flags=wx.SizerFlags().Expand().Proportion(2))
+        sizerbottom.Add(self.text_log_roller_pumps, flags=wx.SizerFlags().Expand().Proportion(1))
 
-        self.sizer.Add(pumpsizer, wx.SizerFlags().Expand().Proportion(1))
-        self.sizer.Add(sizerbottom, wx.SizerFlags().Expand().Proportion(2))
+        self.sizer.Add(pumpsizer, wx.SizerFlags().Expand().Proportion(2))
+        self.sizer.Add(sizerbottom, wx.SizerFlags().Expand().Proportion(1))
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetSizer(self.sizer)

@@ -66,14 +66,18 @@ class HardwarePanel(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Border()
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.sizer = wx.GridSizer(cols=2)
+        sizer_leftside = wx.BoxSizer(wx.VERTICAL)
+        sizer_leftside.Add(self.panel_syringes, wx.SizerFlags().Proportion(1).Expand())
+        sizer_leftside.Add(self.panel_gas_mixers, wx.SizerFlags().Proportion(1).Expand())
 
-        self.sizer.Add(self.panel_syringes, flags.Proportion(1))
-        self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(1))
-        self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
-        self.sizer.Add(self.panel_levitronix_pumps, flags.Proportion(2))
+        sizer_rightside = wx.BoxSizer(wx.VERTICAL)
+        sizer_rightside.Add(self.panel_dialysate_pumps, wx.SizerFlags().Proportion(2).Expand())
+        sizer_rightside.Add(self.panel_levitronix_pumps, wx.SizerFlags().Proportion(1).Expand())
+
+        self.sizer.Add(sizer_leftside, wx.SizerFlags().Proportion(2).Expand())
+        self.sizer.Add(sizer_rightside, wx.SizerFlags().Proportion(1).Expand())
 
         self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start

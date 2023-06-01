@@ -128,6 +128,9 @@ class PanelVasoactive(wx.Panel):
 
         sizer_adjustments = wx.BoxSizer(wx.HORIZONTAL)
 
+        sizer_adjustments.Add(self.syringe_collapsible['constrictor'])
+        sizer_adjustments.AddStretchSpacer(3)
+
         sizer_min = wx.BoxSizer(wx.VERTICAL)
         sizer_min.Add(self.label_min_pressure)
         sizer_min.Add(self.spin_min_pressure)
@@ -150,13 +153,10 @@ class PanelVasoactive(wx.Panel):
         sizer_buttons.Add(self.btn_update)
         sizer_adjustments.Add(sizer_buttons, wx.SizerFlags().CenterVertical().Border(wx.RIGHT, 10))
 
-        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Border(wx.RIGHT, 10))
+        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1))
 
-        sizer_manual = wx.BoxSizer(wx.VERTICAL)
-        sizer_manual.Add(self.syringe_collapsible['constrictor'])
-        sizer_manual.Add(self.syringe_collapsible['dilator'])
-
-        sizer_adjustments.Add(sizer_manual, wx.SizerFlags().Expand())
+        sizer_adjustments.AddStretchSpacer(3)
+        sizer_adjustments.Add(self.syringe_collapsible['dilator'])
 
         self.sizer.Add(sizer_adjustments, wx.SizerFlags().CenterHorizontal())
         # self.sizer.Add(self.text_log, wx.SizerFlags().Expand().Proportion(1))
@@ -255,6 +255,9 @@ class PanelGlucose(wx.Panel):
 
         sizer_adjustments = wx.BoxSizer(wx.HORIZONTAL)
 
+        sizer_adjustments.Add(self.syringe_collapsible['decrease'])
+        sizer_adjustments.AddStretchSpacer(3)
+
         sizer_min = wx.BoxSizer(wx.VERTICAL)
         sizer_min.Add(self.label_min_pressure)
         sizer_min.Add(self.spin_min_pressure)
@@ -277,13 +280,11 @@ class PanelGlucose(wx.Panel):
         sizer_buttons.Add(self.btn_update)
         sizer_adjustments.Add(sizer_buttons, wx.SizerFlags().CenterVertical().Border(wx.RIGHT, 10))
 
-        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Border(wx.RIGHT, 10))
 
-        sizer_manual = wx.BoxSizer(wx.VERTICAL)
-        sizer_manual.Add(self.syringe_collapsible['decrease'])
-        sizer_manual.Add(self.syringe_collapsible['increase'])
+        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1).Border(wx.RIGHT, 10))
 
-        sizer_adjustments.Add(sizer_manual, wx.SizerFlags().Expand())
+        sizer_adjustments.AddStretchSpacer(3)
+        sizer_adjustments.Add(self.syringe_collapsible['increase'])
 
         self.sizer.Add(sizer_adjustments, wx.SizerFlags().CenterHorizontal())
 
