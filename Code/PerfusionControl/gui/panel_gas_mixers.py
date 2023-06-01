@@ -167,15 +167,15 @@ class BaseGasMixerPanel(wx.Panel):
 
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_buttons.Add(self.config, wx.SizerFlags().Proportion(0))
-        sizer_buttons.Add(self.btn_update, wx.SizerFlags().Expand())
-        sizer_buttons.Add(self.btn_flow, wx.SizerFlags().Expand())
-        sizer_buttons.Add(self.btn_auto, wx.SizerFlags().Expand())
+        sizer_buttons.Add(self.btn_update, wx.SizerFlags().Expand().Proportion(1))
+        sizer_buttons.Add(self.btn_flow, wx.SizerFlags().Expand().Proportion(1))
+        sizer_buttons.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1))
 
         sizer_bottom = wx.BoxSizer(wx.VERTICAL)
         sizer_bottom.Add(sizer_buttons, wx.SizerFlags().Proportion(1).Expand())
         sizer_bottom.Add(self.text_log, wx.SizerFlags().Proportion(3).Expand())
 
-        self.sizer.Add(sizer_control)
+        self.sizer.Add(sizer_control, wx.SizerFlags().Expand())
         self.sizer.Add(sizer_bottom, wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
@@ -221,15 +221,20 @@ class BaseGasMixerPanel(wx.Panel):
         self.warn_on_difference(self.label_gas2_flow, gas2_flow_actual, gas2_flow_set)
 
     def warn_on_difference(self, ctrl, actual, set_value):
-        color = self.normal_color
+        old_color = ctrl.GetBackgroundColour()
         tooltip_msg = ''
 
         if not np.isclose(actual, set_value):
             color = self.warning_color
             tooltip_msg = f'Expected {set_value:02f}'
-        ctrl.SetBackgroundColour(color)
+        else:
+            color = self.normal_color
+
+        # this prevents "blinking" text by only refreshing when somthing changes
+        if old_color != color:
+            ctrl.SetBackgroundColour(color)
+            ctrl.Refresh()
         ctrl.SetToolTip(tooltip_msg)
-        ctrl.Refresh()
 
     def _update_manual_entries(self):
         self.spin_flow_adjust.SetValue(f'{self.autogasmixer.gas_device.get_total_flow()}')
