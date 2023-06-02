@@ -115,6 +115,8 @@ class MyHardwareApp(wx.App):
     def OnInit(self):
         frame = HardwareFrame(sys, None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
+        # match approx size of window on Perfusion Laptop
+        frame.SetSize((1666, 917))
         frame.Show()
         return True
 
