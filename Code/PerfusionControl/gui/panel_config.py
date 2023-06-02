@@ -17,15 +17,18 @@ class AutomationConfig(wx.CollapsiblePane):
         self._lgr = logging.getLogger(__name__)
         self.automation = automation
 
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.label_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.spin_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.btn_update = wx.Button(self.GetPane(), label='Update Automation')
-        self.btn_load = wx.Button(self.GetPane(), label='Load From Config')
-        self.btn_save = wx.Button(self.GetPane(), label='Save From Config')
-        self.btn_save.Enable(False)
-        self.btn_update.Enable(False)
+        self.btn_save = wx.Button(self.GetPane(), style=wx.BU_EXACTFIT)
+        self.btn_save.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE, wx.ART_BUTTON))
+        self.btn_save.SetToolTip('Save Config to File')
+        self.btn_load = wx.Button(self.GetPane(), style=wx.BU_EXACTFIT)
+        self.btn_load.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_FILE_OPEN, wx.ART_BUTTON))
+        self.btn_load.SetToolTip('Load Config From File')
+        self.btn_update = wx.Button(self.GetPane(), style=wx.BU_EXACTFIT)
+        self.btn_update.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK, wx.ART_BUTTON))
+        self.btn_update.SetToolTip('Update Hardware with Current Displayed Config')
+
 
         self.labels = {}
         self.spins = {}
@@ -55,21 +58,21 @@ class AutomationConfig(wx.CollapsiblePane):
         self.spins[cfg_name].SetDigits(decimal_places)
 
     def do_layout(self):
-        flags = wx.SizerFlags(1).Expand().Border(wx.ALL, 2)
-        for label in self.labels.values():
-            self.label_sizer.Add(label, flags)
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        for spin in self.spins.values():
-            self.spin_sizer.Add(spin, flags)
+        for label, spin in zip(self.labels.values(), self.spins.values()):
+            sizer = wx.BoxSizer(wx.VERTICAL)
+            sizer.Add(label, wx.SizerFlags().CenterHorizontal())
+            sizer.Add(spin, wx.SizerFlags().CenterHorizontal())
+            self.sizer.Add(sizer, wx.SizerFlags().CenterVertical().Border(wx.RIGHT, 10))
 
-        self.sizer.Add(self.label_sizer, flags)
-        self.sizer.Add(self.spin_sizer, flags)
+        sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_buttons.Add(self.btn_save, wx.SizerFlags().Expand())
+        sizer_buttons.Add(self.btn_load, wx.SizerFlags().Expand())
+        sizer_buttons.Add(self.btn_update, wx.SizerFlags().Expand())
 
-        btnsizer = wx.BoxSizer(wx.HORIZONTAL)
-        btnsizer.Add(self.btn_update, flags)
-        btnsizer.Add(self.btn_load, flags)
-        btnsizer.Add(self.btn_save, flags)
-        self.sizer.Add(btnsizer, flags)
+        self.sizer.AddSpacer(2)
+        self.sizer.Add(sizer_buttons, wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.GetPane().SetSizer(self.sizer)

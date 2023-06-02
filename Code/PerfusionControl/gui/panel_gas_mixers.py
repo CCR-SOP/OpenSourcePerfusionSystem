@@ -166,6 +166,7 @@ class BaseGasMixerPanel(wx.Panel):
 
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
         sizer_buttons.Add(self.config, wx.SizerFlags().Proportion(0))
+        sizer_buttons.AddStretchSpacer(2)
         sizer_buttons.Add(self.btn_update, wx.SizerFlags().Expand().Proportion(1))
         sizer_buttons.Add(self.btn_flow, wx.SizerFlags().Expand().Proportion(1))
         sizer_buttons.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1))
