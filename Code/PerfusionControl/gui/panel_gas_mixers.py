@@ -45,24 +45,19 @@ class GasMixerPanel(wx.Panel):
                 panel.config.add_var('O2_max', 'O2 (max)', limits=(0, 1, 100))
                 panel.config.do_layout()
                 panel.config.set_bindings()
-        self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Gas Mixers")
-        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
-
-        # self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Arterial Gas Mixer'])
-        # self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Venous Gas Mixer'])
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Border()
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        self.wrapper.Add(self.panels[0], flags.Proportion(1))
-        self.wrapper.Add(self.panels[1], flags.Proportion(1))
+        self.sizer.Add(self.panels[0], wx.SizerFlags().Proportion(1).Expand())
+        self.sizer.Add(self.panels[1], wx.SizerFlags().Proportion(1).Expand())
 
-        self.wrapper.SetSizeHints(self.GetParent())
+        self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
-        self.SetSizer(self.wrapper)
+        self.SetSizer(self.sizer)
         self.Layout()
 
     def __set_bindings(self):
@@ -98,6 +93,7 @@ class BaseGasMixerPanel(wx.Panel):
         font.SetPointSize(int(12))
 
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name, style=wx.ALIGN_CENTER_HORIZONTAL)
+        self.static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         # Adjustable parameters

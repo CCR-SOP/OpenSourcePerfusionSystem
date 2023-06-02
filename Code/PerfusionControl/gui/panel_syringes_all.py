@@ -99,6 +99,7 @@ class PanelVasoactive(wx.Panel):
         self.spin_adjust_minutes = wx.SpinCtrlDouble(self, min=0, max=60*60*24, inc=1, initial=5)
 
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name, style=wx.ALIGN_CENTER_HORIZONTAL)
+        self.static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         self.btn_save = wx.Button(self, style=wx.BU_EXACTFIT)
@@ -257,6 +258,7 @@ class PanelGlucose(wx.Panel):
         self.spin_adjust_minutes = wx.SpinCtrlDouble(self, min=0, max=60*60*24, inc=1, initial=5)
 
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name, style=wx.ALIGN_CENTER_HORIZONTAL)
+        self.static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         self.btn_save = wx.Button(self, style=wx.BU_EXACTFIT)

@@ -30,7 +30,9 @@ class PanelSyringe(wx.Panel):
         self._panel_cfg = PanelSyringeConfig(self, self.automation.device.hw)
         self._panel_ctrl = PanelSyringeControls(self, self.automation)
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
+        self.static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
+        self.static_box.SetFont(utils.get_header_font())
 
         self.__do_layout()
         self.__set_bindings()
@@ -178,7 +180,7 @@ class PanelSyringeControls(wx.Panel):
         font_smaller.SetPointSize((int(10)))
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
-        static_box.SetFont(font)
+        static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc, initial=int(self.automation.cfg.ul_per_min))

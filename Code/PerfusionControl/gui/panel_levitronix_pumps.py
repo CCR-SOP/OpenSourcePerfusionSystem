@@ -21,46 +21,36 @@ class LeviPumpPanel(wx.Panel):
         super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
 
-        self.panels = []
+        self.panels = {}
+        self.logs = {}
         for sensor in sensors:
             panel = BaseLeviPumpPanel(self, sensor)
-            self.panels.append(panel)
-
-        self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Centrifugal Pumps")
-        self.wrapper = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
-
-        self.text_log_arterial = utils.create_log_display(self, logging.INFO, ['Arterial PuraLev'])
-        self.text_log_venous = utils.create_log_display(self, logging.INFO, ['Venous PuraLev'])
+            self.panels[sensor.name] = panel
+            self._lgr.debug(f'logging to {sensor.name}')
+            self.logs[sensor.name] = utils.create_log_display(self, logging.INFO, [sensor.name])
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Border()
-        self.sizer = wx.FlexGridSizer(cols=2, vgap=1, hgap=1)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        for panel in self.panels:
-            self.sizer.Add(panel, flags)
-
-        self.sizer.AddGrowableCol(0, 1)
-        self.sizer.AddGrowableCol(1, 1)
-
-        self.sizer.Add(self.text_log_arterial, flags)
-        self.sizer.Add(self.text_log_venous, flags)
-
-        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        for panel, log in zip(self.panels.values(), self.logs.values()):
+            self.sizer.Add(panel, wx.SizerFlags().Expand())
+            self.sizer.Add(log, wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
-        self.SetSizer(self.wrapper)
+        self.SetSizer(self.sizer)
         self.Layout()
 
     def __set_bindings(self):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        for panel in self.panels:
+        for panel in self.panels.values():
             panel.Close()
+
 
 class BaseLeviPumpPanel(wx.Panel):
     def __init__(self, parent, sensor):  # autolevipump eventually
@@ -74,6 +64,7 @@ class BaseLeviPumpPanel(wx.Panel):
         font.SetPointSize(int(12))
 
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
+        self.static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         # Pump speed and flow
@@ -82,7 +73,7 @@ class BaseLeviPumpPanel(wx.Panel):
         self.label_speed.SetFont(font)
         self.input_speed.SetFont(font)
 
-        self.label_corr_flow = wx.StaticText(self, label='Corresponding Flow (mL/min):')
+        self.label_corr_flow = wx.StaticText(self, label='Corresponding Flow\nmL/min')
         self.value_corr_flow = wx.TextCtrl(self, style=wx.TE_READONLY, value='0')
         self.label_corr_flow.SetFont(font)
         self.value_corr_flow.SetFont(font)

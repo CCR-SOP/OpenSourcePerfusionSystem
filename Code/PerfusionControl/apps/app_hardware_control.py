@@ -59,8 +59,6 @@ class HardwarePanel(wx.Panel):
             sensors.append(perfusion_system.get_sensor(name))
         self.panel_levitronix_pumps = LeviPumpPanel(self, sensors)
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
@@ -69,19 +67,18 @@ class HardwarePanel(wx.Panel):
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_leftside = wx.BoxSizer(wx.VERTICAL)
-        sizer_leftside.Add(self.panel_syringes, wx.SizerFlags().Proportion(1).Expand())
+        sizer_leftside.Add(self.panel_syringes, wx.SizerFlags().Proportion(1).Expand().Border(wx.BOTTOM, 10))
         sizer_leftside.Add(self.panel_gas_mixers, wx.SizerFlags().Proportion(1).Expand())
 
         sizer_rightside = wx.BoxSizer(wx.VERTICAL)
-        sizer_rightside.Add(self.panel_dialysate_pumps, wx.SizerFlags().Proportion(1).Expand())
+        sizer_rightside.Add(self.panel_dialysate_pumps, wx.SizerFlags().Proportion(1).Expand().Border(wx.BOTTOM, 10))
         sizer_rightside.Add(self.panel_levitronix_pumps, wx.SizerFlags().Proportion(1).Expand())
 
-        self.sizer.Add(sizer_leftside, wx.SizerFlags().Proportion(2).Expand())
+        self.sizer.Add(sizer_leftside, wx.SizerFlags().Proportion(2).Expand().Border(wx.RIGHT, 10))
         self.sizer.Add(sizer_rightside, wx.SizerFlags().Proportion(1).Expand())
 
-        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
         self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start
-        self.SetSizer(self.wrapper)
+        self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
