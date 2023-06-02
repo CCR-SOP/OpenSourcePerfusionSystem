@@ -179,18 +179,18 @@ class PanelSyringeControls(wx.Panel):
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
         static_box.SetFont(font)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc, initial=int(self.automation.cfg.ul_per_min))
         self.spin_rate.SetFont(font)
-        self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min):')
+        self.label_rate = wx.StaticText(self, label='Infusion Rate\nul/min', style=wx.ALIGN_CENTER)
         self.label_rate.SetFont(font_smaller)
         self.btn_basal = wx.ToggleButton(self, label='Start Basal')
         self.btn_basal.SetFont(font_smaller)
 
         self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc, initial=int(self.automation.cfg.volume_ul))
         self.spin_volume.SetFont(font)
-        self.label_volume = wx.StaticText(self, label='Target Volume (ul):')
+        self.label_volume = wx.StaticText(self, label='Target Volume\nul', style=wx.ALIGN_CENTER)
         self.label_volume.SetFont(font_smaller)
         self.btn_bolus = wx.Button(self, label='Bolus')
         self.btn_bolus.SetFont(font_smaller)
@@ -202,26 +202,21 @@ class PanelSyringeControls(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 5).Expand()
+        sizer_rate = wx.BoxSizer(wx.VERTICAL)
+        sizer_rate.Add(self.label_rate)
+        sizer_rate.Add(self.spin_rate)
 
-        self.sizer_cfg = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
+        sizer_vol = wx.BoxSizer(wx.VERTICAL)
+        sizer_vol.Add(self.label_volume)
+        sizer_vol.Add(self.spin_volume)
 
-        self.sizer_cfg.Add(self.label_rate, flags)
-        self.sizer_cfg.Add(self.spin_rate, flags)
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons.Add(self.btn_basal)
+        sizer_buttons.Add(self.btn_bolus)
 
-        self.sizer_cfg.Add(self.label_volume, flags)
-        self.sizer_cfg.Add(self.spin_volume, flags)
-
-        self.sizer_cfg.Add(self.btn_basal, flags)
-        self.sizer_cfg.Add(self.btn_bolus, flags)
-
-        self.sizer_cfg.AddGrowableCol(0, 2)
-        self.sizer_cfg.AddGrowableCol(1, 1)
-        self.sizer_cfg.AddGrowableRow(0, 1)
-        self.sizer_cfg.AddGrowableRow(1, 1)
-        self.sizer_cfg.AddGrowableRow(2, 1)
-
-        self.sizer.Add(self.sizer_cfg)
+        self.sizer.Add(sizer_rate, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_vol, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_buttons, wx.SizerFlags().CenterVertical())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetSizer(self.sizer)
@@ -300,18 +295,18 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
         font_smaller = wx.Font()
         font_smaller.SetPointSize((int(10)))
 
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.spin_rate = wx.SpinCtrlDouble(self.GetPane(), min=0, max=100000, inc=self._inc, initial=0)
         self.spin_rate.SetFont(font)
-        self.label_rate = wx.StaticText(self.GetPane(), label='Infusion Rate (ul/min):')
+        self.label_rate = wx.StaticText(self.GetPane(), label='Infusion Rate\nul/min', style=wx.ALIGN_CENTER)
         self.label_rate.SetFont(font_smaller)
         self.btn_basal = wx.ToggleButton(self.GetPane(), label='Start Basal')
         self.btn_basal.SetFont(font_smaller)
 
         self.spin_volume = wx.SpinCtrlDouble(self.GetPane(), min=0, max=100000, inc=self._vol_inc, initial=0)
         self.spin_volume.SetFont(font)
-        self.label_volume = wx.StaticText(self.GetPane(), label='Target Volume (ul):')
+        self.label_volume = wx.StaticText(self.GetPane(), label='Target Volume\nul', style=wx.ALIGN_CENTER)
         self.label_volume.SetFont(font_smaller)
         self.btn_bolus = wx.Button(self.GetPane(), label='Bolus')
         self.btn_bolus.SetFont(font_smaller)
@@ -323,26 +318,21 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 5).Expand()
+        sizer_rate = wx.BoxSizer(wx.VERTICAL)
+        sizer_rate.Add(self.label_rate)
+        sizer_rate.Add(self.spin_rate)
 
-        self.sizer_cfg = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
+        sizer_vol = wx.BoxSizer(wx.VERTICAL)
+        sizer_vol.Add(self.label_volume)
+        sizer_vol.Add(self.spin_volume)
 
-        self.sizer_cfg.Add(self.label_rate, flags)
-        self.sizer_cfg.Add(self.spin_rate, flags)
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons.Add(self.btn_basal)
+        sizer_buttons.Add(self.btn_bolus)
 
-        self.sizer_cfg.Add(self.label_volume, flags)
-        self.sizer_cfg.Add(self.spin_volume, flags)
-
-        self.sizer_cfg.Add(self.btn_basal, flags)
-        self.sizer_cfg.Add(self.btn_bolus, flags)
-
-        self.sizer_cfg.AddGrowableCol(0, 2)
-        self.sizer_cfg.AddGrowableCol(1, 1)
-        self.sizer_cfg.AddGrowableRow(0, 1)
-        self.sizer_cfg.AddGrowableRow(1, 1)
-        self.sizer_cfg.AddGrowableRow(2, 1)
-
-        self.sizer.Add(self.sizer_cfg)
+        self.sizer.Add(sizer_rate, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_vol, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_buttons, wx.SizerFlags().CenterVertical())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.GetPane().SetSizer(self.sizer)
