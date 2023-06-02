@@ -58,7 +58,7 @@ class AutomationConfig(wx.CollapsiblePane):
         self.spins[cfg_name].SetDigits(decimal_places)
 
     def do_layout(self):
-        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer = wx.WrapSizer(wx.HORIZONTAL)
 
         for label, spin in zip(self.labels.values(), self.spins.values()):
             sizer = wx.BoxSizer(wx.VERTICAL)

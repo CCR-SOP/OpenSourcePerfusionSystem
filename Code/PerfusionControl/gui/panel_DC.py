@@ -28,11 +28,8 @@ class PanelDC(wx.Panel):
 
         self.panel_dc = PanelDCControl(self, self.pump)
 
-        font = wx.Font()
-        font.SetPointSize(int(16))
-
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
-        self.static_box.SetFont(font)
+        self.static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         self.__do_layout()
@@ -61,7 +58,7 @@ class PanelDCControl(wx.Panel):
         self.pump = pump
 
         font = wx.Font()
-        font.SetPointSize(int(12))
+        font.SetPointSize(12)
 
         wx.lib.colourdb.updateColourDB()
         self.normal_color = self.GetBackgroundColour()
@@ -84,18 +81,22 @@ class PanelDCControl(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        self.sizer_cfg = wx.GridSizer(rows=2, cols=2, vgap=1, hgap=1)
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.sizer_cfg.Add(self.label_offset)
-        self.sizer_cfg.Add(self.spin_offset)
-        self.sizer_cfg.Add(self.btn_change_rate)
-        self.sizer_cfg.Add(self.btn_stop)
+        sizer_spin = wx.BoxSizer(wx.VERTICAL)
+        sizer_spin.Add(self.label_offset, wx.SizerFlags().Border(wx.RIGHT, 10))
+        sizer_spin.Add(self.spin_offset)
 
-        self.sizer_cfg.SetSizeHints(self.GetParent())
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons.Add(self.btn_change_rate)
+        sizer_buttons.Add(self.btn_stop)
 
-        self.sizer_cfg.SetSizeHints(self.GetParent())
+        self.sizer.Add(sizer_spin)
+        self.sizer.Add(sizer_buttons)
+
+        self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
-        self.SetSizer(self.sizer_cfg)
+        self.SetSizer(self.sizer)
         self.Layout()
 
     def __set_bindings(self):

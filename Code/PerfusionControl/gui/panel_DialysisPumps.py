@@ -23,13 +23,6 @@ class DialysisPumpPanel(wx.Panel):
         self._lgr = logging.getLogger(__name__)
         self.automations = automations
 
-        font = wx.Font()
-        font.SetPointSize(int(16))
-
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.static_box = wx.StaticBox(self, wx.ID_ANY, label="Roller Pumps")
-        self.static_box.SetFont(font)
-
         self.panels = []
         self.configs = []
         for automation in automations:
@@ -66,6 +59,8 @@ class DialysisPumpPanel(wx.Panel):
 
         # Add auto start button
         self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis')
+        font =wx.Font()
+        font.SetPointSize(16)
         self.btn_auto_dialysis.SetFont(font)
         self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
 
@@ -78,20 +73,21 @@ class DialysisPumpPanel(wx.Panel):
         super().Close()
 
     def __do_layout(self):
-        configsizer = wx.BoxSizer(wx.HORIZONTAL)
-        for config in self.configs:
-            configsizer.Add(config)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        pumpsizer = wx.BoxSizer(wx.VERTICAL)
+        pumpsizer = wx.GridSizer(2)
         for idx, panel in enumerate(self.panels):
-            pumpsizer.Add(panel, flags=wx.SizerFlags().Proportion(1).Expand())
+            pumpsizer.Add(panel, flags=wx.SizerFlags().Expand())
 
-        sizerbottom = wx.BoxSizer(wx.VERTICAL)
-        sizerbottom.Add(configsizer, flags=wx.SizerFlags().Proportion(0))
-        sizerbottom.Add(self.text_log_roller_pumps, flags=wx.SizerFlags().Expand().Proportion(1))
+        pumpsizer.Add(self.btn_auto_dialysis, wx.SizerFlags().Expand())
 
-        self.sizer.Add(pumpsizer, wx.SizerFlags().Expand().Proportion(2))
-        self.sizer.Add(sizerbottom, wx.SizerFlags().Expand().Proportion(1))
+        configsizer = wx.BoxSizer(wx.VERTICAL)
+        for config in self.configs:
+            configsizer.Add(config, wx.SizerFlags().Proportion(0).Border(wx.RIGHT, 5))
+
+        self.sizer.Add(pumpsizer, wx.SizerFlags().Proportion(2))
+        self.sizer.Add(configsizer, wx.SizerFlags().Proportion(0))
+        self.sizer.Add(self.text_log_roller_pumps, flags=wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetSizer(self.sizer)

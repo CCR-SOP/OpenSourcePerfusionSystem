@@ -73,7 +73,7 @@ class HardwarePanel(wx.Panel):
         sizer_leftside.Add(self.panel_gas_mixers, wx.SizerFlags().Proportion(1).Expand())
 
         sizer_rightside = wx.BoxSizer(wx.VERTICAL)
-        sizer_rightside.Add(self.panel_dialysate_pumps, wx.SizerFlags().Proportion(2).Expand())
+        sizer_rightside.Add(self.panel_dialysate_pumps, wx.SizerFlags().Proportion(1).Expand())
         sizer_rightside.Add(self.panel_levitronix_pumps, wx.SizerFlags().Proportion(1).Expand())
 
         self.sizer.Add(sizer_leftside, wx.SizerFlags().Proportion(2).Expand())

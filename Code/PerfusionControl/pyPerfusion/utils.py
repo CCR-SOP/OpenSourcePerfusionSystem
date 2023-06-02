@@ -194,3 +194,10 @@ def setup_default_logging(app_name, stream_level):
     disable_matplotlib_logging()
     setup_stream_logger(lgr, stream_level)
     setup_file_logger(lgr, logging.DEBUG, app_name)
+
+
+def get_header_font():
+    header_font = wx.Font()
+    header_font.SetWeight(wx.FONTWEIGHT_BOLD)
+    header_font.SetPointSize(12)
+    return header_font
