@@ -211,12 +211,12 @@ class PanelSyringeControls(wx.Panel):
         sizer_vol.Add(self.spin_volume)
 
         sizer_buttons = wx.BoxSizer(wx.VERTICAL)
-        sizer_buttons.Add(self.btn_basal)
-        sizer_buttons.Add(self.btn_bolus)
+        sizer_buttons.Add(self.btn_basal, wx.SizerFlags().Proportion(1).Expand())
+        sizer_buttons.Add(self.btn_bolus, wx.SizerFlags().Proportion(1).Expand())
 
         self.sizer.Add(sizer_rate, wx.SizerFlags().CenterVertical())
         self.sizer.Add(sizer_vol, wx.SizerFlags().CenterVertical())
-        self.sizer.Add(sizer_buttons, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_buttons, wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetSizer(self.sizer)
@@ -327,12 +327,12 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
         sizer_vol.Add(self.spin_volume)
 
         sizer_buttons = wx.BoxSizer(wx.VERTICAL)
-        sizer_buttons.Add(self.btn_basal)
-        sizer_buttons.Add(self.btn_bolus)
+        sizer_buttons.Add(self.btn_basal, wx.SizerFlags().Proportion(1).Expand())
+        sizer_buttons.Add(self.btn_bolus, wx.SizerFlags().Proportion(1).Expand())
 
         self.sizer.Add(sizer_rate, wx.SizerFlags().CenterVertical())
         self.sizer.Add(sizer_vol, wx.SizerFlags().CenterVertical())
-        self.sizer.Add(sizer_buttons, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_buttons, wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.GetPane().SetSizer(self.sizer)

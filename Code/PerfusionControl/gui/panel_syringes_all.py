@@ -153,7 +153,7 @@ class PanelVasoactive(wx.Panel):
         sizer_buttons.Add(self.btn_update)
         sizer_adjustments.Add(sizer_buttons, wx.SizerFlags().CenterVertical().Border(wx.RIGHT, 10))
 
-        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1).Border(wx.RIGHT, 10))
+        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Border(wx.RIGHT, 10))
 
         sizer_adjustments.AddStretchSpacer(3)
         sizer_adjustments.Add(self.syringe_collapsible['dilator'])
