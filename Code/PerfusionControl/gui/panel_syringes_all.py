@@ -90,10 +90,10 @@ class PanelVasoactive(wx.Panel):
         font.SetPointSize(12)
 
         self.label_min_pressure = wx.StaticText(self, label='Min Arterial\nmmHg')
-        self.spin_min_pressure = wx.SpinCtrlDouble(self, min=0, max=14, inc=0.1, initial=7.0)
+        self.spin_min_pressure = wx.SpinCtrlDouble(self, min=0, max=300, inc=1, initial=0)
 
         self.label_max_pressure = wx.StaticText(self, label='Max Arterial\nmmHg')
-        self.spin_max_pressure = wx.SpinCtrlDouble(self, min=0, max=14, inc=0.1, initial=7.0)
+        self.spin_max_pressure = wx.SpinCtrlDouble(self, min=0, max=300, inc=1, initial=0)
 
         self.label_adjust_minutes = wx.StaticText(self, label='Update Rate\nminute')
         self.spin_adjust_minutes = wx.SpinCtrlDouble(self, min=0, max=60*60*24, inc=1, initial=5)
@@ -111,7 +111,7 @@ class PanelVasoactive(wx.Panel):
         self.btn_update.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK, wx.ART_BUTTON))
         self.btn_update.SetToolTip('Update Hardware with Current Displayed Config')
 
-        self.btn_auto = wx.ToggleButton(self, label='Automate')
+        self.btn_auto = wx.ToggleButton(self, label='Automate', style=wx.TE_MULTILINE)
 
         self.syringe_collapsible = {}
         self.syringe_collapsible['dilator'] = PanelSyringeControlsSimple(self, self.automation.dilator)
@@ -153,23 +153,23 @@ class PanelVasoactive(wx.Panel):
         sizer_buttons.Add(self.btn_update)
         sizer_adjustments.Add(sizer_buttons, wx.SizerFlags().CenterVertical().Border(wx.RIGHT, 10))
 
-        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1))
+        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1).Border(wx.RIGHT, 10))
 
         sizer_adjustments.AddStretchSpacer(3)
         sizer_adjustments.Add(self.syringe_collapsible['dilator'])
 
         self.sizer.Add(sizer_adjustments, wx.SizerFlags().CenterHorizontal())
-        # self.sizer.Add(self.text_log, wx.SizerFlags().Expand().Proportion(1))
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
         self.SetSizer(self.sizer)
         self.Layout()
 
-        self.update_controls_from_hardware()
-
     def __set_bindings(self):
-        self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
+        self.btn_auto.Bind(wx.EVT_TOGGLEBUTTON, self.on_auto)
+        self.btn_save.Bind(wx.EVT_BUTTON, self.on_save)
+        self.btn_load.Bind(wx.EVT_BUTTON, self.on_load)
+        self.btn_update.Bind(wx.EVT_BUTTON, self.on_update)
         for pane in self.syringe_collapsible.values():
             pane.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
@@ -196,8 +196,38 @@ class PanelVasoactive(wx.Panel):
             ctrl.Refresh()
         ctrl.SetToolTip(tooltip_msg)
 
-    def update_controls_from_hardware(self, evt=None):
-        pass
+    def on_auto(self, evt):
+        if not self.btn_auto.GetValue():
+            self.automation.stop()
+            self.btn_auto.SetLabel('Automate')
+        else:
+            self.automation.start()
+            self.btn_auto.SetLabel('Switch to\nManual Control')
+        self.Refresh()
+        for pane in self.syringe_collapsible.values():
+            pane.Enable(not self.btn_auto.GetValue())
+
+    def update_config_from_controls(self):
+        self.automation.cfg.pressure_mmHg_min = self.spin_min_pressure.GetValue()
+        self.automation.cfg.pressure_mmHg_max = self.spin_max_pressure.GetValue()
+        self.automation.cfg.update_rate_minute = self.spin_adjust_minutes.GetValue()
+
+    def update_controls_from_config(self):
+        self._lgr.debug(f'min pressure is {self.automation.cfg.pressure_mmHg_min}')
+        self.spin_min_pressure.SetValue(self.automation.cfg.pressure_mmHg_min)
+        self.spin_max_pressure.SetValue(self.automation.cfg.pressure_mmHg_max)
+        self.spin_adjust_minutes.SetValue(self.automation.cfg.update_rate_minute)
+
+    def on_save(self, evt):
+        self.update_config_from_controls()
+        self.automation.write_config()
+
+    def on_load(self, evt):
+        self.automation.read_config()
+        self.update_controls_from_config()
+
+    def on_update(self, evt):
+        self.update_controls_from_config()
 
     def OnClose(self, evt):
         self.timer_gui_update.Stop()
@@ -217,11 +247,11 @@ class PanelGlucose(wx.Panel):
         font = wx.Font()
         font.SetPointSize(12)
 
-        self.label_min_pressure = wx.StaticText(self, label='Min Glucose\n')
-        self.spin_min_pressure = wx.SpinCtrlDouble(self, min=0, max=14, inc=0.1, initial=7.0)
+        self.label_min_glucose = wx.StaticText(self, label='Min Glucose\n')
+        self.spin_min_glucose = wx.SpinCtrlDouble(self, min=0, max=1000, inc=1, initial=0)
 
-        self.label_max_pressure = wx.StaticText(self, label='Max Glucose\n')
-        self.spin_max_pressure = wx.SpinCtrlDouble(self, min=0, max=14, inc=0.1, initial=7.0)
+        self.label_max_glucose = wx.StaticText(self, label='Max Glucose\n')
+        self.spin_max_glucose = wx.SpinCtrlDouble(self, min=0, max=1000, inc=1, initial=0)
 
         self.label_adjust_minutes = wx.StaticText(self, label='Update Rate\nminute')
         self.spin_adjust_minutes = wx.SpinCtrlDouble(self, min=0, max=60*60*24, inc=1, initial=5)
@@ -239,7 +269,7 @@ class PanelGlucose(wx.Panel):
         self.btn_update.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK, wx.ART_BUTTON))
         self.btn_update.SetToolTip('Update Hardware with Current Displayed Config')
 
-        self.btn_auto = wx.ToggleButton(self, label='Automate')
+        self.btn_auto = wx.ToggleButton(self, label='Automate\n')
 
         self.syringe_collapsible = {}
         self.syringe_collapsible['increase'] = PanelSyringeControlsSimple(self, self.automation.increase)
@@ -259,12 +289,12 @@ class PanelGlucose(wx.Panel):
         sizer_adjustments.AddStretchSpacer(3)
 
         sizer_min = wx.BoxSizer(wx.VERTICAL)
-        sizer_min.Add(self.label_min_pressure)
-        sizer_min.Add(self.spin_min_pressure)
+        sizer_min.Add(self.label_min_glucose)
+        sizer_min.Add(self.spin_min_glucose)
 
         sizer_max = wx.BoxSizer(wx.VERTICAL)
-        sizer_max.Add(self.label_max_pressure)
-        sizer_max.Add(self.spin_max_pressure)
+        sizer_max.Add(self.label_max_glucose)
+        sizer_max.Add(self.spin_max_glucose)
 
         sizer_minute = wx.BoxSizer(wx.VERTICAL)
         sizer_minute.Add(self.label_adjust_minutes)
@@ -280,7 +310,6 @@ class PanelGlucose(wx.Panel):
         sizer_buttons.Add(self.btn_update)
         sizer_adjustments.Add(sizer_buttons, wx.SizerFlags().CenterVertical().Border(wx.RIGHT, 10))
 
-
         sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1).Border(wx.RIGHT, 10))
 
         sizer_adjustments.AddStretchSpacer(3)
@@ -293,16 +322,29 @@ class PanelGlucose(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
 
-        self.update_controls_from_hardware()
-
     def __set_bindings(self):
-        self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
+        self.btn_auto.Bind(wx.EVT_TOGGLEBUTTON, self.on_auto)
+        self.btn_save.Bind(wx.EVT_BUTTON, self.on_save)
+        self.btn_load.Bind(wx.EVT_BUTTON, self.on_load)
+        self.btn_update.Bind(wx.EVT_BUTTON, self.on_update)
         for pane in self.syringe_collapsible.values():
             pane.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
     def on_pane_changed(self, evt):
         self.sizer.Layout()
         self.Layout()
+
+    def on_auto(self, evt):
+        if not self.btn_auto.GetValue():
+            self.automation.stop()
+            self.btn_auto.SetLabel('Automate')
+        else:
+            self.automation.start()
+            self.btn_auto.SetLabel('Switch to\nManual Control')
+
+        self.Refresh()
+        for pane in self.syringe_collapsible.values():
+            pane.Enable(not self.btn_auto.GetValue())
 
     def update_controls(self):
         pass
@@ -323,8 +365,26 @@ class PanelGlucose(wx.Panel):
             ctrl.Refresh()
         ctrl.SetToolTip(tooltip_msg)
 
-    def update_controls_from_hardware(self, evt=None):
-        pass
+    def update_config_from_controls(self):
+        self.automation.cfg.glucose_min = self.spin_min_glucose.GetValue()
+        self.automation.cfg.glucose_max = self.spin_max_glucose.GetValue()
+        self.automation.cfg.update_rate_minute = self.spin_adjust_minutes.GetValue()
+
+    def update_controls_from_config(self):
+        self.spin_min_glucose.SetValue(self.automation.cfg.glucose_min)
+        self.spin_max_glucose.SetValue(self.automation.cfg.glucose_max)
+        self.spin_adjust_minutes.SetValue(self.automation.cfg.update_rate_minute)
+
+    def on_save(self, evt):
+        self.update_config_from_controls()
+        self.automation.write_config()
+
+    def on_load(self, evt):
+        self.automation.read_config()
+        self.update_controls_from_config()
+
+    def on_update(self, evt):
+        self.update_controls_from_config()
 
     def OnClose(self, evt):
         self.timer_gui_update.Stop()
@@ -334,8 +394,12 @@ class TestFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
 
-        self.panel_syringes = PanelAllSyringes(self, 'Vasoactive Automation', 'Glucose Automation', manual_automation_names)
+        vaso = SYS_PERFUSION.get_automation('Vasoactive Automation')
+        glucose = SYS_PERFUSION.get_automation('Glucose Automation')
+        manual = [SYS_PERFUSION.get_automation('TPN + Bile Salts Manual'),
+                  SYS_PERFUSION.get_automation('Zosyn Manual')]
 
+        self.panel_syringes = PanelAllSyringes(self, vaso, glucose, manual)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):

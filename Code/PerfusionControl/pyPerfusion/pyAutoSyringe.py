@@ -23,7 +23,7 @@ class AutoSyringeConfig:
     volume_ul: int = 0
     ul_per_min: int = 0
     basal: bool = False
-    adjust_rate_ms: int = 0
+    update_rate_minute: int = 0
 
 
 @dataclass
@@ -49,7 +49,7 @@ class AutoSyringeVasoConfig:
     dilator_volume_ul: int = 0
     dilator_ul_per_min: int = 0
     basal: bool = False
-    adjust_rate_ms: int = 0
+    update_rate_minute: int = 0
     pressure_mmHg_min: float = 0.0
     pressure_mmHg_max: float = 0.0
 
@@ -64,9 +64,9 @@ class AutoSyringeGlucoseConfig:
     increase_volume_ul: int = 0
     increase_ul_per_min: int = 0
     basal: bool = False
-    adjust_rate_ms: int = 0
-    pressure_mmHg_min: float = 0.0
-    pressure_mmHg_max: float = 0.0
+    update_rate_minute: int = 0
+    glucose_min: float = 0.0
+    glucose_max: float = 0.0
 
 
 @dataclass
@@ -109,7 +109,7 @@ class AutoSyringe:
         return self.is_streaming
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg, classname=self.__class__.__name__)
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
@@ -120,7 +120,7 @@ class AutoSyringe:
         # adjustments is small compared to the adjust rate so timing drift
         # is small
         while not PerfusionConfig.MASTER_HALT.is_set():
-            timeout = self.cfg.adjust_rate_ms / 1000.0
+            timeout = self.cfg.adjust_rate_min * 60
             if self._event_halt.wait(timeout):
                 break
             if self.device and self.data_source:
