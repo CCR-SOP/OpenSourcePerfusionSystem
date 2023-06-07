@@ -32,6 +32,25 @@ class WriterPointsConfig:
     samples_per_timestamp: int = 1
 
 
+@dataclass
+class ReaderStreamSensor:
+    data_dtype: np.dtype
+    acq_start_ms: int
+    sampling_period_ms: int
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
+
+
+@dataclass
+class ReaderPointsSensor:
+    data_dtype: np.dtype
+    acq_start_ms: int
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
+
+
 class Reader:
     def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterConfig, sensor):
         self.name = name
@@ -123,6 +142,19 @@ class Reader:
         file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
         data = data[-1]
         data_time = file_size_in_samples * self.sensor.sampling_period_ms
+        fid.close()
+        return data_time, data
+
+    def get_all(self):
+        period = self.sensor.sampling_period_ms
+        fid, data = self._open_mmap()
+
+        if data is None:
+            return [], []
+
+        file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
+        data_time = np.linspace(0, file_size_in_samples * period, dtype=np.uint64)
+
         fid.close()
         return data_time, data
 
@@ -230,8 +262,31 @@ class ReaderPoints(Reader):
         if index is not None and index < len(data_chunk):
             data_chunk = data_chunk[index]
         fid.close()
-        ts = (ts - self.sensor.get_acq_start_ms()) / 1000.0
         return ts, data_chunk
+
+    def get_all(self, index:int = 0):
+        data_time = np.zeros(0, dtype=self.data_dtype)
+        data = np.zeros(0, dtype=self.data_dtype)
+
+        fid = open(self.fqpn, 'rb')
+        fid.seek(0)
+        while True:
+            chunk = fid.read(self.cfg.bytes_per_timestamp)
+            if chunk and (len(chunk) == self.cfg.bytes_per_timestamp):
+                ts, = struct.unpack('!Q', chunk)
+                data_chunk = np.fromfile(fid, dtype=self.data_dtype,
+                                         count=self.cfg.samples_per_timestamp)
+                if index is None:
+                    data = np.append(data, data_chunk)
+                else:
+                    data = np.append(data, data_chunk[index])
+                data_time = np.append(data_time, ts - self.sensor.get_acq_start_ms())
+
+            else:
+                break
+
+        fid.close()
+        return data_time, data
 
 
 class WriterStream:

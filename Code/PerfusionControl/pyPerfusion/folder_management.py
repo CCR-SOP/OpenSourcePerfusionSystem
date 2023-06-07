@@ -104,3 +104,6 @@ class FolderManagement:
     def get_config_file(self, name):
         file = self._config_files.get(name, None)
         return file
+
+    def get_data_folder(self, yyyy_mm_dd: str):
+        return Path('data') / yyyy_mm_dd
