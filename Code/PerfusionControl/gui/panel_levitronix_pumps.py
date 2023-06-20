@@ -155,7 +155,7 @@ class BaseLeviPumpPanel(wx.Panel):
 
     def ChangeRPM(self):
         rpm = self.input_speed.GetValue()
-        # self.autolevipump.hw.set_speed(rpm=rpm)
+        self.autolevipump.hw.set_speed(rpm=rpm)
 
 
 class TestFrame(wx.Frame):
