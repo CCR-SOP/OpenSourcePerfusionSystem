@@ -26,11 +26,8 @@ class Paneli30(wx.Panel):
 
         self.panel_i30 = Paneli30Control(self, self.name, hw)
 
-        font = wx.Font()
-        font.SetPointSize(int(16))
-
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
-        static_box.SetFont(font)
+        static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
 
         self.__do_layout()

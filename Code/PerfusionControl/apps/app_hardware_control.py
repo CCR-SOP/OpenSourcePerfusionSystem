@@ -13,6 +13,7 @@ import wx
 
 import pyPerfusion.utils as utils
 from gui.panel_multiple_syringes import SyringePanel
+from gui.panel_syringes_all import PanelAllSyringes
 from gui.panel_DialysisPumps import DialysisPumpPanel
 from gui.panel_gas_mixers import GasMixerPanel
 from gui.panel_levitronix_pumps import LeviPumpPanel
@@ -31,12 +32,12 @@ class HardwarePanel(wx.Panel):
         for pump_name in pump_names:
             pumps.append(perfusion_system.get_sensor(pump_name))
 
-        automation_names = ['Insulin Automation', 'Epoprostenol Automation', 'TPN + Bile Salts Manual',
-                            'Glucagon Automation', 'Phenylephrine Automation', 'Zosyn Manual']
-        automations = []
-        for name in automation_names:
-            automations.append(perfusion_system.get_automation(name))
-        self.panel_syringes = SyringePanel(self, automations)
+        vaso = perfusion_system.get_automation('Vasoactive Automation')
+        glucose = perfusion_system.get_automation('Glucose Automation')
+        manual = [perfusion_system.get_automation('TPN + Bile Salts Manual'),
+                  perfusion_system.get_automation('Zosyn Manual')]
+
+        self.panel_syringes = PanelAllSyringes(self, vaso, glucose, manual)
 
         automation_names = ['Dialysate Inflow Automation',
                             'Dialysate Outflow Automation',
@@ -58,25 +59,26 @@ class HardwarePanel(wx.Panel):
             sensors.append(perfusion_system.get_sensor(name))
         self.panel_levitronix_pumps = LeviPumpPanel(self, sensors)
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label="Hardware Control App")
-        self.wrapper = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Expand().Border()
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.sizer = wx.GridSizer(cols=2)
+        sizer_leftside = wx.BoxSizer(wx.VERTICAL)
+        sizer_leftside.Add(self.panel_syringes, wx.SizerFlags().Proportion(1).Expand().Border(wx.BOTTOM, 10))
+        sizer_leftside.Add(self.panel_gas_mixers, wx.SizerFlags().Proportion(1).Expand())
 
-        self.sizer.Add(self.panel_syringes, flags.Proportion(2))
-        self.sizer.Add(self.panel_dialysate_pumps, flags.Proportion(2))
-        self.sizer.Add(self.panel_gas_mixers, flags.Proportion(2))
-        self.sizer.Add(self.panel_levitronix_pumps, flags.Proportion(2))
+        sizer_rightside = wx.BoxSizer(wx.VERTICAL)
+        sizer_rightside.Add(self.panel_dialysate_pumps, wx.SizerFlags().Proportion(1).Expand().Border(wx.BOTTOM, 10))
+        sizer_rightside.Add(self.panel_levitronix_pumps, wx.SizerFlags().Proportion(1).Expand())
 
-        self.wrapper.Add(self.sizer, proportion=1, flag=wx.ALL | wx.EXPAND, border=2)
+        self.sizer.Add(sizer_leftside, wx.SizerFlags().Proportion(2).Expand().Border(wx.RIGHT, 10))
+        self.sizer.Add(sizer_rightside, wx.SizerFlags().Proportion(1).Expand())
+
         self.sizer.SetSizeHints(self.parent)  # this makes it expand to its proportional size at the start
-        self.SetSizer(self.wrapper)
+        self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
 
@@ -110,6 +112,8 @@ class MyHardwareApp(wx.App):
     def OnInit(self):
         frame = HardwareFrame(sys, None, wx.ID_ANY, "")
         self.SetTopWindow(frame)
+        # match approx size of window on Perfusion Laptop
+        frame.SetSize((1666, 917))
         frame.Show()
         return True
 

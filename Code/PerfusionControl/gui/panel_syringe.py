@@ -30,7 +30,9 @@ class PanelSyringe(wx.Panel):
         self._panel_cfg = PanelSyringeConfig(self, self.automation.device.hw)
         self._panel_ctrl = PanelSyringeControls(self, self.automation)
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
+        self.static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
+        self.static_box.SetFont(utils.get_header_font())
 
         self.__do_layout()
         self.__set_bindings()
@@ -178,19 +180,19 @@ class PanelSyringeControls(wx.Panel):
         font_smaller.SetPointSize((int(10)))
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
-        static_box.SetFont(font)
-        self.sizer = wx.StaticBoxSizer(static_box, wx.VERTICAL)
+        static_box.SetFont(utils.get_header_font())
+        self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 
         self.spin_rate = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._inc, initial=int(self.automation.cfg.ul_per_min))
         self.spin_rate.SetFont(font)
-        self.label_rate = wx.StaticText(self, label='Infusion Rate (ul/min):')
+        self.label_rate = wx.StaticText(self, label='Infusion Rate\nul/min', style=wx.ALIGN_CENTER)
         self.label_rate.SetFont(font_smaller)
         self.btn_basal = wx.ToggleButton(self, label='Start Basal')
         self.btn_basal.SetFont(font_smaller)
 
         self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc, initial=int(self.automation.cfg.volume_ul))
         self.spin_volume.SetFont(font)
-        self.label_volume = wx.StaticText(self, label='Target Volume (ul):')
+        self.label_volume = wx.StaticText(self, label='Target Volume\nul', style=wx.ALIGN_CENTER)
         self.label_volume.SetFont(font_smaller)
         self.btn_bolus = wx.Button(self, label='Bolus')
         self.btn_bolus.SetFont(font_smaller)
@@ -202,26 +204,21 @@ class PanelSyringeControls(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 5).Expand()
+        sizer_rate = wx.BoxSizer(wx.VERTICAL)
+        sizer_rate.Add(self.label_rate)
+        sizer_rate.Add(self.spin_rate)
 
-        self.sizer_cfg = wx.FlexGridSizer(rows=3, cols=2, hgap=1, vgap=1)
+        sizer_vol = wx.BoxSizer(wx.VERTICAL)
+        sizer_vol.Add(self.label_volume)
+        sizer_vol.Add(self.spin_volume)
 
-        self.sizer_cfg.Add(self.label_rate, flags)
-        self.sizer_cfg.Add(self.spin_rate, flags)
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons.Add(self.btn_basal, wx.SizerFlags().Proportion(1).Expand())
+        sizer_buttons.Add(self.btn_bolus, wx.SizerFlags().Proportion(1).Expand())
 
-        self.sizer_cfg.Add(self.label_volume, flags)
-        self.sizer_cfg.Add(self.spin_volume, flags)
-
-        self.sizer_cfg.Add(self.btn_basal, flags)
-        self.sizer_cfg.Add(self.btn_bolus, flags)
-
-        self.sizer_cfg.AddGrowableCol(0, 2)
-        self.sizer_cfg.AddGrowableCol(1, 1)
-        self.sizer_cfg.AddGrowableRow(0, 1)
-        self.sizer_cfg.AddGrowableRow(1, 1)
-        self.sizer_cfg.AddGrowableRow(2, 1)
-
-        self.sizer.Add(self.sizer_cfg)
+        self.sizer.Add(sizer_rate, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_vol, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_buttons, wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetSizer(self.sizer)
@@ -284,6 +281,103 @@ class PanelSyringeControls(wx.Panel):
     def OnClose(self, evt):
         self.timer_gui_update.Stop()
         self.automation.device.hw.stop()
+
+
+class PanelSyringeControlsSimple(wx.CollapsiblePane):
+    def __init__(self, parent, sensor):
+        super().__init__(parent, label=sensor.name)
+        self._lgr = logging.getLogger(__name__)
+        self.sensor = sensor
+
+        self._inc = 1
+        self._vol_inc = 100
+
+        font = wx.Font()
+        font.SetPointSize(int(12))
+        font_smaller = wx.Font()
+        font_smaller.SetPointSize((int(10)))
+
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.spin_rate = wx.SpinCtrlDouble(self.GetPane(), min=0, max=100000, inc=self._inc, initial=0)
+        self.spin_rate.SetFont(font)
+        self.label_rate = wx.StaticText(self.GetPane(), label='Infusion Rate\nul/min', style=wx.ALIGN_CENTER)
+        self.label_rate.SetFont(font_smaller)
+        self.btn_basal = wx.ToggleButton(self.GetPane(), label='Start Basal')
+        self.btn_basal.SetFont(font_smaller)
+
+        self.spin_volume = wx.SpinCtrlDouble(self.GetPane(), min=0, max=100000, inc=self._vol_inc, initial=0)
+        self.spin_volume.SetFont(font)
+        self.label_volume = wx.StaticText(self.GetPane(), label='Target Volume\nul', style=wx.ALIGN_CENTER)
+        self.label_volume.SetFont(font_smaller)
+        self.btn_bolus = wx.Button(self.GetPane(), label='Bolus')
+        self.btn_bolus.SetFont(font_smaller)
+
+        self.timer_gui_update = wx.Timer(self.GetPane())
+        self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
+
+        self.__do_layout()
+        self.__set_bindings()
+
+    def __do_layout(self):
+        sizer_rate = wx.BoxSizer(wx.VERTICAL)
+        sizer_rate.Add(self.label_rate)
+        sizer_rate.Add(self.spin_rate)
+
+        sizer_vol = wx.BoxSizer(wx.VERTICAL)
+        sizer_vol.Add(self.label_volume)
+        sizer_vol.Add(self.spin_volume)
+
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons.Add(self.btn_basal, wx.SizerFlags().Proportion(1).Expand())
+        sizer_buttons.Add(self.btn_bolus, wx.SizerFlags().Proportion(1).Expand())
+
+        self.sizer.Add(sizer_rate, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_vol, wx.SizerFlags().CenterVertical())
+        self.sizer.Add(sizer_buttons, wx.SizerFlags().Expand())
+
+        self.sizer.SetSizeHints(self.GetParent())
+        self.GetPane().SetSizer(self.sizer)
+        self.Layout()
+        self.Fit()
+
+    def __set_bindings(self):
+        self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
+        self.btn_bolus.Bind(wx.EVT_BUTTON, self.OnBolus)
+        self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
+
+    def OnBasal(self, evt):
+        infusion_rate = self.spin_rate.GetValue()
+        if self.sensor.hw.is_infusing:
+            self.sensor.hw.set_target_volume(0)
+            self.sensor.btn_basal.SetLabel('Start Basal')
+            self.sensor.btn_basal.SetValue(True)
+            self.sensor.hw.stop()
+            self._lgr.info(f'Basal syringe infusion halted')
+        else:
+            self.sensor.hw.set_infusion_rate(infusion_rate)
+            self.sensor.hw.set_target_volume(0)
+            self.sensor.hw.start_constant_infusion()
+            self.btn_basal.SetLabel('Stop Basal')
+            self.btn_basal.SetValue(False)
+            self._lgr.info(f'Basal syringe infusion at rate {infusion_rate} uL/min started')
+
+    def OnBolus(self, evt):
+        infusion_rate = self.spin_rate.GetValue()
+        target_vol = self.spin_volume.GetValue()
+        self.sensor.hw.set_infusion_rate(infusion_rate)
+        self.sensor.hw.set_target_volume(target_vol)
+        self.sensor.hw.infuse_to_target_volume()
+        self.btn_basal.SetLabel('Stop Bolus')
+        self._lgr.info(f'Bolus syringe infusion at rate {infusion_rate} uL/min to target volume {target_vol} started')
+
+    def update_controls_from_hardware(self, evt=None):
+        enable = not self.sensor.hw.is_infusing
+        self.btn_bolus.Enable(enable)
+
+    def OnClose(self, evt):
+        self.timer_gui_update.Stop()
 
 
 class TestFrame(wx.Frame):

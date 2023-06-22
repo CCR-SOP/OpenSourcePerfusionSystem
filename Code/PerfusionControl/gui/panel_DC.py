@@ -10,6 +10,8 @@ and under the public domain.
 import logging
 
 import wx
+import wx.lib.colourdb
+import numpy as np
 
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
@@ -26,11 +28,8 @@ class PanelDC(wx.Panel):
 
         self.panel_dc = PanelDCControl(self, self.pump)
 
-        font = wx.Font()
-        font.SetPointSize(int(16))
-
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
-        self.static_box.SetFont(font)
+        self.static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
 
         self.__do_layout()
@@ -59,17 +58,16 @@ class PanelDCControl(wx.Panel):
         self.pump = pump
 
         font = wx.Font()
-        font.SetPointSize(int(12))
+        font.SetPointSize(12)
 
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.label_offset = wx.StaticText(self, label='Set Speed (mL/min):')
-        self.entered_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5, initial=0)
-        self.label_real = wx.StaticText(self, label='Actual Speed (mL/min):')
-        self.text_real = wx.TextCtrl(self, style=wx.TE_READONLY, value=str(0))
+        wx.lib.colourdb.updateColourDB()
+        self.normal_color = self.GetBackgroundColour()
+        self.warning_color = wx.Colour('orange')
+
+        self.label_offset = wx.StaticText(self, label='Flow (mL/min):')
+        self.spin_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5, initial=0)
         self.label_offset.SetFont(font)
-        self.entered_offset.SetFont(font)
-        self.label_real.SetFont(font)
-        self.text_real.SetFont(font)
+        self.spin_offset.SetFont(font)
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
         self.btn_change_rate.SetFont(font)
@@ -83,18 +81,18 @@ class PanelDCControl(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 2).Expand()
-        self.sizer_cfg = wx.GridSizer(rows=3, cols=2, vgap=1, hgap=1)
+        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
-        self.sizer_cfg.Add(self.label_offset, flags)
-        self.sizer_cfg.Add(self.label_real, flags)
-        self.sizer_cfg.Add(self.entered_offset, flags)
-        self.sizer_cfg.Add(self.text_real, flags)
-        self.sizer_cfg.Add(self.btn_change_rate, flags)
-        self.sizer_cfg.Add(self.btn_stop, flags)
+        sizer_spin = wx.BoxSizer(wx.VERTICAL)
+        sizer_spin.Add(self.label_offset, wx.SizerFlags().Border(wx.RIGHT, 10))
+        sizer_spin.Add(self.spin_offset)
 
-        self.sizer_cfg.SetSizeHints(self.GetParent())
-        self.sizer.Add(self.sizer_cfg, flags)
+        sizer_buttons = wx.BoxSizer(wx.VERTICAL)
+        sizer_buttons.Add(self.btn_change_rate)
+        sizer_buttons.Add(self.btn_stop)
+
+        self.sizer.Add(sizer_spin)
+        self.sizer.Add(sizer_buttons)
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
@@ -107,16 +105,29 @@ class PanelDCControl(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
 
-    def update_controls_from_hardware(self, evt):
-        self.text_real.SetValue(str(round(self.pump.last_flow, 2)))
+    def warn_on_difference(self, ctrl, actual, set_value):
+        old_color = ctrl.GetClassDefaultAttributes().colBg
+        tooltip_msg = ''
+
+        if not np.isclose(actual, set_value):
+            color = self.warning_color
+            tooltip_msg = f'Actual {actual:02f}'
+        else:
+            color = self.normal_color
+
+        ctrl.SetBackgroundColour(color)
+        ctrl.Refresh()
+
+        ctrl.SetToolTip(tooltip_msg)
+
+    def update_controls_from_hardware(self, evt=None):
+        self.warn_on_difference(self.spin_offset, self.pump.last_flow, self.spin_offset.GetValue())
 
     def on_update(self, evt):
-        self._lgr.debug('on update')
-        new_flow = self.entered_offset.GetValue()
+        new_flow = self.spin_offset.GetValue()
         if self.pump:
-            self._lgr.debug('setting flow')
             self.pump.set_flow(new_flow)
-            self.text_real.SetValue(str(round(self.pump.last_flow, 2)))
+            self.update_controls_from_hardware()
 
     def on_stop(self, evt):
         if self.pump:

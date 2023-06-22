@@ -58,7 +58,7 @@ class MyGuiFormatter(logging.Formatter):
         if record.levelno > logging.INFO:
             level_str = '<font color=\"red\">%(levelname)s</font>:  '
 
-        self._style._fmt = f'{level_str}{time_str}--{name_str}--%(message)s<br>'
+        self._style._fmt = f'{level_str}{time_str}--{name_str}--%(message)s'
         result = logging.Formatter.format(self, record)
 
         self._style._fmt = orig_format
@@ -154,7 +154,7 @@ class WxTextCtrlHandler(logging.Handler):
 
 def create_log_display(parent, logging_level, names_to_log, use_last_name=False):
     txt_style = wx.VSCROLL | wx.HSCROLL | wx.TE_READONLY | wx.BORDER_SIMPLE
-    log_display = wx.html.SimpleHtmlListBox(parent, -1, size=(300, 150), style=txt_style)
+    log_display = wx.html.SimpleHtmlListBox(parent, -1, size=(300, 75), style=txt_style)
     create_wx_handler(log_display, logging_level, names_to_log, use_last_name)
     return log_display
 
@@ -194,3 +194,10 @@ def setup_default_logging(app_name, stream_level):
     disable_matplotlib_logging()
     setup_stream_logger(lgr, stream_level)
     setup_file_logger(lgr, logging.DEBUG, app_name)
+
+
+def get_header_font():
+    header_font = wx.Font()
+    header_font.SetWeight(wx.FONTWEIGHT_BOLD)
+    header_font.SetPointSize(12)
+    return header_font
