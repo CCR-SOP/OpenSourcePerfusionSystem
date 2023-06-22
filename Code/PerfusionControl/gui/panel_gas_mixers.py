@@ -260,6 +260,7 @@ class BaseGasMixerPanel(wx.Panel):
         else:
             self.autogasmixer.gas_device.set_working_status(turn_on=False)
             self.autogasmixer.stop()
+            self._lgr.debug(f'{self.name} is off')
 
     def OnChangeFlow(self, evt):
         self.btn_update.Enable(True)

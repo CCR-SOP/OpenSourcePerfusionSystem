@@ -36,9 +36,9 @@ class LeviPumpPanel(wx.Panel):
     def __do_layout(self):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        for panel, log in zip(self.panels.values(), self.text_log_levi.values()):
+        for panel in self.panels.values():
             self.sizer.Add(panel, wx.SizerFlags().Expand())
-            self.sizer.Add(log, wx.SizerFlags().Expand())
+        self.sizer.Add(self.text_log_levi, wx.SizerFlags().Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
