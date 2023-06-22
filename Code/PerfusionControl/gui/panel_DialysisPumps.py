@@ -30,7 +30,7 @@ class DialysisPumpPanel(wx.Panel):
             self.panels.append(panel)
             if automation.name == 'Dialysate Inflow Automation':
                 config = AutomationConfig(self, automation)
-                config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60 * 1_000, 60 * 60 * 1_000))
+                config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60 * 1_000, 60 * 60 * 1_000))  # TODO: make this minutes
                 config.add_var('adjust_rate', 'Flow (ml/min)', (0, 0.1, 100), decimal_places=1)
                 config.add_var('K_min', 'K (min)', limits=(0, 1, 10))
                 config.add_var('K_max', 'K (max)', limits=(0, 1, 10))

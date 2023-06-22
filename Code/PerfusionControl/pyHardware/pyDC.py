@@ -79,7 +79,10 @@ class DCDevice(pyGeneric.GenericDevice):
 
     def adjust_flow_rate(self, flow_adjust: float):
         volts = self.last_value + self.mlpermin_to_volts(flow_adjust)
-        self._lgr.info(f'Adjusting pump speed by {flow_adjust} and volts are {volts}')
+        if volts > self.last_value:
+            self._lgr.info(f'Increasing pump speed by {flow_adjust}')
+        elif volts < self.last_value:
+            self._lgr.info(f'Decreasing pump speed by {flow_adjust}')
         self.set_output(volts)
 
     def set_output(self, output_volts: float):
