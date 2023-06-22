@@ -22,12 +22,13 @@ class LeviPumpPanel(wx.Panel):
         self._lgr = logging.getLogger(__name__)
 
         self.panels = {}
-        self.logs = {}
+        log_names = []
         for sensor in sensors:
             panel = BaseLeviPumpPanel(self, sensor)
             self.panels[sensor.name] = panel
             self._lgr.debug(f'logging to {sensor.name}')
-            self.logs[sensor.name] = utils.create_log_display(self, logging.INFO, [sensor.name])
+            log_names.append(sensor.name)
+        self.text_log_levi = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
 
         self.__do_layout()
         self.__set_bindings()
@@ -35,7 +36,7 @@ class LeviPumpPanel(wx.Panel):
     def __do_layout(self):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        for panel, log in zip(self.panels.values(), self.logs.values()):
+        for panel, log in zip(self.panels.values(), self.text_log_levi.values()):
             self.sizer.Add(panel, wx.SizerFlags().Expand())
             self.sizer.Add(log, wx.SizerFlags().Expand())
 
