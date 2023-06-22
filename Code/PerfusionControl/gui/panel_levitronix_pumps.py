@@ -70,14 +70,9 @@ class BaseLeviPumpPanel(wx.Panel):
 
         # Pump speed and flow
         self.label_speed = wx.StaticText(self, label='Speed (rpm):')
-        self.input_speed = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=10000, initial=0, inc=25)
+        self.input_speed = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=10000, initial=0, inc=100)
         self.label_speed.SetFont(font)
         self.input_speed.SetFont(font)
-
-        self.label_corr_flow = wx.StaticText(self, label='Corresponding Flow\nmL/min')
-        self.value_corr_flow = wx.TextCtrl(self, style=wx.TE_READONLY, value='0')
-        self.label_corr_flow.SetFont(font)
-        self.value_corr_flow.SetFont(font)
 
         # Buttons for functionality
         self.btn_update = wx.Button(self, label='Update')
@@ -96,8 +91,6 @@ class BaseLeviPumpPanel(wx.Panel):
 
         self.sizer_cfg.Add(self.label_speed, flags)
         self.sizer_cfg.Add(self.input_speed, flags)
-        self.sizer_cfg.Add(self.label_corr_flow, flags)
-        self.sizer_cfg.Add(self.value_corr_flow, flags)
 
         self.sizer_cfg.Add(self.btn_update, flags)
         self.sizer_cfg.Add(self.btn_start, flags)
@@ -132,13 +125,11 @@ class BaseLeviPumpPanel(wx.Panel):
         self.autolevipump.hw.stop()
 
     def OnStart(self, evt):
-        flow = self.value_corr_flow.GetValue()
         if self.btn_start.GetLabel() == 'Start':
             self.ChangeRPM()
-            # self.autolevipump.hw.start()  # TODO: remove hw. eventually
             self.btn_start.SetLabel('Stop')
         else:
-            self.autolevipump.hw.stop()
+            self.autolevipump.hw.stop()  # TODO: remove hw. eventually
             self.btn_start.SetLabel('Start')
 
     def OnChangeSpeed(self, evt):
@@ -149,10 +140,6 @@ class BaseLeviPumpPanel(wx.Panel):
         self.ChangeRPM()
         self.input_speed.SetBackgroundColour(wx.WHITE)
         self.input_speed.Refresh()
-        # TODO: update value_corr_flow - eventually tie to flow sensor but "calculate" for now
-        rpm = self.input_speed.GetValue()
-        flow = 0.5*rpm  # fake equation
-        self.value_corr_flow.SetValue(str(flow))
 
     def ChangeRPM(self):
         rpm = self.input_speed.GetValue()
