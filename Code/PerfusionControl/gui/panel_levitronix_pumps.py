@@ -183,7 +183,6 @@ class MyTestApp(wx.App):
         frame.Show()
         return True
 
-hi hannah!
 
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
