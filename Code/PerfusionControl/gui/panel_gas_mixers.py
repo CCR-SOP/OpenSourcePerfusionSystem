@@ -26,9 +26,11 @@ class GasMixerPanel(wx.Panel):
 
         self.panels = []
         self.configs = []
+        log_names = []
         for automation in automations:
             panel = BaseGasMixerPanel(self, automation)
             self.panels.append(panel)
+            log_names.append(automation.gas_device.name)
             if automation.name == 'Arterial Gas Mixer Automation':
                 panel.config.add_var('pH_min', 'pH (min)', limits=(0, 0.01, 14), decimal_places=2)
                 panel.config.add_var('pH_max', 'pH (max)', limits=(0, 0.01, 14), decimal_places=2)
@@ -46,6 +48,12 @@ class GasMixerPanel(wx.Panel):
                 panel.config.do_layout()
                 panel.config.set_bindings()
 
+        self._lgr.debug(f'Log names are {log_names}')
+        # Add logs
+        log_names.append('AutoGasMixer')
+        self._lgr.debug(f'Log names are {log_names}')
+        self.text_log_gas_mixer = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
+
         self.__do_layout()
         self.__set_bindings()
 
@@ -54,6 +62,7 @@ class GasMixerPanel(wx.Panel):
 
         self.sizer.Add(self.panels[0], wx.SizerFlags().Proportion(1).Expand())
         self.sizer.Add(self.panels[1], wx.SizerFlags().Proportion(1).Expand())
+        self.sizer.Add(self.text_log_gas_mixer, wx.SizerFlags().Proportion(1).Expand())
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
@@ -73,7 +82,6 @@ class BaseGasMixerPanel(wx.Panel):
     def __init__(self, parent, autogasmixer):
         super().__init__(parent)
         self.name = autogasmixer.name
-        self._lgr = utils.get_object_logger(__name__, self.name)
 
         self.autogasmixer = autogasmixer
 
@@ -126,8 +134,6 @@ class BaseGasMixerPanel(wx.Panel):
         self.btn_update = wx.Button(self, label='Update')
         self.btn_auto = wx.ToggleButton(self, label='Automate')
 
-        self.text_log = utils.create_log_display(self, logging.INFO, [self.autogasmixer.gas_device.parent.name])
-
         self.config = AutomationConfig(self, self.autogasmixer)
 
         self.timer_gui_update = wx.Timer(self)
@@ -169,7 +175,6 @@ class BaseGasMixerPanel(wx.Panel):
 
         sizer_bottom = wx.BoxSizer(wx.VERTICAL)
         sizer_bottom.Add(sizer_buttons, wx.SizerFlags().Proportion(1).Expand())
-        sizer_bottom.Add(self.text_log, wx.SizerFlags().Proportion(3).Expand())
 
         self.sizer.Add(sizer_control, wx.SizerFlags().Expand())
         self.sizer.Add(sizer_bottom, wx.SizerFlags().Expand())
