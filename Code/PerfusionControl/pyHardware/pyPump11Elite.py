@@ -174,8 +174,6 @@ class Pump11Elite(pyGeneric.GenericDevice):
                 response = self._serial.read_until('\r', size=1000)
                 resp_str = response.decode('ascii').strip('\r').strip('\n')
                 str2send = str2send.strip('\r')
-                self._lgr.debug(f"str2send=||{str2send}||, response is ||{resp_str}||\n")
-                self._lgr.debug(f'response in hex is ||{hexlify(response)}||')
         return resp_str
 
     def _set_param(self, param, value):
