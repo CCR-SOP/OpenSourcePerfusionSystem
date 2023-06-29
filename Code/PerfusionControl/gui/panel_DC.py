@@ -58,7 +58,7 @@ class PanelDCControl(wx.Panel):
         self.pump = pump
 
         font = wx.Font()
-        font.SetPointSize(12)
+        font.SetPointSize(10)
 
         wx.lib.colourdb.updateColourDB()
         self.normal_color = self.GetBackgroundColour()

@@ -58,7 +58,7 @@ class DialysisPumpPanel(wx.Panel):
         self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
 
         # Add auto start button
-        self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis', size=(100, 20))
+        self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis', size=(180, 20))
         font =wx.Font()
         font.SetPointSize(8)
         self.btn_auto_dialysis.SetFont(font)
@@ -83,9 +83,9 @@ class DialysisPumpPanel(wx.Panel):
 
         configsizer = wx.BoxSizer(wx.VERTICAL)
         for config in self.configs:
-            configsizer.Add(config, wx.SizerFlags().Proportion(0).Border(wx.RIGHT, 5))
+            configsizer.Add(config, wx.SizerFlags().Proportion(0).Border(wx.ALL, 5))
 
-        self.sizer.Add(pumpsizer, wx.SizerFlags().Proportion(2))
+        self.sizer.Add(pumpsizer, wx.SizerFlags().Proportion(2).Expand())
         self.sizer.Add(configsizer, wx.SizerFlags().Proportion(0))
         self.sizer.Add(self.text_log_roller_pumps, flags=wx.SizerFlags().Expand())
 
