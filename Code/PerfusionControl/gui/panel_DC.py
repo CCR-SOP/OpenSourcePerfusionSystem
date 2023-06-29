@@ -81,7 +81,7 @@ class PanelDCControl(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        self.sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
 
         sizer_spin = wx.BoxSizer(wx.VERTICAL)
         sizer_spin.Add(self.label_offset, wx.SizerFlags().Border(wx.RIGHT, 10))
@@ -91,7 +91,7 @@ class PanelDCControl(wx.Panel):
         sizer_buttons.Add(self.btn_change_rate)
         sizer_buttons.Add(self.btn_stop)
 
-        self.sizer.Add(sizer_spin)
+        self.sizer.Add(sizer_spin, wx.SizerFlags().Border(wx.BOTTOM, 10))
         self.sizer.Add(sizer_buttons)
 
         self.sizer.SetSizeHints(self.GetParent())

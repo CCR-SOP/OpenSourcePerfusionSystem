@@ -75,7 +75,7 @@ class DialysisPumpPanel(wx.Panel):
     def __do_layout(self):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
-        pumpsizer = wx.GridSizer(2)
+        pumpsizer = wx.GridSizer(3)
         for idx, panel in enumerate(self.panels):
             pumpsizer.Add(panel, flags=wx.SizerFlags().Expand())
 
