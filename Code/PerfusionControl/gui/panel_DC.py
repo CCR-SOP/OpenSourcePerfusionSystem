@@ -132,6 +132,9 @@ class PanelDCControl(wx.Panel):
     def on_stop(self, evt):
         if self.pump:
             self.pump.set_flow(0)
+            self.spin_offset.SetValue(0)
+
+
 
     def on_close(self, evt):
         self.timer_gui_update.Stop()
