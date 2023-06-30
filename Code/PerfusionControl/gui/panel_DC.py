@@ -58,7 +58,7 @@ class PanelDCControl(wx.Panel):
         self.pump = pump
 
         font = wx.Font()
-        font.SetPointSize(12)
+        font.SetPointSize(10)
 
         wx.lib.colourdb.updateColourDB()
         self.normal_color = self.GetBackgroundColour()
@@ -91,7 +91,7 @@ class PanelDCControl(wx.Panel):
         sizer_buttons.Add(self.btn_change_rate)
         sizer_buttons.Add(self.btn_stop)
 
-        self.sizer.Add(sizer_spin)
+        self.sizer.Add(sizer_spin, wx.SizerFlags().Border(wx.BOTTOM, 10))
         self.sizer.Add(sizer_buttons)
 
         self.sizer.SetSizeHints(self.GetParent())
