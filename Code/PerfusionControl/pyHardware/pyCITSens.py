@@ -101,9 +101,11 @@ class CITSens(pyGeneric.GenericDevice):
                 except serial.SerialException as e:
                     self._lgr.exception(e)
                     # assuming this is an occasional glitch so log, but keep going
-
-                self._buffer[0] = self.parse_response(resp)
-                self._queue.put((self._buffer, utils.get_epoch_ms()))
+                else:
+                    if resp != '':
+                        self._buffer[0] = self.parse_response(resp)
+                        self._lgr.debug(f'parsing {resp} to {self._buffer[0]}')
+                        self._queue.put((self._buffer, utils.get_epoch_ms()))
         self.is_streaming = False
 
     def start(self):
