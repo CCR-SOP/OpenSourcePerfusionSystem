@@ -70,7 +70,7 @@ class AutoGasMixer:
         return self.is_streaming
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('automations', self.name, self.cfg, classname=self.__class__.__name__)
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
