@@ -28,8 +28,8 @@ class LeviPumpPanel(wx.Panel):
             self.panels[sensor.name] = panel
             self._lgr.debug(f'logging to {sensor.name}')
             log_names.append(sensor.name)
-        self.text_log_levi = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
 
+        self.text_log_levi = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
         self.__do_layout()
         self.__set_bindings()
 
