@@ -67,7 +67,7 @@ class GenericDevice:
         self.stop()
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg, classname=self.__class__.__name__)
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)

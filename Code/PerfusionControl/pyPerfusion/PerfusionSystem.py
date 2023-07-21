@@ -136,7 +136,7 @@ class PerfusionSystem:
         return self.automations.get(name, None)
 
     def write_config(self, obj):
-        PerfusionConfig.write_from_dataclass('sensors', obj.name, obj.cfg)
+        PerfusionConfig.write_from_dataclass('sensors', obj.name, obj.cfg, classname=self.__class__.__name__)
 
     def create_config(self, obj):
         PerfusionConfig.read_into_dataclass(self.config_name, obj.name, obj.cfg)

@@ -61,9 +61,9 @@ class AIDevice(pyGeneric.GenericDevice):
         self.ai_channels = []
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass(self.name, 'General', self.cfg)
+        PerfusionConfig.write_from_dataclass(self.name, 'General', self.cfg, classname=self.__class__.__name__)
         for ch in self.ai_channels:
-            PerfusionConfig.write_from_dataclass(self.name, ch.name, ch.cfg)
+            PerfusionConfig.write_from_dataclass(self.name, ch.name, ch.cfg, classname=type(ch).__name__)
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
@@ -186,7 +186,7 @@ class AIChannel(pyGeneric.GenericDevice):
         return self.device.get_acq_start_ms()
 
     def write_config(self):
-        PerfusionConfig.write_from_dataclass(self.device.name, self.name, self.cfg)
+        PerfusionConfig.write_from_dataclass(self.device.name, self.name, self.cfg, classname=self.__class__.__name__)
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass(self.device.name, self.name, self.cfg)
