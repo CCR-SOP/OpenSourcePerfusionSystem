@@ -153,12 +153,14 @@ class PuraLevi30(pyGeneric.GenericDevice):
             self.stop()
 
     def stop(self):
+        self._lgr.info('Stopping pump')
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['State']
                 self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
 
     def set_speed(self, rpm: int):
+        self._lgr.info(f'Setting RPM to {rpm}')
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointSpeed']
@@ -167,6 +169,7 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
 
     def set_flow(self, percent_of_max: float):
+        self._lgr.info(f'Setting flow to {percent_of_max}%')
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointProcess']
@@ -200,12 +203,18 @@ class PuraLevi30(pyGeneric.GenericDevice):
         return buf, t
 
 
-class Mocki30(pyGeneric.GenericDevice):
+class Mocki30(PuraLevi30):
     def __init__(self, name: str):
         super().__init__(name)
         self.state = PumpState.Off
         self.speed = 0
         self.process = 0
+
+    def open(self):
+        self._queue = Queue()
+
+    def close(self):
+        self.stop()
 
     def read_register(self, addr, number_of_decimals=0):
         if addr == ReadRegisters['SetpointProcess'].addr:

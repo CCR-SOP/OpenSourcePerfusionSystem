@@ -111,9 +111,9 @@ class SystemHardware:
             self._lgr.debug(f'cfg is {self.hw[name].cfg}')
         except pyGeneric.HardwareException as e:
             self._lgr.error(f'Error opening {name}. Message {e}. Loading mock')
-            self._lgr.info(f'Loading mock for {name}')
 
             self.hw[name] = get_mock(name)
+            self._lgr.info(f'Loading mock {get_mock(name)}for {name}')
             self.hw[name].read_config()
 
         if isinstance(self.hw[name], NIDAQAIDevice) or isinstance(self.hw[name], AIDevice):
