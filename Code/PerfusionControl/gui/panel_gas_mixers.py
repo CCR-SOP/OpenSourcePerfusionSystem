@@ -81,6 +81,7 @@ class GasMixerPanel(wx.Panel):
 class BaseGasMixerPanel(wx.Panel):
     def __init__(self, parent, autogasmixer):
         super().__init__(parent)
+        self._lgr = logging.getLogger(__name__)
         self.name = autogasmixer.name
 
         self.autogasmixer = autogasmixer
