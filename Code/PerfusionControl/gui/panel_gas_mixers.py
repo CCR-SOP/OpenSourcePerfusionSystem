@@ -71,7 +71,12 @@ class GasMixerPanel(wx.Panel):
 
     def __set_bindings(self):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.panels[0].config.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
+        self.panels[1].config.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
+    def on_pane_changed(self, evt):
+        self.sizer.Layout()
+        self.Layout()
 
     def OnClose(self, evt):
         for panel in self.panels:
@@ -168,17 +173,14 @@ class BaseGasMixerPanel(wx.Panel):
         sizer_control.Add(sizer_gas2, wx.SizerFlags().Proportion(1))
 
         sizer_buttons = wx.BoxSizer(wx.HORIZONTAL)
-        sizer_buttons.Add(self.config, wx.SizerFlags().Proportion(0))
-        sizer_buttons.AddStretchSpacer(2)
+
         sizer_buttons.Add(self.btn_update, wx.SizerFlags().Expand().Proportion(1))
         sizer_buttons.Add(self.btn_flow, wx.SizerFlags().Expand().Proportion(1))
         sizer_buttons.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1))
 
-        sizer_bottom = wx.BoxSizer(wx.VERTICAL)
-        sizer_bottom.Add(sizer_buttons, wx.SizerFlags().Proportion(1).Expand())
-
-        self.sizer.Add(sizer_control, wx.SizerFlags().Expand())
-        self.sizer.Add(sizer_bottom, wx.SizerFlags().Expand())
+        self.sizer.Add(sizer_control, wx.SizerFlags().Expand().Proportion(1))
+        self.sizer.Add(self.config, wx.SizerFlags().Proportion(0))
+        self.sizer.Add(sizer_buttons, wx.SizerFlags().Expand().Proportion(1))
 
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
@@ -196,11 +198,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnAuto)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
-        self.config.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
-    def on_pane_changed(self, evt):
-        self.sizer.Layout()
-        self.Layout()
 
     def update_controls(self):
         gas1_mix_set = self.autogasmixer.gas_device.percent[0]
