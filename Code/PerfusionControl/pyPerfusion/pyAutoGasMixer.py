@@ -134,10 +134,10 @@ class AutoGasMixerVenous(AutoGasMixer):
             self._lgr.warning(f'{self.name} pH is out of range. Cannot be adjusted automatically')
         elif pH < self.cfg.pH_min:
             self.gas_device.adjust_flow(self.cfg.flow_adjust)
-            self._lgr.info(f'{self.name} is acidotic, increasing total flow by {self.cfg.flow_adjust}')
+            self._lgr.info(f'{self.name} is acidotic (pH={pH:1.2f}), increasing total flow by {self.cfg.flow_adjust}')
         elif pH > self.cfg.pH_max:
             self.gas_device.adjust_flow(-self.cfg.flow_adjust)
-            self._lgr.info(f'{self.name} is alkalotic, decreasing total flow by {self.cfg.flow_adjust}')
+            self._lgr.info(f'{self.name} is alkalotic (pH={pH:1.2f}), decreasing total flow by {self.cfg.flow_adjust}')
 
     def _update_O2(self, O2: float):
         O2_adjust = 0
@@ -176,12 +176,12 @@ class AutoGasMixerArterial(AutoGasMixer):
         if pH == -1:
             self._lgr.warning(f'{self.name}: pH is out of range. Cannot be adjusted automatically')
             check_co2 = True
-        elif pH > self.cfg.pH_min:
-            co2_adjust = self.cfg.CO2_adjust
-            self._lgr.info(f'{self.name} is alkalotic, increasing CO2')
-        elif pH < self.cfg.pH_max:
+        elif pH < self.cfg.pH_min:
             co2_adjust = -self.cfg.CO2_adjust
-            self._lgr.info(f'{self.name} is acidotic, decreasing C02')
+            self._lgr.info(f'{self.name} is alkalotic (ph={pH:1.2f}), decreasing CO2')
+        elif pH > self.cfg.pH_max:
+            co2_adjust = self.cfg.CO2_adjust
+            self._lgr.info(f'{self.name} is acidotic (ph={pH:1.2f}), increasing C02')
         else:
            check_co2 = True
 
