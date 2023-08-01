@@ -31,12 +31,13 @@ def main():
     fqpn = base_folder / f'{sensor_name}_{output}.dat'
     cfg = Strategy_ReadWrite.WriterConfig()
     reader = Strategy_ReadWrite.Reader(output, fqpn, cfg, sensor)
+    reader.read_settings()
     ts, data = reader.get_last_acq()
-    print(f'Last acq was t={datetime.fromtimestamp((start_ms + ts) / 1000.0)} data={data}')
+    print(f'Last acq was t={datetime.fromtimestamp((cfg.get_ + ts) / 1000.0)} data={data}')
     ts, data = reader.get_all()
     print(f'total data points are {len(ts)}')
-    for t, d in zip(ts, data):
-        print(f't={datetime.fromtimestamp((start_ms + t) / 1000.0)} data={d}')
+    # for t, d in zip(ts, data):
+    #     print(f't={datetime.fromtimestamp((start_ms + t) / 1000.0)} data={d}')
 
 
 if __name__ == "__main__":

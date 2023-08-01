@@ -66,6 +66,18 @@ class Reader:
     def data_dtype(self):
         return self.sensor.data_dtype
 
+    def read_settings(self):
+        settings_file = self.fqpn.with_suffix('.txt')
+        with open(settings_file) as reader:
+            for line in reader:
+                key, value = line.strip().split(': ')
+                if key == 'Data Type':
+                    print(f'Data type is {value}')
+                elif key == 'Start of Acquisition':
+                    start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+                    self._acq_start_ms = start_ts.timestamp() * 1000
+
+
     def _open_read(self):
         fid = open(self.fqpn, 'rb')
         return fid
