@@ -24,7 +24,7 @@ def main():
     output = 'Raw'
     start_timestamp_str = '2023-06-05 20:53:58.719000'
     start_ts = datetime.strptime(start_timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
-    start_ms = start_ts.timestamp()
+    start_ms = start_ts.timestamp() * 1000
     sensor = Strategy_ReadWrite.ReaderStreamSensor(data_dtype=np.dtype('float64'),
                                                    acq_start_ms=start_ms,
                                                    sampling_period_ms=100)
@@ -32,11 +32,11 @@ def main():
     cfg = Strategy_ReadWrite.WriterConfig()
     reader = Strategy_ReadWrite.Reader(output, fqpn, cfg, sensor)
     ts, data = reader.get_last_acq()
-    print(f'Last acq was t={datetime.fromtimestamp(ts / 1000.0)} data={data}')
+    print(f'Last acq was t={datetime.fromtimestamp((start_ms + ts) / 1000.0)} data={data}')
     ts, data = reader.get_all()
     print(f'total data points are {len(ts)}')
     for t, d in zip(ts, data):
-        print(f't={datetime.fromtimestamp(t / 1000.0)} data={d}')
+        print(f't={datetime.fromtimestamp((start_ms + t) / 1000.0)} data={d}')
 
 
 if __name__ == "__main__":
