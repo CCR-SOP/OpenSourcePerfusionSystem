@@ -72,7 +72,7 @@ class Reader:
             for line in reader:
                 key, value = line.strip().split(': ')
                 if key == 'Data Type':
-                    print(f'Data type is {value}')
+                    self.sensor.data_dtype = np.dtype(value)
                 elif key == 'Start of Acquisition':
                     start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
                     self.sensor.acq_start_ms = start_ts.timestamp() * 1000
@@ -174,7 +174,7 @@ class Reader:
 
 
 class ReaderPoints(Reader):
-    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor):
+    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: ReaderPointsSensor):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
         super().__init__(name, fqpn, cfg, sensor)
@@ -188,6 +188,23 @@ class ReaderPoints(Reader):
         bytes_per_chunk = self.cfg.bytes_per_timestamp + (
                 self.cfg.samples_per_timestamp * self.data_dtype.itemsize)
         return bytes_per_chunk
+
+    def read_settings(self):
+        settings_file = self.fqpn.with_suffix('.txt')
+        with open(settings_file) as reader:
+            for line in reader:
+                key, value = line.strip().split(': ')
+                if key == 'Data Type':
+                    self.sensor.data_dtype = np.dtype(value)
+                elif key == 'Start of Acquisition':
+                    start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+                    self.sensor.acq_start_ms = start_ts.timestamp() * 1000
+                elif key == 'samples_per_timestamp':
+                    self.sensor.samples_per_timestamp = int(value)
+                    self.cfg.samples_per_timestamp = int(value)
+                elif key == 'bytes_per_timestamp':
+                    self.sensor.bytes_per_timestamp = int(value)
+                    self.cfg.bytes_per_timestamp = int(value)
 
     def read_chunk(self, fid):
 
@@ -294,7 +311,7 @@ class ReaderPoints(Reader):
                     data = np.append(data, data_chunk)
                 else:
                     data = np.append(data, data_chunk[index])
-                data_time = np.append(data_time, ts - self.sensor.get_acq_start_ms())
+                data_time = np.append(data_time, ts)
 
             else:
                 break
