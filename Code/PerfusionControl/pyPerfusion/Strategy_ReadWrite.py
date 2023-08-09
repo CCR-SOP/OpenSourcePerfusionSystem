@@ -295,26 +295,20 @@ class ReaderPoints(Reader):
         fid.close()
         return ts, data_chunk
 
-    def get_all(self, index:int = 0):
+    def get_all(self, index:int = None):
         data_time = np.zeros(0, dtype=self.data_dtype)
         data = np.zeros(0, dtype=self.data_dtype)
 
-        fid = open(self.fqpn, 'rb')
+        fid = self._open_read()
         fid.seek(0)
         while True:
-            chunk = fid.read(self.cfg.bytes_per_timestamp)
-            if chunk and (len(chunk) == self.cfg.bytes_per_timestamp):
-                ts, = struct.unpack('!Q', chunk)
-                data_chunk = np.fromfile(fid, dtype=self.data_dtype,
-                                         count=self.cfg.samples_per_timestamp)
-                if index is None:
-                    data = np.append(data, data_chunk)
-                else:
-                    data = np.append(data, data_chunk[index])
-                data_time = np.append(data_time, ts)
-
-            else:
+            ts, data_chunk = self.read_chunk(fid)
+            if data_chunk is None:
                 break
+            if index is not None and index < len(data_chunk):
+                data_chunk = data_chunk[index]
+            data = np.append(data, data_chunk)
+            data_time = np.append(data_time, ts)
 
         fid.close()
         return data_time, data
