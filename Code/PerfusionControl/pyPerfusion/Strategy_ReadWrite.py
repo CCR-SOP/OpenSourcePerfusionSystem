@@ -34,9 +34,9 @@ class WriterPointsConfig:
 
 @dataclass
 class ReaderStreamSensor:
-    data_dtype: np.dtype
-    acq_start_ms: int
-    sampling_period_ms: int
+    data_dtype: np.dtype = np.dtype('float64')
+    acq_start_ms: int = 0
+    sampling_period_ms: int = 0
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -44,8 +44,8 @@ class ReaderStreamSensor:
 
 @dataclass
 class ReaderPointsSensor:
-    data_dtype: np.dtype
-    acq_start_ms: int
+    data_dtype: np.dtype = np.dtype('float64')
+    acq_start_ms: int = 0
 
     def get_acq_start_ms(self):
         return self.acq_start_ms
@@ -75,8 +75,7 @@ class Reader:
                     print(f'Data type is {value}')
                 elif key == 'Start of Acquisition':
                     start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
-                    self._acq_start_ms = start_ts.timestamp() * 1000
-
+                    self.sensor.acq_start_ms = start_ts.timestamp() * 1000
 
     def _open_read(self):
         fid = open(self.fqpn, 'rb')

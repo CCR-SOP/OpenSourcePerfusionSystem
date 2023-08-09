@@ -22,18 +22,14 @@ def main():
     base_folder = PerfusionConfig.ACTIVE_CONFIG.basepath / PerfusionConfig.ACTIVE_CONFIG.get_data_folder('2023-06-05')
     sensor_name = 'Hepatic Artery Flow'
     output = 'Raw'
-    start_timestamp_str = '2023-06-05 20:53:58.719000'
-    start_ts = datetime.strptime(start_timestamp_str, '%Y-%m-%d %H:%M:%S.%f')
-    start_ms = start_ts.timestamp() * 1000
-    sensor = Strategy_ReadWrite.ReaderStreamSensor(data_dtype=np.dtype('float64'),
-                                                   acq_start_ms=start_ms,
-                                                   sampling_period_ms=100)
+
     fqpn = base_folder / f'{sensor_name}_{output}.dat'
-    cfg = Strategy_ReadWrite.WriterConfig()
-    reader = Strategy_ReadWrite.Reader(output, fqpn, cfg, sensor)
+    sensor = Strategy_ReadWrite.ReaderStreamSensor()
+    reader = Strategy_ReadWrite.Reader(output, fqpn, Strategy_ReadWrite.WriterConfig(), sensor)
     reader.read_settings()
+
     ts, data = reader.get_last_acq()
-    print(f'Last acq was t={datetime.fromtimestamp((cfg.get_ + ts) / 1000.0)} data={data}')
+    print(f'Last acq was t={datetime.fromtimestamp((sensor.get_acq_start_ms()+ts) / 1000.0)} data={data}')
     ts, data = reader.get_all()
     print(f'total data points are {len(ts)}')
     # for t, d in zip(ts, data):
