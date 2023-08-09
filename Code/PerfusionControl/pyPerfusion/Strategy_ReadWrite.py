@@ -76,6 +76,8 @@ class Reader:
                 elif key == 'Start of Acquisition':
                     start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
                     self.sensor.acq_start_ms = start_ts.timestamp() * 1000
+                elif key == 'Sampling Period (ms)':
+                    self.sensor.sampling_period_ms = int(value)
 
     def _open_read(self):
         fid = open(self.fqpn, 'rb')
@@ -164,7 +166,8 @@ class Reader:
             return [], []
 
         file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
-        data_time = np.linspace(0, file_size_in_samples * period, dtype=np.uint64)
+        data_time = np.linspace(0, file_size_in_samples * period,
+                                num=file_size_in_samples, dtype=np.uint64)
 
         fid.close()
         return data_time, data
