@@ -406,6 +406,7 @@ class WriterStream:
         # all_params = {**self._params, **self._sensor_params}
         all_params = asdict(self.cfg)
         all_params['Data Type'] = str(self.data_dtype)
+        all_params['Sample Period (ms)'] = str(self.sensor.sampling_period_ms)
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)
 
