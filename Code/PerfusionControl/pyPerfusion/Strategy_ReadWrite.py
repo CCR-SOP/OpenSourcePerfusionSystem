@@ -73,15 +73,26 @@ def convert_to_csv(reader):
     array_data = True
     if type(reader) == Reader:
         array_data = False
+        start_ts = reader.sensor.get_acq_start_ms()
     else:
         data = data.reshape(-1, reader.sensor.samples_per_timestamp)
-    with open(reader.fqpn.with_suffix('.csv'), 'wt') as csv:
-        for t, d in zip(ts, data):
-            if array_data:
-                data_str = ','.join(map(str, d))
-            else:
-                data_str = f'{d}'
-            csv.write(f'{datetime.fromtimestamp(t / 1000.0)}, {data_str}\n')
+        start_ts = 0
+    csv = ''
+    for t, d in zip(ts, data):
+        if array_data:
+            data_str = ','.join(map(str, d))
+        else:
+            data_str = f'{d}'
+        csv += f'{datetime.fromtimestamp((start_ts + t) / 1000.0)}, {data_str}\n'
+
+    return csv
+
+
+def save_to_csv(date_str, sensor_name, output_type):
+    reader = read_file(date_str, sensor_name, output_type)
+    csv = convert_to_csv(reader)
+    with open(reader.fqpn.with_suffix('.csv'), 'wt') as csv_file:
+        csv_file.write(csv)
 
 
 class Reader:
