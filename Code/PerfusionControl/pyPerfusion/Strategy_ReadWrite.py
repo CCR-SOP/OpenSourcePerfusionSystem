@@ -51,6 +51,39 @@ class ReaderPointsSensor:
         return self.acq_start_ms
 
 
+def read_file(date_str, sensor_name, output_type):
+    base_folder = PerfusionConfig.ACTIVE_CONFIG.basepath / \
+                  PerfusionConfig.ACTIVE_CONFIG.get_data_folder(date_str)
+
+    fqpn = base_folder / f'{sensor_name}_{output_type}.dat'
+    if 'points' in output_type.lower():
+        sensor = ReaderPointsSensor()
+        reader = ReaderPoints(output_type, fqpn, WriterPointsConfig(), sensor)
+    else:
+        sensor = ReaderStreamSensor()
+        reader = Reader(output_type, fqpn, WriterConfig(), sensor)
+
+    reader.read_settings()
+
+    return reader
+
+
+def convert_to_csv(reader):
+    ts, data = reader.get_all()
+    array_data = True
+    if type(reader) == Reader:
+        array_data = False
+    else:
+        data = data.reshape(-1, reader.sensor.samples_per_timestamp)
+    with open(reader.fqpn.with_suffix('.csv'), 'wt') as csv:
+        for t, d in zip(ts, data):
+            if array_data:
+                data_str = ','.join(map(str, d))
+            else:
+                data_str = f'{d}'
+            csv.write(f'{datetime.fromtimestamp(t / 1000.0)}, {data_str}\n')
+
+
 class Reader:
     def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterConfig, sensor):
         self.name = name
