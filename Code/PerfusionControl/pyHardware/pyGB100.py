@@ -153,6 +153,13 @@ class GasDevice(pyGeneric.GenericDevice):
         flow = self.get_total_flow()
         self.set_total_flow(flow + adjust_flow)
 
+    def cancel_flow(self, cancel_flow: int):
+        self.set_total_flow(cancel_flow)
+
+    def resume_flow(self, resume_flow: int):
+        flow = self.get_total_flow()
+        self.set_total_flow(flow + resume_flow)
+
     def set_total_flow(self, total_flow: int):
         if self.hw is not None:
             if total_flow < self.cfg.flow_limits[0]:
