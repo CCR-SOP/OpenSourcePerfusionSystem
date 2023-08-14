@@ -51,17 +51,14 @@ class ReaderPointsSensor:
         return self.acq_start_ms
 
 
-def read_file(date_str, sensor_name, output_type):
-    base_folder = PerfusionConfig.ACTIVE_CONFIG.basepath / \
-                  PerfusionConfig.ACTIVE_CONFIG.get_data_folder(date_str)
+def read_file(filename):
 
-    fqpn = base_folder / f'{sensor_name}_{output_type}.dat'
-    if 'points' in output_type.lower():
+    if 'points' in str(filename).lower():
         sensor = ReaderPointsSensor()
-        reader = ReaderPoints(output_type, fqpn, WriterPointsConfig(), sensor)
+        reader = ReaderPoints('Reader', filename, WriterPointsConfig(), sensor)
     else:
         sensor = ReaderStreamSensor()
-        reader = Reader(output_type, fqpn, WriterConfig(), sensor)
+        reader = Reader('Reader', filename, WriterConfig(), sensor)
 
     reader.read_settings()
 
@@ -88,8 +85,16 @@ def convert_to_csv(reader):
     return csv
 
 
-def save_to_csv(date_str, sensor_name, output_type):
-    reader = read_file(date_str, sensor_name, output_type)
+def get_standard_filename(date_str, sensor_name, output_type):
+    base_folder = PerfusionConfig.ACTIVE_CONFIG.basepath / \
+                  PerfusionConfig.ACTIVE_CONFIG.get_data_folder(date_str)
+
+    fqpn = base_folder / f'{sensor_name}_{output_type}.dat'
+    return fqpn
+
+
+def save_to_csv(filename):
+    reader = read_file(filename)
     csv = convert_to_csv(reader)
     with open(reader.fqpn.with_suffix('.csv'), 'wt') as csv_file:
         csv_file.write(csv)
@@ -406,7 +411,7 @@ class WriterStream:
         # all_params = {**self._params, **self._sensor_params}
         all_params = asdict(self.cfg)
         all_params['Data Type'] = str(self.data_dtype)
-        all_params['Sample Period (ms)'] = str(self.sensor.sampling_period_ms)
+        all_params['Sampling Period (ms)'] = str(self.sensor.sampling_period_ms)
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)
 

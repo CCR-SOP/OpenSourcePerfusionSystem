@@ -20,11 +20,11 @@ def main():
 
     sensor_name = 'Hepatic Artery Flow'
     output_type = 'Raw'
-    ReadWrite.save_to_csv(date_str, sensor_name, output_type)
+    ReadWrite.save_to_csv(ReadWrite.get_standard_filename(date_str, sensor_name, output_type))
 
     sensor_name = 'Arterial Gas Mixer'
     output_type = 'GasMixerPoints'
-    ReadWrite.save_to_csv(date_str, sensor_name, output_type)
+    ReadWrite.save_to_csv(ReadWrite.get_standard_filename(date_str, sensor_name, output_type))
 
 
 if __name__ == "__main__":
