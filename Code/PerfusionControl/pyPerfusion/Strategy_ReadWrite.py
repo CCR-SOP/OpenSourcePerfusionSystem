@@ -9,6 +9,7 @@ and under the public domain.
 """
 import pathlib
 import struct
+import os
 from os import SEEK_CUR, SEEK_END, SEEK_SET
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -123,10 +124,17 @@ class Reader:
                 if key == 'Data Type':
                     self.sensor.data_dtype = np.dtype(value)
                 elif key == 'Start of Acquisition':
+                    if value == '1970-01-01 00:00:00':
+                        # some dat files did not record correct date and is missing milliseconds
+                        # update date and assume start at midnight to force conversion
+                        value = f'{pathlib.PurePath(self.fqpn).parent.name} 00:00:00.00'
                     start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
                     self.sensor.acq_start_ms = start_ts.timestamp() * 1000
                 elif key == 'Sampling Period (ms)':
                     self.sensor.sampling_period_ms = int(value)
+        # error in some dat files did not include sampling period
+        if self.sensor.sampling_period_ms == 0:
+            self.sensor.sampling_period_ms = 100
 
     def _open_read(self):
         fid = open(self.fqpn, 'rb')
