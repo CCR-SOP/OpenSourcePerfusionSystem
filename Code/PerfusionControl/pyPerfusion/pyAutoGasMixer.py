@@ -206,7 +206,7 @@ class AutoGasMixerArterial(AutoGasMixer):
             self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
         elif O2 < self.cfg.O2_min:
             self.gas_device.adjust_flow(self.cfg.flow_adjust)
-            self._lgr.info(f'{self.name}: O2 low. Increasing total flow by {self.cfg.flow_adjust}')
+            self._lgr.info(f'{self.name}: O2 low. {O2}. Increasing total flow by {self.cfg.flow_adjust}')
         elif O2 > self.cfg.O2_max:
             self.gas_device.adjust_flow(self.cfg.flow_adjust)
             self._lgr.warning(f'{self.name}: O2 high. Decreasing total flow by {self.cfg.flow_adjust}')
