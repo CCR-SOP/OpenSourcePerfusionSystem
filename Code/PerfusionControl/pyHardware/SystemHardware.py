@@ -132,6 +132,7 @@ class SystemHardware:
         except AIDeviceException as e:
             self._lgr.debug('Exception caught')
             self._lgr.error(e)
+
     def stop(self):
         PerfusionConfig.MASTER_HALT.set()
 

@@ -388,6 +388,7 @@ class WriterStream:
         self.data_dtype = np.dtype(np.float64)
 
         self._processed_buffer = None
+        self._wrote_header = False
 
 
     @classmethod

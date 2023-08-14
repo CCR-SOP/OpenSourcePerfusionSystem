@@ -139,7 +139,6 @@ class AIDevice(pyGeneric.GenericDevice):
     def start(self):
         super().start()
         self._event_halt.clear()
-
         self.__thread = Thread(target=self.run)
         self.__thread.name = f'pyAI {self.name}'
         self.__thread.start()
@@ -182,6 +181,9 @@ class AIChannel(pyGeneric.GenericDevice):
     @property
     def samples_per_read(self):
         return self.device.samples_per_read
+
+    def get_acq_start_ms(self):
+        return self.device.get_acq_start_ms()
 
     def write_config(self):
         PerfusionConfig.write_from_dataclass(self.device.name, self.name, self.cfg)
