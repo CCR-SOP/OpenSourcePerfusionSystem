@@ -417,10 +417,12 @@ class WriterStream:
             self._last_idx += len(data_buf)
 
     def _get_stream_info(self):
-        # all_params = {**self._params, **self._sensor_params}
-        all_params = asdict(self.cfg)
+        all_params = {}
+        all_params['Sensor Name'] = self.sensor.name
+        all_params['Output Type'] = self.name
         all_params['Data Type'] = str(self.data_dtype)
         all_params['Sampling Period (ms)'] = str(self.sensor.sampling_period_ms)
+        all_params.update(asdict(self.cfg))
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)
 
@@ -474,6 +476,16 @@ class WriterPoints(WriterStream):
     @classmethod
     def get_config_type(cls):
         return WriterPointsConfig
+
+    def _get_stream_info(self):
+        all_params = {}
+        all_params['Sensor Name'] = self.sensor.name
+        all_params['Output Type'] = self.name
+        all_params['Data Type'] = str(self.data_dtype)
+        all_params.update(asdict(self.cfg))
+
+        hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
+        return ''.join(hdr_str)
 
     def get_reader(self):
         return ReaderPoints(self.name, self.fqpn, self.cfg, self.sensor)
