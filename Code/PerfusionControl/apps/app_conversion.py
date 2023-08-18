@@ -12,6 +12,7 @@ and under the public domain.
 import logging
 import os
 import pathlib
+import sys
 
 import pyPerfusion.Strategy_ReadWrite as ReadWrite
 import pyPerfusion.PerfusionConfig as PerfusionConfig
@@ -19,15 +20,18 @@ import pyPerfusion.utils as utils
 
 
 def main():
-    date_str = '2023-08-09'
+    date_str = sys.argv[1]
     base_folder = PerfusionConfig.ACTIVE_CONFIG.basepath / \
                   PerfusionConfig.ACTIVE_CONFIG.get_data_folder(date_str)
 
-    for file in os.scandir(base_folder):
-        ext = os.path.splitext(file.name)[-1].lower()
-        if ext == '.dat':
-            print(f'converting {file.name}')
-            ReadWrite.save_to_csv(pathlib.Path(file.path))
+    if not os.path.isdir(base_folder):
+        print(f'Could not find folder {base_folder}')
+    else:
+        for file in os.scandir(base_folder):
+            ext = os.path.splitext(file.name)[-1].lower()
+            if ext == '.dat':
+                print(f'converting {file.name}')
+                ReadWrite.save_to_csv(pathlib.Path(file.path))
 
 
 if __name__ == "__main__":
