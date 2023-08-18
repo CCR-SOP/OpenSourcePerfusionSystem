@@ -10,16 +10,18 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 
-import logging
 from dataclasses import dataclass
 from enum import IntEnum
 from queue import Queue, Empty
-from threading import Lock
+from threading import Lock, Thread, Event
 
 import minimalmodbus as modbus
 import serial
+import numpy as np
 
 import pyHardware.pyGeneric as pyGeneric
+import pyPerfusion.utils as utils
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 class i30Exception(pyGeneric.HardwareException):
@@ -121,6 +123,14 @@ class PuraLevi30Config:
     device_addr: int = 0
 
 
+@dataclass
+class PuraLevi30SinusoidalConfig(PuraLevi30Config):
+    min_rpm: float = 0.0
+    max_rpm: float = 0.0
+    sine_freq: float = 0.0
+    update_period_ms: int = 0
+
+
 class PuraLevi30(pyGeneric.GenericDevice):
     def __init__(self, name):
         super().__init__(name)
@@ -201,6 +211,44 @@ class PuraLevi30(pyGeneric.GenericDevice):
             # this is not unusual, so catch the error but do nothing
             pass
         return buf, t
+
+
+class PuraLevi30Sinusoidal(PuraLevi30):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._lgr = utils.get_object_logger(__name__, self.name)
+        self.cfg = PuraLevi30SinusoidalConfig()
+        self.__thread = None
+        self._event_halt = Event()
+        self.sine = None
+
+    def start(self):
+        super().start()
+        self._event_halt.clear()
+
+        self.__thread = Thread(target=self.run)
+        self.__thread.name = f'pyAI {self.name}'
+        self.__thread.start()
+
+    def stop(self):
+        if self.__thread and self.__thread.is_alive():
+            self._event_halt.set()
+            self.__thread.join(2.0)
+            self.__thread = None
+        super().stop()
+
+    def run(self):
+        t = 0
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            sine_period = 1/(2*np.pi*self.cfg.sine_freq)
+            period_timeout = self.cfg.update_period_ms / 1_000.0
+            if not self._event_halt.wait(timeout=period_timeout):
+                t = t + period_timeout
+                sine_pt = np.sin(2*np.pi*self.cfg.sine_freq * t) + 0.5
+                adjusted = sine_pt * (self.cfg.max_rpm - self.cfg.min_rpm) + self.cfg.min_rpm
+                self.set_speed(adjusted)
+                if t > sine_period:
+                    t = t - sine_period
 
 
 class Mocki30(PuraLevi30):
