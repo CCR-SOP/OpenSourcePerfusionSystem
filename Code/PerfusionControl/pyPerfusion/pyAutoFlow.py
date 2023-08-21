@@ -37,7 +37,7 @@ class StaticAutoFlowConfig(AutoFlowConfig):
 # data source should return a value equal to the
 # average value of the pulsatile flow (e.g. a moving average over several cycles)
 @dataclass
-class StaticAutoFlowConfig(AutoFlowConfig):
+class SinusoidalAutoFlowConfig(AutoFlowConfig):
     desired_max_flow: float = 0.0
     desired_min_flow: float = 0.0
 
@@ -70,6 +70,7 @@ class AutoFlow:
         self.cfg.kp = kp
         self.cfg.ki = ki
         self.cfg.kd = kd
+        self.pid.tunings = (self.cfg.kp, self.cfg.ki, self.cfg.kd)
 
     def run(self):
         self.is_streaming = True
@@ -80,8 +81,10 @@ class AutoFlow:
             timeout = self.cfg.adjust_rate_ms / 1_000.0
             if self._event_halt.wait(timeout):
                 break
+            self._lgr.debug(f'device = {self.device}, source = {self.data_source}')
             if self.device and self.data_source:
                 ts, flow = self.data_source.get_last_acq()
+                self._lgr.debug(f'flow = {flow}')
                 if flow is not None:
                     self.update_on_input(flow)
 
@@ -116,7 +119,8 @@ class StaticAutoFlow(AutoFlow):
 
     def update_on_input(self, flow):
         new_speed = self.pid(flow)
-        self.device.set_speed(new_speed)
+        self._lgr.debug(f'Updating speed to {new_speed} based on flow {flow}')
+        self.device.hw.set_speed(new_speed)
 
 
 class SinusoidalAutoFlow(AutoFlow):
@@ -127,5 +131,5 @@ class SinusoidalAutoFlow(AutoFlow):
 
     def update_on_input(self, flow):
         new_speed = self.pid(flow)
-        self.device.set_avg_speed(new_speed)
-
+        self._lgr.debug(f'Updating avg speed to {new_speed} based on flow {flow}')
+        self.device.hw.set_avg_speed(new_speed)

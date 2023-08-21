@@ -247,7 +247,7 @@ class PuraLevi30Sinusoidal(PuraLevi30):
                 t = t + period_timeout
                 sine_pt = (np.sin(2*np.pi*self.cfg.sine_freq * t) + 1.0) * 0.5
                 adjusted = sine_pt * (self.cfg.max_rpm - self.cfg.min_rpm) + self.cfg.min_rpm
-                self._lgr.debug(f"||{t}||{sine_pt}||{adjusted}||{self.cfg.min_rpm}||{self.cfg.max_rpm}")
+                # self._lgr.debug(f"||{t}||{sine_pt}||{adjusted}||{self.cfg.min_rpm}||{self.cfg.max_rpm}")
                 self.set_speed(adjusted)
                 if t > sine_period:
                      t = t - sine_period

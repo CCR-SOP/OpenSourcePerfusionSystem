@@ -17,7 +17,6 @@ import logging
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.PerfusionSystem import PerfusionSystem
-from pyHardware.pyPuraLevi30 import PuraLevi30Sinusoidal
 
 
 def main():
