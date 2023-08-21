@@ -137,8 +137,10 @@ class PuraLevi30(pyGeneric.GenericDevice):
         self.cfg = PuraLevi30Config()
 
         self.hw = None
-
         self.mutex = Lock()
+
+        self._buffer = np.zeros(1, dtype=self.data_dtype)
+        self.buf_len = 1
 
     def open(self):
         if self.cfg.port != '':
@@ -168,6 +170,8 @@ class PuraLevi30(pyGeneric.GenericDevice):
             with self.mutex:
                 reg = WriteRegisters['State']
                 self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
+                self._buffer[0] = 0
+                self._queue.put((self._buffer, utils.get_epoch_ms()))
 
     def set_speed(self, rpm: int):
         self._lgr.info(f'Setting RPM to {rpm}')
@@ -177,6 +181,8 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
                 reg = WriteRegisters['State']
                 self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
+                self._buffer[0] = rpm
+                self._queue.put((self._buffer, utils.get_epoch_ms()))
 
     def set_flow(self, percent_of_max: float):
         self._lgr.info(f'Setting flow to {percent_of_max}%')
@@ -236,6 +242,8 @@ class PuraLevi30Sinusoidal(PuraLevi30):
             self._event_halt.set()
             self.__thread.join(2.0)
             self.__thread = None
+            self._buffer[0] = 0
+            self._queue.put((self._buffer, utils.get_epoch_ms()))
         super().stop()
 
     def run(self):
@@ -261,6 +269,8 @@ class PuraLevi30Sinusoidal(PuraLevi30):
                 self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
                 reg = WriteRegisters['State']
                 self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
+                self._buffer[0] = rpm
+                self._queue.put((self._buffer, utils.get_epoch_ms()))
 
 
 class Mocki30(PuraLevi30):

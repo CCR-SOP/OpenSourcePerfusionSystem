@@ -99,7 +99,7 @@ class PanelPID(wx.Panel):
 
     def update_controls(self):
         if self.automation.pid:
-            p, i, d = self.automation.pid.components
+            p, i, d = self.automation.pid.tunings
             self.spin_p.SetValue(p)
             self.spin_i.SetValue(i)
             self.spin_d.SetValue(d)
@@ -124,7 +124,7 @@ class MyTestApp(wx.App):
 
 if __name__ == '__main__':
     PerfusionConfig.set_test_config()
-    utils.setup_default_logging('ex_gui_test_pid', logging.DEBUG)
+    utils.setup_default_logging('ex_gui_test_pid', logging.WARNING)
 
     SYS_PERFUSION = PerfusionSystem()
     try:

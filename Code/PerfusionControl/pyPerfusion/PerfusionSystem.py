@@ -128,17 +128,14 @@ class PerfusionSystem:
                 automation.device = self.get_sensor(automation.cfg.device)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
             elif isinstance(automation, StaticAutoFlow):
-                self._lgr.debug(f'loading automation StaticAutoFlow with {automation.cfg.device}, {automation.cfg.data_source}')
                 automation.device = self.get_sensor(automation.cfg.device)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
-                self._lgr.debug(f'loaded automation StaticAutoFlow with {automation.device}, {automation.data_source}')
             elif isinstance(automation, SinusoidalAutoFlow):
                 automation.device = self.get_sensor(automation.cfg.device)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
             elif isinstance(automation, AutoFlow):
                 automation.device = self.get_sensor(automation.cfg.device)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
-
 
             self.automations[name] = automation
 

@@ -65,8 +65,9 @@ class AutoFlow:
 
     def read_config(self):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
+        self.pid.tunings = (self.cfg.kp, self.cfg.ki, self.cfg.kd)
 
-    def update_tunings(self, kp, ki, kd):
+    def update_tunings(self, kp=None, ki=None, kd=None):
         self.cfg.kp = kp
         self.cfg.ki = ki
         self.cfg.kd = kd
@@ -81,10 +82,8 @@ class AutoFlow:
             timeout = self.cfg.adjust_rate_ms / 1_000.0
             if self._event_halt.wait(timeout):
                 break
-            self._lgr.debug(f'device = {self.device}, source = {self.data_source}')
             if self.device and self.data_source:
                 ts, flow = self.data_source.get_last_acq()
-                self._lgr.debug(f'flow = {flow}')
                 if flow is not None:
                     self.update_on_input(flow)
 
@@ -127,7 +126,7 @@ class SinusoidalAutoFlow(AutoFlow):
     def __init__(self, name: str):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self.cfg = StaticAutoFlowConfig()
+        self.cfg = SinusoidalAutoFlowConfig()
 
     def update_on_input(self, flow):
         new_speed = self.pid(flow)
