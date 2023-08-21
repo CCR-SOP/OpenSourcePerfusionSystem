@@ -176,13 +176,15 @@ class PuraLevi30(pyGeneric.GenericDevice):
     def set_speed(self, rpm: int):
         self._lgr.info(f'Setting RPM to {rpm}')
         if self.hw:
+            self._lgr.debug(self.hw)
             with self.mutex:
+                self._lgr.debug('in mutex')
                 reg = WriteRegisters['SetpointSpeed']
                 self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
                 reg = WriteRegisters['State']
                 self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
-                self._buffer[0] = rpm
-                self._queue.put((self._buffer, utils.get_epoch_ms()))
+        self._buffer[0] = rpm
+        self._queue.put((self._buffer, utils.get_epoch_ms()))
 
     def set_flow(self, percent_of_max: float):
         self._lgr.info(f'Setting flow to {percent_of_max}%')

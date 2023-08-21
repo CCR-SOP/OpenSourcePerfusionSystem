@@ -45,6 +45,10 @@ class PanelPID(wx.Panel):
         self.spin_d = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.001)
         self.spin_d.SetDigits(3)
 
+        self.label_setpoint = wx.StaticText(self, label='SetPoint')
+        self.spin_setpoint = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.001)
+        self.spin_setpoint.SetDigits(3)
+
         self.updateBtn = wx.Button(self, id=wx.ID_ANY, label="Update")
 
         self.__do_layout()
@@ -67,6 +71,12 @@ class PanelPID(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.label_d)
         sizer.Add(self.spin_d)
+        sizer_pids.Add(sizer, wx.SizerFlags().CenterVertical().Proportion(1))
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.label_setpoint)
+        sizer.Add(self.spin_setpoint)
+        sizer_pids.AddSpacer(5)
         sizer_pids.Add(sizer, wx.SizerFlags().CenterVertical().Proportion(1))
 
         sizer_pids.AddSpacer(10)
@@ -94,7 +104,9 @@ class PanelPID(wx.Panel):
         p = self.spin_p.GetValue()
         i = self.spin_i.GetValue()
         d = self.spin_d.GetValue()
+        setpoint = self.spin_setpoint.GetValue()
         self.automation.update_tunings(p, i, d)
+        self.automation.update_setpoint(setpoint)
         self.automation.start()
 
     def update_controls(self):
@@ -103,6 +115,7 @@ class PanelPID(wx.Panel):
             self.spin_p.SetValue(p)
             self.spin_i.SetValue(i)
             self.spin_d.SetValue(d)
+            self.spin_setpoint.SetValue(self.automation.pid.setpoint)
 
 
 class TestFrame(wx.Frame):

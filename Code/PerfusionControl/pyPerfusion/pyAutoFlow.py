@@ -24,9 +24,9 @@ class AutoFlowConfig:
     kp: float = 0.0
     ki: float = 0.0
     kd: float = 0.0
+    setpoint: float = 0.0
     limit_high: float = 0.0
     limit_low: float = 0.0
-    reverse_mode: bool = False
 
 
 @dataclass
@@ -66,12 +66,16 @@ class AutoFlow:
     def read_config(self):
         PerfusionConfig.read_into_dataclass('automations', self.name, self.cfg)
         self.pid.tunings = (self.cfg.kp, self.cfg.ki, self.cfg.kd)
+        self.pid.setpoint = self.cfg.setpoint
 
-    def update_tunings(self, kp=None, ki=None, kd=None):
+    def update_tunings(self, kp, ki, kd):
         self.cfg.kp = kp
         self.cfg.ki = ki
         self.cfg.kd = kd
         self.pid.tunings = (self.cfg.kp, self.cfg.ki, self.cfg.kd)
+
+    def update_setpoint(self, sp):
+        self.pid.setpoint = sp
 
     def run(self):
         self.is_streaming = True
@@ -118,6 +122,7 @@ class StaticAutoFlow(AutoFlow):
 
     def update_on_input(self, flow):
         new_speed = self.pid(flow)
+        self._lgr.debug(f'tunings are {self.pid.tunings}')
         self._lgr.debug(f'Updating speed to {new_speed} based on flow {flow}')
         self.device.hw.set_speed(new_speed)
 
