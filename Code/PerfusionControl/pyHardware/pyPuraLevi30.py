@@ -170,7 +170,7 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
 
     def set_speed(self, rpm: int):
-        # self._lgr.info(f'Setting RPM to {rpm}')
+        self._lgr.info(f'Setting RPM to {rpm}')
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointSpeed']
@@ -251,6 +251,16 @@ class PuraLevi30Sinusoidal(PuraLevi30):
                 self.set_speed(adjusted)
                 if t > sine_period:
                      t = t - sine_period
+
+    def set_speed(self, rpm: int):
+        # override set_speed just to ignore the set_speed log message
+        # as sinusoidal output calls it regularly
+        if self.hw:
+            with self.mutex:
+                reg = WriteRegisters['SetpointSpeed']
+                self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
+                reg = WriteRegisters['State']
+                self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
 
 
 class Mocki30(PuraLevi30):
