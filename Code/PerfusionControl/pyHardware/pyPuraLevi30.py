@@ -170,7 +170,7 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
 
     def set_speed(self, rpm: int):
-        self._lgr.info(f'Setting RPM to {rpm}')
+        # self._lgr.info(f'Setting RPM to {rpm}')
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointSpeed']
@@ -223,11 +223,12 @@ class PuraLevi30Sinusoidal(PuraLevi30):
         self.sine = None
 
     def start(self):
+        self.stop()
         super().start()
         self._event_halt.clear()
 
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'pyAI {self.name}'
+        self.__thread.name = f'PuraLevi30Sinusoidal {self.name}'
         self.__thread.start()
 
     def stop(self):
@@ -240,18 +241,47 @@ class PuraLevi30Sinusoidal(PuraLevi30):
     def run(self):
         t = 0
         while not PerfusionConfig.MASTER_HALT.is_set():
-            sine_period = 1/(2*np.pi*self.cfg.sine_freq)
+            sine_period = 1/self.cfg.sine_freq
             period_timeout = self.cfg.update_period_ms / 1_000.0
             if not self._event_halt.wait(timeout=period_timeout):
                 t = t + period_timeout
-                sine_pt = np.sin(2*np.pi*self.cfg.sine_freq * t) + 0.5
+                sine_pt = (np.sin(2*np.pi*self.cfg.sine_freq * t) + 1.0) * 0.5
                 adjusted = sine_pt * (self.cfg.max_rpm - self.cfg.min_rpm) + self.cfg.min_rpm
+                self._lgr.debug(f"||{t}||{sine_pt}||{adjusted}||{self.cfg.min_rpm}||{self.cfg.max_rpm}")
                 self.set_speed(adjusted)
                 if t > sine_period:
-                    t = t - sine_period
+                     t = t - sine_period
 
 
 class Mocki30(PuraLevi30):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.state = PumpState.Off
+        self.speed = 0
+        self.process = 0
+
+    def open(self):
+        self._queue = Queue()
+
+    def close(self):
+        self.stop()
+
+    def read_register(self, addr, number_of_decimals=0):
+        if addr == ReadRegisters['SetpointProcess'].addr:
+            return self.process
+        elif addr == ReadRegisters['SetpointSpeed'].addr:
+            return self.speed
+
+    def write_register(self, addr, value):
+        if addr == WriteRegisters['State'].addr:
+            self.state = value
+        elif addr == WriteRegisters['SetpointSpeed'].addr:
+            self.speed = value
+        elif addr == WriteRegisters['SetpointProcess'].addr:
+            self.process = value
+
+
+class Mocki30Sinusoidal(PuraLevi30Sinusoidal):
     def __init__(self, name: str):
         super().__init__(name)
         self.state = PumpState.Off
