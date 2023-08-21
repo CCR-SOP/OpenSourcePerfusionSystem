@@ -104,7 +104,7 @@ class CITSens(pyGeneric.GenericDevice):
                 else:
                     if resp != '':
                         self._buffer[0] = self.parse_response(resp)
-                        self._lgr.debug(f'parsing {resp} to {self._buffer[0]}')
+                        # self._lgr.debug(f'parsing {resp} to {self._buffer[0]}')
                         self._queue.put((self._buffer, utils.get_epoch_ms()))
         self.is_streaming = False
 
