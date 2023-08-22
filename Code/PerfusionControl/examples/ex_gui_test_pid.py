@@ -34,11 +34,11 @@ class PanelPID(wx.Panel):
         self.panel_speed.add_plot(self.plot_speed)
 
         self.label_p = wx.StaticText(self, label='Proportional')
-        self.spin_p = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
+        self.spin_p = wx.SpinCtrlDouble(self, min=0, max=32000, initial=10, inc=100)
         self.spin_p.SetDigits(3)
 
         self.label_i = wx.StaticText(self, label='Integral')
-        self.spin_i = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
+        self.spin_i = wx.SpinCtrlDouble(self, min=0, max=32000, initial=10, inc=100)
         self.spin_i.SetDigits(3)
 
         self.label_d = wx.StaticText(self, label='Derivative')

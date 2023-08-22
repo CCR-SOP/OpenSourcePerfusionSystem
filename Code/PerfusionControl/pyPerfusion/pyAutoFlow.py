@@ -125,9 +125,10 @@ class StaticAutoFlow(AutoFlow):
 
     def update_on_input(self, flow):
         speed_diff = self.pid(flow)
-        new_speed = self.last_speed + speed_diff
+        current_speed = self.device.hw.get_speed()
+        new_speed = current_speed + speed_diff
         self._lgr.debug(f'tunings are {self.pid.tunings}')
-        self._lgr.debug(f'Adjusting speed by {speed_diff} to {new_speed} based on flow {flow}')
+        self._lgr.debug(f'Adjusting current speed {current_speed} by {speed_diff} to {new_speed} based on flow {flow}')
         self.device.hw.set_speed(new_speed)
         self.last_speed = new_speed
 
