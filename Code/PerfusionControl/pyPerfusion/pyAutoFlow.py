@@ -121,12 +121,15 @@ class StaticAutoFlow(AutoFlow):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = StaticAutoFlowConfig()
+        self.last_speed = 0
 
     def update_on_input(self, flow):
-        new_speed = self.pid(flow)
+        speed_diff = self.pid(flow)
+        new_speed = self.last_speed + speed_diff
         self._lgr.debug(f'tunings are {self.pid.tunings}')
-        self._lgr.debug(f'Updating speed to {new_speed} based on flow {flow}')
+        self._lgr.debug(f'Adjusting speed by {speed_diff} to {new_speed} based on flow {flow}')
         self.device.hw.set_speed(new_speed)
+        self.last_speed = new_speed
 
 
 class SinusoidalAutoFlow(AutoFlow):
@@ -134,8 +137,12 @@ class SinusoidalAutoFlow(AutoFlow):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
         self.cfg = SinusoidalAutoFlowConfig()
+        self.last_speed = 0
 
     def update_on_input(self, flow):
-        new_speed = self.pid(flow)
-        self._lgr.debug(f'Updating avg speed to {new_speed} based on flow {flow}')
+        speed_diff = self.pid(flow)
+        new_speed = self.last_speed + speed_diff
+        self._lgr.debug(f'tunings are {self.pid.tunings}')
+        self._lgr.debug(f'Adjusting speed by {speed_diff} to {new_speed} based on flow {flow}')
         self.device.hw.set_avg_speed(new_speed)
+        self.last_speed = new_speed
