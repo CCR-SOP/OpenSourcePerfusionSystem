@@ -34,22 +34,23 @@ class PanelPID(wx.Panel):
         self.panel_speed.add_plot(self.plot_speed)
 
         self.label_p = wx.StaticText(self, label='Proportional')
-        self.spin_p = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.001)
+        self.spin_p = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
         self.spin_p.SetDigits(3)
 
         self.label_i = wx.StaticText(self, label='Integral')
-        self.spin_i = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.001)
+        self.spin_i = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
         self.spin_i.SetDigits(3)
 
         self.label_d = wx.StaticText(self, label='Derivative')
-        self.spin_d = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.001)
+        self.spin_d = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.1)
         self.spin_d.SetDigits(3)
 
         self.label_setpoint = wx.StaticText(self, label='SetPoint')
-        self.spin_setpoint = wx.SpinCtrlDouble(self, min=0, max=100, initial=10, inc=0.001)
-        self.spin_setpoint.SetDigits(3)
+        self.spin_setpoint = wx.SpinCtrlDouble(self, min=0, max=10000, initial=5000, inc=100)
+        self.spin_setpoint.SetDigits(0)
 
-        self.updateBtn = wx.Button(self, id=wx.ID_ANY, label="Update")
+        self.btn_start = wx.ToggleButton(self, id=wx.ID_ANY, label="Start Auto")
+        self.btn_start_pump= wx.ToggleButton(self, id=wx.ID_ANY, label="Start Pump")
 
         self.__do_layout()
         self.__set_bindings()
@@ -80,7 +81,9 @@ class PanelPID(wx.Panel):
         sizer_pids.Add(sizer, wx.SizerFlags().CenterVertical().Proportion(1))
 
         sizer_pids.AddSpacer(10)
-        sizer_pids.Add(self.updateBtn, wx.SizerFlags().Proportion(1).CenterVertical())
+        sizer_pids.Add(self.btn_start, wx.SizerFlags().Proportion(1).CenterVertical())
+        sizer_pids.AddSpacer(10)
+        sizer_pids.Add(self.btn_start_pump, wx.SizerFlags().Proportion(1).CenterVertical())
 
         self.sizer.Add(sizer_pids, wx.SizerFlags().Proportion(1).CenterHorizontal())
         self.sizer.Add(self.panel_flow, wx.SizerFlags().Expand().Proportion(4))
@@ -92,22 +95,39 @@ class PanelPID(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.updateBtn.Bind(wx.EVT_BUTTON, self.on_update_pid)
+        self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.on_start_stop)
+        self.btn_start_pump.Bind(wx.EVT_TOGGLEBUTTON, self.on_start_stop_pump)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.panel_plots.Destroy()
+        self.panel_flow.Destroy()
+        self.panel_speed.Destroy()
         self.Destroy()
 
-    def on_update_pid(self, evt):
-        self.automation.stop()
-        p = self.spin_p.GetValue()
-        i = self.spin_i.GetValue()
-        d = self.spin_d.GetValue()
-        setpoint = self.spin_setpoint.GetValue()
-        self.automation.update_tunings(p, i, d)
-        self.automation.update_setpoint(setpoint)
-        self.automation.start()
+    def on_start_stop(self, evt):
+        if not evt.IsChecked():
+            self.btn_start.SetLabel('Start')
+            self.automation.stop()
+        else:
+            self.btn_start.SetLabel('Stop')
+            p = self.spin_p.GetValue()
+            i = self.spin_i.GetValue()
+            d = self.spin_d.GetValue()
+            setpoint = self.spin_setpoint.GetValue()
+            self.automation.update_tunings(p, i, d)
+            self.automation.update_setpoint(setpoint)
+            self.automation.starting_output = 5000
+            self.automation.start()
+
+    def on_start_stop_pump(self, evt):
+        if not evt.IsChecked():
+            self.btn_start_pump.SetLabel('Start Pump')
+            self.automation.device.hw.set_speed(0)
+        else:
+            self.btn_start_pump.SetLabel('Stop Pump')
+            self.automation.device.hw.set_speed(5000)
+            # self.automation.device.hw.start()
+
 
     def update_controls(self):
         if self.automation.pid:
@@ -123,6 +143,11 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.auto = SYS_PERFUSION.get_automation('TestAutoFlowDC')
+        self.flow = SYS_PERFUSION.get_sensor('Portal Vein Flow')
+        self.flow.hw.cfg.cal_pt1_target = 0.0
+        self.flow.hw.cfg.cal_pt1_reading = 0.0
+        self.flow.hw.cfg.cal_pt2_target = 760
+        self.flow.hw.cfg.cal_pt2_reading = 0.76
         self.panel = PanelPID(self, automation=self.auto)
         self.panel.update_controls()
 
@@ -137,7 +162,7 @@ class MyTestApp(wx.App):
 
 if __name__ == '__main__':
     PerfusionConfig.set_test_config()
-    utils.setup_default_logging('ex_gui_test_pid', logging.WARNING)
+    utils.setup_default_logging('ex_gui_test_pid', logging.DEBUG)
 
     SYS_PERFUSION = PerfusionSystem()
     try:

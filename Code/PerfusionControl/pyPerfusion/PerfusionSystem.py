@@ -128,6 +128,7 @@ class PerfusionSystem:
                 automation.device = self.get_sensor(automation.cfg.device)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
             elif isinstance(automation, StaticAutoFlow):
+                self._lgr.warning(f'Looking for {automation.cfg.device}')
                 automation.device = self.get_sensor(automation.cfg.device)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
                 self._lgr.warning(f'loaded automation StaticAutoFlow with {automation.device}, {automation.data_source}')

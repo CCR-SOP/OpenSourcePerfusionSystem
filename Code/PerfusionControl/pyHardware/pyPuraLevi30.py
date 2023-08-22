@@ -174,11 +174,12 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 self._queue.put((self._buffer, utils.get_epoch_ms()))
 
     def set_speed(self, rpm: int):
+        if rpm < 0:
+            rpm = 0
+            self._lgr.warning(f'Attempt to set rpm ({rpm}) below zero. Setting to 0.')
         self._lgr.info(f'Setting RPM to {rpm}')
         if self.hw:
-            self._lgr.debug(self.hw)
             with self.mutex:
-                self._lgr.debug('in mutex')
                 reg = WriteRegisters['SetpointSpeed']
                 self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
                 reg = WriteRegisters['State']

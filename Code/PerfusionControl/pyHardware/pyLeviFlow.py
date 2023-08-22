@@ -216,7 +216,7 @@ class LeviFlow(pyGeneric.GenericDevice):
     def run(self):
         while not PerfusionConfig.MASTER_HALT.is_set():
             period_timeout = self.cfg.sampling_period_ms / 1_000.0
-            if not self._event_halt.wait(timeout=period_timeout):
+            if not self._evt_halt.wait(timeout=period_timeout):
                 self._acq_samples()
 
     def get_data(self):

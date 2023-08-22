@@ -89,6 +89,7 @@ class AutoFlow:
             if self.device and self.data_source:
                 ts, flow = self.data_source.get_last_acq()
                 if flow is not None:
+                    self._lgr.debug(f'Calling update_on_input with {flow}')
                     self.update_on_input(flow)
 
     def start(self):
@@ -111,6 +112,7 @@ class AutoFlow:
         # this is the base class, so do nothing
         # This can be used when an automation object needs to be supplied
         # but no automation is necessary (e.g., panel_gas_mixers)
+        self._lgr.debug('Calling base pyAutoFlow')
         pass
 
 

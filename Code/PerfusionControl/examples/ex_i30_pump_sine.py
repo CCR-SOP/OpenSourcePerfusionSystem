@@ -20,7 +20,7 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 def main():
-    name = 'Test LeviFlow Sine'
+    name = 'Test Puralev Sine'
     sensor = SYS_PERFUSION.get_sensor(name)
 
     print('Starting pump')
