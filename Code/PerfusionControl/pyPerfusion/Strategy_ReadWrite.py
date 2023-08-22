@@ -9,6 +9,7 @@ and under the public domain.
 """
 import pathlib
 import struct
+import os
 from os import SEEK_CUR, SEEK_END, SEEK_SET
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -32,6 +33,74 @@ class WriterPointsConfig:
     samples_per_timestamp: int = 1
 
 
+@dataclass
+class ReaderStreamSensor:
+    data_dtype: np.dtype = np.dtype('float64')
+    acq_start_ms: int = 0
+    sampling_period_ms: int = 0
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
+
+
+@dataclass
+class ReaderPointsSensor:
+    data_dtype: np.dtype = np.dtype('float64')
+    acq_start_ms: int = 0
+
+    def get_acq_start_ms(self):
+        return self.acq_start_ms
+
+
+def read_file(filename):
+
+    if 'points' in str(filename).lower():
+        sensor = ReaderPointsSensor()
+        reader = ReaderPoints('Reader', filename, WriterPointsConfig(), sensor)
+    else:
+        sensor = ReaderStreamSensor()
+        reader = Reader('Reader', filename, WriterConfig(), sensor)
+
+    reader.read_settings()
+
+    return reader
+
+
+def convert_to_csv(reader):
+    ts, data = reader.get_all()
+    array_data = True
+    if type(reader) == Reader:
+        array_data = False
+        start_ts = reader.sensor.get_acq_start_ms()
+    else:
+        data = data.reshape(-1, reader.sensor.samples_per_timestamp)
+        start_ts = 0
+    csv = ''
+    for t, d in zip(ts, data):
+        if array_data:
+            data_str = ','.join(map(str, d))
+        else:
+            data_str = f'{d}'
+        csv += f'{datetime.fromtimestamp((start_ts + t) / 1000.0)}, {data_str}\n'
+
+    return csv
+
+
+def get_standard_filename(date_str, sensor_name, output_type):
+    base_folder = PerfusionConfig.ACTIVE_CONFIG.basepath / \
+                  PerfusionConfig.ACTIVE_CONFIG.get_data_folder(date_str)
+
+    fqpn = base_folder / f'{sensor_name}_{output_type}.dat'
+    return fqpn
+
+
+def save_to_csv(filename):
+    reader = read_file(filename)
+    csv = convert_to_csv(reader)
+    with open(reader.fqpn.with_suffix('.csv'), 'wt') as csv_file:
+        csv_file.write(csv)
+
+
 class Reader:
     def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterConfig, sensor):
         self.name = name
@@ -46,6 +115,26 @@ class Reader:
     @property
     def data_dtype(self):
         return self.sensor.data_dtype
+
+    def read_settings(self):
+        settings_file = self.fqpn.with_suffix('.txt')
+        with open(settings_file) as reader:
+            for line in reader:
+                key, value = line.strip().split(': ')
+                if key == 'Data Type':
+                    self.sensor.data_dtype = np.dtype(value)
+                elif key == 'Start of Acquisition':
+                    if value == '1970-01-01 00:00:00':
+                        # some dat files did not record correct date and is missing milliseconds
+                        # update date and assume start at midnight to force conversion
+                        value = f'{pathlib.PurePath(self.fqpn).parent.name} 00:00:00.00'
+                    start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+                    self.sensor.acq_start_ms = start_ts.timestamp() * 1000
+                elif key == 'Sampling Period (ms)':
+                    self.sensor.sampling_period_ms = int(value)
+        # error in some dat files did not include sampling period
+        if self.sensor.sampling_period_ms == 0:
+            self.sensor.sampling_period_ms = 100
 
     def _open_read(self):
         fid = open(self.fqpn, 'rb')
@@ -126,9 +215,23 @@ class Reader:
         fid.close()
         return data_time, data
 
+    def get_all(self):
+        period = self.sensor.sampling_period_ms
+        fid, data = self._open_mmap()
+
+        if data is None:
+            return [], []
+
+        file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
+        data_time = np.linspace(0, file_size_in_samples * period,
+                                num=file_size_in_samples, dtype=np.uint64)
+
+        fid.close()
+        return data_time, data
+
 
 class ReaderPoints(Reader):
-    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor):
+    def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterPointsConfig, sensor: ReaderPointsSensor):
         self.name = name
         self._lgr = utils.get_object_logger(__name__, self.name)
         super().__init__(name, fqpn, cfg, sensor)
@@ -142,6 +245,23 @@ class ReaderPoints(Reader):
         bytes_per_chunk = self.cfg.bytes_per_timestamp + (
                 self.cfg.samples_per_timestamp * self.data_dtype.itemsize)
         return bytes_per_chunk
+
+    def read_settings(self):
+        settings_file = self.fqpn.with_suffix('.txt')
+        with open(settings_file) as reader:
+            for line in reader:
+                key, value = line.strip().split(': ')
+                if key == 'Data Type':
+                    self.sensor.data_dtype = np.dtype(value)
+                elif key == 'Start of Acquisition':
+                    start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
+                    self.sensor.acq_start_ms = start_ts.timestamp() * 1000
+                elif key == 'samples_per_timestamp':
+                    self.sensor.samples_per_timestamp = int(value)
+                    self.cfg.samples_per_timestamp = int(value)
+                elif key == 'bytes_per_timestamp':
+                    self.sensor.bytes_per_timestamp = int(value)
+                    self.cfg.bytes_per_timestamp = int(value)
 
     def read_chunk(self, fid):
 
@@ -230,8 +350,25 @@ class ReaderPoints(Reader):
         if index is not None and index < len(data_chunk):
             data_chunk = data_chunk[index]
         fid.close()
-        ts = (ts - self.sensor.get_acq_start_ms()) / 1000.0
         return ts, data_chunk
+
+    def get_all(self, index:int = None):
+        data_time = np.zeros(0, dtype=self.data_dtype)
+        data = np.zeros(0, dtype=self.data_dtype)
+
+        fid = self._open_read()
+        fid.seek(0)
+        while True:
+            ts, data_chunk = self.read_chunk(fid)
+            if data_chunk is None:
+                break
+            if index is not None and index < len(data_chunk):
+                data_chunk = data_chunk[index]
+            data = np.append(data, data_chunk)
+            data_time = np.append(data_time, ts)
+
+        fid.close()
+        return data_time, data
 
 
 class WriterStream:
@@ -251,6 +388,7 @@ class WriterStream:
         self.data_dtype = np.dtype(np.float64)
 
         self._processed_buffer = None
+        self._wrote_header = False
 
 
     @classmethod
@@ -279,9 +417,12 @@ class WriterStream:
             self._last_idx += len(data_buf)
 
     def _get_stream_info(self):
-        # all_params = {**self._params, **self._sensor_params}
-        all_params = asdict(self.cfg)
+        all_params = {}
+        all_params['Sensor Name'] = self.sensor.name
+        all_params['Output Type'] = self.name
         all_params['Data Type'] = str(self.data_dtype)
+        all_params['Sampling Period (ms)'] = str(self.sensor.sampling_period_ms)
+        all_params.update(asdict(self.cfg))
         hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
         return ''.join(hdr_str)
 
@@ -335,6 +476,16 @@ class WriterPoints(WriterStream):
     @classmethod
     def get_config_type(cls):
         return WriterPointsConfig
+
+    def _get_stream_info(self):
+        all_params = {}
+        all_params['Sensor Name'] = self.sensor.name
+        all_params['Output Type'] = self.name
+        all_params['Data Type'] = str(self.data_dtype)
+        all_params.update(asdict(self.cfg))
+
+        hdr_str = [f'{k}: {v}\n' for k, v in all_params.items()]
+        return ''.join(hdr_str)
 
     def get_reader(self):
         return ReaderPoints(self.name, self.fqpn, self.cfg, self.sensor)

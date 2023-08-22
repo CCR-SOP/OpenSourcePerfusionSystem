@@ -68,6 +68,7 @@ class PerfusionSystem:
             sensor.stop()
             if sensor.hw:
                 sensor.hw.stop()
+            sensor.close()
         self.is_opened = False
         self._lgr.info('PerfusionSystem is closed')
 
