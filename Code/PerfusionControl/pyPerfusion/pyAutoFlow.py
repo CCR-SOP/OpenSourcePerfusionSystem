@@ -29,11 +29,6 @@ class AutoFlowConfig:
     limit_low: float = 0.0
 
 
-@dataclass
-class StaticAutoFlowConfig(AutoFlowConfig):
-    desired_flow: float = 0.0
-
-
 # data source should return a value equal to the
 # average value of the pulsatile flow (e.g. a moving average over several cycles)
 @dataclass
@@ -112,7 +107,6 @@ class AutoFlow:
         # this is the base class, so do nothing
         # This can be used when an automation object needs to be supplied
         # but no automation is necessary (e.g., panel_gas_mixers)
-        self._lgr.debug('Calling base pyAutoFlow')
         pass
 
 
@@ -120,7 +114,7 @@ class StaticAutoFlow(AutoFlow):
     def __init__(self, name: str):
         super().__init__(name)
         self._lgr = utils.get_object_logger(__name__, self.name)
-        self.cfg = StaticAutoFlowConfig()
+        self.cfg = AutoFlowConfig()
         self.last_speed = 0
 
     def update_on_input(self, flow):

@@ -20,19 +20,21 @@ from pyPerfusion.PerfusionSystem import PerfusionSystem
 
 
 def main():
-    name = 'Test Puralev Sine'
+    name = 'Test Puralev'
     sensor = SYS_PERFUSION.get_sensor(name)
+    sensor.hw.start()
 
     print('Starting pump')
     # sensor.hw.start()
-    sleep(10.0)
+    sleep(2.0)
 
     print('Changing frequency to 2Hz')
-    sensor.hw.cfg.sine_freq = 2.0
-    sleep(10.0)
+    sensor.hw.cfg.freq = 2.0
+    sleep(2.0)
 
     print('Stopping pump')
     sensor.hw.stop()
+    sleep(10.0)
 
 
 if __name__ == '__main__':

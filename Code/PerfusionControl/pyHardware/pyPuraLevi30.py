@@ -22,6 +22,7 @@ import numpy as np
 import pyHardware.pyGeneric as pyGeneric
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
+import pyHardware.pyWaveformGen as pyWaveformGen
 
 
 class i30Exception(pyGeneric.HardwareException):
@@ -121,23 +122,21 @@ class PuraLevi30Config:
     baud: int = 57600
     serial_num: str = 'nnnnnn-nnnn'
     device_addr: int = 0
-
-
-@dataclass
-class PuraLevi30SinusoidalConfig(PuraLevi30Config):
-    min_rpm: float = 0.0
-    max_rpm: float = 0.0
-    sine_freq: float = 0.0
-    update_period_ms: int = 0
+    update_rate_ms: int = 0
+    waveform: str = 'none, 0'
 
 
 class PuraLevi30(pyGeneric.GenericDevice):
     def __init__(self, name):
         super().__init__(name)
         self.cfg = PuraLevi30Config()
+        self.waveform = pyWaveformGen.WaveformGen()
 
         self.hw = None
         self.mutex = Lock()
+
+        self.__thread = None
+        self._event_halt = Event()
 
         self._buffer = np.zeros(1, dtype=self.data_dtype)
         self.buf_len = 1
@@ -164,20 +163,50 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 self.hw.serial.close()
             self.stop()
 
+    def start(self):
+        self.stop()
+        super().start()
+        self._event_halt.clear()
+
+        self.__thread = Thread(target=self.run)
+        self.__thread.name = f'PuraLevi30Sinusoidal {self.name}'
+        self.__thread.start()
+
     def stop(self):
-        self._lgr.info('Stopping pump')
-        if self.hw:
-            with self.mutex:
-                reg = WriteRegisters['State']
-                self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
-                self._buffer[0] = 0
-                self._queue.put((self._buffer, utils.get_epoch_ms()))
+        if self.__thread and self.__thread.is_alive():
+            if self.hw:
+                with self.mutex:
+                    reg = WriteRegisters['State']
+                    self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
+                    self._buffer[0] = 0
+                    self._queue.put((self._buffer, utils.get_epoch_ms()))
+            self._event_halt.set()
+            self.__thread.join(2.0)
+            self.__thread = None
+        super().stop()
+
+    def write_config(self):
+        self.cfg.waveform = self.waveform.get_config_str()
+        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg, classname=self.__class__.__name__)
+
+    def read_config(self):
+        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
+        self._lgr.debug(f'config for {self.name} is {self.cfg}')
+        self._lgr.debug(f'Creating waveform {self.cfg.waveform}')
+        self.waveform = pyWaveformGen.create_waveform_from_str(self.cfg.waveform)
+        if self.waveform is None:
+            self._lgr.error(f'Unknown waveform string: {self.cfg.waveform}')
+        self.open()
+
+    def update_waveform(self, waveform_cfg):
+        self.waveform = pyWaveformGen.create_waveform_from_config(waveform_cfg)
 
     def set_speed(self, rpm: int):
         if rpm < 0:
             rpm = 0
             self._lgr.warning(f'Attempt to set rpm ({rpm}) below zero. Setting to 0.')
-        self._lgr.info(f'Setting RPM to {rpm}')
+        rpm = int(rpm)
+        # self._lgr.info(f'Setting RPM to {rpm}')
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointSpeed']
@@ -221,90 +250,22 @@ class PuraLevi30(pyGeneric.GenericDevice):
             pass
         return buf, t
 
-
-class PuraLevi30Sinusoidal(PuraLevi30):
-    def __init__(self, name: str):
-        super().__init__(name)
-        self._lgr = utils.get_object_logger(__name__, self.name)
-        self.cfg = PuraLevi30SinusoidalConfig()
-        self.__thread = None
-        self._event_halt = Event()
-        self.sine = None
-
-    def start(self):
-        self.stop()
-        super().start()
-        self._event_halt.clear()
-
-        self.__thread = Thread(target=self.run)
-        self.__thread.name = f'PuraLevi30Sinusoidal {self.name}'
-        self.__thread.start()
-
-    def stop(self):
-        if self.__thread and self.__thread.is_alive():
-            self._event_halt.set()
-            self.__thread.join(2.0)
-            self.__thread = None
-            self._buffer[0] = 0
-            self._queue.put((self._buffer, utils.get_epoch_ms()))
-        super().stop()
-
     def run(self):
         t = 0
+        last_speed = self.get_speed()
         while not PerfusionConfig.MASTER_HALT.is_set():
-            sine_period = 1/self.cfg.sine_freq
-            period_timeout = self.cfg.update_period_ms / 1_000.0
+            period_timeout = self.cfg.update_rate_ms / 1_000.0
             if not self._event_halt.wait(timeout=period_timeout):
                 t = t + period_timeout
-                sine_pt = (np.sin(2*np.pi*self.cfg.sine_freq * t) + 1.0) * 0.5
-                adjusted = sine_pt * (self.cfg.max_rpm - self.cfg.min_rpm) + self.cfg.min_rpm
-                # self._lgr.debug(f"||{t}||{sine_pt}||{adjusted}||{self.cfg.min_rpm}||{self.cfg.max_rpm}")
-                self.set_speed(adjusted)
-                if t > sine_period:
-                     t = t - sine_period
-
-    def set_speed(self, rpm: int):
-        # override set_speed just to ignore the set_speed log message
-        # as sinusoidal output calls it regularly
-        if self.hw:
-            with self.mutex:
-                reg = WriteRegisters['SetpointSpeed']
-                self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
-                reg = WriteRegisters['State']
-                self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
-                self._buffer[0] = rpm
-                self._queue.put((self._buffer, utils.get_epoch_ms()))
+                new_speed = self.waveform.get_value_at(t)
+                if new_speed != last_speed:
+                    self.set_speed(new_speed)
+                    last_speed = new_speed
+            else:
+                break
 
 
 class Mocki30(PuraLevi30):
-    def __init__(self, name: str):
-        super().__init__(name)
-        self.state = PumpState.Off
-        self.speed = 0
-        self.process = 0
-
-    def open(self):
-        self._queue = Queue()
-
-    def close(self):
-        self.stop()
-
-    def read_register(self, addr, number_of_decimals=0):
-        if addr == ReadRegisters['SetpointProcess'].addr:
-            return self.process
-        elif addr == ReadRegisters['SetpointSpeed'].addr:
-            return self.speed
-
-    def write_register(self, addr, value):
-        if addr == WriteRegisters['State'].addr:
-            self.state = value
-        elif addr == WriteRegisters['SetpointSpeed'].addr:
-            self.speed = value
-        elif addr == WriteRegisters['SetpointProcess'].addr:
-            self.process = value
-
-
-class Mocki30Sinusoidal(PuraLevi30Sinusoidal):
     def __init__(self, name: str):
         super().__init__(name)
         self.state = PumpState.Off

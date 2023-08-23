@@ -491,6 +491,8 @@ class WriterPoints(WriterStream):
         return ReaderPoints(self.name, self.fqpn, self.cfg, self.sensor)
 
     def _write_to_file(self, data_buf, t=None):
+        if self.sensor.name == 'Test Puralev':
+            self._lgr.debug(f'writing {t}, {data_buf}')
         ts_bytes = struct.pack('!Q', t)
         self._fid.write(ts_bytes)
         data_buf.tofile(self._fid)

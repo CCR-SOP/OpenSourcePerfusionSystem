@@ -20,7 +20,8 @@ from gui.plotting import SensorPlot, PanelPlotting
 class PanelPID(wx.Panel):
     def __init__(self, parent, automation):
         self.parent = parent
-        wx.Panel.__init__(self, parent)
+        super().__init__(parent)
+        self._logger = logging.getLogger(__name__)
         self.automation = automation
 
         self.panel_flow = PanelPlotting(self)
@@ -49,8 +50,9 @@ class PanelPID(wx.Panel):
         self.spin_setpoint = wx.SpinCtrlDouble(self, min=0, max=10000, initial=5000, inc=100)
         self.spin_setpoint.SetDigits(0)
 
-        self.btn_start = wx.ToggleButton(self, id=wx.ID_ANY, label="Start Auto")
-        self.btn_start_pump= wx.ToggleButton(self, id=wx.ID_ANY, label="Start Pump")
+        self.btn_start_auto = wx.ToggleButton(self, label="Start Auto")
+        self.btn_start_pump= wx.ToggleButton(self, label="Start Pump")
+        self.btn_update_auto = wx.Button(self, label="Update")
 
         self.__do_layout()
         self.__set_bindings()
@@ -80,12 +82,13 @@ class PanelPID(wx.Panel):
         sizer_pids.AddSpacer(5)
         sizer_pids.Add(sizer, wx.SizerFlags().CenterVertical().Proportion(1))
 
-        sizer_pids.AddSpacer(10)
-        sizer_pids.Add(self.btn_start, wx.SizerFlags().Proportion(1).CenterVertical())
-        sizer_pids.AddSpacer(10)
-        sizer_pids.Add(self.btn_start_pump, wx.SizerFlags().Proportion(1).CenterVertical())
+        sizer_btn = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_btn.Add(self.btn_start_auto, wx.SizerFlags().Proportion(1).CenterVertical())
+        sizer_btn.Add(self.btn_start_pump, wx.SizerFlags().Proportion(1).CenterVertical())
+        sizer_btn.Add(self.btn_update_auto, wx.SizerFlags().Proportion(1).CenterVertical())
 
         self.sizer.Add(sizer_pids, wx.SizerFlags().Proportion(1).CenterHorizontal())
+        self.sizer.Add(sizer_btn, wx.SizerFlags().Proportion(1).CenterHorizontal())
         self.sizer.Add(self.panel_flow, wx.SizerFlags().Expand().Proportion(4))
         self.sizer.Add(self.panel_speed, wx.SizerFlags().Expand().Proportion(4))
 
@@ -95,8 +98,9 @@ class PanelPID(wx.Panel):
         self.Fit()
 
     def __set_bindings(self):
-        self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.on_start_stop)
+        self.btn_start_auto.Bind(wx.EVT_TOGGLEBUTTON, self.on_start_stop_auto)
         self.btn_start_pump.Bind(wx.EVT_TOGGLEBUTTON, self.on_start_stop_pump)
+        self.btn_update_auto.Bind(wx.EVT_BUTTON, self.on_update_auto)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
@@ -104,19 +108,12 @@ class PanelPID(wx.Panel):
         self.panel_speed.Destroy()
         self.Destroy()
 
-    def on_start_stop(self, evt):
+    def on_start_stop_auto(self, evt):
         if not evt.IsChecked():
-            self.btn_start.SetLabel('Start')
+            self.btn_start_auto.SetLabel('Start Auto')
             self.automation.stop()
         else:
-            self.btn_start.SetLabel('Stop')
-            p = self.spin_p.GetValue()
-            i = self.spin_i.GetValue()
-            d = self.spin_d.GetValue()
-            setpoint = self.spin_setpoint.GetValue()
-            self.automation.update_tunings(p, i, d)
-            self.automation.update_setpoint(setpoint)
-            self.automation.starting_output = 5000
+            self.btn_start_auto.SetLabel('Stop Auto')
             self.automation.start()
 
     def on_start_stop_pump(self, evt):
@@ -126,8 +123,14 @@ class PanelPID(wx.Panel):
         else:
             self.btn_start_pump.SetLabel('Stop Pump')
             self.automation.device.hw.set_speed(5000)
-            # self.automation.device.hw.start()
 
+    def on_update_auto(self, evt):
+        p = self.spin_p.GetValue()
+        i = self.spin_i.GetValue()
+        d = self.spin_d.GetValue()
+        setpoint = self.spin_setpoint.GetValue()
+        self.automation.update_tunings(p, i, d)
+        self.automation.update_setpoint(setpoint)
 
     def update_controls(self):
         if self.automation.pid:
