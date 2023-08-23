@@ -43,7 +43,11 @@ def get_object(name: str, config: str ='sensors'):
         logging.getLogger().error(f'Class {class_name} was not imported in PerfusionSystem')
         return None
 
-    obj = class_(name=name)
+    try:
+        obj = class_(name=name)
+    except TypeError:
+        obj = None
+        logging.getLogger().error(f'Class {class_name} could be created in PerfusionSystem')
     return obj
 
 
