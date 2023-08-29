@@ -12,8 +12,10 @@ import wx
 
 
 class ConfigGUI(wx.CollapsiblePane):
-    def __init__(self, parent, target_object):
-        super().__init__(parent, label=target_object.name)
+    def __init__(self, parent, target_object, pane_label:str = None):
+        if pane_label is None:
+            pane_label = target_object.name
+        super().__init__(parent, label=pane_label)
         self._lgr = logging.getLogger(__name__)
         self.target_object = target_object
 

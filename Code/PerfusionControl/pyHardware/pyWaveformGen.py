@@ -38,28 +38,30 @@ class SineConfig(WaveformConfig):
 
 @dataclass
 class ConstantConfig(WaveformConfig):
-    rpm: float = 0.0
+    min_rpm: float = 0.0
+    max_rpm: float = 0.0
+    freq: float = 0
 
 
-def create_waveform_from_str(config_str):
+def create_waveform_from_str(config_str, parent):
     params = config_str.split(',')
     if params[0] == 'constant':
-        cfg = ConstantConfig(rpm=float(params[1]))
-        obj = create_waveform_from_config(cfg)
+        cfg = ConstantConfig(min_rpm=float(params[1]))
+        obj = create_waveform_from_config(cfg, parent)
     elif params[0] == 'sine':
         cfg = SineConfig(min_rpm=float(params[1]), max_rpm=float(params[2]), freq=float(params[3]))
-        obj = create_waveform_from_config(cfg)
+        obj = create_waveform_from_config(cfg, parent)
     else:
         obj = None
     return obj
 
 
-def create_waveform_from_config(config):
+def create_waveform_from_config(config, parent):
     if type(config) == ConstantConfig:
-        obj = ConstantGen()
+        obj = ConstantGen(parent=parent)
         obj.cfg = config
     elif type(config) == SineConfig:
-        obj = SineGen()
+        obj = SineGen(parent=parent)
         obj.cfg = config
     else:
         obj = None
@@ -68,9 +70,11 @@ def create_waveform_from_config(config):
 
 
 class WaveformGen:
-    def __init__(self):
+    def __init__(self, parent: object):
         self._lgr = utils.get_object_logger(__name__, 'WaveformGen')
         self.cfg = WaveformConfig()
+        self.name = "NoWaveform"
+        self.parent = parent
 
     def get_value_at(self, time_pt):
         return 0
@@ -81,25 +85,33 @@ class WaveformGen:
     def get_config_str(self):
         return f'none'
 
+    def write_config(self):
+        self.parent.write_config()
+
+    def read_config(self):
+        self.parent.read_config()
+
 
 class ConstantGen(WaveformGen):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self._lgr = utils.get_object_logger(__name__, "ConstantGen")
         self.cfg = ConstantConfig()
+        self.name = "Constant"
 
     def get_value_at(self, time_pt):
-        return self.cfg.rpm
+        return self.cfg.min_rpm
 
     def get_config_str(self):
-        return f'constant, {self.cfg.rpm}'
+        return f'constant, {self.cfg.min_rpm}'
 
 
 class SineGen(WaveformGen):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self._lgr = utils.get_object_logger(__name__, 'SineGen')
         self.cfg = SineConfig()
+        self.name = "Sine"
 
     def get_value_at(self, time_pt):
         # adjust time point to with a period

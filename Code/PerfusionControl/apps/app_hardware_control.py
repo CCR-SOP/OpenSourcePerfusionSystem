@@ -59,7 +59,6 @@ class HardwarePanel(wx.Panel):
             sensors.append(perfusion_system.get_sensor(name))
         self.panel_levitronix_pumps = LeviPumpPanel(self, sensors)
 
-
         self.__do_layout()
         self.__set_bindings()
 

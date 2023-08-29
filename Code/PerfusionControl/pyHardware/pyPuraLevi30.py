@@ -130,7 +130,7 @@ class PuraLevi30(pyGeneric.GenericDevice):
     def __init__(self, name):
         super().__init__(name)
         self.cfg = PuraLevi30Config()
-        self.waveform = pyWaveformGen.WaveformGen()
+        self.waveform = pyWaveformGen.WaveformGen(parent=self)
 
         self.hw = None
         self.mutex = Lock()
@@ -193,7 +193,7 @@ class PuraLevi30(pyGeneric.GenericDevice):
         PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
         self._lgr.debug(f'config for {self.name} is {self.cfg}')
         self._lgr.debug(f'Creating waveform {self.cfg.waveform}')
-        self.waveform = pyWaveformGen.create_waveform_from_str(self.cfg.waveform)
+        self.waveform = pyWaveformGen.create_waveform_from_str(self.cfg.waveform, parent=self)
         if self.waveform is None:
             self._lgr.error(f'Unknown waveform string: {self.cfg.waveform}')
         if self.cfg.update_rate_ms == 0 and type(self.waveform) == pyWaveformGen.SineGen:
@@ -267,7 +267,6 @@ class PuraLevi30(pyGeneric.GenericDevice):
             return
         while not PerfusionConfig.MASTER_HALT.is_set():
             period_timeout = self.cfg.update_rate_ms / 1_000.0
-            self._lgr.debug(f'{self.name} period timeout = {period_timeout}')
             if not self._event_halt.wait(timeout=period_timeout):
                 t = t + period_timeout
                 new_speed = self.waveform.get_value_at(t)
