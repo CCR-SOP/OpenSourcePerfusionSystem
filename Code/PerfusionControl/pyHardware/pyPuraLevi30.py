@@ -237,6 +237,8 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 reg = ReadRegisters['SetpointSpeed']
                 rpm = self.hw.read_register(reg.addr, functioncode=ModbusFunction.InputRegister)
                 return rpm
+        else:
+            return 0
 
     def get_flow(self) -> float:
         if self.hw:

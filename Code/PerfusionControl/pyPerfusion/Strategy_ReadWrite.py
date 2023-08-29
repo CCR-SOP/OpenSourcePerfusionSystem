@@ -181,11 +181,13 @@ class Reader:
             else:
                 start_idx = 0
             samples_needed = min(file_size_in_samples, samples_needed)
-            idx = np.linspace(start_idx, file_size_in_samples - 1, samples_needed, dtype=np.uint64)
+            idx = np.linspace(start_idx, len(data) - 1, samples_needed, dtype=np.uint64)
             try:
                 data = data[idx]
             except IndexError :
-                self._lgr.exception(f'idx = {idx}')
+                self._lgr.exception(f'filesize = {file_size_in_samples},'
+                                    f'len(data) = {len(data)},'
+                                    f'samples_needed = {samples_needed}')
                 return None, None
 
         data_time = np.linspace(start_idx * period, file_size_in_samples * period,
