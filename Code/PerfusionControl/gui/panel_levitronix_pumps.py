@@ -14,6 +14,7 @@ import wx
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.PerfusionSystem import PerfusionSystem
+import pyHardware.pyWaveformGen as pyWaveformGen
 
 
 class LeviPumpPanel(wx.Panel):
@@ -111,6 +112,40 @@ class OutputTypePanel(wx.Panel):
         else:
             self.label_min.SetLabel('Speed\n(rpm):')
 
+    def update_from_waveform(self, waveform):
+        if type(waveform) == pyWaveformGen.ConstantGen:
+            self.chk_sine.SetValue(False)
+            self.spin_min.SetValue(waveform.rpm)
+            self.spin_max.SetValue(0)
+            self.spin_freq.SetValue(0)
+        elif type(waveform) == pyWaveformGen.SineGen:
+            self.chk_sine.SetValue(True)
+            self.spin_min.SetValue(waveform.min_rpm)
+            self.spin_max.SetValue(waveform.max_rpm)
+            self.spin_freq.SetValue(waveform.freq)
+        self.on_check_sine()
+
+    def manual_control(self, manual=True):
+        self.spin_min.Enable(manual)
+        self.spin_max.Enable(manual)
+        self.spin_freq.Enable(manual)
+        self.chk_sine.Enable(manual)
+
+    def get_waveform(self):
+        sine_checked = self.chk_sine.IsChecked()
+        if sine_checked:
+            cfg = pyWaveformGen.SineConfig(min_rpm=self.spin_min.GetValue(),
+                                           max_rpm=self.spin_max.GetValue(),
+                                           freq=self.spin_freq.GetValue())
+            waveform = pyWaveformGen.SineGen()
+            waveform.cfg = cfg
+        else:
+            cfg = pyWaveformGen.ConstantConfig(rpm=self.spin_min.GetValue())
+            waveform =  pyWaveformGen.ConstantGen()
+            waveform.cfg = cfg
+
+        return waveform
+
 
 class BaseLeviPumpPanel(wx.Panel):
     def __init__(self, parent, sensor):
@@ -157,41 +192,42 @@ class BaseLeviPumpPanel(wx.Panel):
     def __set_bindings(self):
         self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
         self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
-        self.Bind(wx.EVT_CHECKBOX, self.OnAuto)
+        self.chk_auto.Bind(wx.EVT_CHECKBOX, self.OnAuto)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnAuto(self, evt):
-        if not self.chk_auto.IsChecked():
-            self.autolevipump.hw.stop()
+        in_auto_mode = self.chk_auto.IsChecked()
+        if in_auto_mode:
+            self.autolevipump.start()
         else:
-            pass
-            # self.autolevipump.hw.start()
-        self.input_speed.Enable(not self.chk_auto.IsChecked())
-        self.btn_update.Enable(not self.chk_auto.IsChecked())
+            self.autolevipump.stop()
+        self.panel_output_type.manual_control(not in_auto_mode)
+        self.btn_update.Enable(not in_auto_mode)
+        self.btn_update.Enable(not in_auto_mode)
 
     def OnClose(self, evt):
         self.autolevipump.hw.stop()
 
     def OnStart(self, evt):
-        if self.btn_start.GetLabel() == 'Start':
-            self.ChangeRPM()
+        in_start_mode = self.btn_start.GetValue()
+        in_auto_mode = self.chk_auto.IsChecked()
+        if in_start_mode:
             self.btn_start.SetLabel('Stop')
+            if in_auto_mode:
+                self.autolevipump.hw.start()
+            else:
+                self.autolevipump.start()
         else:
-            self.autolevipump.hw.stop()  # TODO: remove hw. eventually
             self.btn_start.SetLabel('Start')
-
-    def OnChangeSpeed(self, evt):
-        self.btn_update.Enable(True)
-        self.input_speed.SetBackgroundColour(wx.RED)
+            if in_auto_mode:
+                self.autolevipump.hw.stop()
+            else:
+                self.autolevipump.stop()
 
     def OnUpdate(self, evt):
-        self.ChangeRPM()
-        self.input_speed.SetBackgroundColour(wx.WHITE)
-        self.input_speed.Refresh()
-
-    def ChangeRPM(self):
-        rpm = self.input_speed.GetValue()
-        self.autolevipump.hw.set_speed(rpm=rpm)
+        waveform = self.panel_output_type.get_waveform()
+        self.autolevipump.hw.cfg.waveform = waveform
+        self._lgr.info(f'Updating {self.autolevipump.hw.name} to {waveform.cfg}')
 
 
 class TestFrame(wx.Frame):
