@@ -196,6 +196,12 @@ class PuraLevi30(pyGeneric.GenericDevice):
         self.waveform = pyWaveformGen.create_waveform_from_str(self.cfg.waveform)
         if self.waveform is None:
             self._lgr.error(f'Unknown waveform string: {self.cfg.waveform}')
+        if self.cfg.update_rate_ms == 0 and type(self.waveform) == pyWaveformGen.SineGen:
+            self.cfg.update_rate_ms = int(((1.0 / self.waveform.cfg.freq) * 1_000.0) / 10.0)
+            self._lgr.warning(f'{self.name}: No update rate specified for sine waveform,'
+                              f'setting to {self.cfg.update_rate_ms} ms '
+                              f'(10 the sinusoidal period of {self.waveform.cfg.freq}')
+
         self.open()
 
     def update_waveform(self, waveform_cfg):
@@ -253,8 +259,15 @@ class PuraLevi30(pyGeneric.GenericDevice):
     def run(self):
         t = 0
         last_speed = self.get_speed()
+        if self.waveform is None:
+            self._lgr.error(f'Missing waveform for {self.name}')
+            return
+        if self.cfg.update_rate_ms == 0:
+            self._lgr.warning(f'Update rate is 0, stopping thread')
+            return
         while not PerfusionConfig.MASTER_HALT.is_set():
             period_timeout = self.cfg.update_rate_ms / 1_000.0
+            self._lgr.debug(f'{self.name} period timeout = {period_timeout}')
             if not self._event_halt.wait(timeout=period_timeout):
                 t = t + period_timeout
                 new_speed = self.waveform.get_value_at(t)
