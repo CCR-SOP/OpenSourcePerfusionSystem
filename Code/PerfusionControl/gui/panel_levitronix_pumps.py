@@ -53,8 +53,67 @@ class LeviPumpPanel(wx.Panel):
             panel.Close()
 
 
+class OutputTypePanel(wx.Panel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._lgr = utils.get_object_logger(__name__, "OutputTypePanel")
+
+        self.sizer = None
+
+        self.chk_sine = wx.CheckBox(self, label='Sine Output')
+        self.label_min = wx.StaticText(self, label='Min Speed\n(rpm):')
+        self.spin_min = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=10000, initial=0, inc=100)
+        self.label_max = wx.StaticText(self, label='Max Speed\n(rpm):')
+        self.spin_max = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=10000, initial=0, inc=100)
+        self.label_freq = wx.StaticText(self, label='Freq\n(Hz):')
+        self.spin_freq = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=100, initial=0, inc=1)
+
+        self.__do_layout()
+        self.__set_bindings()
+
+        self.on_check_sine(evt=None)
+
+    def __do_layout(self):
+        self.sizer = wx.BoxSizer(wx.VERTICAL)
+        self.sizer.Add(self.chk_sine, wx.SizerFlags().Border(wx.BOTTOM, 5))
+
+        sizer_params = wx.BoxSizer(wx.HORIZONTAL)
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.label_min)
+        sizer.Add(self.spin_min)
+        sizer_params.Add(sizer, wx.SizerFlags().Border(wx.RIGHT, 5))
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.label_max)
+        sizer.Add(self.spin_max)
+        sizer_params.Add(sizer, wx.SizerFlags().Border(wx.RIGHT, 5))
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(self.label_freq)
+        sizer.Add(self.spin_freq)
+        sizer_params.Add(sizer, wx.SizerFlags().Border(wx.RIGHT, 5))
+
+        self.sizer.Add(sizer_params, wx.SizerFlags().Border(wx.RIGHT, 5))
+
+        self.SetSizer(self.sizer)
+        self.Layout()
+        self.Fit()
+
+    def __set_bindings(self):
+        self.chk_sine.Bind(wx.EVT_CHECKBOX, self.on_check_sine)
+
+    def on_check_sine(self, evt):
+        self.spin_max.Enable(self.chk_sine.IsChecked())
+        self.spin_freq.Enable(self.chk_sine.IsChecked())
+
+        if self.chk_sine.IsChecked():
+            self.label_min.SetLabel('Min Speed\n(rpm):')
+        else:
+            self.label_min.SetLabel('Speed\n(rpm):')
+
+
 class BaseLeviPumpPanel(wx.Panel):
-    def __init__(self, parent, sensor):  # autolevipump eventually
+    def __init__(self, parent, sensor):
         super().__init__(parent)
         self.name = sensor.name
         self._lgr = utils.get_object_logger(__name__, self.name)
@@ -73,60 +132,29 @@ class BaseLeviPumpPanel(wx.Panel):
         self.btn_start = wx.ToggleButton(self, label='Start')
         self.chk_auto = wx.CheckBox(self, label='Maintain\nFlow')
 
-        self.chk_sine = wx.CheckBox(self, label='Sine Output')
-        self.label_min = wx.StaticText(self, label='Min Speed\n(rpm):')
-        self.spin_min = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=10000, initial=0, inc=100)
-        self.label_max = wx.StaticText(self, label='Max Speed\n(rpm):')
-        self.spin_max = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=10000, initial=0, inc=100)
-        self.label_freq = wx.StaticText(self, label='Freq\n(Hz):')
-        self.spin_freq = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=100, initial=0, inc=1)
+        self.panel_output_type = OutputTypePanel(self)
 
         self.__do_layout()
         self.__set_bindings()
 
     def __do_layout(self):
-        flags = wx.SizerFlags().Border(wx.ALL, 2).Expand()
-
         self.sizer_cfg = wx.BoxSizer(wx.HORIZONTAL)
-
-        sizer_waveform = wx.BoxSizer(wx.VERTICAL)
-        sizer_waveform.Add(self.chk_sine, wx.SizerFlags().Border(wx.BOTTOM, 5))
-
-        sizer_params = wx.BoxSizer(wx.HORIZONTAL)
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.label_min)
-        sizer.Add(self.spin_min)
-        sizer_params.Add(sizer, wx.SizerFlags().Border(wx.RIGHT, 5))
-
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.label_max)
-        sizer.Add(self.spin_max)
-        sizer_params.Add(sizer, wx.SizerFlags().Border(wx.RIGHT, 5))
-
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.label_freq)
-        sizer.Add(self.spin_freq)
-        sizer_params.Add(sizer, wx.SizerFlags().Border(wx.RIGHT, 5))
-
-        sizer_waveform.Add(sizer_params, wx.SizerFlags().Border(wx.RIGHT, 5))
 
         sizer_btn = wx.BoxSizer(wx.VERTICAL)
         sizer_btn.Add(self.btn_update)
         sizer_btn.Add(self.btn_start)
         sizer_btn.Add(self.chk_auto)
 
-        self.sizer.Add(sizer_waveform)
+        self.sizer.Add(self.panel_output_type)
         self.sizer.Add(sizer_btn)
 
-
+        self.SetSizer(self.sizer)
         self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
-        self.SetSizer(self.sizer)
         self.Layout()
+        self.Fit()
 
     def __set_bindings(self):
-        # self.input_speed.Bind(wx.EVT_SPINCTRLDOUBLE, self.OnChangeSpeed)
-        # self.input_speed.Bind(wx.EVT_TEXT, self.OnChangeSpeed)
         self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
         self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.OnStart)
         self.Bind(wx.EVT_CHECKBOX, self.OnAuto)
