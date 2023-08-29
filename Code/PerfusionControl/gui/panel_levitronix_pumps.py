@@ -38,11 +38,14 @@ class LeviPumpPanel(wx.Panel):
     def __do_layout(self):
         self.sizer = wx.BoxSizer(wx.VERTICAL)
 
+        self.panel_sizer = wx.BoxSizer(wx.VERTICAL)
         for panel in self.panels.values():
-            self.sizer.Add(panel, wx.SizerFlags().Expand().Proportion(1))
+            self.panel_sizer.Add(panel, wx.SizerFlags().Expand())
+
+        self.sizer.Add(self.panel_sizer, wx.SizerFlags().Expand().Proportion(1))
         self.sizer.Add(self.text_log_levi, wx.SizerFlags().Expand().Proportion(1))
 
-        self.sizer.SetSizeHints(self.GetParent())
+        # self.sizer.SetSizeHints(self.GetParent())
         self.SetAutoLayout(True)
         self.SetSizer(self.sizer)
         self.Layout()
@@ -53,8 +56,8 @@ class LeviPumpPanel(wx.Panel):
             panel.pump_config.panel_config.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.on_pane_changed)
 
     def on_pane_changed(self, evt):
-        for panel in self.panels.values():
-            panel.Layout()
+        # for panel in self.panels.values():
+        #     panel.Layout()
         self.sizer.Layout()
         self.Layout()
 
@@ -157,7 +160,7 @@ class BaseLeviPumpPanel(wx.Panel):
 
         self.static_box = wx.StaticBox(self, wx.ID_ANY, label=self.name)
         self.static_box.SetFont(utils.get_header_font())
-        self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
+        self.sizer = wx.StaticBoxSizer(self.static_box, wx.HORIZONTAL)
 
         self.pump_config = PumpConfig(self, sensor.hw)
         # Buttons for functionality
@@ -169,15 +172,13 @@ class BaseLeviPumpPanel(wx.Panel):
         self.__set_bindings()
 
     def __do_layout(self):
-        self.sizer_cfg = wx.BoxSizer(wx.VERTICAL)
-
-        sizer_btn = wx.BoxSizer(wx.HORIZONTAL)
+        sizer_btn = wx.BoxSizer(wx.VERTICAL)
         sizer_btn.Add(self.btn_update, wx.SizerFlags().Proportion(1).Expand())
         sizer_btn.Add(self.btn_start, wx.SizerFlags().Proportion(1).Expand())
         sizer_btn.Add(self.chk_auto, wx.SizerFlags().Proportion(1).Expand())
 
         self.sizer.Add(sizer_btn, wx.SizerFlags().Proportion(1))
-        self.sizer.Add(self.pump_config, wx.SizerFlags().Proportion(1).Expand())
+        self.sizer.Add(self.pump_config, wx.SizerFlags().Proportion(4).Expand())
 
         self.SetSizer(self.sizer)
         self.sizer.SetSizeHints(self.GetParent())
