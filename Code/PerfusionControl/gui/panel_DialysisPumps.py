@@ -14,7 +14,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from gui.panel_DC import PanelDC
 from pyPerfusion.PerfusionSystem import PerfusionSystem
-from gui.panel_config import AutomationConfig
+from gui.panel_config import ConfigGUI
 
 
 class DialysisPumpPanel(wx.Panel):
@@ -29,7 +29,7 @@ class DialysisPumpPanel(wx.Panel):
             panel = PanelDC(self, automation.pump)
             self.panels.append(panel)
             if automation.name == 'Dialysate Inflow Automation':
-                config = AutomationConfig(self, automation)
+                config = ConfigGUI(self, automation)
                 config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60 * 1_000, 60 * 60 * 1_000))  # TODO: make this minutes
                 config.add_var('adjust_rate', 'Flow (ml/min)', (0, 0.1, 100), decimal_places=1)
                 config.add_var('K_min', 'K (min)', limits=(0, 1, 10))
@@ -38,7 +38,7 @@ class DialysisPumpPanel(wx.Panel):
                 config.set_bindings()
                 self.configs.append(config)
             elif automation.name == 'Dialysate Outflow Automation':
-                config = AutomationConfig(self, automation)
+                config = ConfigGUI(self, automation)
                 config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', (0, 60 * 1_000, 60 * 60 * 1_000))
                 config.add_var('adjust_rate', 'Flow (ml/min)', (0, 0.1, 100), decimal_places=1)
                 config.add_var('K_min', 'K (min)', limits=(0, 1, 10))

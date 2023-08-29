@@ -15,7 +15,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from gui.panel_syringe import PanelSyringeControls
 from pyPerfusion.PerfusionSystem import PerfusionSystem
-from gui.panel_config import AutomationConfig
+from gui.panel_config import ConfigGUI
 
 
 class SyringePanel(wx.Panel):
@@ -40,7 +40,7 @@ class SyringePanel(wx.Panel):
             panel = PanelSyringeControls(self, automation)
             if automation.device.name == 'Epoprostenol' or automation.device.name == 'Phenylephrine':
                 self.panels_vaso.append(panel)
-                config = AutomationConfig(self, automation)
+                config = ConfigGUI(self, automation)
                 config.add_var('pressure_mmHg_min', 'Arterial mmHg (min)', limits=(0, 1, 200))
                 config.add_var('pressure_mmHg_max', 'Arterial mmHg (max)', limits=(0, 1, 200))
                 config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', limits=(0, 1, 1e6))
@@ -49,7 +49,7 @@ class SyringePanel(wx.Panel):
                 self.configs_vaso.append(config)
             elif automation.device.name == 'Glucagon' or automation.device.name == 'Insulin':
                 self.panels_glucose.append(panel)
-                config = AutomationConfig(self, automation)
+                config = ConfigGUI(self, automation)
                 config.add_var('glucose_min', 'Glucose (min)', limits=(0, 1, 1000))
                 config.add_var('glucose_max', 'Glucose (max)', limits=(0, 1, 1000))
                 config.add_var('adjust_rate_ms', 'Adjust Rate (ms)', limits=(0, 1, 1e6))

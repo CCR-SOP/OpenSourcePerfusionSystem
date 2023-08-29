@@ -11,11 +11,11 @@ import logging
 import wx
 
 
-class AutomationConfig(wx.CollapsiblePane):
-    def __init__(self, parent, automation):
-        super().__init__(parent, label=automation.name)
+class ConfigGUI(wx.CollapsiblePane):
+    def __init__(self, parent, target_object):
+        super().__init__(parent, label=target_object.name)
         self._lgr = logging.getLogger(__name__)
-        self.automation = automation
+        self.target_object = target_object
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
@@ -29,7 +29,6 @@ class AutomationConfig(wx.CollapsiblePane):
         self.btn_update.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_TICK_MARK, wx.ART_BUTTON))
         self.btn_update.SetToolTip('Update Hardware with Current Displayed Config')
 
-
         self.labels = {}
         self.spins = {}
 
@@ -39,7 +38,7 @@ class AutomationConfig(wx.CollapsiblePane):
         self.labels[config_name] = wx.StaticText(self.GetPane(), label=lbl_name)
         self.spins[config_name] = wx.SpinCtrlDouble(self.GetPane(),
                                                     min=limits[0], max=limits[2], inc=limits[1],
-                                                    initial=getattr(self.automation.cfg, config_name))
+                                                    initial=getattr(self.target_object.cfg, config_name))
         self.spins[config_name].SetDigits(decimal_places)
 
     def add_range(self, config_name, lbl_name, limits, decimal_places=0):
@@ -47,14 +46,14 @@ class AutomationConfig(wx.CollapsiblePane):
         self.labels[cfg_name] = wx.StaticText(self.GetPane(), label=f'{lbl_name} min')
         self.spins[cfg_name] = wx.SpinCtrlDouble(self.GetPane(),
                                                  min=limits[0], max=limits[2], inc=limits[1],
-                                                 initial=getattr(self.automation.cfg, config_name)[0])
+                                                 initial=getattr(self.target_object.cfg, config_name)[0])
         self.spins[cfg_name].SetDigits(decimal_places)
 
         cfg_name = f'{config_name}_max'
         self.labels[cfg_name] = wx.StaticText(self.GetPane(), label=f'{lbl_name} max')
         self.spins[cfg_name] = wx.SpinCtrlDouble(self.GetPane(),
                                                  min=limits[0], max=limits[2], inc=limits[1],
-                                                 initial=getattr(self.automation.cfg, config_name)[1])
+                                                 initial=getattr(self.target_object.cfg, config_name)[1])
         self.spins[cfg_name].SetDigits(decimal_places)
 
     def do_layout(self):
@@ -98,24 +97,24 @@ class AutomationConfig(wx.CollapsiblePane):
 
     def update_config_from_controls(self):
         for cfg_name, ctrl in self.spins.items():
-            setattr(self.automation.cfg, cfg_name, ctrl.GetValue())
+            setattr(self.target_object.cfg, cfg_name, ctrl.GetValue())
 
     def update_controls_from_config(self):
         try:
             for cfg_name, ctrl in self.spins.items():
-                ctrl.SetValue(str(getattr(self.automation.cfg, cfg_name)))
+                ctrl.SetValue(str(getattr(self.target_object.cfg, cfg_name)))
         except AttributeError:
             # this should only happen if the hardware didn't load
             pass
 
     def on_save_cfg(self, evt):
         self.update_config_from_controls()
-        self.automation.write_config()
+        self.target_object.write_config()
         self.btn_save.Enable(False)
         self.clear_backgrounds()
 
     def on_load_cfg(self, evt):
-        self.automation.read_config()
+        self.target_object.read_config()
         self.update_controls_from_config()
         self.btn_save.Enable(False)
         self.btn_update.Enable(False)
