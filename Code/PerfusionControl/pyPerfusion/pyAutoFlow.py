@@ -86,6 +86,8 @@ class AutoFlow:
                 if flow is not None:
                     self._lgr.debug(f'Calling update_on_input with {flow}')
                     self.update_on_input(flow)
+        self._lgr.debug(f'Halting pyautoflow')
+        self.is_streaming = True
 
     def start(self):
         self.stop()
@@ -100,7 +102,6 @@ class AutoFlow:
     def stop(self):
         if self.is_streaming:
             self._event_halt.set()
-            self.is_streaming = False
             self._lgr.info(f'{__name__} {self.name} stopped')
 
     def update_on_input(self, flow):

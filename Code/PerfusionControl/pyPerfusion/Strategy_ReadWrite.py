@@ -268,8 +268,6 @@ class ReaderPoints(Reader):
     def read_chunk(self, fid):
 
         chunk = fid.read(self.cfg.bytes_per_timestamp)
-        # self._lgr.debug(f'bpt={self.cfg.bytes_per_timestamp}')
-        # self._lgr.debug(f'chunk={chunk}')
         if chunk:
             ts, = struct.unpack('!Q', chunk)
             data_chunk = np.fromfile(fid, dtype=self.data_dtype, count=self.cfg.samples_per_timestamp)
@@ -285,9 +283,11 @@ class ReaderPoints(Reader):
         fid = open(self.fqpn, 'rb')
         fid.seek(0)
         cur_time = utils.get_epoch_ms()
+        chunks_read = 0
         while True:
             chunk = fid.read(self.cfg.bytes_per_timestamp)
             if chunk and (len(chunk) == self.cfg.bytes_per_timestamp):
+                chunks_read += 1
                 ts, = struct.unpack('!Q', chunk)
                 diff_t = cur_time - ts
                 if diff_t <= last_ms:
@@ -300,7 +300,6 @@ class ReaderPoints(Reader):
                     data_time = np.append(data_time, ts - self.sensor.get_acq_start_ms())
                 else:
                     fid.seek(self.bytes_per_chunk-self.cfg.bytes_per_timestamp, SEEK_CUR)
-
             else:
                 break
 
@@ -493,8 +492,6 @@ class WriterPoints(WriterStream):
         return ReaderPoints(self.name, self.fqpn, self.cfg, self.sensor)
 
     def _write_to_file(self, data_buf, t=None):
-        # if self.sensor.name == 'Test Puralev':
-            # self._lgr.debug(f'writing {t}, {data_buf}')
         ts_bytes = struct.pack('!Q', t)
         self._fid.write(ts_bytes)
         data_buf.tofile(self._fid)

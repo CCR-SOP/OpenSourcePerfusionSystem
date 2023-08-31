@@ -21,7 +21,7 @@ class PanelPID(wx.Panel):
     def __init__(self, parent, automation):
         self.parent = parent
         super().__init__(parent)
-        self._logger = logging.getLogger(__name__)
+        self._lgr = logging.getLogger(__name__)
         self.automation = automation
 
         self.panel_flow = PanelPlotting(self)
@@ -102,11 +102,27 @@ class PanelPID(wx.Panel):
         self.btn_start_pump.Bind(wx.EVT_TOGGLEBUTTON, self.on_start_stop_pump)
         self.btn_update_auto.Bind(wx.EVT_BUTTON, self.on_update_auto)
         self.Bind(wx.EVT_CLOSE, self.OnClose)
+        self.Bind(wx.EVT_UPDATE_UI, self.on_update_ui)
 
     def OnClose(self, evt):
         self.panel_flow.Destroy()
         self.panel_speed.Destroy()
         self.Destroy()
+
+    def on_update_ui(self, evt):
+        if evt.GetId() == self.btn_start_pump.GetId():
+            if self.automation.device.hw.is_running():
+                btn_str = 'Stop Pump'
+            else:
+                btn_str = 'Start Pump'
+            self.btn_start_pump.SetLabel(btn_str)
+
+        if evt.GetId() == self.btn_start_auto.GetId():
+            if self.automation.is_running():
+                btn_str = 'Stop Auto'
+            else:
+                btn_str = 'Start Auto'
+            self.btn_start_auto.SetLabel(btn_str)
 
     def on_start_stop_auto(self, evt):
         if not evt.IsChecked():
@@ -117,12 +133,15 @@ class PanelPID(wx.Panel):
             self.automation.start()
 
     def on_start_stop_pump(self, evt):
-        if not evt.IsChecked():
+        if self.btn_start_pump.GetValue():
             self.btn_start_pump.SetLabel('Start Pump')
-            self.automation.device.hw.set_speed(0)
+            self.automation.device.hw.stop()
         else:
             self.btn_start_pump.SetLabel('Stop Pump')
-            self.automation.device.hw.set_speed(5000)
+            speed = self.spin_setpoint.GetValue()
+            self.automation.device.hw.set_speed(speed)
+            self.automation.device.hw.start()
+            self._lgr.debug(f'Setting speed to {speed}')
 
     def on_update_auto(self, evt):
         p = self.spin_p.GetValue()
@@ -166,7 +185,7 @@ class MyTestApp(wx.App):
 if __name__ == '__main__':
     PerfusionConfig.set_test_config()
     utils.setup_default_logging('ex_gui_test_pid', logging.DEBUG)
-
+    utils.only_show_logs_from(['Test Puralev', 'MockPuraLev', 'TestAutoFlowDC', 'RawPoints'])
     SYS_PERFUSION = PerfusionSystem()
     try:
         SYS_PERFUSION.open()

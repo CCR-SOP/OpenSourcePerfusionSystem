@@ -141,6 +141,8 @@ class PuraLevi30(pyGeneric.GenericDevice):
         self._buffer = np.zeros(1, dtype=self.data_dtype)
         self.buf_len = 1
 
+        self.last_speed = 0
+
     def open(self):
         if self.cfg.port != '':
             self._lgr.info(f'{self.name}: Opening PuraLev i30 at {self.cfg.port}')
@@ -169,21 +171,31 @@ class PuraLevi30(pyGeneric.GenericDevice):
         self._event_halt.clear()
 
         self.__thread = Thread(target=self.run)
-        self.__thread.name = f'PuraLevi30Sinusoidal {self.name}'
+        self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
+        self.set_speed(self.last_speed)
 
     def stop(self):
         if self.__thread and self.__thread.is_alive():
+            self._event_halt.set()
+            self.__thread.join(2.0)
+            self.__thread = None
+
             if self.hw:
                 with self.mutex:
                     reg = WriteRegisters['State']
                     self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
-                    self._buffer[0] = 0
-                    self._queue.put((self._buffer, utils.get_epoch_ms()))
-            self._event_halt.set()
-            self.__thread.join(2.0)
-            self.__thread = None
+            self._buffer[0] = 0
+            self._queue.put((self._buffer, utils.get_epoch_ms()))
+            self.last_speed = 0
         super().stop()
+
+    def has_started(self):
+        return self.__thread.is_alive()
+
+    def is_running(self):
+        # JWK, replace with call to hardware to verify actually running
+        return self.last_speed > 0.0
 
     def write_config(self):
         self.cfg.waveform = self.waveform.get_config_str()
@@ -212,15 +224,17 @@ class PuraLevi30(pyGeneric.GenericDevice):
             rpm = 0
             self._lgr.warning(f'Attempt to set rpm ({rpm}) below zero. Setting to 0.')
         rpm = int(rpm)
-        # self._lgr.info(f'Setting RPM to {rpm}')
+
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointSpeed']
                 self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
                 reg = WriteRegisters['State']
                 self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
+        self.last_speed = rpm
         self._buffer[0] = rpm
-        self._queue.put((self._buffer, utils.get_epoch_ms()))
+        t = utils.get_epoch_ms()
+        self._queue.put((self._buffer, t))
 
     def set_flow(self, percent_of_max: float):
         self._lgr.info(f'Setting flow to {percent_of_max}%')
@@ -273,6 +287,7 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 t = t + period_timeout
                 new_speed = self.waveform.get_value_at(t)
                 if new_speed != last_speed:
+                    self._lgr.debug(f'newspeed = {new_speed}')
                     self.set_speed(new_speed)
                     last_speed = new_speed
             else:
