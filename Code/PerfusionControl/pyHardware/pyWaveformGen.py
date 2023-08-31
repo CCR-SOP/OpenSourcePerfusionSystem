@@ -32,7 +32,7 @@ class WaveformConfig:
 class SineConfig(WaveformConfig):
     min_rpm: float = 0.0
     max_rpm: float = 0.0
-    freq: float = 0.0
+    bpm: float = 0.0
     update_period_ms: int = 0
 
 
@@ -40,7 +40,7 @@ class SineConfig(WaveformConfig):
 class ConstantConfig(WaveformConfig):
     min_rpm: float = 0.0
     max_rpm: float = 0.0
-    freq: float = 0
+    bpm: float = 0
 
 
 def create_waveform_from_str(config_str, parent):
@@ -49,7 +49,7 @@ def create_waveform_from_str(config_str, parent):
         cfg = ConstantConfig(min_rpm=float(params[1]))
         obj = create_waveform_from_config(cfg, parent)
     elif params[0] == 'sine':
-        cfg = SineConfig(min_rpm=float(params[1]), max_rpm=float(params[2]), freq=float(params[3]))
+        cfg = SineConfig(min_rpm=float(params[1]), max_rpm=float(params[2]), bpm=float(params[3]))
         obj = create_waveform_from_config(cfg, parent)
     else:
         obj = None
@@ -115,11 +115,12 @@ class SineGen(WaveformGen):
 
     def get_value_at(self, time_pt):
         # adjust time point to with a period
-        t = time_pt % (1.0 / self.cfg.freq)
-        pt = (np.sin(2*np.pi*self.cfg.freq * t) + 1.0) * 0.5
+        freq = self.cfg.bpm / 60.0
+        t = time_pt % (1.0 / freq)
+        pt = (np.sin(2 * np.pi * self.cfg.bpm * t) + 1.0) * 0.5
         adjusted = pt * (self.cfg.max_rpm - self.cfg.min_rpm) + self.cfg.min_rpm
         # self._lgr.debug(f'{time_pt}|{adjusted}|{self.cfg.min_rpm}|{self.cfg.max_rpm}|{self.cfg.freq}')
         return adjusted
 
     def get_config_str(self):
-        return f'sine, {self.cfg.min_rpm}, {self.cfg.max_rpm}, {self.cfg.freq}'
+        return f'sine, {self.cfg.min_rpm}, {self.cfg.max_rpm}, {self.cfg.bpm}'

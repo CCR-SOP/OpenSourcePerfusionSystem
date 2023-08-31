@@ -29,7 +29,7 @@ def main():
     sleep(2.0)
 
     print('Changing frequency to 2Hz')
-    sensor.hw.cfg.freq = 2.0
+    sensor.hw.cfg.bpm = 2.0
     sleep(2.0)
 
     print('Stopping pump')

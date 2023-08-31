@@ -209,10 +209,10 @@ class PuraLevi30(pyGeneric.GenericDevice):
         if self.waveform is None:
             self._lgr.error(f'Unknown waveform string: {self.cfg.waveform}')
         if self.cfg.update_rate_ms == 0 and type(self.waveform) == pyWaveformGen.SineGen:
-            self.cfg.update_rate_ms = int(((1.0 / self.waveform.cfg.freq) * 1_000.0) / 10.0)
+            self.cfg.update_rate_ms = int(((1.0 / self.waveform.cfg.bpm) * 1_000.0) / 10.0)
             self._lgr.warning(f'{self.name}: No update rate specified for sine waveform,'
                               f'setting to {self.cfg.update_rate_ms} ms '
-                              f'(10 the sinusoidal period of {self.waveform.cfg.freq}')
+                              f'(10 the sinusoidal period of {self.waveform.cfg.bpm}')
 
         self.open()
 
@@ -287,7 +287,6 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 t = t + period_timeout
                 new_speed = self.waveform.get_value_at(t)
                 if new_speed != last_speed:
-                    self._lgr.debug(f'newspeed = {new_speed}')
                     self.set_speed(new_speed)
                     last_speed = new_speed
             else:

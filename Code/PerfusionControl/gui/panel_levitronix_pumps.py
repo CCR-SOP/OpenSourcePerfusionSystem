@@ -77,7 +77,7 @@ class PumpConfig(wx.Panel):
         self.panel_config = ConfigGUI(self, hw.waveform, pane_label="Properties")
         self.panel_config.add_var('min_rpm', 'RPM (min)', limits=(0, 100, 10_000))
         self.panel_config.add_var('max_rpm', 'RPM (max)', limits=(0, 100, 10_000))
-        self.panel_config.add_var('freq', 'Hz', limits=(0, 0.1, 100), decimal_places=1)
+        self.panel_config.add_var('bpm', 'BPM', limits=(0, 1, 1000))
 
         self.panel_config.do_layout()
         self.chk_sine = wx.CheckBox(self.panel_config.GetPane(), label='Sine Output')
@@ -105,7 +105,7 @@ class PumpConfig(wx.Panel):
 
     def on_check_sine(self, evt):
         self.panel_config.spins['max_rpm'].Enable(self.chk_sine.IsChecked())
-        self.panel_config.spins['freq'].Enable(self.chk_sine.IsChecked())
+        self.panel_config.spins['bpm'].Enable(self.chk_sine.IsChecked())
 
         if self.chk_sine.IsChecked():
             self.panel_config.labels['min_rpm'].SetLabel('RPM (min):')
@@ -117,18 +117,18 @@ class PumpConfig(wx.Panel):
             self.chk_sine.SetValue(False)
             self.panel_config.spins['min_rpm'].SetValue(waveform.min_rpm)
             self.panel_config.spins['max_rpm'].SetValue(0)
-            self.panel_config.spins['freq'].SetValue(0)
+            self.panel_config.spins['bpm'].SetValue(0)
         elif type(waveform) == pyWaveformGen.SineGen:
             self.chk_sine.SetValue(True)
             self.panel_config.spins['min_rpm'].SetValue(waveform.min_rpm)
             self.panel_config.spins['max_rpm'].SetValue(waveform.max_rpm)
-            self.panel_config.spins['freq'].SetValue(waveform.freq)
+            self.panel_config.spins['bpm'].SetValue(waveform.bpm)
         self.on_check_sine()
 
     def manual_control(self, manual=True):
         self.panel_config.spins['min_rpm'].Enable(manual)
         self.panel_config.spins['max_rpm'].Enable(manual)
-        self.panel_config.spins['freq'].Enable(manual)
+        self.panel_config.spins['bpm'].Enable(manual)
         self.chk_sine.Enable(manual)
 
     def get_waveform(self):
@@ -136,7 +136,7 @@ class PumpConfig(wx.Panel):
         if sine_checked:
             cfg = pyWaveformGen.SineConfig(min_rpm=self.panel_config.spins['min_rpm'].GetValue(),
                                            max_rpm=self.panel_config.spins['max_rpm'].GetValue(),
-                                           freq=self.panel_config.spins['freq'].GetValue())
+                                           bpm=self.panel_config.spins['bpm'].GetValue())
             waveform = pyWaveformGen.SineGen()
             waveform.cfg = cfg
         else:
