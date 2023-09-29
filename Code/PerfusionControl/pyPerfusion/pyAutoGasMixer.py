@@ -33,8 +33,12 @@ class ArterialAutoGasMixerConfig(AutoGasMixerConfig):
     CO2_max: float = 0.0
     O2_min: float = 0.0
     O2_max: float = 0.0
+    PO2_min: float = 0.0
+    PO2_max: float = 0.0
     CO2_adjust: float = 0.0
     flow_adjust: float = 0.0
+    flow_cancel: float = 0.0
+    flow_resume: float = 0.0
     O2_channel: int = 0
     CO2_channel: int = 0
 
@@ -165,7 +169,8 @@ class AutoGasMixerArterial(AutoGasMixer):
     def update_on_input(self, data):
         try:
             self.update_CO2(data.arterial_pH, data.arterial_CO2)
-            self._update_O2(data.arterial_sO2)
+            #self._update_O2(data.arterial_sO2)
+            self._update_PO2(data.arterial_O2, data.arterial_pH)
         except AttributeError:
             # this will happen if there is invalid CDI data
             pass
@@ -178,10 +183,10 @@ class AutoGasMixerArterial(AutoGasMixer):
             check_co2 = True
         elif pH < self.cfg.pH_min:
             co2_adjust = -self.cfg.CO2_adjust
-            self._lgr.info(f'{self.name} is alkalotic (ph={pH:1.2f}), decreasing CO2')
+            self._lgr.info(f'{self.name} is acidotic (ph={pH:1.2f}), decreasing CO2')
         elif pH > self.cfg.pH_max:
             co2_adjust = self.cfg.CO2_adjust
-            self._lgr.info(f'{self.name} is acidotic (ph={pH:1.2f}), increasing C02')
+            self._lgr.info(f'{self.name} is alkalotic (ph={pH:1.2f}), increasing C02')
         else:
            check_co2 = True
 
@@ -200,13 +205,31 @@ class AutoGasMixerArterial(AutoGasMixer):
             self.gas_device.set_percent_value(self.cfg.CO2_channel, new_percent)
             self._lgr.debug(f'CO2 updated')
 
-    def _update_O2(self, O2: float):
+    def _update_PO2(self, PO2: float, pH: float):
+        if PO2 == -1:
+              self.gas_device.bolus_O2()
+              self.gas_device.cancel_flow()
+              self._lgr.warning(f'{self.name}:PO2 is out of range. Cannot be adjusted automatically')
+        elif PO2 < self.cfg.PO2_min:
+              self.gas_device.bolus_O2()
+              self.gas_device.resume_flow()
+              self._lgr.info(f'{self.name}: PO2 low: {PO2}. Resuming flow.')
+        elif PO2 > self.cfg.PO2_max and pH < self.cfg.pH_max:
+              self.gas_device.bolus_O2()
+              self.gas_device.cancel_flow()
+              self._lgr.info(f'{self.name}: PO2 high: {PO2}.Stopping flow.')
+        elif PO2 > self.cfg.PO2_max and pH > self.cfg.pH_max:
+              self.gas_device.bolus_CO2()
+              self.gas_device.resume_flow()
+              self._lgr.warning(f'{self.name}: PO2 high: {PO2} but artery is basic. Bolusing CO2.')
 
-        if O2 == -1:
-            self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
-        elif O2 < self.cfg.O2_min:
-            self.gas_device.adjust_flow(self.cfg.flow_adjust)
-            self._lgr.info(f'{self.name}: O2 low. {O2}. Increasing total flow by {self.cfg.flow_adjust}')
-        elif O2 > self.cfg.O2_max:
-            self.gas_device.adjust_flow(self.cfg.flow_adjust)
-            self._lgr.warning(f'{self.name}: O2 high. Decreasing total flow by {self.cfg.flow_adjust}')
+#    def _update_O2(self, O2: float):
+#
+ #       if O2 == -1:
+  #          self._lgr.warning(f'{self.name}: O2 is out of range. Cannot be adjusted automatically')
+   #     elif O2 < self.cfg.O2_min:
+    #        self.gas_device.adjust_flow(self.cfg.flow_adjust)
+     #       self._lgr.info(f'{self.name}: O2 low. {O2}. Increasing total flow by {self.cfg.flow_adjust}')
+      #  elif O2 > self.cfg.O2_max:
+       #     self.gas_device.adjust_flow(self.cfg.flow_adjust)
+        #    self._lgr.warning(f'{self.name}: O2 high. Decreasing total flow by {self.cfg.flow_adjust}')

@@ -92,6 +92,7 @@ class GasDevice(pyGeneric.GenericDevice):
         self.hw = None
 
         self.total_flow = 0
+        self.last_flow = 0
         # assume a max of 3 channels
         self.percent = [0, 0, 0]
         self.status = False
@@ -152,6 +153,18 @@ class GasDevice(pyGeneric.GenericDevice):
     def adjust_flow(self, adjust_flow: int):
         flow = self.get_total_flow()
         self.set_total_flow(flow + adjust_flow)
+
+    def cancel_flow(self):
+        self.set_total_flow(0)
+
+    def resume_flow(self):
+        self.set_total_flow(5)
+
+    def bolus_CO2(self):
+        self.set_percent_value(2, 100)
+
+    def bolus_O2(self):
+        self.set_percent_value(1, 100)
 
     def set_total_flow(self, total_flow: int):
         if self.hw is not None:
