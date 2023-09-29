@@ -16,7 +16,7 @@ import numpy as np
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 import pyPerfusion.utils as utils
 from pyPerfusion.PerfusionSystem import PerfusionSystem
-from gui.panel_config import AutomationConfig
+from gui.panel_config import ConfigGUI
 
 
 class GasMixerPanel(wx.Panel):
@@ -140,7 +140,7 @@ class BaseGasMixerPanel(wx.Panel):
         self.btn_update = wx.Button(self, label='Update')
         self.btn_auto = wx.ToggleButton(self, label='Automate')
 
-        self.config = AutomationConfig(self, self.autogasmixer)
+        self.config = ConfigGUI(self, self.autogasmixer)
 
         self.timer_gui_update = wx.Timer(self)
         self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)

@@ -179,7 +179,12 @@ class PanelSyringeControls(wx.Panel):
         font_smaller = wx.Font()
         font_smaller.SetPointSize((int(10)))
 
-        static_box = wx.StaticBox(self, wx.ID_ANY, label=self.automation.device.name)
+        if self.automation and self.automation.device:
+            name = self.automation.device.name
+        else:
+            raise Exception('Missing automation')
+
+        static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         static_box.SetFont(utils.get_header_font())
         self.sizer = wx.StaticBoxSizer(static_box, wx.HORIZONTAL)
 

@@ -135,11 +135,13 @@ class Sensor:
             if self._evt_halt.wait(self._timeout):
                 break
             if self.hw is not None:
-                data_buf, t = self.hw.get_data()
-                if data_buf is not None:
-                    buf = data_buf
-                    for strategy in self._strategies:
-                        buf, t = strategy.process_buffer(buf, t)
+                data_buf = 0
+                while data_buf is not None:
+                    data_buf, t = self.hw.get_data()
+                    if data_buf is not None:
+                        buf = data_buf
+                        for strategy in self._strategies:
+                            buf, t = strategy.process_buffer(buf, t)
 
     def open(self):
         pass

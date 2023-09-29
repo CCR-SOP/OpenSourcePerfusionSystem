@@ -181,11 +181,13 @@ class Reader:
             else:
                 start_idx = 0
             samples_needed = min(file_size_in_samples, samples_needed)
-            idx = np.linspace(start_idx, file_size_in_samples - 1, samples_needed, dtype=np.uint64)
+            idx = np.linspace(start_idx, len(data) - 1, samples_needed, dtype=np.uint64)
             try:
                 data = data[idx]
             except IndexError :
-                self._lgr.exception(f'idx = {idx}')
+                self._lgr.exception(f'filesize = {file_size_in_samples},'
+                                    f'len(data) = {len(data)},'
+                                    f'samples_needed = {samples_needed}')
                 return None, None
 
         data_time = np.linspace(start_idx * period, file_size_in_samples * period,
@@ -266,8 +268,6 @@ class ReaderPoints(Reader):
     def read_chunk(self, fid):
 
         chunk = fid.read(self.cfg.bytes_per_timestamp)
-        # self._lgr.debug(f'bpt={self.cfg.bytes_per_timestamp}')
-        # self._lgr.debug(f'chunk={chunk}')
         if chunk:
             ts, = struct.unpack('!Q', chunk)
             data_chunk = np.fromfile(fid, dtype=self.data_dtype, count=self.cfg.samples_per_timestamp)
@@ -283,9 +283,11 @@ class ReaderPoints(Reader):
         fid = open(self.fqpn, 'rb')
         fid.seek(0)
         cur_time = utils.get_epoch_ms()
+        chunks_read = 0
         while True:
             chunk = fid.read(self.cfg.bytes_per_timestamp)
             if chunk and (len(chunk) == self.cfg.bytes_per_timestamp):
+                chunks_read += 1
                 ts, = struct.unpack('!Q', chunk)
                 diff_t = cur_time - ts
                 if diff_t <= last_ms:
@@ -298,7 +300,6 @@ class ReaderPoints(Reader):
                     data_time = np.append(data_time, ts - self.sensor.get_acq_start_ms())
                 else:
                     fid.seek(self.bytes_per_chunk-self.cfg.bytes_per_timestamp, SEEK_CUR)
-
             else:
                 break
 

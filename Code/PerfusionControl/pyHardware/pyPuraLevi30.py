@@ -10,16 +10,19 @@ This work was created by an employee of the US Federal Gov
 and under the public domain.
 """
 
-import logging
 from dataclasses import dataclass
 from enum import IntEnum
 from queue import Queue, Empty
-from threading import Lock
+from threading import Lock, Thread, Event
 
 import minimalmodbus as modbus
 import serial
+import numpy as np
 
 import pyHardware.pyGeneric as pyGeneric
+import pyPerfusion.utils as utils
+import pyPerfusion.PerfusionConfig as PerfusionConfig
+import pyHardware.pyWaveformGen as pyWaveformGen
 
 
 class i30Exception(pyGeneric.HardwareException):
@@ -119,16 +122,26 @@ class PuraLevi30Config:
     baud: int = 57600
     serial_num: str = 'nnnnnn-nnnn'
     device_addr: int = 0
+    update_rate_ms: int = 0
+    waveform: str = 'none, 0'
 
 
 class PuraLevi30(pyGeneric.GenericDevice):
     def __init__(self, name):
         super().__init__(name)
         self.cfg = PuraLevi30Config()
+        self.waveform = pyWaveformGen.WaveformGen(parent=self)
 
         self.hw = None
-
         self.mutex = Lock()
+
+        self.__thread = None
+        self._event_halt = Event()
+
+        self._buffer = np.zeros(1, dtype=self.data_dtype)
+        self.buf_len = 1
+
+        self.last_speed = 0
 
     def open(self):
         if self.cfg.port != '':
@@ -152,21 +165,76 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 self.hw.serial.close()
             self.stop()
 
+    def start(self):
+        self.stop()
+        super().start()
+        self._event_halt.clear()
+
+        self.__thread = Thread(target=self.run)
+        self.__thread.name = f'{__name__} {self.name}'
+        self.__thread.start()
+        self.set_speed(self.last_speed)
+
     def stop(self):
-        self._lgr.info('Stopping pump')
-        if self.hw:
-            with self.mutex:
-                reg = WriteRegisters['State']
-                self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
+        if self.__thread and self.__thread.is_alive():
+            self._event_halt.set()
+            self.__thread.join(2.0)
+            self.__thread = None
+
+            if self.hw:
+                with self.mutex:
+                    reg = WriteRegisters['State']
+                    self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
+            self._buffer[0] = 0
+            self._queue.put((self._buffer, utils.get_epoch_ms()))
+            self.last_speed = 0
+        super().stop()
+
+    def has_started(self):
+        return self.__thread.is_alive()
+
+    def is_running(self):
+        # JWK, replace with call to hardware to verify actually running
+        return self.last_speed > 0.0
+
+    def write_config(self):
+        self.cfg.waveform = self.waveform.get_config_str()
+        PerfusionConfig.write_from_dataclass('hardware', self.name, self.cfg, classname=self.__class__.__name__)
+
+    def read_config(self):
+        PerfusionConfig.read_into_dataclass('hardware', self.name, self.cfg)
+        self._lgr.debug(f'config for {self.name} is {self.cfg}')
+        self._lgr.debug(f'Creating waveform {self.cfg.waveform}')
+        self.waveform = pyWaveformGen.create_waveform_from_str(self.cfg.waveform, parent=self)
+        if self.waveform is None:
+            self._lgr.error(f'Unknown waveform string: {self.cfg.waveform}')
+        if self.cfg.update_rate_ms == 0 and type(self.waveform) == pyWaveformGen.SineGen:
+            self.cfg.update_rate_ms = int(((1.0 / self.waveform.cfg.bpm) * 1_000.0) / 10.0)
+            self._lgr.warning(f'{self.name}: No update rate specified for sine waveform,'
+                              f'setting to {self.cfg.update_rate_ms} ms '
+                              f'(10 the sinusoidal period of {self.waveform.cfg.bpm}')
+
+        self.open()
+
+    def update_waveform(self, waveform_cfg):
+        self.waveform = pyWaveformGen.create_waveform_from_config(waveform_cfg)
 
     def set_speed(self, rpm: int):
-        self._lgr.info(f'Setting RPM to {rpm}')
+        if rpm < 0:
+            rpm = 0
+            self._lgr.warning(f'Attempt to set rpm ({rpm}) below zero. Setting to 0.')
+        rpm = int(rpm)
+
         if self.hw:
             with self.mutex:
                 reg = WriteRegisters['SetpointSpeed']
                 self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
                 reg = WriteRegisters['State']
                 self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
+        self.last_speed = rpm
+        self._buffer[0] = rpm
+        t = utils.get_epoch_ms()
+        self._queue.put((self._buffer, t))
 
     def set_flow(self, percent_of_max: float):
         self._lgr.info(f'Setting flow to {percent_of_max}%')
@@ -183,6 +251,8 @@ class PuraLevi30(pyGeneric.GenericDevice):
                 reg = ReadRegisters['SetpointSpeed']
                 rpm = self.hw.read_register(reg.addr, functioncode=ModbusFunction.InputRegister)
                 return rpm
+        else:
+            return 0
 
     def get_flow(self) -> float:
         if self.hw:
@@ -201,6 +271,26 @@ class PuraLevi30(pyGeneric.GenericDevice):
             # this is not unusual, so catch the error but do nothing
             pass
         return buf, t
+
+    def run(self):
+        t = 0
+        last_speed = self.get_speed()
+        if self.waveform is None:
+            self._lgr.error(f'Missing waveform for {self.name}')
+            return
+        if self.cfg.update_rate_ms == 0:
+            self._lgr.warning(f'Update rate is 0, stopping thread')
+            return
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            period_timeout = self.cfg.update_rate_ms / 1_000.0
+            if not self._event_halt.wait(timeout=period_timeout):
+                t = t + period_timeout
+                new_speed = self.waveform.get_value_at(t)
+                if new_speed != last_speed:
+                    self.set_speed(new_speed)
+                    last_speed = new_speed
+            else:
+                break
 
 
 class Mocki30(PuraLevi30):

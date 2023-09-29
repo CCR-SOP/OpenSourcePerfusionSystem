@@ -18,9 +18,9 @@ from pyPerfusion.Sensor import *
 from pyPerfusion.pyAutoGasMixer import *
 from pyPerfusion.pyAutoDialysis import *
 from pyPerfusion.pyAutoSyringe import *
+from pyPerfusion.pyAutoFlow import *
 from pyPerfusion.Strategy_ReadWrite import *
 from pyPerfusion.Strategy_Processing import *
-
 
 
 def get_object(name: str, config: str ='sensors'):
@@ -43,7 +43,11 @@ def get_object(name: str, config: str ='sensors'):
         logging.getLogger().error(f'Class {class_name} was not imported in PerfusionSystem')
         return None
 
-    obj = class_(name=name)
+    try:
+        obj = class_(name=name)
+    except TypeError:
+        obj = None
+        logging.getLogger().error(f'Class {class_name} could be created in PerfusionSystem')
     return obj
 
 
@@ -109,6 +113,7 @@ class PerfusionSystem:
                 self._lgr.exception(e)
                 continue
 
+            self._lgr.debug(f'Automation is {type(automation)}')
             if isinstance(automation, AutoGasMixer):
                 # self._lgr.debug(f'loading {automation.cfg.gas_device}, {automation.cfg.data_source}')
                 automation.gas_device = self.get_sensor(automation.cfg.gas_device).hw
@@ -127,6 +132,19 @@ class PerfusionSystem:
             elif isinstance(automation, AutoSyringe):
                 automation.device = self.get_sensor(automation.cfg.device)
                 automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
+            elif isinstance(automation, StaticAutoFlow):
+                self._lgr.warning(f'Looking for {automation.cfg.device}')
+                automation.device = self.get_sensor(automation.cfg.device)
+                automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
+                self._lgr.warning(f'loaded automation StaticAutoFlow with {automation.device}, {automation.data_source}')
+            elif isinstance(automation, SinusoidalAutoFlow):
+                automation.device = self.get_sensor(automation.cfg.device)
+                automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
+            elif isinstance(automation, AutoFlow):
+                automation.device = self.get_sensor(automation.cfg.device)
+                automation.data_source = self.get_sensor(automation.cfg.data_source).get_reader()
+
+
             self.automations[name] = automation
 
     def get_sensor(self, name: str):
