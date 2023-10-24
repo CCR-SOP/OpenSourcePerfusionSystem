@@ -126,7 +126,7 @@ class SystemHardware:
 
         try:
             for name, device in self.hw.items():
-                if type(device) != AIChannel:
+                if type(device) != AIChannel and type(device) != PuraLevi30:
                     self._lgr.debug(f'Starting {name}')
                     device.start()
         except AIDeviceException as e:
