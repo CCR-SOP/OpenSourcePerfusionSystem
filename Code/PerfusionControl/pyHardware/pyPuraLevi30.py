@@ -166,7 +166,9 @@ class PuraLevi30(pyGeneric.GenericDevice):
             self.stop()
 
     def start(self):
+        self._lgr.debug(f'{self.name}: stopping any existing thread')
         self.stop()
+
         super().start()
         self._event_halt.clear()
 
@@ -174,20 +176,29 @@ class PuraLevi30(pyGeneric.GenericDevice):
         self.__thread.name = f'{__name__} {self.name}'
         self.__thread.start()
         self.set_speed(self.last_speed)
+        self._lgr.debug(f'{self.name}: starting at speed {self.last_speed}')
 
     def stop(self):
         if self.__thread and self.__thread.is_alive():
             self._event_halt.set()
             self.__thread.join(2.0)
             self.__thread = None
+        else:
+            self._lgr.debug(f'{self.name}: in stop(), no active thread')
 
-            if self.hw:
-                with self.mutex:
+        if self.hw:
+            with self.mutex:
+                try:
                     reg = WriteRegisters['State']
                     self.hw.write_register(reg.addr, PumpState.Off, functioncode=ModbusFunction.HoldRegister)
+                    self._lgr.debug(f'{self.name}: in stop(), set pump state to off')
+                except modbus.NoResponseError as e:
+                    self._lgr.exception(e)
             self._buffer[0] = 0
             self._queue.put((self._buffer, utils.get_epoch_ms()))
             self.last_speed = 0
+        else:
+            self._lgr.debug(f'{self.name}: in stop(), no valid hw')
         super().stop()
 
     def has_started(self):
@@ -227,10 +238,15 @@ class PuraLevi30(pyGeneric.GenericDevice):
 
         if self.hw:
             with self.mutex:
-                reg = WriteRegisters['SetpointSpeed']
-                self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
-                reg = WriteRegisters['State']
-                self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
+                try:
+                    reg = WriteRegisters['SetpointSpeed']
+                    self.hw.write_register(reg.addr, rpm, functioncode=ModbusFunction.HoldRegister)
+                    reg = WriteRegisters['State']
+                    self.hw.write_register(reg.addr, PumpState.SpeedControl, functioncode=ModbusFunction.HoldRegister)
+                except modbus.InvalidResponseError as e:
+                    self._lgr.warning(f'{self.name}: when trying to set speed, received Invalid Response')
+                    self._lgr.exception(e)
+
         self.last_speed = rpm
         self._buffer[0] = rpm
         t = utils.get_epoch_ms()

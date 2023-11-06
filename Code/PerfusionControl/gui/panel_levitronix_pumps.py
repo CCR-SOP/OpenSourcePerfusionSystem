@@ -75,8 +75,8 @@ class PumpConfig(wx.Panel):
         self.sizer = None
 
         self.panel_config = ConfigGUI(self, hw.waveform, pane_label="Properties")
-        self.panel_config.add_var('min_rpm', 'RPM (min)', limits=(0, 100, 10_000))
-        self.panel_config.add_var('max_rpm', 'RPM (max)', limits=(0, 100, 10_000))
+        self.panel_config.add_var('min_rpm', 'RPM (min)', limits=(0, 100, 30_000))
+        self.panel_config.add_var('max_rpm', 'RPM (max)', limits=(0, 100, 30_000))
         self.panel_config.add_var('bpm', 'BPM', limits=(0, 1, 1000))
 
         self.panel_config.do_layout()
@@ -209,17 +209,22 @@ class BaseLeviPumpPanel(wx.Panel):
         in_start_mode = self.btn_start.GetValue()
         in_auto_mode = self.chk_auto.IsChecked()
         if in_start_mode:
+
             self.btn_start.SetLabel('Stop')
             if in_auto_mode:
-                self.autolevipump.hw.start()
-            else:
+
                 self.autolevipump.start()
+            else:
+                self._lgr.debug('Starting  pump')
+                self.autolevipump.hw.start()
         else:
+
             self.btn_start.SetLabel('Start')
             if in_auto_mode:
-                self.autolevipump.hw.stop()
-            else:
                 self.autolevipump.stop()
+            else:
+                self._lgr.debug('Stopping  pump')
+                self.autolevipump.hw.stop()
 
     def OnUpdate(self, evt):
         waveform = self.pump_config.get_waveform()

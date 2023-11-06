@@ -87,9 +87,9 @@ class PanelAICalibration(wx.Panel):
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
         self.label_cal_pt1 = wx.StaticText(self, label="Pt 1 Target")
-        self.spin_cal_pt1 = wx.SpinCtrlDouble(self, min=0, max=1000, inc=1)
+        self.spin_cal_pt1 = wx.SpinCtrlDouble(self, min=0, max=10000, inc=1)
         self.label_cal_pt2 = wx.StaticText(self, label="Pt 2 Target")
-        self.spin_cal_pt2 = wx.SpinCtrlDouble(self, min=0, max=1000, inc=1)
+        self.spin_cal_pt2 = wx.SpinCtrlDouble(self, min=0, max=10000, inc=1)
         self.spin_cal_pt1.Digits = 3
         self.spin_cal_pt2.Digits = 3
         self.label_cal_pt1_val = wx.StaticText(self, label='No reading')

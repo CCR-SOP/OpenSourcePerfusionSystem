@@ -165,7 +165,7 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
         self.auto = SYS_PERFUSION.get_automation('TestAutoFlowDC')
-        self.flow = SYS_PERFUSION.get_sensor('Portal Vein Flow')
+        self.flow = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
         self.flow.hw.cfg.cal_pt1_target = 0.0
         self.flow.hw.cfg.cal_pt1_reading = 0.0
         self.flow.hw.cfg.cal_pt2_target = 760
@@ -185,7 +185,7 @@ class MyTestApp(wx.App):
 if __name__ == '__main__':
     PerfusionConfig.set_test_config()
     utils.setup_default_logging('ex_gui_test_pid', logging.DEBUG)
-    utils.only_show_logs_from(['Test Puralev', 'MockPuraLev', 'TestAutoFlowDC', 'RawPoints'])
+    utils.only_show_logs_from(['Hepatic Artery Flow ', 'TestAutoFlowDC', 'RawPoints'])
     SYS_PERFUSION = PerfusionSystem()
     try:
         SYS_PERFUSION.open()
