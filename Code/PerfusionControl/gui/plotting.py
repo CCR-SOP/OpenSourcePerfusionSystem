@@ -28,10 +28,12 @@ class SensorPlot:
         self._reader = None
         self._axes = axes
         self._line = None
-        self._invalid = None
         self._display = None
         self._color = None
         self._with_readout = readout
+        self._low_range = None
+        self._high_range = None
+        self._axhspan = None
 
     @property
     def name(self):
@@ -62,11 +64,15 @@ class SensorPlot:
         readout = data[-1]
         if hasattr(self._sensor.cfg, 'valid_range'):
             if self._sensor.cfg.valid_range is not None:
-                low_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[0],
-                                                    where=data < self._sensor.cfg.valid_range[0], color='r')
-                high_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[1],
-                                                     where=data > self._sensor.cfg.valid_range[1], color='r')
-                self._invalid = [low_range, high_range]
+                if self._low_range:
+                    self._low_range.remove()
+                if self._high_range:
+                    self._high_range.remove()
+
+                self._low_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[0],
+                                                          where=data < self._sensor.cfg.valid_range[0], color='r')
+                self._high_range = self._axes.fill_between(data_time, data, self._sensor.cfg.valid_range[1],
+                                                           where=data > self._sensor.cfg.valid_range[1], color='r')
 
                 if self._with_readout:
                     if readout < self._sensor.cfg.valid_range[0]:
@@ -86,7 +92,8 @@ class SensorPlot:
             except AttributeError:
                 # if sensor doesn't have units, ignore
                 unit_str = ''
-            self._line.set_label(f'{self._reader.name}: {readout:.2f} {unit_str}')
+            if self._line is not None:
+                self._line.set_label(f'{self._reader.name}: {readout:.2f} {unit_str}')
             leg = self._axes.get_legend()
             if leg is not None:
                 leg_texts = leg.get_texts()
@@ -102,7 +109,9 @@ class SensorPlot:
         if hasattr(self._sensor.cfg, 'valid_range'):
             if self._sensor.cfg.valid_range is not None:
                 rng = self._sensor.cfg.valid_range
-                self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
+                if self._axhspan is not None:
+                    self._axhspan.remove()
+                self._axhspan = self._axes.axhspan(rng[0], rng[1], color='g', alpha=0.2)
         if not keep_old_title:
             self._axes.set_title(f'{self._sensor.name}\n')
             try:
