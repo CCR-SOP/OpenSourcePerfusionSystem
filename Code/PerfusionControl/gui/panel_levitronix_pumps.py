@@ -229,6 +229,7 @@ class BaseLeviPumpPanel(wx.Panel):
     def OnUpdate(self, evt):
         waveform = self.pump_config.get_waveform()
         self.autolevipump.hw.cfg.waveform = waveform
+        self.autolevipump.hw.waveform = waveform
         self._lgr.info(f'Updating {self.autolevipump.hw.name} to {waveform.cfg}')
 
 
