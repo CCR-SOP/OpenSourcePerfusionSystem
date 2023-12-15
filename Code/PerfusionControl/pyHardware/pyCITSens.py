@@ -57,7 +57,7 @@ class CITSens(pyGeneric.GenericDevice):
         if self.__serial.is_open:
             self.__serial.close()
         self.__serial.port = self.cfg.port
-        self.__serial.baudrate = 9600
+        self.__serial.baudrate = 115200
         self.__serial.stopbits = serial.STOPBITS_ONE
         self.__serial.parity = serial.PARITY_NONE
         self.__serial.bytesize = serial.EIGHTBITS
