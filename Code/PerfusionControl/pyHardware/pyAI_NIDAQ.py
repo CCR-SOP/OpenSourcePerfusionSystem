@@ -25,6 +25,7 @@ import PyDAQmx.DAQmxConstants
 
 import pyHardware.pyAI as pyAI
 import pyPerfusion.utils as utils
+import pyPerfusion.PerfusionConfig as PerfusionConfig
 
 
 @dataclass
@@ -63,6 +64,12 @@ class NIDAQAIDevice(pyAI.AIDevice):
         # is valid
         return self.cfg.device_name and super().is_open()
 
+    def run(self):
+        while not PerfusionConfig.MASTER_HALT.is_set():
+            # period_timeout = 100
+            #if not self._event_halt.wait(timeout=period_timeout):
+            self._acq_samples()
+
     def _acq_samples(self):
         samples_read = PyDAQmx.int32()
         buffer_t = utils.get_epoch_ms() - self.get_acq_start_ms()
@@ -88,7 +95,10 @@ class NIDAQAIDevice(pyAI.AIDevice):
             self._lgr.exception(f'For device {self.name}, read not completed before timeout in _acq_samples.')
         except PyDAQmx.DAQmxFunctions.InvalidTaskError:
             self._lgr.exception(f'For device {self.name}, invalid task error in _acq_samples.')
-
+        except PyDAQmx.DAQmxFunctions.SamplesNoLongerAvailable as e:
+            self._lgr.exception(f'For device {self.name}, not reading data fast enough from hardware')
+        except Exception as e:
+            self._lgr.exception(f'For device {self.name}, unknown exception {e}')
 
     def _is_valid_device_name(self, device):
         try:
