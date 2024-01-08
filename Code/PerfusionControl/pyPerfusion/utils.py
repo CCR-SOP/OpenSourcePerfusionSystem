@@ -177,12 +177,16 @@ def create_wx_handler(wx_control, logging_level, names_to_log, use_last_name=Fal
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        logging.critical('Ctrl-C combo was detected')
         return
     logging.critical('Uncaught exception, ', exc_info=(exc_type, exc_value, exc_traceback))
     # raise exc_type
 
 
 def catch_unhandled_exceptions():
+    # sys.excepthook only seems to catch unhandled exceptions that would
+    # terminate the program. If the exception halts a thread, it may
+    # not be caught
     sys.excepthook = handle_exception
 
 
