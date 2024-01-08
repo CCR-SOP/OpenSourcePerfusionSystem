@@ -77,9 +77,10 @@ class CITSens(pyGeneric.GenericDevice):
 
     def parse_response(self, response: str):
         try:
-            data = self.data_dtype.type(response.strip('\r\n'))
+            # parse data and return only first element "glucose"
+            data = np.fromstring(response.strip('\r\n'), dtype=self.data_dtype, sep=';')[0:1]
         except ValueError as e:
-            data = self.data_dtype.type(0)
+            data = np.zeros(1, dtype=self.data_dtype)
             self._lgr.debug(f'could not interpret response ||{response}||')
         return data
 
@@ -103,8 +104,7 @@ class CITSens(pyGeneric.GenericDevice):
                     # assuming this is an occasional glitch so log, but keep going
                 else:
                     if resp != '':
-                        self._buffer[0] = self.parse_response(resp)
-                        # self._lgr.debug(f'parsing {resp} to {self._buffer[0]}')
+                        self._buffer = self.parse_response(resp)
                         self._queue.put((self._buffer, utils.get_epoch_ms()))
         self.is_streaming = False
 
@@ -128,6 +128,7 @@ class MockCITSens(CITSens):
         self._is_open = False
         self.last_pkt = ''
         self.last_pkt_index = 0
+        self.device = None
 
     def is_open(self):
         return self._is_open
@@ -141,4 +142,4 @@ class MockCITSens(CITSens):
 
     def read_from_serial(self):
         rand = np.random.randint(10, size=1)[0]
-        return f'{rand}\r\n'
+        return f'{rand};{rand*2}\r\n'

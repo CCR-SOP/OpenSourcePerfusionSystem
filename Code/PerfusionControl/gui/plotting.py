@@ -153,7 +153,7 @@ class PanelPlotting(wx.Panel):
         self._with_readout = with_readout
 
         self.__plot_len = 200
-        self._plot_frame_ms = 5_000
+        self._plot_frame_ms = 10_000
 
         self.fig = matplotlib.figure.Figure()
         self._axes = self.fig.add_subplot(111)
