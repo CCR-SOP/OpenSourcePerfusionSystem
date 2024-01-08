@@ -29,6 +29,11 @@ class CITSensConfig:
     port: str = ''
 
 
+@dataclass
+class DummyDevice:
+    name: str
+
+
 class CITSens(pyGeneric.GenericDevice):
     def __init__(self, name: str):
         super().__init__(name)
@@ -44,6 +49,7 @@ class CITSens(pyGeneric.GenericDevice):
         self.is_streaming = False
         self.sampling_period_ms = 5000
         self.buf_len = 1
+        self.device = DummyDevice(name=name)
 
     @property
     def hw(self):
@@ -128,7 +134,7 @@ class MockCITSens(CITSens):
         self._is_open = False
         self.last_pkt = ''
         self.last_pkt_index = 0
-        self.device = None
+        self.device = DummyDevice(name=name)
 
     def is_open(self):
         return self._is_open
