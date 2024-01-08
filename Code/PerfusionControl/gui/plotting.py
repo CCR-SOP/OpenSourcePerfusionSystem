@@ -50,13 +50,22 @@ class SensorPlot:
 
         try:
             data_time, data = self._reader.retrieve_buffer(frame_ms, plot_len)
-            if data_time is not None:
-                data_time = np.divide(data_time, 1000.0)
-        except ValueError:
+            start_t = frame_ms
+            if len(data) < plot_len:
+                if len(data_time) == 0:
+                    start_t = len(data) * self._sensor.sampling_period_ms
+                else:
+                    start_t = data_time[-1]
+
+            data_time = np.linspace(-1*start_t/1000.0, 0, num=len(data))
+
+        except ValueError as e:
             # this can happen if no data has been collected, so don't print a message
             # as it can flood the logs
+            self._lgr.debug(f'{self._sensor.name} {e} ')
             data = None
             data_time = None
+
 
         if data is None or len(data) == 0:
             return
