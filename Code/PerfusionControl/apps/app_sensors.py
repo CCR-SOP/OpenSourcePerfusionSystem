@@ -24,15 +24,19 @@ class SensorPanel(wx.Panel):
         wx.Panel.__init__(self, parent)
         self._lgr = logging.getLogger('SensorPanel')
         self.sys = perfusion_system
-        sensor_names = ['Hepatic Artery Flow', 'Portal Vein Flow', 'Hepatic Artery Pressure', 'Portal Vein Pressure']
+        sensor_names = ['Hepatic Artery Flow', 'Portal Vein Flow', 'Test Glucose',
+                        'Hepatic Artery Pressure', 'Portal Vein Pressure'
+                        ]
 
-        sizer = wx.GridSizer(cols=2)
+        sizer = wx.GridSizer(cols=3)
         self.sensors = {}
         self.panels = []
         for name in sensor_names:
             sensor = self.sys.get_sensor(name)
             self.sensors[name] = sensor
-            panel = PanelAI(self, sensor, reader=sensor.get_reader('MovAvg_11pt'))
+            panel = PanelAI(self, sensor, reader=sensor.get_reader())
+            panel.update_frame_ms(30_000)
+
             self.panels.append(panel)
             sizer.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
 

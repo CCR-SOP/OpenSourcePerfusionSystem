@@ -32,7 +32,7 @@ class PanelAI(wx.Panel):
         self._panel_plot = PanelPlotting(self)
         self._panel_cal = PanelAICalibration(self, sensor, reader)
 
-        if self._sensor.hw is not None:
+        if self._sensor.hw is not None and self._sensor.hw.device is not None:
             ch_name = f'{self._sensor.hw.device.name} Channel: {self._sensor.hw.name}'
         else:
             ch_name = "NA"
@@ -74,6 +74,9 @@ class PanelAI(wx.Panel):
     def on_close(self, evt):
         self._panel_cal.Close()
         self._panel_plot.Close()
+
+    def update_frame_ms(self, frame_ms):
+        self._panel_plot.plot_frame_ms = frame_ms
 
 
 class PanelAICalibration(wx.Panel):
