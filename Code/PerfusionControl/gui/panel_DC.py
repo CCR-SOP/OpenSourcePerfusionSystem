@@ -65,7 +65,7 @@ class PanelDCControl(wx.Panel):
         self.warning_color = wx.Colour('orange')
 
         self.label_offset = wx.StaticText(self, label='Flow (mL/min):')
-        self.spin_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=50, inc=.5, initial=0)
+        self.spin_offset = wx.SpinCtrlDouble(self, wx.ID_ANY, min=0, max=200, inc=.5, initial=0)
         self.label_offset.SetFont(font)
         self.spin_offset.SetFont(font)
 
@@ -142,14 +142,6 @@ class PanelDCControl(wx.Panel):
             if in_start_mode:
                 self.pump.set_flow(new_flow)
                 self.update_controls_from_hardware()
-
-
-
-
-
-            
-
-
 
     def on_close(self, evt):
         self.timer_gui_update.Stop()
