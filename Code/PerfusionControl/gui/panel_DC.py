@@ -71,8 +71,8 @@ class PanelDCControl(wx.Panel):
 
         self.btn_change_rate = wx.Button(self, label='Update Rate')
         self.btn_change_rate.SetFont(font)
-        self.btn_stop = wx.Button(self, label='Stop')
-        self.btn_stop.SetFont(font)
+        self.btn_start = wx.ToggleButton(self, label='Start')
+        self.btn_start.SetFont(font)
 
         self.timer_gui_update = wx.Timer(self)
         self.timer_gui_update.Start(milliseconds=500, oneShot=wx.TIMER_CONTINUOUS)
@@ -89,7 +89,7 @@ class PanelDCControl(wx.Panel):
 
         sizer_buttons = wx.BoxSizer(wx.VERTICAL)
         sizer_buttons.Add(self.btn_change_rate)
-        sizer_buttons.Add(self.btn_stop)
+        sizer_buttons.Add(self.btn_start)
 
         self.sizer.Add(sizer_spin, wx.SizerFlags().Border(wx.BOTTOM, 10))
         self.sizer.Add(sizer_buttons)
@@ -101,7 +101,7 @@ class PanelDCControl(wx.Panel):
 
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
-        self.btn_stop.Bind(wx.EVT_BUTTON, self.on_stop)
+        self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.on_start)
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.Bind(wx.EVT_TIMER, self.update_controls_from_hardware, self.timer_gui_update)
 
@@ -123,16 +123,27 @@ class PanelDCControl(wx.Panel):
     def update_controls_from_hardware(self, evt=None):
         self.warn_on_difference(self.spin_offset, self.pump.last_flow, self.spin_offset.GetValue())
 
-    def on_update(self, evt):
+    def on_start(self, evt):
+        in_start_mode = self.btn_start.GetValue()
         new_flow = self.spin_offset.GetValue()
         if self.pump:
-            self.pump.set_flow(new_flow)
-            self.update_controls_from_hardware()
+            if in_start_mode:
+                self.btn_start.SetLabel("Stop")
+                self.pump.set_flow(new_flow)
+            else:
+                self.pump.set_flow(0)
+                self.btn_start.SetLabel("Start")
 
-    def on_stop(self, evt):
+
+    def on_update(self, evt):
+        new_flow = self.spin_offset.GetValue()
+        in_start_mode = self.btn_start.GetValue()
         if self.pump:
-            self.pump.set_flow(0)
-            self.spin_offset.SetValue(0)
+            if in_start_mode:
+                self.pump.set_flow(new_flow)
+                self.update_controls_from_hardware()
+
+
 
 
 
