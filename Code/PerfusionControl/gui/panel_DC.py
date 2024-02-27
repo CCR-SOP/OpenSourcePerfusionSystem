@@ -136,6 +136,10 @@ class PanelDCControl(wx.Panel):
 
 
 
+            
+
+
+
     def on_close(self, evt):
         self.timer_gui_update.Stop()
 
