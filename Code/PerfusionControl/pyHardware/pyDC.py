@@ -33,7 +33,7 @@ class DCDeviceException(pyGeneric.HardwareException):
 class DCChannelConfig:
     device: str = ''
     line: int = 0
-    flow_range: List = field(default_factory=lambda: [0, 100])
+    flow_range: List = field(default_factory=lambda: [0, 140])
     cal_pt1_volts: np.float64 = 0.1  # values for pump 3 loaded right now
     cal_pt1_flow: np.float64 = 0.806
     cal_pt2_volts: np.float64 = 5
@@ -74,7 +74,7 @@ class DCDevice(pyGeneric.GenericDevice):
 
     def set_flow(self, ml_per_min):
         volts = self.mlpermin_to_volts(ml_per_min)
-        self._lgr.info(f'Setting flow to {ml_per_min} ml/min at {volts} volts')
+        self._lgr.info(f'Setting flow to {ml_per_min} ml/min at {volts} volts {self.cfg.cal_pt1_flow} {self.cfg.cal_pt2_flow} {self.cfg.cal_pt1_volts} {self.cfg.cal_pt2_volts}')
         self.set_output(volts)
 
     def adjust_flow_rate(self, flow_adjust: float):
