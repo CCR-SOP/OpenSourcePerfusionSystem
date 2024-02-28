@@ -180,7 +180,7 @@ class SyringeFrame(wx.Frame):
     def __init__(self, *args, **kwds):
         super().__init__(*args, **kwds)
 
-        automation_names = ['Insulin Automation', 'Epoprostenol Automation', 'TPN + Bile Salts Manual',
+        automation_names = ['Insulin Automation', 'Epoprostenol Automation', 'Solumed Manual', 'TPN + Bile Salts Manual',
                             'Glucagon Automation', 'Phenylephrine Automation', 'Zosyn Manual']
         automations = []
         for name in automation_names:

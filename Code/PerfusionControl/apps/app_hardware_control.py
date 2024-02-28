@@ -35,7 +35,8 @@ class HardwarePanel(wx.Panel):
         vaso = perfusion_system.get_automation('Vasoactive Automation')
         glucose = perfusion_system.get_automation('Glucose Automation')
         manual = [perfusion_system.get_automation('TPN + Bile Salts Manual'),
-                  perfusion_system.get_automation('Zosyn Manual')]
+                  perfusion_system.get_automation('Zosyn Manual'),
+                  perfusion_system.get_automation('Solumed Manual')]
 
         self.panel_syringes = PanelAllSyringes(self, vaso, glucose, manual)
 

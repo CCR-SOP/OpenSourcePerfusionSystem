@@ -398,7 +398,8 @@ class TestFrame(wx.Frame):
 
         vaso = SYS_PERFUSION.get_automation('Vasoactive Automation')
         glucose = SYS_PERFUSION.get_automation('Glucose Automation')
-        manual = [SYS_PERFUSION.get_automation('TPN + Bile Salts Manual'),
+        manual = [SYS_PERFUSION.get_automation('Solumed Manual'),
+                  SYS_PERFUSION.get_automation('TPN + Bile Salts Manual'),
                   SYS_PERFUSION.get_automation('Zosyn Manual')]
 
         self.panel_syringes = PanelAllSyringes(self, vaso, glucose, manual)
