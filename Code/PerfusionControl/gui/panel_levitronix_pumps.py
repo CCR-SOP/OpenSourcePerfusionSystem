@@ -72,6 +72,7 @@ class PumpConfig(wx.Panel):
         self._lgr = utils.get_object_logger(__name__, "OutputTypePanel")
         self.hw = hw
 
+
         self.sizer = None
 
         self.panel_config = ConfigGUI(self, hw.waveform, pane_label="Properties")
@@ -82,6 +83,7 @@ class PumpConfig(wx.Panel):
         self.panel_config.do_layout()
         self.chk_sine = wx.CheckBox(self.panel_config.GetPane(), label='Sine Output')
         self.panel_config.sizer.Prepend(self.chk_sine)
+        self.panel_config.Expand()
         self.panel_config.Layout()
         self.panel_config.set_bindings()
 
@@ -99,6 +101,8 @@ class PumpConfig(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
+
+
 
     def __set_bindings(self):
         self.chk_sine.Bind(wx.EVT_CHECKBOX, self.on_check_sine)
