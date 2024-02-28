@@ -308,6 +308,8 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
 
         self.sizer = wx.BoxSizer(wx.HORIZONTAL)
 
+        self.Expand()
+
         self.spin_rate = wx.SpinCtrlDouble(self.GetPane(), min=0, max=100000, inc=self._inc, initial=0)
         self.spin_rate.SetFont(font)
         self.label_rate = wx.StaticText(self.GetPane(), label='Infusion Rate\nul/min', style=wx.ALIGN_CENTER)
