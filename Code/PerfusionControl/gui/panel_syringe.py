@@ -356,8 +356,8 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
         infusion_rate = self.spin_rate.GetValue()
         if self.sensor.hw.is_infusing:
             self.sensor.hw.set_target_volume(0)
-            self.sensor.btn_basal.SetLabel('Start Basal')
-            self.sensor.btn_basal.SetValue(True)
+            self.btn_basal.SetLabel('Start Basal')
+            self.btn_basal.SetValue(True)
             self.sensor.hw.stop()
             self._lgr.info(f'Basal syringe infusion halted')
         else:
