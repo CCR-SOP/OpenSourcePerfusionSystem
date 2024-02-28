@@ -197,7 +197,7 @@ class PanelSyringeControls(wx.Panel):
 
         self.spin_volume = wx.SpinCtrlDouble(self, min=0, max=100000, inc=self._vol_inc, initial=int(self.automation.cfg.volume_ul))
         self.spin_volume.SetFont(font)
-        self.label_volume = wx.StaticText(self, label='Target Volume\nul', style=wx.ALIGN_CENTER)
+        self.label_volume = wx.StaticText(self, label='Bolus Volume\nul', style=wx.ALIGN_CENTER)
         self.label_volume.SetFont(font_smaller)
         self.btn_bolus = wx.Button(self, label='Bolus')
         self.btn_bolus.SetFont(font_smaller)
@@ -241,17 +241,21 @@ class PanelSyringeControls(wx.Panel):
         sensor = self.automation.device
         if sensor.hw.is_infusing:
             sensor.hw.set_target_volume(0)
+            self.spin_volume.SetValue(0)
             self.btn_basal.SetLabel('Start Basal')
             self.btn_basal.SetValue(True)
             sensor.hw.stop()
             self._lgr.info(f'Basal syringe infusion halted')
+            self.spin_volume.Enable()
         else:
             sensor.hw.set_infusion_rate(infusion_rate)
             sensor.hw.set_target_volume(0)
+            self.spin_volume.SetValue(0)
             sensor.hw.start_constant_infusion()
             self.btn_basal.SetLabel('Stop Basal')
             self.btn_basal.SetValue(False)
             self._lgr.info(f'Basal syringe infusion at rate {infusion_rate} uL/min started')
+            self.spin_volume.Disable()
 
     def OnBolus(self, evt):
         sensor = self.automation.device
@@ -313,7 +317,7 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
 
         self.spin_volume = wx.SpinCtrlDouble(self.GetPane(), min=0, max=100000, inc=self._vol_inc, initial=0)
         self.spin_volume.SetFont(font)
-        self.label_volume = wx.StaticText(self.GetPane(), label='Target Volume\nul', style=wx.ALIGN_CENTER)
+        self.label_volume = wx.StaticText(self.GetPane(), label='Bolus Volume\nul', style=wx.ALIGN_CENTER)
         self.label_volume.SetFont(font_smaller)
         self.btn_bolus = wx.Button(self.GetPane(), label='Bolus')
         self.btn_bolus.SetFont(font_smaller)
@@ -360,6 +364,8 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
             self.btn_basal.SetValue(True)
             self.sensor.hw.stop()
             self._lgr.info(f'Basal syringe infusion halted')
+            self.spin_volume.Enable()
+            self.btn_bolus.Enable()
         else:
             self.sensor.hw.set_infusion_rate(infusion_rate)
             self.sensor.hw.set_target_volume(0)
@@ -367,6 +373,8 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
             self.btn_basal.SetLabel('Stop Basal')
             self.btn_basal.SetValue(False)
             self._lgr.info(f'Basal syringe infusion at rate {infusion_rate} uL/min started')
+            self.spin_volume.Disable()
+            self.btn_bolus.Disable()
 
     def OnBolus(self, evt):
         infusion_rate = self.spin_rate.GetValue()
