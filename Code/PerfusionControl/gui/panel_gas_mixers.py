@@ -189,6 +189,9 @@ class BaseGasMixerPanel(wx.Panel):
 
         self.update_controls_from_hardware()
 
+        self.btn_auto.SetBackgroundColour(wx.Colour(126, 202, 22))
+        self.btn_flow.SetBackgroundColour(wx.Colour(153, 204, 255))
+
     def __set_bindings(self):
         self.btn_flow.Bind(wx.EVT_TOGGLEBUTTON, self.OnFlow)
         self.btn_update.Bind(wx.EVT_BUTTON, self.OnUpdate)
@@ -246,9 +249,11 @@ class BaseGasMixerPanel(wx.Panel):
             self._update_manual_entries()
             self.autogasmixer.stop()
             self.btn_auto.SetLabel('Automate')
+            self.btn_auto.SetBackgroundColour(wx.Colour(126, 202, 22))
         else:
             self.autogasmixer.start()
             self.btn_auto.SetLabel('Switch to Manual Control')
+            self.btn_auto.SetBackgroundColour(wx.Colour(113, 182, 20))
         self.slider_mix.Enable(not self.btn_auto.GetValue())
         self.spin_flow_adjust.Enable(not self.btn_auto.GetValue())
         self.Refresh()
@@ -290,9 +295,11 @@ class BaseGasMixerPanel(wx.Panel):
         self.btn_flow.SetValue(working_status)
         if working_status:
             self.btn_flow.SetLabel('Disable Flow')
+            self.btn_flow.SetBackgroundColour(wx.Colour(102, 153, 255))
             # self.btn_update.Enable(False)
         else:
             self.btn_flow.SetLabel('Enable Flow')
+            self.btn_flow.SetBackgroundColour(wx.Colour(153, 204, 255))
             # self.btn_update.Enable(True)
 
         self.update_controls()

@@ -170,6 +170,7 @@ class BaseLeviPumpPanel(wx.Panel):
         # Buttons for functionality
         self.btn_update = wx.Button(self, label='Update')
         self.btn_start = wx.ToggleButton(self, label='Start')
+        self.btn_start.SetBackgroundColour(wx.Colour(153, 204, 255))
         self.chk_auto = wx.CheckBox(self, label='Maintain\nFlow')
 
         self.__do_layout()
@@ -215,6 +216,7 @@ class BaseLeviPumpPanel(wx.Panel):
         if in_start_mode:
 
             self.btn_start.SetLabel('Stop')
+            self.btn_start.SetBackgroundColour(wx.Colour(102, 153, 255))
             if in_auto_mode:
 
                 self.autolevipump.start()
@@ -224,6 +226,7 @@ class BaseLeviPumpPanel(wx.Panel):
         else:
 
             self.btn_start.SetLabel('Start')
+            self.btn_start.SetBackgroundColour(wx.Colour(153, 204, 255))
             if in_auto_mode:
                 self.autolevipump.stop()
             else:

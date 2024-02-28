@@ -229,6 +229,8 @@ class PanelSyringeControls(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
         self.Fit()
+        self.btn_basal.SetBackgroundColour(wx.Colour(153, 204, 255))
+        self.btn_bolus.SetBackgroundColour(wx.Colour(153, 204, 255))
 
     def __set_bindings(self):
         self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
@@ -243,6 +245,8 @@ class PanelSyringeControls(wx.Panel):
             sensor.hw.set_target_volume(0)
             self.spin_volume.SetValue(0)
             self.btn_basal.SetLabel('Start Basal')
+            self.btn_basal.SetBackgroundColour(wx.Colour(153, 204, 255))
+            self.btn_bolus.SetBackgroundColour(wx.Colour(153, 204, 255))
             self.btn_basal.SetValue(True)
             sensor.hw.stop()
             self._lgr.info(f'Basal syringe infusion halted')
@@ -253,6 +257,7 @@ class PanelSyringeControls(wx.Panel):
             self.spin_volume.SetValue(0)
             sensor.hw.start_constant_infusion()
             self.btn_basal.SetLabel('Stop Basal')
+            self.btn_basal.SetBackgroundColour(wx.Colour(102, 153, 255))
             self.btn_basal.SetValue(False)
             self._lgr.info(f'Basal syringe infusion at rate {infusion_rate} uL/min started')
             self.spin_volume.Disable()
@@ -265,6 +270,7 @@ class PanelSyringeControls(wx.Panel):
         sensor.hw.set_target_volume(target_vol)
         sensor.hw.infuse_to_target_volume()
         self.btn_basal.SetLabel('Stop Bolus')
+        self.btn_bolus.SetBackgroundColour(wx.Colour(102, 153, 255))
         self._lgr.info(f'Bolus syringe infusion at rate {infusion_rate} uL/min to target volume {target_vol} started')
 
     def update_controls_from_hardware(self, evt=None):
@@ -351,6 +357,8 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
         self.GetPane().SetSizer(self.sizer)
         self.Layout()
         self.Fit()
+        self.btn_basal.SetBackgroundColour(wx.Colour(153, 204, 255))
+        self.btn_bolus.SetBackgroundColour(wx.Colour(153, 204, 255))
 
     def __set_bindings(self):
         self.btn_basal.Bind(wx.EVT_TOGGLEBUTTON, self.OnBasal)
@@ -363,6 +371,8 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
         if self.sensor.hw.is_infusing:
             self.sensor.hw.set_target_volume(0)
             self.btn_basal.SetLabel('Start Basal')
+            self.btn_basal.SetBackgroundColour(wx.Colour(153, 204, 255))
+            self.btn_bolus.SetBackgroundColour(wx.Colour(153, 204, 255))
             self.btn_basal.SetValue(True)
             self.sensor.hw.stop()
             self._lgr.info(f'Basal syringe infusion halted')
@@ -373,6 +383,7 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
             self.sensor.hw.set_target_volume(0)
             self.sensor.hw.start_constant_infusion()
             self.btn_basal.SetLabel('Stop Basal')
+            self.btn_basal.SetBackgroundColour(wx.Colour(102, 153, 255))
             self.btn_basal.SetValue(False)
             self._lgr.info(f'Basal syringe infusion at rate {infusion_rate} uL/min started')
             self.spin_volume.Disable()
@@ -385,6 +396,7 @@ class PanelSyringeControlsSimple(wx.CollapsiblePane):
         self.sensor.hw.set_target_volume(target_vol)
         self.sensor.hw.infuse_to_target_volume()
         self.btn_basal.SetLabel('Stop Bolus')
+        self.btn_bolus.SetBackgroundColour(wx.Colour(102, 153, 255))
         self._lgr.info(f'Bolus syringe infusion at rate {infusion_rate} uL/min to target volume {target_vol} started')
 
     def update_controls_from_hardware(self, evt=None):
