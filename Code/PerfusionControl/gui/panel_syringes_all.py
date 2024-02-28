@@ -130,7 +130,7 @@ class PanelVasoactive(wx.Panel):
         sizer_adjustments = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_adjustments.Add(self.syringe_collapsible['constrictor'])
-        sizer_adjustments.AddStretchSpacer(3)
+        sizer_adjustments.AddStretchSpacer(6)
 
         sizer_min = wx.BoxSizer(wx.VERTICAL)
         sizer_min.Add(self.label_min_pressure)
@@ -154,7 +154,7 @@ class PanelVasoactive(wx.Panel):
         sizer_buttons.Add(self.btn_update)
         sizer_adjustments.Add(sizer_buttons, wx.SizerFlags().CenterVertical().Border(wx.RIGHT, 10))
 
-        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Border(wx.RIGHT, 10))
+        sizer_adjustments.Add(self.btn_auto, wx.SizerFlags().Expand().Proportion(1).Border(wx.RIGHT, 10))
 
         sizer_adjustments.AddStretchSpacer(3)
         sizer_adjustments.Add(self.syringe_collapsible['dilator'])
@@ -288,7 +288,7 @@ class PanelGlucose(wx.Panel):
         sizer_adjustments = wx.BoxSizer(wx.HORIZONTAL)
 
         sizer_adjustments.Add(self.syringe_collapsible['decrease'])
-        sizer_adjustments.AddStretchSpacer(3)
+        sizer_adjustments.AddStretchSpacer(7)
 
         sizer_min = wx.BoxSizer(wx.VERTICAL)
         sizer_min.Add(self.label_min_glucose)
