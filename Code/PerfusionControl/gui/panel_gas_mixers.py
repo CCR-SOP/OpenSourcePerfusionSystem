@@ -249,10 +249,12 @@ class BaseGasMixerPanel(wx.Panel):
             self._update_manual_entries()
             self.autogasmixer.stop()
             self.btn_auto.SetLabel('Automate')
+            self.btn_update.Enable()
             self.btn_auto.SetBackgroundColour(wx.Colour(126, 202, 22))
         else:
             self.autogasmixer.start()
             self.btn_auto.SetLabel('Switch to Manual Control')
+         #  self.btn_update.Disable()
             self.btn_auto.SetBackgroundColour(wx.Colour(113, 182, 20))
         self.slider_mix.Enable(not self.btn_auto.GetValue())
         self.spin_flow_adjust.Enable(not self.btn_auto.GetValue())
@@ -300,7 +302,7 @@ class BaseGasMixerPanel(wx.Panel):
         else:
             self.btn_flow.SetLabel('Enable Flow')
             self.btn_flow.SetBackgroundColour(wx.Colour(153, 204, 255))
-            # self.btn_update.Enable(True)
+           # self.btn_update.Enable(True)
 
         self.update_controls()
 
