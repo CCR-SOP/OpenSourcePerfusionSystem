@@ -166,6 +166,8 @@ class PanelVasoactive(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
 
+        self.btn_auto.SetBackgroundColour(wx.Colour(126, 202, 22))
+
     def __set_bindings(self):
         self.btn_auto.Bind(wx.EVT_TOGGLEBUTTON, self.on_auto)
         self.btn_save.Bind(wx.EVT_BUTTON, self.on_save)
@@ -201,9 +203,11 @@ class PanelVasoactive(wx.Panel):
         if not self.btn_auto.GetValue():
             self.automation.stop()
             self.btn_auto.SetLabel('Automate')
+            self.btn_auto.SetBackgroundColour(wx.Colour(126, 202, 22))
         else:
             self.automation.start()
-            self.btn_auto.SetLabel('Switch to\nManual Control')
+            self.btn_auto.SetLabel('Switch to\nManual\nControl')
+            self.btn_auto.SetBackgroundColour(wx.Colour(113, 182, 20))
         self.Refresh()
         for pane in self.syringe_collapsible.values():
             pane.Enable(not self.btn_auto.GetValue())
@@ -324,6 +328,8 @@ class PanelGlucose(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
 
+        self.btn_auto.SetBackgroundColour(wx.Colour(126, 202, 22))
+
     def __set_bindings(self):
         self.btn_auto.Bind(wx.EVT_TOGGLEBUTTON, self.on_auto)
         self.btn_save.Bind(wx.EVT_BUTTON, self.on_save)
@@ -340,9 +346,11 @@ class PanelGlucose(wx.Panel):
         if not self.btn_auto.GetValue():
             self.automation.stop()
             self.btn_auto.SetLabel('Automate')
+            self.btn_auto.SetBackgroundColour(wx.Colour(126, 202, 22))
         else:
             self.automation.start()
-            self.btn_auto.SetLabel('Switch to\nManual Control')
+            self.btn_auto.SetLabel('Switch to\nManual\nControl')
+            self.btn_auto.SetBackgroundColour(wx.Colour(113, 182, 20))
 
         self.Refresh()
         for pane in self.syringe_collapsible.values():

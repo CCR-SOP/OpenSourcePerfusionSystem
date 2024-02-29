@@ -58,11 +58,11 @@ class DialysisPumpPanel(wx.Panel):
         self.text_log_roller_pumps = utils.create_log_display(self, logging.INFO, log_names, use_last_name=True)
 
         # Add auto start button
-        self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis', size=(180, 20))
+        self.btn_auto_dialysis = wx.Button(self, label='Start Auto Dialysis', size=(840, 30))
         font =wx.Font()
-        font.SetPointSize(8)
+        font.SetPointSize(10)
         self.btn_auto_dialysis.SetFont(font)
-        # self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
+        self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(126, 202, 22))
 
         self.__do_layout()
         self.__set_bindings()
@@ -103,14 +103,14 @@ class DialysisPumpPanel(wx.Panel):
     def on_auto(self, evt):
         if self.btn_auto_dialysis.GetLabel() == "Start Auto Dialysis":
             self.btn_auto_dialysis.SetLabel("Stop Auto Dialysis")
-            self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(240, 0, 0))
+            self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(113, 182, 20))
             for automation in self.automations:
                 automation.start()
             for panel in self.panels:
                 panel.panel_dc.spin_offset.Enable(False)
         else:
             self.btn_auto_dialysis.SetLabel("Start Auto Dialysis")
-            self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(0, 240, 0))
+            self.btn_auto_dialysis.SetBackgroundColour(wx.Colour(126, 202, 22))
             for automation in self.automations:
                 automation.stop()
             for panel in self.panels:

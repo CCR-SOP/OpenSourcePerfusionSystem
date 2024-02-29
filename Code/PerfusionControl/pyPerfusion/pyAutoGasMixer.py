@@ -214,14 +214,15 @@ class AutoGasMixerArterial(AutoGasMixer):
               self.gas_device.bolus_O2()
               self.gas_device.resume_flow()
               self._lgr.info(f'{self.name}: PO2 low: {PO2}. Resuming flow.')
-        elif PO2 > self.cfg.PO2_max and pH < self.cfg.pH_max:
+        elif PO2 > self.cfg.PO2_max:  # and pH < self.cfg.pH_max:
               self.gas_device.bolus_O2()
               self.gas_device.cancel_flow()
               self._lgr.info(f'{self.name}: PO2 high: {PO2}.Stopping flow.')
         elif PO2 > self.cfg.PO2_max and pH > self.cfg.pH_max:
               self.gas_device.bolus_CO2()
               self.gas_device.resume_flow()
-              self._lgr.warning(f'{self.name}: PO2 high: {PO2} but artery is basic. Bolusing CO2.')
+              self._lgr.warning(f'{self.name}: PO2 high: {PO2} but artery is basic: {pH}. Bolusing CO2.')
+
 
 #    def _update_O2(self, O2: float):
 #

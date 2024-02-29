@@ -99,6 +99,8 @@ class PanelDCControl(wx.Panel):
         self.SetSizer(self.sizer)
         self.Layout()
 
+        self.btn_start.SetBackgroundColour(wx.Colour(153, 204, 255))
+
     def __set_bindings(self):
         self.btn_change_rate.Bind(wx.EVT_BUTTON, self.on_update)
         self.btn_start.Bind(wx.EVT_TOGGLEBUTTON, self.on_start)
@@ -129,10 +131,12 @@ class PanelDCControl(wx.Panel):
         if self.pump:
             if in_start_mode:
                 self.btn_start.SetLabel("Stop")
+                self.btn_start.SetBackgroundColour(wx.Colour(102, 153, 255))
                 self.pump.set_flow(new_flow)
             else:
                 self.pump.set_flow(0)
                 self.btn_start.SetLabel("Start")
+                self.btn_start.SetBackgroundColour(wx.Colour(153, 204, 255))
 
 
     def on_update(self, evt):
