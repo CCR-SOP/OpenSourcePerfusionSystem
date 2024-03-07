@@ -159,7 +159,7 @@ class GasDevice(pyGeneric.GenericDevice):
 
     def resume_flow(self):
         flow = self.get_total_flow()
-        self.set_total_flow(flow)
+        self.set_total_flow(flow + 5)
 
 
     def bolus_CO2(self):
