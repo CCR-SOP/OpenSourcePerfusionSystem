@@ -256,6 +256,10 @@ class ReaderPoints(Reader):
                 if key == 'Data Type':
                     self.sensor.data_dtype = np.dtype(value)
                 elif key == 'Start of Acquisition':
+                    if value == '1970-01-01 00:00:00':
+                        # some dat files did not record correct date and is missing milliseconds
+                        # update date and assume start at midnight to force conversion
+                        value = f'{pathlib.PurePath(self.fqpn).parent.name} 00:00:00.00'
                     start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
                     self.sensor.acq_start_ms = start_ts.timestamp() * 1000
                 elif key == 'samples_per_timestamp':
@@ -434,7 +438,7 @@ class WriterStream:
         fid = open(self.fqpn.with_suffix('').with_suffix('.txt'), 'wt')
         fid.write(hdr_str)
         timestamp = datetime.utcfromtimestamp(self.sensor.get_acq_start_ms() / 1_000)
-        fid.write(f'Start of Acquisition: {timestamp}')
+        fid.write(f'Start of Acquisition: {timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")}')
 
         fid.close()
 
