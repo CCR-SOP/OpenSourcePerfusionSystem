@@ -280,7 +280,7 @@ class ReaderPoints(Reader):
                 if key == 'Data Type':
                     self.sensor.data_dtype = np.dtype(value)
                 elif key == 'Start of Acquisition':
-                    if value == '1970-01-01 00:00:00':
+                    if value.startswith('1970-01-01 00:00:00'):
                         # some dat files did not record correct date and is missing milliseconds
                         # update date and assume start at midnight to force conversion
                         value = f'{pathlib.PurePath(self.fqpn).parent.name} 00:00:00.00'
