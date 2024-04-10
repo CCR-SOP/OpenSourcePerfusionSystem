@@ -68,9 +68,7 @@ def read_file(filename):
 
 
 def convert_to_csv(reader):
-    logging.getLogger().debug('getting all data')
     ts, data = reader.get_all()
-    logging.getLogger().debug('done')
     array_data = True
     if type(reader) == Reader:
         array_data = False
@@ -79,7 +77,6 @@ def convert_to_csv(reader):
         data = data.reshape(-1, reader.sensor.samples_per_timestamp)
         start_ts = 0
     csv = ''
-    logging.getLogger().debug('converting all data')
     for t, d in zip(ts, data):
         if array_data:
             data_str = ','.join(map(str, d))
@@ -100,12 +97,7 @@ def get_standard_filename(date_str, sensor_name, output_type):
 
 
 def save_to_csv(filename):
-    lgr = logging.getLogger()
-
-    lgr.debug('reading file')
     reader = read_file(filename)
-
-    lgr.debug('getting data')
     ts, data = reader.get_all()
 
     array_data = True
@@ -113,32 +105,18 @@ def save_to_csv(filename):
         array_data = False
         start_ts = reader.sensor.get_acq_start_ms()
     else:
-        try:
-            data = data.reshape(-1, reader.sensor.samples_per_timestamp)
-            start_ts = 0
-        except ValueError:
-            lgr.debug(f'len(ts) = {len(ts)}, len(data) = {len(data)}')
+        data = data.reshape(-1, reader.sensor.samples_per_timestamp)
+        start_ts = 0
 
-    lgr.debug('opening csv')
     with open(reader.fqpn.with_suffix('.csv'), 'wt') as csv_file:
         for t, d in zip(ts, data):
             if array_data:
                 data_str = ','.join(map(str, d))
             else:
                 data_str = f'{d}'
-            try:
-                csv = f'{datetime.fromtimestamp((start_ts + t)/ 1000.0)}, {data_str}\n'
-            except OSError as e:
-                lgr.debug('OSError exception')
-                lgr.debug(f'len(ts) = {len(ts)}, len(data) = {len(data)}')
-                lgr.debug(f'start_ts = {start_ts}, t = {t}, data_str = {data_str}')
-                lgr.debug(f'timestamp = {(start_ts + t)/ 1000.0}')
-                break
-            else:
-                csv_file.write(csv)
 
-    lgr.debug('completed csv conversion')
-
+            csv = f'{datetime.fromtimestamp((start_ts + t)/ 1000.0)}, {data_str}\n'
+            csv_file.write(csv)
 
 class Reader:
     def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterConfig, sensor):
@@ -159,7 +137,6 @@ class Reader:
         settings_file = self.fqpn.with_suffix('.txt')
         with open(settings_file) as reader:
             for line in reader:
-                self._lgr.debug(f'Reading line ||{line}||')
                 key, value = line.strip().split(': ')
                 if key == 'Data Type':
                     self.sensor.data_dtype = np.dtype(value)
@@ -169,15 +146,12 @@ class Reader:
                         # update date and assume start at midnight to force conversion
                         value = f'{pathlib.PurePath(self.fqpn).parent.name} 00:00:00.00'
                     start_ts = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
-                    self._lgr.debug(f'timestamp = {start_ts}, {start_ts.timestamp()}')
                     self.sensor.acq_start_ms = start_ts.timestamp() * 1000
                 elif key == 'Sampling Period (ms)':
                     self.sensor.sampling_period_ms = int(value)
         # error in some dat files did not include sampling period
         if self.sensor.sampling_period_ms == 0:
             self.sensor.sampling_period_ms = 100
-
-        self._lgr.debug('completed read_settings')
 
     def _open_read(self):
         fid = open(self.fqpn, 'rb')
@@ -261,16 +235,13 @@ class Reader:
         return data_time, data
 
     def get_all(self):
-        self._lgr.debug('in get_all')
         period = self.sensor.sampling_period_ms
-        self._lgr.debug('opening mmap')
         fid, data = self._open_mmap()
 
         if data is None:
             return [], []
 
         file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
-        self._lgr.debug(f'file_size_in_samples is {file_size_in_samples}')
         data_time = np.linspace(0, file_size_in_samples * period,
                                 num=file_size_in_samples, dtype=np.uint64)
         fid.close()
@@ -412,7 +383,8 @@ class ReaderPoints(Reader):
         total_chunks = file_size/self.bytes_per_chunk
         fid.seek(0)
 
-        dtype = np.dtype({'names': ('time', 'data'), 'formats': (np.uint64, np.float64)})
+        format_str = f'(1,{self.cfg.samples_per_timestamp}){self.data_dtype}'
+        dtype = np.dtype({'names': ('time', 'data'), 'formats': (np.uint64, format_str)})
         all_data = np.fromfile(fid, dtype=dtype)
         data_time = [struct.unpack('!Q', chunk)[0] for chunk in all_data['time']]
         data = all_data['data']
