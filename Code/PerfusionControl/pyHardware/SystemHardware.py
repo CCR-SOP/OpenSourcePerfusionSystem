@@ -22,9 +22,11 @@ from pyHardware.pyDC import DCDevice
 from pyHardware.pyLeviFlow import *
 from pyHardware.pyPuraLevi30 import *
 from pyHardware.pyCITSens import *
+from pyHardware.pyAI_MCC import *
 
 
 MOCKS = {'NIDAQAIDevice': 'AIDevice',
+         'MCCAIDevice': 'AIDevice',
          'CDI': 'MockCDI',
          'Pump11Elite': 'MockPump11Elite',
          'GasDevice': 'MockGasDevice',

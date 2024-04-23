@@ -21,7 +21,7 @@ import time
 
 import numpy as np
 from mcculw import ul
-from mcculw.enums import ScanOptions, ULRange, AnalogInputMode, FunctionType, Status
+from mcculw.enums import ScanOptions, ULRange, AnalogInputMode, FunctionType, Status, InterfaceType
 from mcculw.ul import ULError
 from mcculw.device_info import DaqDeviceInfo
 
@@ -33,6 +33,7 @@ import pyPerfusion.PerfusionConfig as PerfusionConfig
 @dataclass
 class AIMCCDeviceConfig(pyAI.AIDeviceConfig):
     ai_range: ULRange = ULRange.BIP10VOLTS
+    total_buffers: int = 2
 
 
 class MCCAIDevice(pyAI.AIDevice):
@@ -40,23 +41,17 @@ class MCCAIDevice(pyAI.AIDevice):
         super().__init__(name)
 
         self.cfg = AIMCCDeviceConfig()
+        self.board_num = None
         self.buf_dtype = np.float64
         self.__timeout = 1.0
-        self._task = None
-        self._exception_msg_ack = False
         self._last_acq = None
         self._acq_buf = None
+        self._read_buf_idx = -1
         self._chan_range = (-1, -1)
         self._scan_options = (ScanOptions.BACKGROUND |
                               ScanOptions.CONTINUOUS |
                               ScanOptions.BURSTMODE |
                               ScanOptions.SCALEDATA)
-
-    def dev_info(self):
-        # recreate from scratch so base naming convention does not need
-        # to be consistent with actual hardware naming convention
-        lines = [ch.cfg.line for ch in self.ai_channels]
-        self._chan_range = (min(lines), max(lines))
 
     @property
     def total_channels(self):
@@ -67,47 +62,46 @@ class MCCAIDevice(pyAI.AIDevice):
     def acq_points(self):
         return self.total_channels * self.samples_per_read
 
-    @property
-    def board_num(self):
-        return int(self.cfg.device_name)
+    def get_status(self):
+        status = Status.IDLE
+        try:
+            if self.board_num:
+                status = ul.get_status(self.board_num, FunctionType.AIFUNCTION)
+        except ULError as e:
+            self._lgr.error(f'Failure getting status from MCC Board {self.board_num}')
+            self._lgr.error(e)
+            raise pyAI.AIDeviceException(f'In MCCAIDevice.get_status: {e.message}')
+        return status
 
     def is_open(self):
         # if channels were added and device name is valid, then we have
         # confirmed that the device is present and the configuration
         # is valid
-        return self.cfg.device_name and super().is_open()
+        return self.board_num is not None
 
     def run(self):
         while not PerfusionConfig.MASTER_HALT.is_set():
-            # period_timeout = 100
-            #if not self._event_halt.wait(timeout=period_timeout):
-            self._acq_samples()
+            time.sleep(self.__timeout)
+            if self.board_num:
+                status, transfer_status = ul.get_scan_status(self.board_num)
+                if status == Status.RUNNING:
+                    buf_idx = (transfer_status % self.acq_points) - 1
+                    if not self._read_buf_idx == buf_idx:
+                        self._read_buf_idx = buf_idx - 1
+                        self._acq_samples()
 
     def _acq_samples(self):
         buffer_t = utils.get_epoch_ms() - self.get_acq_start_ms()
         try:
-            if self._task and len(self.ai_channels) > 0:
-
-                offset = 0
-                for ch in self.ai_channels:
-                    buf = self._acq_buf[slice(offset, None, self.total_channels)]
-                    ch.put_data(buf, buffer_t)
-                    offset += 1
+            offset = self._read_buf_idx * self.acq_points
+            for ch in self.ai_channels:
+                buf = self._acq_buf[slice(offset, offset+self.acq_points, self.total_channels)]
+                ch.put_data(buf, buffer_t)
+                offset += 1
         except Exception as e:
             self._lgr.exception(f'For device {self.name}, unknown exception {e}')
 
-    def _is_valid_device_name(self, device):
-        try:
-            dev_info = DaqDeviceInfo(device)
-        except ULError as e:
-            self._lgr.exception(f'Device {device} is not a valid device')
-            return False
-        else:
-            return True
-
     def remove_channel(self, name: str):
-        if not self._task:
-            raise pyAI.AIDeviceException(f'Cannot remove channel {name}, device {self.cfg.device_name} not yet opened')
         acquiring = self.is_acquiring
         self.stop()
         super().remove_channel(name)
@@ -115,37 +109,51 @@ class MCCAIDevice(pyAI.AIDevice):
             self.start()
 
     def open(self):
-        ul.a_input_mode(self.board_num, AnalogInputMode.SINGLE_ENDED)
         # ensure the buffer type is float64 for MCC devices
         self.cfg.buf_type = 'float64'
         super().open()
-        if not self._is_valid_device_name(self.cfg.device_name):
-            msg = f'Device "{self.cfg.device_name}" is not a valid device name on this system. ' \
+
+        descriptors = ul.get_daq_device_inventory(InterfaceType.USB)
+        device = next(filter(lambda desc: ul.get_board_number(desc) == self.board_num, descriptors), None)
+        if device:
+            self.board_num = ul.get_board_number(device)
+            ul.a_input_mode(self.board_num, AnalogInputMode.SINGLE_ENDED)
+        else:
+            msg = f'Device "{self.board_num}" is not a valid MCC Board Num on this system. ' \
                   f'Please check that the hardware had been plugged in and the correct' \
                   f'device name has been used'
             self._lgr.error(msg)
+            self.board_num = None
             raise pyAI.AIDeviceException(msg)
 
     def close(self):
         self.stop()
 
     def start(self):
-        rate = np.ceil(1.0 / self.cfg.sampling_period_ms)
-        ul.a_in_scan(int(self.cfg.device_name), self._chan_range[0], self._chan_range[1],
-                     self.acq_points, rate, self.cfg.ai_range, self._acq_buf, self._scan_options)
-        total_count = self.total_channels * self.samples_per_read
+        lines = [ch.cfg.line for ch in self.ai_channels]
+        self._chan_range = (min(lines), max(lines))
+
+        total_count = self.total_channels * self.samples_per_read * self.cfg.total_buffers
         self._acq_buf = ul.scaled_win_buf_alloc(total_count)
+        rate = np.ceil(1.0 / self.cfg.sampling_period_ms)
+        self._read_buf_idx = -1
+        ul.a_in_scan(self.board_num, self._chan_range[0], self._chan_range[1],
+                     self.acq_points, rate, self.cfg.ai_range, self._acq_buf, self._scan_options)
+
         super().start()
 
     def stop(self):
-        ul.stop_background(self.board_num, FunctionType.AIFUNCTION)
-        running = ul.get_status(self.board_num, FunctionType.AIFUNCTION).status
+        if self.board_num:
+            ul.stop_background(self.board_num, FunctionType.AIFUNCTION)
+        running = self.get_status()
         waiting = 0
         while running == Status.RUNNING and (waiting < 1.0):
             time.sleep(0.1)
             waiting += 0.1
-            running = ul.get_status(self.board_num, FunctionType.AIFUNCTION).status
+            running = self.get_status()
 
         if running == Status.RUNNING:
             self._lgr.error(f'MCC Board {self.board_num} could not be stopped')
+        else:
+            ul.win_buf_free(self._acq_buf)
         super().stop()
