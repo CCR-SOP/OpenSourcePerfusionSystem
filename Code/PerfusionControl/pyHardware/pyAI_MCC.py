@@ -102,7 +102,6 @@ class MCCAIDevice(pyAI.AIDevice):
                 period_timeout = self.cfg.read_period_ms / 1_000.0
                 if not self._event_halt.wait(timeout=period_timeout):
                     if self.board_num is not None:
-                        self._lgr.debug('in run()')
                         status_info = self.get_status()
                         if status_info.status == Status.RUNNING:
                             if status_info.cur_index >= 0:
@@ -142,14 +141,17 @@ class MCCAIDevice(pyAI.AIDevice):
         self.cfg.buf_type = 'float64'
         super().open()
         descriptors = ul.get_daq_device_inventory(InterfaceType.USB)
-        if len(descriptors) > 1:
+        if len(descriptors) == 1:
+            device = descriptors[0]
+            self.board_num = 0
+        elif len(descriptors) > 1:
             self._lgr.info(f'Found multiple MCC devices, checking for matching board numbers')
             device = next(filter(lambda desc: ul.get_board_number(desc) == int(self.cfg.device_name), descriptors), None)
             self.board_num = self.cfg.device_number
             self._lgr.debug(f'found device {device}')
         else:
-            device = descriptors[0]
-            self.board_num = 0
+            device = None
+            self.board_num = None
 
         if device is None:
             msg = f'Device "{self.board_num}" is not a valid MCC Board Num on this system. ' \
