@@ -18,7 +18,6 @@ and under the public domain.
 from ctypes import cast, POINTER, c_double
 from dataclasses import dataclass
 import time
-import inspect
 
 import numpy as np
 from mcculw import ul
@@ -128,6 +127,9 @@ class MCCAIDevice(pyAI.AIDevice):
                                     if buf_idx == 0:
                                         first_run = False
                                 else:
+                                    if ((self._read_buf_idx == buf_idx + 1) or
+                                       (buf_idx == self.cfg.total_buffers - 1 and self._read_buf_idx == 0)):
+                                        self._lgr.warning('Potential buffer overflow in MCC Board')
                                     if buf_idx != self._read_buf_idx:
                                         self._acq_samples();
                 except Exception as e:
