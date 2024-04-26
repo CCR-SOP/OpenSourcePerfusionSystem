@@ -99,15 +99,17 @@ class MCCAIDevice(pyAI.AIDevice):
             raise pyAI.AIDeviceException(f'Could not allocate memory of size {total_count}')
 
         self._acq_buf = cast(self._memhandle, POINTER(c_double))
-        self._lgr.debug(f'period is {self.cfg.sampling_period_ms}')
         rate = int(1000.0 / self.cfg.sampling_period_ms)
-        self._lgr.debug(f'rate is {rate}')
+        actual_rate = 0
         try:
             actual_rate = ul.a_in_scan(self.board_num, self._chan_range[0], self._chan_range[1],
                                        total_count, rate,
                                        self.cfg.ai_range, self._memhandle, self._scan_options)
         except Exception as e:
             self._lgr.exception(e)
+            self.stop()
+            return
+
         if actual_rate != rate:
             self._lgr.warning(f'Actual sampling rate for MCC Board {self.board_num} is {actual_rate}, should be {rate}')
 
@@ -126,8 +128,6 @@ class MCCAIDevice(pyAI.AIDevice):
                                     if buf_idx == 0:
                                         first_run = False
                                 else:
-                                    self._lgr.debug(f'buf_idx={buf_idx}, read_idx={self._read_buf_idx}, '
-                                                    f'cur_index={status_info.cur_index}, acq_pts={self.acq_points}')
                                     if buf_idx != self._read_buf_idx:
                                         self._acq_samples();
                 except Exception as e:
@@ -136,7 +136,6 @@ class MCCAIDevice(pyAI.AIDevice):
         self._lgr.debug('pyAI_MCC thread has ended.')
 
     def _acq_samples(self):
-        self._lgr.debug('acquiring samples')
         buffer_t = utils.get_epoch_ms() - self.get_acq_start_ms()
         try:
             offset = self._read_buf_idx * self.acq_points

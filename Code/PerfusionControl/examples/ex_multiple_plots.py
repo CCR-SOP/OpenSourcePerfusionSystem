@@ -63,6 +63,7 @@ class MyTestApp(wx.App):
 if __name__ == '__main__':
     PerfusionConfig.set_test_config()
     utils.setup_default_logging('ex_multiple_plots', logging.DEBUG)
+    utils.only_show_logs_from(['pyHardware.pyGeneric.MCC_Brd0'])
     sys = PerfusionSystem()
     sys.open()
     sys.load_all()

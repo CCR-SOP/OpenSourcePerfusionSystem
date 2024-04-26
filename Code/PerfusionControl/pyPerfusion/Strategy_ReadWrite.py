@@ -455,7 +455,10 @@ class WriterStream:
         self._open_write()
 
     def close(self):
-        self._fid.close()
+        try:
+            self._fid.close()
+        except AttributeError as e:
+            self._lgr.error(f'Attempt to close {self._filename} failed as fid=None')
 
     def _process(self, buffer, t=None):
         # the default WriterStream doesn't alter the data
