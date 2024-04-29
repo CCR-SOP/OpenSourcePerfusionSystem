@@ -102,6 +102,10 @@ class Sensor:
         strategy.open(sensor=self)
         self._strategies.append(strategy)
 
+    def get_reader_names(self):
+        strategy_names = [strategy.name for strategy in self._strategies]
+        return strategy_names
+
     def get_reader(self, name: str = None):
         writer = self.get_writer(name)
         if writer is None:
