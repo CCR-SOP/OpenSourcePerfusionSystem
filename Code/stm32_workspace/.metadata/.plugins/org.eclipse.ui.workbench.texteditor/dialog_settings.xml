@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <section name="Workbench">
 	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
-		<item key="selection" value=""/>
+		<item key="selection" value="StartDefaultTask"/>
 		<item key="wrap" value="true"/>
 		<item key="casesensitive" value="false"/>
 		<item key="wholeword" value="false"/>
 		<item key="incremental" value="false"/>
 		<item key="isRegEx" value="false"/>
 		<list key="findhistory">
+			<item value="StartDefaultTask"/>
+			<item value="flag_dac_u"/>
 			<item value="dac0"/>
 			<item value="dac"/>
 			<item value="cmd_buf"/>
@@ -21,8 +23,6 @@
 			<item value="inctick"/>
 			<item value="systick"/>
 			<item value="HAL_TIM_PeriodElapsedCallback"/>
-			<item value="elapsed"/>
-			<item value="PERIOD"/>
 		</list>
 		<list key="replacehistory">
 		</list>

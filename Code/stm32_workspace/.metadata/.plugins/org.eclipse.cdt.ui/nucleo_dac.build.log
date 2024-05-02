@@ -1,10 +1,10 @@
-14:46:00 **** Incremental Build of configuration Debug for project nucleo_dac ****
+13:56:13 **** Incremental Build of configuration Debug for project nucleo_dac ****
 make -j24 all 
 arm-none-eabi-size   nucleo_dac.elf 
    text	   data	    bss	    dec	    hex	filename
-  47748	    484	   9060	  57292	   dfcc	nucleo_dac.elf
+  46148	    484	   8988	  55620	   d944	nucleo_dac.elf
 Finished building: default.size.stdout
  
 
-14:46:00 Build Finished. 0 errors, 0 warnings. (took 606ms)
+13:56:14 Build Finished. 0 errors, 0 warnings. (took 552ms)
 

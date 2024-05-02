@@ -45,6 +45,9 @@
 #define MAX_RCV_LEN (CMD_MAX_LEN + 1 + (PARAM_MAX_LEN * TOTAL_CMD_PARAMS))
 #define FLAG_CMD_BUF0_READY 0x1
 #define FLAG_CMD_BUF1_READY 0x2
+#define FLAG_DAC0_UPDATE 0x1
+#define FLAG_DAC1_UPDATE 0x2
+#define FLAG_DAC2_UPDATE 0x3
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,8 +58,6 @@
 /* Private variables ---------------------------------------------------------*/
 DAC_HandleTypeDef hdac1;
 DAC_HandleTypeDef hdac2;
-
-TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart2;
 
@@ -78,6 +79,11 @@ const osThreadAttr_t taskCMD_attributes = {
 osEventFlagsId_t eventCMDHandle;
 const osEventFlagsAttr_t eventCMD_attributes = {
   .name = "eventCMD"
+};
+/* Definitions for eventUpdateDAC */
+osEventFlagsId_t eventUpdateDACHandle;
+const osEventFlagsAttr_t eventUpdateDAC_attributes = {
+  .name = "eventUpdateDAC"
 };
 /* USER CODE BEGIN PV */
 uint16_t dac_value[TOTAL_DACS];
@@ -106,7 +112,6 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_DAC2_Init(void);
-static void MX_TIM16_Init(void);
 void StartDefaultTask(void *argument);
 void StartTaskCMD(void *argument);
 
@@ -150,9 +155,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_DAC1_Init();
   MX_DAC2_Init();
-  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim16);
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
   HAL_DAC_Start(&hdac2, DAC_CHANNEL_1);
@@ -191,6 +194,9 @@ int main(void)
   /* Create the event(s) */
   /* creation of eventCMD */
   eventCMDHandle = osEventFlagsNew(&eventCMD_attributes);
+
+  /* creation of eventUpdateDAC */
+  eventUpdateDACHandle = osEventFlagsNew(&eventUpdateDAC_attributes);
 
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
@@ -336,38 +342,6 @@ static void MX_DAC2_Init(void)
 }
 
 /**
-  * @brief TIM16 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM16_Init(void)
-{
-
-  /* USER CODE BEGIN TIM16_Init 0 */
-
-  /* USER CODE END TIM16_Init 0 */
-
-  /* USER CODE BEGIN TIM16_Init 1 */
-
-  /* USER CODE END TIM16_Init 1 */
-  htim16.Instance = TIM16;
-  htim16.Init.Prescaler = 800-1;
-  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim16.Init.Period = 100-1;
-  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim16.Init.RepetitionCounter = 0;
-  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM16_Init 2 */
-
-  /* USER CODE END TIM16_Init 2 */
-
-}
-
-/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -456,15 +430,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
    HAL_UART_Receive_IT(&huart2, &rcv_byte, 1);
 }
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if (htim->Instance == TIM16) {
-		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_value[0] );
-		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value[1]);
-		HAL_DAC_SetValue(&hdac2, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_value[2]);
-	}
-}
-
 void parse_cmd_buf(void)
 {
 	char *ptr = strtok(cmd_buf, cmd_delim);
@@ -498,12 +463,23 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  for(;;)
-  {
+	uint32_t requested_flags = FLAG_DAC0_UPDATE | FLAG_DAC1_UPDATE | FLAG_DAC2_UPDATE;
+	uint32_t flags;
 
-
-	  osDelay(10);
-  }
+	for(;;) {
+		flags = osEventFlagsWait(eventUpdateDACHandle, requested_flags, osFlagsWaitAny, osWaitForever);
+		if (flags < 0x80000000) {
+			if (flags & FLAG_DAC0_UPDATE) {
+				HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_value[0]);
+			}
+			if (flags & FLAG_DAC1_UPDATE) {
+				HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value[1]);
+			}
+			if (flags & FLAG_DAC2_UPDATE) {
+				HAL_DAC_SetValue(&hdac2, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_value[2]);
+			}
+		}
+	}
   /* USER CODE END 5 */
 }
 
@@ -536,8 +512,9 @@ void StartTaskCMD(void *argument)
 						if (percent < 0.0 || percent > 100.0) {
 							debug_print_uart("Illegal dac value %d\r\n", dac_value[dac_idx]);
 						} else {
-							dac_value[dac_idx] = (int)(percent/100.0 * 4095);
 							debug_print_uart("Setting DAC %d to %d\r\n", dac_idx, dac_value[dac_idx]);
+							dac_value[dac_idx] = (int)(percent/100.0 * 4095);
+							osEventFlagsSet(eventUpdateDACHandle, dac_idx+1);
 						}
 					} else{
 						debug_print_uart("Illegal DAC %d\r\n", dac_idx);
