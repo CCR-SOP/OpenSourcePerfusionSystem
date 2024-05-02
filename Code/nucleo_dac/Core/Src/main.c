@@ -56,7 +56,7 @@
 DAC_HandleTypeDef hdac1;
 DAC_HandleTypeDef hdac2;
 
-TIM_HandleTypeDef htim6;
+TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart2;
 
@@ -106,7 +106,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_DAC2_Init(void);
-static void MX_TIM6_Init(void);
+static void MX_TIM16_Init(void);
 void StartDefaultTask(void *argument);
 void StartTaskCMD(void *argument);
 
@@ -150,8 +150,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_DAC1_Init();
   MX_DAC2_Init();
-  MX_TIM6_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
+  HAL_TIM_Base_Start_IT(&htim16);
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
   HAL_DAC_Start(&hdac2, DAC_CHANNEL_1);
@@ -335,40 +336,34 @@ static void MX_DAC2_Init(void)
 }
 
 /**
-  * @brief TIM6 Initialization Function
+  * @brief TIM16 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_TIM6_Init(void)
+static void MX_TIM16_Init(void)
 {
 
-  /* USER CODE BEGIN TIM6_Init 0 */
+  /* USER CODE BEGIN TIM16_Init 0 */
 
-  /* USER CODE END TIM6_Init 0 */
+  /* USER CODE END TIM16_Init 0 */
 
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  /* USER CODE BEGIN TIM16_Init 1 */
 
-  /* USER CODE BEGIN TIM6_Init 1 */
-
-  /* USER CODE END TIM6_Init 1 */
-  htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 800;
-  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 100;
-  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 800-1;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 100-1;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM6_Init 2 */
+  /* USER CODE BEGIN TIM16_Init 2 */
 
-  /* USER CODE END TIM6_Init 2 */
+  /* USER CODE END TIM16_Init 2 */
 
 }
 
@@ -463,7 +458,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if (htim->Instance == TIM6) {
+	if (htim->Instance == TIM16) {
 		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_value[0] );
 		HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dac_value[1]);
 		HAL_DAC_SetValue(&hdac2, DAC_CHANNEL_1, DAC_ALIGN_12B_R, dac_value[2]);

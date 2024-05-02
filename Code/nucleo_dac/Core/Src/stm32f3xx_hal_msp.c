@@ -160,14 +160,7 @@ void HAL_DAC_MspDeInit(DAC_HandleTypeDef* hdac)
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_4|GPIO_PIN_5);
 
     /* DAC1 interrupt DeInit */
-  /* USER CODE BEGIN DAC1:TIM6_DAC1_IRQn disable */
-    /**
-    * Uncomment the line below to disable the "TIM6_DAC1_IRQn" interrupt
-    * Be aware, disabling shared interrupt may affect other IPs
-    */
-    /* HAL_NVIC_DisableIRQ(TIM6_DAC1_IRQn); */
-  /* USER CODE END DAC1:TIM6_DAC1_IRQn disable */
-
+    HAL_NVIC_DisableIRQ(TIM6_DAC1_IRQn);
   /* USER CODE BEGIN DAC1_MspDeInit 1 */
 
   /* USER CODE END DAC1_MspDeInit 1 */
@@ -200,19 +193,19 @@ void HAL_DAC_MspDeInit(DAC_HandleTypeDef* hdac)
 */
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 {
-  if(htim_base->Instance==TIM6)
+  if(htim_base->Instance==TIM16)
   {
-  /* USER CODE BEGIN TIM6_MspInit 0 */
+  /* USER CODE BEGIN TIM16_MspInit 0 */
 
-  /* USER CODE END TIM6_MspInit 0 */
+  /* USER CODE END TIM16_MspInit 0 */
     /* Peripheral clock enable */
-    __HAL_RCC_TIM6_CLK_ENABLE();
-    /* TIM6 interrupt Init */
-    HAL_NVIC_SetPriority(TIM6_DAC1_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(TIM6_DAC1_IRQn);
-  /* USER CODE BEGIN TIM6_MspInit 1 */
+    __HAL_RCC_TIM16_CLK_ENABLE();
+    /* TIM16 interrupt Init */
+    HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+  /* USER CODE BEGIN TIM16_MspInit 1 */
 
-  /* USER CODE END TIM6_MspInit 1 */
+  /* USER CODE END TIM16_MspInit 1 */
   }
 
 }
@@ -225,26 +218,19 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 */
 void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
 {
-  if(htim_base->Instance==TIM6)
+  if(htim_base->Instance==TIM16)
   {
-  /* USER CODE BEGIN TIM6_MspDeInit 0 */
+  /* USER CODE BEGIN TIM16_MspDeInit 0 */
 
-  /* USER CODE END TIM6_MspDeInit 0 */
+  /* USER CODE END TIM16_MspDeInit 0 */
     /* Peripheral clock disable */
-    __HAL_RCC_TIM6_CLK_DISABLE();
+    __HAL_RCC_TIM16_CLK_DISABLE();
 
-    /* TIM6 interrupt DeInit */
-  /* USER CODE BEGIN TIM6:TIM6_DAC1_IRQn disable */
-    /**
-    * Uncomment the line below to disable the "TIM6_DAC1_IRQn" interrupt
-    * Be aware, disabling shared interrupt may affect other IPs
-    */
-    /* HAL_NVIC_DisableIRQ(TIM6_DAC1_IRQn); */
-  /* USER CODE END TIM6:TIM6_DAC1_IRQn disable */
+    /* TIM16 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(TIM1_UP_TIM16_IRQn);
+  /* USER CODE BEGIN TIM16_MspDeInit 1 */
 
-  /* USER CODE BEGIN TIM6_MspDeInit 1 */
-
-  /* USER CODE END TIM6_MspDeInit 1 */
+  /* USER CODE END TIM16_MspDeInit 1 */
   }
 
 }
