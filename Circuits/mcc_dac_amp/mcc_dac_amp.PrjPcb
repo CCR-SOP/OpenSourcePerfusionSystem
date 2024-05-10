@@ -151,6 +151,10 @@ DItemRevisionGUID=
 GenerateClassCluster=0
 DocumentUniqueId=NUCQSBBN
 
+[GeneratedDocument1]
+DocumentPath=Project Outputs for mcc_dac_amp\Design Rule Check - mcc_dac_amp.html
+DItemRevisionGUID=
+
 [Configuration1]
 Name=Sources
 ParameterCount=0
