@@ -13,7 +13,8 @@ import logging
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from gui.plotting import PanelPlotting, SensorPlot
+# from gui.plotting import PanelPlotting, SensorPlot
+from gui.panel_plotting import PanelPlotting
 import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 from pyPerfusion.PerfusionSystem import PerfusionSystem
@@ -40,10 +41,9 @@ class PanelAI(wx.Panel):
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
         self.sizer_pane = wx.BoxSizer(wx.VERTICAL)
 
-        self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
-        self._panel_plot.add_plot(self._sensorplot)
-        self._sensorplot.set_reader(self._reader)
         self._sensor.start()
+        self._panel_plot.add_sensor(self._sensor, reader)
+        # self._panel_plot.add_sensor(self._sensor, self._sensor.get_reader(name='RMS_11pt'))
 
         self.__do_layout()
         self.__set_bindings()
@@ -201,6 +201,7 @@ class TestFrame(wx.Frame):
 
         sensor = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
         self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
+        sensor.start()
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
 
@@ -220,6 +221,7 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_default_logging('panel_AI', logging.DEBUG)
+    utils.only_show_logs_from(['panel_plotting'])
 
     SYS_PERFUSION = PerfusionSystem()
     try:
