@@ -12,6 +12,7 @@ and under the public domain.
 """
 import logging
 from typing import Protocol
+import time
 
 import wx
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg
@@ -60,6 +61,7 @@ class PanelPlotting(wx.Panel):
         self.colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
         self.lines = None
         self.anim = None
+        self.time_vector = []
 
         self.__do_layout()
         self.__set_bindings()
@@ -86,18 +88,20 @@ class PanelPlotting(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def init_plot(self):
-        self.lines = self._axes.plot(np.linspace(-self.secs2display, 0, num=self.plot_len),
+        self.time_vector = np.linspace(-self.secs2display, 0, num=self.plot_len)
+        self._axes.clear()
+        self.lines = self._axes.plot(self.time_vector,
                                      np.zeros([self.plot_len, len(self._readers)], dtype=np.float64))
-        self.legend = self._axes.legend()
+        self.show_legend()
         return self.lines
 
     def animate(self, i):
         readout_color = 'black'
+
         for idx, line in enumerate(self.lines):
             reader = self._readers[idx]
             t, data = reader.retrieve_buffer(self.secs2display * 1000, self.plot_len)
             line.set_data(t, data)
-            self._lgr.debug(f't = {t}')
             line.set_color(self.colors[idx])
             if self._with_readout:
                 try:
@@ -111,13 +115,13 @@ class PanelPlotting(wx.Panel):
                     # no data yet
                     pass
 
-            # leg = self._axes.get_legend()
-            # if leg is not None:
-            #     leg_texts = leg.get_texts()
-            #     for txt in leg_texts:
-            #         txt.set_color(readout_color)
-            #         txt.set_fontsize('large')
-            #         # self._display.set_color(readout_color)
+            leg = self._axes.get_legend()
+            if leg is not None:
+                leg_texts = leg.get_texts()
+                for txt in leg_texts:
+                    txt.set_color(readout_color)
+                    txt.set_fontsize('large')
+                    # self._display.set_color(readout_color)
 
         self._axes.relim()
         self._axes.autoscale_view()
@@ -125,7 +129,7 @@ class PanelPlotting(wx.Panel):
         return self.lines
 
     def show_legend(self):
-        total_plots = 1
+        total_plots = len(self._readers)
         ncols = total_plots if total_plots % 2 == 0 else total_plots + 1
         if self._axes.lines:
             leg = self._axes.legend(loc='lower right', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",

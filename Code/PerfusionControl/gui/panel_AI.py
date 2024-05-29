@@ -43,7 +43,7 @@ class PanelAI(wx.Panel):
 
         self._sensor.start()
         self._panel_plot.add_sensor(self._sensor, reader)
-        # self._panel_plot.add_sensor(self._sensor, self._sensor.get_reader(name='RMS_11pt'))
+        self._panel_plot.add_sensor(self._sensor, self._sensor.get_reader(name='RMS_11pt'))
 
         self.__do_layout()
         self.__set_bindings()
