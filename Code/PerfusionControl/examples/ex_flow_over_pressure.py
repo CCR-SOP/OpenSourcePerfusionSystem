@@ -16,7 +16,7 @@ import wx
 import logging
 import threading
 
-from gui.plotting import SensorPlot, PanelPlotting
+from gui.panel_plotting import PanelPlotting
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.PerfusionSystem import PerfusionSystem
@@ -29,13 +29,8 @@ class TestFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
 
         sensor_foverp = SYS_PERFUSION.get_sensor('HA Flow Over Pressure')
-        self.panel = PanelPlotting(self)
-        self.panel.plot_frame_ms = 10_000
-        self.plot = SensorPlot(sensor_foverp, self.panel.axes, readout=True)
-
-        self.plot.set_reader(sensor_foverp.get_reader())
-
-        self.panel.add_plot(self.plot)
+        self.panel = PanelPlotting(self, seconds_to_display=5)
+        self.panel.add_reader(sensor_foverp.get_reader())
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 

@@ -11,7 +11,7 @@ import wx
 import logging
 import threading
 
-from gui.plotting import SensorPlot, PanelPlotting
+from gui.panel_plotting import  PanelPlotting
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.PerfusionSystem import PerfusionSystem
@@ -24,16 +24,10 @@ class TestFrame(wx.Frame):
 
         sensor = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
 
-        self.panel = PanelPlotting(self)
+        self.panel = PanelPlotting(self, seconds_to_display=10)
         self.panel.plot_frame_ms = 10_000
-        self.plotraw = SensorPlot(sensor, self.panel.axes, readout=True)
-        self.plotrms = SensorPlot(sensor, self.panel.axes, readout=True)
-
-        self.plotraw.set_reader(sensor.get_reader('Raw'))
-        self.plotrms.set_reader(sensor.get_reader('RMS_11pt'), color='y')
-
-        self.panel.add_plot(self.plotraw)
-        self.panel.add_plot(self.plotrms)
+        self.panel.add_reader(sensor.get_reader('Raw'))
+        self.panel.add_reader(sensor.get_reader('RMS_11Pt'))
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 

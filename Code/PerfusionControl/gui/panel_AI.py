@@ -22,16 +22,15 @@ from pyPerfusion.Strategy_ReadWrite import Reader
 
 
 class PanelAI(wx.Panel):
-    def __init__(self, parent, sensor: Sensor.Sensor, reader: Reader):
+    def __init__(self, parent, sensor: Sensor.Sensor):
         super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
-        self._reader = reader
 
         self.collapse_pane = wx.CollapsiblePane(self, wx.ID_ANY, 'Calibration')
         self._panel_plot = PanelPlotting(self)
-        self._panel_cal = PanelAICalibration(self, sensor, reader)
+        self._panel_cal = PanelAICalibration(self, sensor, sensor.get_reader())
 
         if self._sensor.hw is not None and self._sensor.hw.device is not None:
             ch_name = f'{self._sensor.hw.device.name} Channel: {self._sensor.hw.name}'
@@ -42,8 +41,8 @@ class PanelAI(wx.Panel):
         self.sizer_pane = wx.BoxSizer(wx.VERTICAL)
 
         self._sensor.start()
-        self._panel_plot.add_sensor(self._sensor, reader)
-        self._panel_plot.add_sensor(self._sensor, self._sensor.get_reader(name='RMS_11pt'))
+        for reader in self._sensor.get_reader_names():
+            self._panel_plot.add_reader(self._sensor.get_reader(reader))
 
         self.__do_layout()
         self.__set_bindings()
@@ -200,7 +199,7 @@ class TestFrame(wx.Frame):
         super().__init__(*args, **kwds)
 
         sensor = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
-        self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
+        self.panel = PanelAI(self, sensor)
         sensor.start()
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
@@ -221,7 +220,6 @@ class MyTestApp(wx.App):
 if __name__ == "__main__":
     PerfusionConfig.set_test_config()
     utils.setup_default_logging('panel_AI', logging.DEBUG)
-    utils.only_show_logs_from(['panel_plotting'])
 
     SYS_PERFUSION = PerfusionSystem()
     try:

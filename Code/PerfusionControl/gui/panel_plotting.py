@@ -40,14 +40,14 @@ class DeviceInterface(Protocol):
 
 
 class PanelPlotting(wx.Panel):
-    def __init__(self, parent, with_readout=True):
+    def __init__(self, parent, seconds_to_display=30,  with_readout=True):
         wx.Panel.__init__(self, parent, -1)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._with_readout = with_readout
         self._readers = []
 
-        self.secs2display = 5
+        self.secs2display = seconds_to_display
         self.plot_len = 200
 
         self.fig = matplotlib.figure.Figure()
@@ -71,6 +71,14 @@ class PanelPlotting(wx.Panel):
                                             cache_frame_data=False)
 
     @property
+    def seconds_to_display(self):
+        return self.secs2display
+
+    @seconds_to_display.setter
+    def seconds_to_display(self, seconds):
+        self.secs2display = seconds
+
+    @property
     def axes(self):
         return self._axes
 
@@ -87,9 +95,9 @@ class PanelPlotting(wx.Panel):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def init_plot(self):
-        self.time_vector = np.linspace(-self.secs2display, 0, num=self.plot_len)
+        time_vector = np.linspace(-self.secs2display, 0, num=self.plot_len)
         self._axes.clear()
-        self.lines = self._axes.plot(self.time_vector,
+        self.lines = self._axes.plot(time_vector,
                                      np.zeros([self.plot_len, len(self._readers)], dtype=np.float64))
         for idx, reader in enumerate(self._readers):
             self.lines[idx].set_label(f'{reader.name}')
@@ -106,8 +114,6 @@ class PanelPlotting(wx.Panel):
         return self.lines
 
     def animate(self, i):
-        readout_color = 'black'
-
         for idx, line in enumerate(self.lines):
             reader = self._readers[idx]
             t, data = reader.retrieve_buffer(self.secs2display * 1000, self.plot_len)
@@ -146,7 +152,7 @@ class PanelPlotting(wx.Panel):
                     self.legend.get_lines()[idx].set_visible(False)
             self.canvas.draw()
 
-    def add_sensor(self, sensor, reader):
+    def add_reader(self, reader):
         self._readers.append(reader)
         self.init_plot()
 
