@@ -61,7 +61,6 @@ class PanelPlotting(wx.Panel):
         self.colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
         self.lines = None
         self.anim = None
-        self.time_vector = []
 
         self.__do_layout()
         self.__set_bindings()
@@ -92,7 +91,18 @@ class PanelPlotting(wx.Panel):
         self._axes.clear()
         self.lines = self._axes.plot(self.time_vector,
                                      np.zeros([self.plot_len, len(self._readers)], dtype=np.float64))
-        self.show_legend()
+        for idx, reader in enumerate(self._readers):
+            self.lines[idx].set_label(f'{reader.name}')
+
+        total_plots = len(self._readers)
+        ncols = total_plots if total_plots % 2 == 0 else total_plots + 1
+        if self._axes.lines:
+            leg = self._axes.legend(loc='lower right', bbox_to_anchor=(0.0, 1.01, 1.0, .102),
+                                    ncol=ncols, mode="expand",
+                                    borderaxespad=0, framealpha=0.0, fontsize='medium')
+            leg.set_picker(5)
+            self.legend = leg
+
         return self.lines
 
     def animate(self, i):
@@ -115,41 +125,26 @@ class PanelPlotting(wx.Panel):
                     # no data yet
                     pass
 
-            leg = self._axes.get_legend()
-            if leg is not None:
-                leg_texts = leg.get_texts()
-                for txt in leg_texts:
-                    txt.set_color(readout_color)
-                    txt.set_fontsize('large')
-                    # self._display.set_color(readout_color)
-
         self._axes.relim()
         self._axes.autoscale_view()
         self.canvas.draw()
         return self.lines
 
-    def show_legend(self):
-        total_plots = len(self._readers)
-        ncols = total_plots if total_plots % 2 == 0 else total_plots + 1
-        if self._axes.lines:
-            leg = self._axes.legend(loc='lower right', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
-                                    borderaxespad=0, framealpha=0.0, fontsize='x-small')
-            leg.set_picker(5)
-
     def on_pick(self, event):
-        self._lgr.debug('Detected pick event')
-        self._lgr.debug(f'artist is {event.artist}')
         reader_names = [reader.name for reader in self._readers]
+        selections = [idx for idx, line in enumerate(self.lines) if line.get_visible()]
         dlg = wx.MultiChoiceDialog(None, "Choose output", "", reader_names, wx.CHOICEDLG_STYLE)
+        dlg.SetSelections(selections)
         if dlg.ShowModal() == wx.ID_OK:
-            self._axes.clear()
             selections = dlg.GetSelections()
-            self._readers = []
-            for s in selections:
-                self._readers.append(reader_names[s])
-
-        dlg.Destroy()
-        self.canvas.draw()
+            for idx in range(len(self._readers)):
+                if idx in selections:
+                    self.lines[idx].set_visible(True)
+                    self.legend.get_lines()[idx].set_visible(True)
+                else:
+                    self.lines[idx].set_visible(False)
+                    self.legend.get_lines()[idx].set_visible(False)
+            self.canvas.draw()
 
     def add_sensor(self, sensor, reader):
         self._readers.append(reader)
