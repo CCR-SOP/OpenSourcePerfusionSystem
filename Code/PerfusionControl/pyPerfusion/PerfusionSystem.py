@@ -21,6 +21,7 @@ from pyPerfusion.pyAutoSyringe import *
 from pyPerfusion.pyAutoFlow import *
 from pyPerfusion.Strategy_ReadWrite import *
 from pyPerfusion.Strategy_Processing import *
+from pyPerfusion.pyAutoFlow import *
 
 
 def get_object(name: str, config: str ='sensors'):
@@ -163,9 +164,12 @@ class PerfusionSystem:
         # of log message
         lgr = logging.getLogger(f'{__name__}.{obj.name}')
         # attach hardware
-        if hasattr(obj.cfg, 'hw_name'):
-            obj.hw = SYS_HW.get_hw(obj.cfg.hw_name)
-            obj.hw.set_parent(obj)
+        try:
+            if hasattr(obj.cfg, 'hw_name'):
+                obj.hw = SYS_HW.get_hw(obj.cfg.hw_name)
+                obj.hw.set_parent(obj)
+        except AttributeError:
+            lgr.debug(f'no hardware for for {obj.cfg.hw_name}')
 
         # load strategies
         lgr.debug(f'strategies are {obj.cfg.strategy_names}')

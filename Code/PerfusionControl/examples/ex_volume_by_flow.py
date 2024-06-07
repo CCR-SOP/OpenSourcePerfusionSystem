@@ -11,7 +11,7 @@ import wx
 import time
 import logging
 
-from gui.plotting import SensorPlot, PanelPlotting
+from gui.panel_plotting import PanelPlotting
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.PerfusionSystem import PerfusionSystem
@@ -30,11 +30,9 @@ class TestFrame(wx.Frame):
         for idx, sensor in enumerate(sensors):
             panel = PanelPlotting(self)
             self._plots.append(panel)
-            plot = SensorPlot(sensor, panel.axes, readout=True)
-            plot.set_reader(sensor.get_reader())
+            panel.add_reader(sensor.get_reader())
             self._lgr.debug(f'reader fqpn = {sensor.get_reader().fqpn}')
             sizer_plots.Add(panel, 1, wx.ALL | wx.EXPAND, border=1)
-            panel.add_plot(plot)
             sensor.start()
 
         self.SetSizer(sizer_plots)
