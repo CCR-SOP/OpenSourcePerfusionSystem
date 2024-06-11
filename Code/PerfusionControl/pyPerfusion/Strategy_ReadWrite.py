@@ -13,6 +13,7 @@ import os
 from os import SEEK_CUR, SEEK_END, SEEK_SET
 from dataclasses import dataclass, asdict
 from datetime import datetime
+import logging
 
 import numpy as np
 
@@ -79,8 +80,9 @@ def convert_to_csv(reader):
     for t, d in zip(ts, data):
         if array_data:
             data_str = ','.join(map(str, d))
-        else:
-            data_str = f'{d}'
+        # else:
+        #     data_str = f'{d}'
+
         csv += f'{datetime.fromtimestamp((start_ts + t) / 1000.0)}, {data_str}\n'
 
     return csv
@@ -96,10 +98,25 @@ def get_standard_filename(date_str, sensor_name, output_type):
 
 def save_to_csv(filename):
     reader = read_file(filename)
-    csv = convert_to_csv(reader)
-    with open(reader.fqpn.with_suffix('.csv'), 'wt') as csv_file:
-        csv_file.write(csv)
+    ts, data = reader.get_all()
 
+    array_data = True
+    if type(reader) == Reader:
+        array_data = False
+        start_ts = reader.sensor.get_acq_start_ms()
+    else:
+        data = data.reshape(-1, reader.sensor.samples_per_timestamp)
+        start_ts = 0
+
+    with open(reader.fqpn.with_suffix('.csv'), 'wt') as csv_file:
+        for t, d in zip(ts, data):
+            if array_data:
+                data_str = ','.join(map(str, d))
+            else:
+                data_str = f'{d}'
+
+            csv = f'{datetime.fromtimestamp((start_ts + t)/ 1000.0)}, {data_str}\n'
+            csv_file.write(csv)
 
 class Reader:
     def __init__(self, name: str, fqpn: pathlib.Path, cfg: WriterConfig, sensor):
@@ -124,7 +141,7 @@ class Reader:
                 if key == 'Data Type':
                     self.sensor.data_dtype = np.dtype(value)
                 elif key == 'Start of Acquisition':
-                    if value == '1970-01-01 00:00:00':
+                    if value.startswith('1970-01-01 00:00:00'):
                         # some dat files did not record correct date and is missing milliseconds
                         # update date and assume start at midnight to force conversion
                         value = f'{pathlib.PurePath(self.fqpn).parent.name} 00:00:00.00'
@@ -227,7 +244,6 @@ class Reader:
         file_size_in_samples = int(self.get_file_size_in_bytes(fid) / self.data_dtype.itemsize)
         data_time = np.linspace(0, file_size_in_samples * period,
                                 num=file_size_in_samples, dtype=np.uint64)
-
         fid.close()
         return data_time, data
 
@@ -256,7 +272,7 @@ class ReaderPoints(Reader):
                 if key == 'Data Type':
                     self.sensor.data_dtype = np.dtype(value)
                 elif key == 'Start of Acquisition':
-                    if value == '1970-01-01 00:00:00':
+                    if value.startswith('1970-01-01 00:00:00'):
                         # some dat files did not record correct date and is missing milliseconds
                         # update date and assume start at midnight to force conversion
                         value = f'{pathlib.PurePath(self.fqpn).parent.name} 00:00:00.00'
@@ -270,14 +286,17 @@ class ReaderPoints(Reader):
                     self.cfg.bytes_per_timestamp = int(value)
 
     def read_chunk(self, fid):
-
-        chunk = fid.read(self.cfg.bytes_per_timestamp)
-        if chunk:
-            ts, = struct.unpack('!Q', chunk)
-            data_chunk = np.fromfile(fid, dtype=self.data_dtype, count=self.cfg.samples_per_timestamp)
-        else:
-            ts = None
-            data_chunk = None
+        dtype = np.dtype({'names': ('time', 'data'), 'formats': (np.uint64, np.float64)})
+        data = np.fromfile(fid, dtype=dtype)
+        ts = data['time']
+        data_chunk = data['data']
+        # chunk = fid.read(self.cfg.bytes_per_timestamp)
+        # if chunk:
+            # ts, = struct.unpack('!Q', chunk)
+            #data_chunk = np.fromfile(fid, dtype=self.data_dtype, count=self.cfg.samples_per_timestamp)
+        # else:
+        #     ts = None
+        #     data_chunk = None
         return ts, data_chunk
 
     def retrieve_buffer(self, last_ms, samples_needed, index: int = None):
@@ -357,21 +376,18 @@ class ReaderPoints(Reader):
         fid.close()
         return ts, data_chunk
 
-    def get_all(self, index:int = None):
-        data_time = np.zeros(0, dtype=self.data_dtype)
-        data = np.zeros(0, dtype=self.data_dtype)
-
+    def get_all(self, index: int = None):
         fid = self._open_read()
-        fid.seek(0)
-        while True:
-            ts, data_chunk = self.read_chunk(fid)
-            if data_chunk is None:
-                break
-            if index is not None and index < len(data_chunk):
-                data_chunk = data_chunk[index]
-            data = np.append(data, data_chunk)
-            data_time = np.append(data_time, ts)
+        file_size = self.get_file_size_in_bytes(fid)
 
+        total_chunks = file_size/self.bytes_per_chunk
+        fid.seek(0)
+
+        format_str = f'(1,{self.cfg.samples_per_timestamp}){self.data_dtype}'
+        dtype = np.dtype({'names': ('time', 'data'), 'formats': (np.uint64, format_str)})
+        all_data = np.fromfile(fid, dtype=dtype)
+        data_time = [struct.unpack('!Q', chunk)[0] for chunk in all_data['time']]
+        data = all_data['data']
         fid.close()
         return data_time, data
 
