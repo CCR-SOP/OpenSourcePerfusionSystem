@@ -26,8 +26,8 @@ class TestFrame(wx.Frame):
 
         self.panel = PanelPlotting(self, seconds_to_display=10)
         self.panel.plot_frame_ms = 10_000
-        self.panel.add_reader(sensor.get_reader('Raw'))
-        self.panel.add_reader(sensor.get_reader('RMS_11Pt'))
+        # self.panel.add_reader(sensor.get_reader('Raw'))
+        self.panel.add_reader(sensor.get_reader('MovAvg_11pt'))
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
