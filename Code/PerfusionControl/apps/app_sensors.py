@@ -24,7 +24,7 @@ class SensorPanel(wx.Panel):
         wx.Panel.__init__(self, parent)
         self._lgr = logging.getLogger('SensorPanel')
         self.sys = perfusion_system
-        sensor_names = ['Hepatic Artery Flow', 'Portal Vein Flow',
+        sensor_names = ['Hepatic Artery Flow', 'Portal Vein Flow', 'Test Glucose',
                         'Hepatic Artery Pressure', 'Portal Vein Pressure'
                         ]
 
