@@ -18,6 +18,7 @@ and under the public domain.
 from ctypes import cast, POINTER, c_double
 from dataclasses import dataclass
 import time
+import weakref
 
 import numpy as np
 from mcculw import ul
@@ -51,6 +52,8 @@ class MCCAIDevice(pyAI.AIDevice):
         self._read_buf_idx = 0
         self._chan_range = (-1, -1)
         self._scan_options = ScanOptions.BACKGROUND | ScanOptions.CONTINUOUS | ScanOptions.SCALEDATA
+
+        self._finalizer = weakref.finalize(self, self.close)
 
     @property
     def total_channels(self):
@@ -120,7 +123,6 @@ class MCCAIDevice(pyAI.AIDevice):
 
                         status_info = self.get_status()
                         if status_info.status == Status.RUNNING:
-
                             if status_info.cur_index >= 0:
                                 buf_idx = int(status_info.cur_index / self.acq_points)
                                 if first_run:
@@ -131,7 +133,7 @@ class MCCAIDevice(pyAI.AIDevice):
                                        (buf_idx == self.cfg.total_buffers - 1 and self._read_buf_idx == 0)):
                                         self._lgr.warning('Potential buffer overflow in MCC Board')
                                     if buf_idx != self._read_buf_idx:
-                                        self._acq_samples();
+                                        self._acq_samples()
                 except Exception as e:
                     raise pyAI.AIDeviceException(e)
 
@@ -167,11 +169,12 @@ class MCCAIDevice(pyAI.AIDevice):
         descriptors = ul.get_daq_device_inventory(InterfaceType.USB)
         if len(descriptors) == 1:
             device = descriptors[0]
+            self._lgr.info(f'Found MCC device {device}')
             self.board_num = 0
         elif len(descriptors) > 1:
             self._lgr.info(f'Found multiple MCC devices, checking for matching board numbers')
             device = next(filter(lambda desc: ul.get_board_number(desc) == int(self.cfg.device_name), descriptors), None)
-            self.board_num = self.cfg.device_number
+            self.board_num = self.cfg.device_name
         else:
             device = None
             self.board_num = None
@@ -188,17 +191,20 @@ class MCCAIDevice(pyAI.AIDevice):
         self.board_num = ul.get_board_number(device)
 
     def close(self):
-        if self.is_acquiring:
-            self.stop()
+        self.stop()
 
     def stop(self):
+        self._lgr.debug('Stopping MCC board')
         super().stop()
+        self._lgr.debug('Base thread stopped')
         if self.board_num is not None:
+            self._lgr.debug('Stopping MCC background thread')
             ul.stop_background(self.board_num, FunctionType.AIFUNCTION)
 
             status_info = self.get_status()
             if status_info is not None:
                 waiting = 0
+                self._lgr.debug(f'waiting for MCC board to stop')
                 while status_info.status == Status.RUNNING and (waiting < 1.0):
                     time.sleep(0.1)
                     waiting += 0.1
@@ -208,5 +214,7 @@ class MCCAIDevice(pyAI.AIDevice):
                     self._lgr.error(f'MCC Board {self.board_num} could not be stopped')
                 else:
                     self._lgr.debug('MCC Board stopped')
-                    ul.win_buf_free(self._memhandle)
+                    if self._memhandle:
+                        ul.win_buf_free(self._memhandle)
+                        self._memhandle = None
 

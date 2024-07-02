@@ -68,12 +68,16 @@ class PerfusionSystem:
         self.is_opened = True
 
     def close(self):
+        self._lgr.info('Closing PerfusionSystem')
         SYS_HW.stop()
         for sensor in self.sensors.values():
             sensor.stop()
             if sensor.hw:
                 sensor.hw.stop()
             sensor.close()
+        for automation in self.automations.values():
+            automation.stop()
+
         self.is_opened = False
         self._lgr.info('PerfusionSystem is closed')
 

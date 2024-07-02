@@ -142,6 +142,12 @@ class SystemHardware:
             for name, device in self.hw.items():
                 if type(device) != AIChannel:
                     device.stop()
+                elif type(device) == MCCAIDevice:
+                    device.close()
+                elif type(device) == NIDAQAIDevice:
+                    device.close()
+                elif type(device) == NIDAQDCDevice:
+                    device.close()
         except AIDeviceException as e:
             self._lgr.error(e)
         self._lgr.info('all hardware stopped')

@@ -24,7 +24,7 @@ class SensorPanel(wx.Panel):
         wx.Panel.__init__(self, parent)
         self._lgr = logging.getLogger('SensorPanel')
         self.sys = perfusion_system
-        sensor_names = ['Hepatic Artery Flow', 'Portal Vein Flow', 'Test Glucose',
+        sensor_names = ['Hepatic Artery Flow', 'Portal Vein Flow',
                         'Hepatic Artery Pressure', 'Portal Vein Pressure'
                         ]
 
@@ -60,10 +60,12 @@ class SensorFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.panel.Close()
+        if self.panel:
+            self.panel.Close()
+            self.panel = None
         for child in self.GetChildren():
             child.Close()
-        self.Destroy()
+        wx.GetApp().close()
 
 
 class MySensorApp(wx.App):
