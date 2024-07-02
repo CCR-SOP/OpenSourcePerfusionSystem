@@ -11,7 +11,7 @@ import wx
 import time
 import logging
 
-from gui.plotting import SensorPlot, PanelPlotting
+from gui.panel_plotting import PanelPlotting
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.PerfusionSystem import PerfusionSystem
@@ -21,13 +21,9 @@ class TestFrame(wx.Frame):
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
 
-        self.panel = PanelPlotting(self)
-        self.panel.plot_frame_ms = 10_000
+        self.panel = PanelPlotting(self, seconds_to_display=10)
         sensor = SYS_PERFUSION.get_sensor('Flow')
-        self.plotraw = SensorPlot(sensor, self.panel.axes, readout=True)
-        self.plotraw.set_reader(sensor.get_reader('Raw'))
-
-        self.panel.add_plot(self.plotraw)
+        self.panel.add_reader(sensor.get_reader('Raw'))
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 

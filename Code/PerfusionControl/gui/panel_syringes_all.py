@@ -32,7 +32,7 @@ class PanelAllSyringes(wx.Panel):
 
         self.manual = []
         for manual in manual_syringes:
-            self.manual.append(PanelSyringeControls(self, manual))
+            self.manual.append(PanelSyringeControls(parent=self, automation=manual))
 
         manual_names = [manual.device.name for manual in manual_syringes]
 

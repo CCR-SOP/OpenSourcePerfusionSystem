@@ -106,6 +106,7 @@ class HardwareFrame(wx.Frame):
         for child in self.GetChildren():
             child.Close()
         self.Destroy()
+        wx.GetApp().close()
 
 
 class MyHardwareApp(wx.App):

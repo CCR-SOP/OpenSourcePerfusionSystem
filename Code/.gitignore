@@ -8,3 +8,16 @@ RemoteSystemsTempFiles/
 
 __pycache__/
 .idea/
+
+# Eclipse/STM32/PyCharm
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders

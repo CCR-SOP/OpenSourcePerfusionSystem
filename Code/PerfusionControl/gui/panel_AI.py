@@ -13,7 +13,8 @@ import logging
 import wx
 
 import pyPerfusion.PerfusionConfig as PerfusionConfig
-from gui.plotting import PanelPlotting, SensorPlot
+# from gui.plotting import PanelPlotting, SensorPlot
+from gui.panel_plotting import PanelPlotting
 import pyPerfusion.Sensor as Sensor
 import pyPerfusion.utils as utils
 from pyPerfusion.PerfusionSystem import PerfusionSystem
@@ -21,16 +22,15 @@ from pyPerfusion.Strategy_ReadWrite import Reader
 
 
 class PanelAI(wx.Panel):
-    def __init__(self, parent, sensor: Sensor.Sensor, reader: Reader):
+    def __init__(self, parent, sensor: Sensor.Sensor):
         super().__init__(parent)
         self._lgr = logging.getLogger(__name__)
         self.parent = parent
         self._sensor = sensor
-        self._reader = reader
 
         self.collapse_pane = wx.CollapsiblePane(self, wx.ID_ANY, 'Calibration')
         self._panel_plot = PanelPlotting(self)
-        self._panel_cal = PanelAICalibration(self, sensor, reader)
+        self._panel_cal = PanelAICalibration(self, sensor, sensor.get_reader())
 
         if self._sensor.hw is not None and self._sensor.hw.device is not None:
             ch_name = f'{self._sensor.hw.device.name} Channel: {self._sensor.hw.name}'
@@ -40,10 +40,9 @@ class PanelAI(wx.Panel):
         self.sizer = wx.StaticBoxSizer(self.static_box, wx.VERTICAL)
         self.sizer_pane = wx.BoxSizer(wx.VERTICAL)
 
-        self._sensorplot = SensorPlot(self._sensor, self._panel_plot.axes, readout=True)
-        self._panel_plot.add_plot(self._sensorplot)
-        self._sensorplot.set_reader(self._reader)
         self._sensor.start()
+        for reader in self._sensor.get_reader_names():
+            self._panel_plot.add_reader(self._sensor.get_reader(reader))
 
         self.__do_layout()
         self.__set_bindings()
@@ -200,7 +199,8 @@ class TestFrame(wx.Frame):
         super().__init__(*args, **kwds)
 
         sensor = SYS_PERFUSION.get_sensor('Hepatic Artery Flow')
-        self.panel = PanelAI(self, sensor, reader=sensor.get_reader('Raw'))
+        self.panel = PanelAI(self, sensor)
+        sensor.start()
 
         self.Bind(wx.EVT_CLOSE, self.on_close)
 

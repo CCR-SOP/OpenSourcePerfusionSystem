@@ -182,7 +182,7 @@ class PanelSyringeControls(wx.Panel):
         if self.automation and self.automation.device:
             name = self.automation.device.name
         else:
-            raise Exception('Missing automation')
+            raise Exception(f'Missing automation {self.automation.name} {self.automation.device}')
 
         static_box = wx.StaticBox(self, wx.ID_ANY, label=name)
         static_box.SetFont(utils.get_header_font())

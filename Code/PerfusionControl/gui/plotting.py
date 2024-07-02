@@ -35,6 +35,7 @@ class SensorPlot:
         self._high_range = None
         self._axhspan = None
 
+
     @property
     def name(self):
         return self._reader.name if self._reader else ''
@@ -112,9 +113,12 @@ class SensorPlot:
                     # self._display.set_color(readout_color)
 
     def set_reader(self, reader, color=None, keep_old_title=False):
+        if isinstance(reader, str):
+            reader = self._sensor.get_reader(reader)
         self._reader = reader
         self._line = None
         self._color = color
+        self._axes.clear()
         if hasattr(self._sensor.cfg, 'valid_range'):
             if self._sensor.cfg.valid_range is not None:
                 rng = self._sensor.cfg.valid_range
@@ -167,6 +171,8 @@ class PanelPlotting(wx.Panel):
         self.fig = matplotlib.figure.Figure()
         self._axes = self.fig.add_subplot(111)
         self.canvas = FigureCanvasWxAgg(self, wx.ID_ANY, self.fig)
+        self.canvas.mpl_connect('pick_event', self.on_pick)
+        self.map_legend_to_axis = {}
 
         self._plots = []
         self._leg = []
@@ -177,6 +183,8 @@ class PanelPlotting(wx.Panel):
 
         self.timer_plot = wx.Timer(self)
         self.timer_plot.Start(100, wx.TIMER_CONTINUOUS)
+
+
 
     @property
     def axes(self):
@@ -222,8 +230,29 @@ class PanelPlotting(wx.Panel):
         total_plots = len(self._plots)
         ncols = total_plots if total_plots % 2 == 0 else total_plots + 1
         if self._axes.lines:
-            self._axes.legend(loc='lower right', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
-                              borderaxespad=0, framealpha=0.0, fontsize='x-small')
+            leg = self._axes.legend(loc='lower right', bbox_to_anchor=(0.0, 1.01, 1.0, .102), ncol=ncols, mode="expand",
+                                    borderaxespad=0, framealpha=0.0, fontsize='x-small')
+            leg.set_picker(5)
+            for legend_line, ax_line in zip(leg.get_lines(), self._axes.lines):
+                legend_line.set_picker(5)
+                self.map_legend_to_axis[legend_line] = ax_line
+
+    def on_pick(self, event):
+        self._lgr.debug('Detected pick event')
+        self._lgr.debug(f'artist is {event.artist}')
+        dlg = wx.SingleChoiceDialog(None, "Choose output", "",
+                                    self.__parent._sensor.get_reader_names(),wx.CHOICEDLG_STYLE)
+        if dlg.ShowModal() == wx.ID_OK:
+            self._plots[0].set_reader(dlg.GetStringSelection())
+        dlg.Destroy()
+        legend_line = event.artist
+        if legend_line not in self.map_legend_to_axis:
+            return
+        ax_line = self.map_legend_to_axis[legend_line]
+        visible = not ax_line.get_visible()
+        ax_line.set_visible(visible)
+        legend_line.set_alpha(1.0 if visible else 0.5)
+        self.canvas.draw()
 
     def add_plot(self, plot):
         self._plots.append(plot)

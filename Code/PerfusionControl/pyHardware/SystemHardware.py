@@ -22,9 +22,11 @@ from pyHardware.pyDC import DCDevice
 from pyHardware.pyLeviFlow import *
 from pyHardware.pyPuraLevi30 import *
 from pyHardware.pyCITSens import *
+from pyHardware.pyAI_MCC import *
 
 
 MOCKS = {'NIDAQAIDevice': 'AIDevice',
+         'MCCAIDevice': 'AIDevice',
          'CDI': 'MockCDI',
          'Pump11Elite': 'MockPump11Elite',
          'GasDevice': 'MockGasDevice',
@@ -140,6 +142,12 @@ class SystemHardware:
             for name, device in self.hw.items():
                 if type(device) != AIChannel:
                     device.stop()
+                elif type(device) == MCCAIDevice:
+                    device.close()
+                elif type(device) == NIDAQAIDevice:
+                    device.close()
+                elif type(device) == NIDAQDCDevice:
+                    device.close()
         except AIDeviceException as e:
             self._lgr.error(e)
         self._lgr.info('all hardware stopped')

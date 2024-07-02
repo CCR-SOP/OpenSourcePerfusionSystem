@@ -34,7 +34,7 @@ class SensorPanel(wx.Panel):
         for name in sensor_names:
             sensor = self.sys.get_sensor(name)
             self.sensors[name] = sensor
-            panel = PanelAI(self, sensor, reader=sensor.get_reader())
+            panel = PanelAI(self, sensor)
             panel.update_frame_ms(30_000)
 
             self.panels.append(panel)
@@ -60,10 +60,12 @@ class SensorFrame(wx.Frame):
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
     def OnClose(self, evt):
-        self.panel.Close()
+        if self.panel:
+            self.panel.Close()
+            self.panel = None
         for child in self.GetChildren():
             child.Close()
-        self.Destroy()
+        wx.GetApp().close()
 
 
 class MySensorApp(wx.App):

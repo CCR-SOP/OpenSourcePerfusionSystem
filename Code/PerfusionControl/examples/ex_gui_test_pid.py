@@ -14,7 +14,7 @@ from simple_pid import PID
 import pyPerfusion.utils as utils
 import pyPerfusion.PerfusionConfig as PerfusionConfig
 from pyPerfusion.PerfusionSystem import PerfusionSystem
-from gui.plotting import SensorPlot, PanelPlotting
+from gui.panel_plotting import PanelPlotting
 
 
 class PanelPID(wx.Panel):
@@ -25,14 +25,10 @@ class PanelPID(wx.Panel):
         self.automation = automation
 
         self.panel_flow = PanelPlotting(self)
-        self.plot_flow = SensorPlot(automation.data_source, self.panel_flow.axes)
-        self.plot_flow.set_reader(automation.data_source)
-        self.panel_flow.add_plot(self.plot_flow)
+        self.panel_flow.add_reader(automation.data_source)
 
         self.panel_speed = PanelPlotting(self)
-        self.plot_speed = SensorPlot(automation.device, self.panel_speed.axes)
-        self.plot_speed.set_reader(automation.device.get_reader())
-        self.panel_speed.add_plot(self.plot_speed)
+        self.panel_speed.add_reader(automation.device.get_reader())
 
         self.label_p = wx.StaticText(self, label='Proportional')
         self.spin_p = wx.SpinCtrlDouble(self, min=0, max=32000, initial=10, inc=100)

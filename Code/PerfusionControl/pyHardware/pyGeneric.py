@@ -33,6 +33,11 @@ class GenericDevice:
         self._queue = Queue()
         self._q_timeout = 0.5
         self.acq_start_ms = 0
+        self._is_started = False
+
+    @property
+    def is_started(self):
+        return self._is_started
 
     def set_parent(self, parent):
         self.parent = parent
@@ -74,11 +79,12 @@ class GenericDevice:
         self.open()
 
     def start(self):
-        self.stop()
+        if self.is_started:
+            self.stop()
         self.acq_start_ms = utils.get_epoch_ms()
 
     def stop(self):
-        pass
+        self._is_started = False
 
     def get_data(self):
         buf = None

@@ -112,7 +112,8 @@ class AIDevice(pyGeneric.GenericDevice):
         if self.channel_exists(ch_name):
             self._lgr.warning(f'Channel {ch_name} already exists!')
         else:
-            self.stop()
+            if self.is_acquiring:
+                self.stop()
             ai = AIChannel(name=ch_name)
             ai.cfg = cfg
             ai.device = self
