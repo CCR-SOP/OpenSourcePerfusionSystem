@@ -157,6 +157,8 @@ class PanelPlotting(wx.Panel):
         self.init_plot()
 
     def OnClose(self, evt):
+        self.anim.pause()
+        time.sleep(0.2)
         self.Destroy()
 
 
