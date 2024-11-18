@@ -1,1 +1,0 @@
-This is a dummy folder created by CCS to match a project subfolder which only holds links to other files. This text files is necessary to commit the directory to git. If this folder is deleted, the CCS project will drop the links causing build errors.
